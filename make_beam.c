@@ -75,6 +75,11 @@ int main(int argc, char **argv)
     opts.metafits    = NULL; // filename of the metafits file
     opts.rec_channel = NULL; // 0 - 255 receiver 1.28MHz channel
     opts.frequency   = 0;    // = rec_channel expressed in Hz
+#ifdef HYPERBEAM_HDF5
+    opts.beam_model  = BEAM_FEE2016;
+#else
+    opts.beam_model  = BEAM_ANALYTIC;
+#endif
 
     // Variables for MWA/VCS configuration
     opts.nstation      = 128;    // The number of antennas
@@ -133,8 +138,8 @@ int main(int argc, char **argv)
     int max_npointing = 120; // Could be more
     char RAs[max_npointing][64];
     char DECs[max_npointing][64];
-    int npointing = sscanf( opts.pointings, 
-            "%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,]," , 
+    int npointing = sscanf( opts.pointings,
+            "%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,]," ,
                             RAs[0],  DECs[0],  RAs[1],  DECs[1],  RAs[2],  DECs[2],
                             RAs[3],  DECs[3],  RAs[4],  DECs[4],  RAs[5],  DECs[5],
                             RAs[6],  DECs[6],  RAs[7],  DECs[7],  RAs[8],  DECs[8],
@@ -189,7 +194,7 @@ int main(int argc, char **argv)
 
     char pointing_array[npointing][2][64];
     int p;
-    for ( p = 0; p < npointing; p++) 
+    for ( p = 0; p < npointing; p++)
     {
        strcpy( pointing_array[p][0], RAs[p] );
        strcpy( pointing_array[p][1], DECs[p] );
@@ -202,6 +207,13 @@ int main(int argc, char **argv)
     ComplexDouble  ****complex_weights_array = create_complex_weights( npointing, nstation, nchan, npol );
     ComplexDouble  ****invJi                 = create_invJi( nstation, nchan, npol );
     ComplexDouble  ****detected_beam         = create_detected_beam( npointing, 2*opts.sample_rate, nchan, npol );
+
+    // Load the FEE2016 beam, if requested
+    fprintf( stderr, "[%f]  Reading in beam model from %s\n", NOW-begintime, HYPERBEAM_HDF5 );
+    FEEBeam *beam = NULL;
+    if (opts.beam_model == BEAM_FEE2016) {
+        beam = new_fee_beam( HYPERBEAM_HDF5 );
+    }
 
     // Read in info from metafits file
     fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
@@ -265,7 +277,7 @@ int main(int argc, char **argv)
                              i % npol );
         }
     }
-    
+
     double wgt_sum = 0;
     for (i = 0; i < nstation*npol; i++)
         wgt_sum += mi.weights_array[i];
@@ -280,6 +292,8 @@ int main(int argc, char **argv)
             opts.frequency,     // middle of the first frequency channel in Hz
             &opts.cal,          // struct holding info about calibration
             opts.sample_rate,   // = 10000 samples per sec
+            opts.beam_model,    // beam model type
+            beam,               // Hyperbeam struct
             opts.time_utc,      // utc time string
             0.0,                // seconds offset from time_utc at which to calculate delays
             delay_vals,        // Populate psrfits header info
@@ -352,11 +366,11 @@ int main(int argc, char **argv)
             opts.time_utc, opts.sample_rate, opts.frequency, nchan,
             opts.chan_width, opts.rec_channel, delay_vals, npointing );
 
-    // To run asynchronously we require two memory allocations for each data 
+    // To run asynchronously we require two memory allocations for each data
     // set so multiple parts of the memory can be worked on at once.
     // We control this by changing the pointer to alternate between
     // the two memory allocations
-    
+
     // Create array for holding the raw data
     int bytes_per_file = opts.sample_rate * nstation * npol * nchan;
 
@@ -395,7 +409,8 @@ int main(int argc, char **argv)
     for ( p = 0; p < npointing; p++ )
         cudaStreamCreate(&(streams[p])) ;
 
-    fprintf( stderr, "[%f]  **BEGINNING BEAMFORMING**\n", NOW-begintime);
+    fprintf( stderr, "[%f]  **BEGINNING BEAMFORMING WITH %s BEAM MODEL**\n", NOW-begintime,
+        (opts.beam_model == BEAM_ANALYTIC ? "ANALYTIC" : "FEE2016") );
 
     int offset;
     unsigned int s;
@@ -424,6 +439,8 @@ int main(int argc, char **argv)
                 opts.frequency,         // middle of the first frequency channel in Hz
                 &opts.cal,              // struct holding info about calibration
                 opts.sample_rate,       // = 10000 samples per sec
+                opts.beam_model,        // beam model type
+                beam,                   // Hyperbeam struct
                 opts.time_utc,          // utc time string
                 (double)file_no,        // seconds offset from time_utc at which to calculate delays
                 NULL,                   // Don't update delay_vals
@@ -431,7 +448,6 @@ int main(int argc, char **argv)
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
         delay_time[file_no] = clock() - start;
-
 
 
         fprintf( stderr, "[%f] [%d/%d] Calculating beam\n", NOW-begintime,
@@ -495,7 +511,7 @@ int main(int argc, char **argv)
             write_time[file_no][p] = clock() - start;
         }
     }
-    
+
     // Calculate total processing times
     float read_sum = 0, delay_sum = 0, calc_sum = 0, write_sum = 0;
     for (file_no = 0; file_no < nfiles; file_no++)
@@ -529,24 +545,24 @@ int main(int argc, char **argv)
 
 
     fprintf( stderr, "[%f]  **FINISHED BEAMFORMING**\n", NOW-begintime);
-    fprintf( stderr, "[%f]  Total read  processing time: %9.3f s\n", 
+    fprintf( stderr, "[%f]  Total read  processing time: %9.3f s\n",
                      NOW-begintime, read_sum / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n", 
+    fprintf( stderr, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, read_mean / CLOCKS_PER_SEC, read_std / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Total delay processing time: %9.3f s\n", 
+    fprintf( stderr, "[%f]  Total delay processing time: %9.3f s\n",
                      NOW-begintime, delay_sum / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  delay processing time: %9.3f +\\- %8.3f s\n", 
+    fprintf( stderr, "[%f]  Mean  delay processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, delay_mean / CLOCKS_PER_SEC, delay_std / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Total calc  processing time: %9.3f s\n", 
+    fprintf( stderr, "[%f]  Total calc  processing time: %9.3f s\n",
                      NOW-begintime, calc_sum / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  calc  processing time: %9.3f +\\- %8.3f s\n", 
+    fprintf( stderr, "[%f]  Mean  calc  processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, calc_mean / CLOCKS_PER_SEC, calc_std / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Total write processing time: %9.3f s\n", 
+    fprintf( stderr, "[%f]  Total write processing time: %9.3f s\n",
                      NOW-begintime, write_sum  * npointing / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  write processing time: %9.3f +\\- %8.3f s\n", 
+    fprintf( stderr, "[%f]  Mean  write processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, write_mean / CLOCKS_PER_SEC, write_std / CLOCKS_PER_SEC);
-    
-    
+
+
     fprintf( stderr, "[%f]  Starting clean-up\n", NOW-begintime);
 
     // Free up memory
@@ -606,10 +622,16 @@ int main(int argc, char **argv)
     {
         free_ipfb( &gi );
     }
-    #ifndef HAVE_CUDA
+
+    // Clean up Hyperbeam
+    if (opts.beam_model == BEAM_FEE2016) {
+        free_fee_beam( beam );
+    }
+
+#ifndef HAVE_CUDA
     // Clean up FFTW OpenMP
     fftw_cleanup_threads();
-    #endif
+#endif
 
     return 0;
 }
@@ -633,7 +655,8 @@ void usage() {
     fprintf(stderr, "\t                          ");
     fprintf(stderr, "option. UTCTIME must have the format: yyyy-mm-ddThh:mm:ss\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "\t-P, --pointings=hh:mm:ss.s_dd:mm:ss.s,hh:mm:ss.s_dd:mm:ss.s... ");
+    fprintf(stderr, "\t-P, --pointings=hh:mm:ss.s_dd:mm:ss.s,hh:mm:ss.s_dd:mm:ss.s...\n");
+    fprintf(stderr, "\t                          ");
     fprintf(stderr, "Right ascension and declinations of multiple pointings\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "\t-d, --data-location=PATH  ");
@@ -702,6 +725,10 @@ void usage() {
     fprintf(stderr, "[default: none]\n");
     fprintf(stderr, "\t                          ");
     fprintf(stderr, "metafits file given by the -m option.\n");
+    fprintf(stderr, "\t-H, --analytic-beam       ");
+    fprintf(stderr, "Force use of analytic beam (No change in behaviour if FEE2016 beam\n");
+    fprintf(stderr, "\t                          ");
+    fprintf(stderr, "is unavailable).\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "CALIBRATION OPTIONS (RTS)\n");
@@ -777,6 +804,7 @@ void make_beam_parse_cmdline(
                 {"psrfits",         no_argument,       0, 'p'},
                 {"vdif",            no_argument,       0, 'v'},
                 {"summed",          no_argument,       0, 's'},
+                {"analytic-beam",   no_argument,       0, 'H'},
                 {"max_t",           required_argument, 0, 't'},
                 {"synth_filter",    required_argument, 0, 'S'},
                 {"antpol",          required_argument, 0, 'A'},
@@ -802,7 +830,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "a:A:b:B:C:d:e:f:F:g:hiJ:m:n:o:O:pP:r:sS:t:vVw:W:z:",
+                             "a:A:b:B:C:d:e:f:F:g:hHiJ:m:n:o:O:pP:r:sS:t:vVw:W:z:",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -847,6 +875,9 @@ void make_beam_parse_cmdline(
                     usage();
                     exit(0);
                     break;
+                case 'H':
+                    opts->beam_model = BEAM_ANALYTIC;
+                    break;
                 case 'i':
                     opts->out_incoh = 1;
                     break;
@@ -884,9 +915,7 @@ void make_beam_parse_cmdline(
                     opts->out_summed = 1;
                     break;
                 case 't':
-                    fprintf( stderr, "before\n");
                     opts->max_sec_per_file = atoi(optarg);
-                    fprintf( stderr, "after\n");
                     break;
                 case 'v':
                     opts->out_vdif = 1;
@@ -979,9 +1008,9 @@ ComplexDouble ****create_complex_weights( int npointing, int nstation, int nchan
 {
     int p, ant, ch; // Loop variables
     ComplexDouble ****array;
-    
+
     array = (ComplexDouble ****)malloc( npointing * sizeof(ComplexDouble ***) );
-    
+
     for (p = 0; p < npointing; p++)
     {
         array[p] = (ComplexDouble ***)malloc( nstation * sizeof(ComplexDouble **) );
@@ -1061,9 +1090,9 @@ ComplexDouble ****create_detected_beam( int npointing, int nsamples, int nchan, 
 {
     int p, s, ch; // Loop variables
     ComplexDouble ****array;
-    
+
     array = (ComplexDouble ****)malloc( npointing * sizeof(ComplexDouble ***) );
-    for (p = 0; p < npointing; p++) 
+    for (p = 0; p < npointing; p++)
     {
         array[p] = (ComplexDouble ***)malloc( nsamples * sizeof(ComplexDouble **) );
 
@@ -1081,7 +1110,7 @@ ComplexDouble ****create_detected_beam( int npointing, int nsamples, int nchan, 
 void destroy_detected_beam( ComplexDouble ****array, int npointing, int nsamples, int nchan )
 {
     int p, s, ch;
-    for (p = 0; p < npointing; p++)    
+    for (p = 0; p < npointing; p++)
     {
         for (s = 0; s < nsamples; s++)
         {
