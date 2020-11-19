@@ -373,7 +373,9 @@ void get_delays(
     double X,Y,Z,u,v,w;
     double geometry, delay_time, delay_samples, cycles_per_sample;
 
-    int nconfigs = 138;
+    int nconfigs = 139;
+    const int multiple_dead = nconfigs - 1; // This indexn is reserved for configurations
+                                            // with three or more dead dipoles
     int config_idx;
     double *jones[nconfigs]; // (see hash_dipole_configs() for explanation of this array)
 
@@ -527,12 +529,9 @@ void get_delays(
                     // computationally expensive.
                     config_idx = hash_dipole_config( mi->amps[row] );
                     if (config_idx == -1)
-                    {
-                        fprintf( stderr, "error: get_delays: dipole configuration not recognised\n" );
-                        exit(EXIT_FAILURE);
-                    }
+                        config_idx = multiple_dead;
 
-                    if (ch == 0 && jones[config_idx] == NULL)
+                    if (ch == 0 && (jones[config_idx] == NULL || config_idx == multiple_dead))
                     {
                         // The Jones matrix for this configuration has not yet been calculated, so do it now.
                         // The FEE beam only needs to be calculated once per coarse channel, because it will
