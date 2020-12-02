@@ -268,19 +268,23 @@ void zero_XY_and_YX( ComplexDouble **M )
 
 void remove_reference_phase( ComplexDouble **M, int ref_ant )
 {
-    ComplexDouble XX0norm, YY0norm;
+    ComplexDouble XX0norm, XY0norm, YX0norm, YY0norm;
     double XXscale = 1.0/CAbsd( M[ref_ant][0] ); // = 1/|XX|
+    double XYscale = 1.0/CAbsd( M[ref_ant][1] ); // = 1/|XY|
+    double YXscale = 1.0/CAbsd( M[ref_ant][2] ); // = 1/|YX|
     double YYscale = 1.0/CAbsd( M[ref_ant][3] ); // = 1/|YY|
 
     XX0norm = CScld( M[ref_ant][0], XXscale ); // = XX/|XX|
+    XY0norm = CScld( M[ref_ant][1], XYscale ); // = XY/|XY|
+    YX0norm = CScld( M[ref_ant][2], YXscale ); // = YX/|YX|
     YY0norm = CScld( M[ref_ant][3], YYscale ); // = YY/|YY|
 
     int ant;
     for (ant = 0; ant < NANT; ant++)
     {
         M[ant][0] = CDivd( M[ant][0], XX0norm ); // Essentially phase rotations
-        M[ant][1] = CDivd( M[ant][1], XX0norm );
-        M[ant][2] = CDivd( M[ant][2], YY0norm );
+        M[ant][1] = CDivd( M[ant][1], XY0norm );
+        M[ant][2] = CDivd( M[ant][2], YX0norm );
         M[ant][3] = CDivd( M[ant][3], YY0norm );
     }
 }
