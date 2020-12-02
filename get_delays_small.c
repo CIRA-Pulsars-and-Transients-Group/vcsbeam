@@ -688,7 +688,7 @@ int calcEjones_analytic(ComplexDouble response[MAX_POLS], // pointer to 4-elemen
     const double c = VLIGHT;                    // speed of light (m/s)
     float sza, cza, saz, caz;                   // sin & cos of azimuth & zenith angle (pencil beam)
     float sza0, cza0, saz0, caz0;               // sin & cos of azimuth & zenith angle (tile pointing)
-    float ground_plane, beam_ha, beam_dec;
+    double ground_plane, beam_ha, beam_dec;
 
     float dipl_e,  dipl_n,  dipl_z;  // Location of dipoles relative to
     float proj_e,  proj_n,  proj_z;  // Components of pencil beam   in local (E,N,Z) coordinates
@@ -787,8 +787,8 @@ void parallactic_angle_correction_analytic(
 {
     double el = PAL__DPIBY2 - za;
 
-    float ha, dec;
-    slaH2e(az, el, lat, &ha, &dec);
+    double ha, dec;
+    palDh2e(az, el, lat, &ha, &dec);
 
     double sl = sin(lat);
     double cl = cos(lat);
@@ -814,8 +814,8 @@ void parallactic_angle_correction_fee2016(
     double R[4], S[4];
 
     // I'm not sure why this works, but apparently it does...
-    parallactic_angle_correction_analytic( R, lat,    az, za );
-    parallactic_angle_correction_analytic( S ,DPIBY2, az, za );
+    parallactic_angle_correction_analytic( R, lat,         az, za );
+    parallactic_angle_correction_analytic( S ,PAL__DPIBY2, az, za );
 
     // R x S
     P[0] = R[0]*S[0] + R[1]*S[2];
