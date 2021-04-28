@@ -561,7 +561,7 @@ void get_delays(
                     // Hyperbeam's output into the Jones matrix thus:
                     //   [ XX XY ] --> [ XY XX ]
                     //   [ YX YY ] --> [ YY YX ]
-                    swap_columns( E, E );
+                    //swap_columns( E, E );
                 }
 
                 mult2x2d(M[ant], invJref, G); // M x J^-1 = G (Forms the "coarse channel" DI gain)
@@ -811,16 +811,25 @@ void parallactic_angle_correction_fee2016(
     double az,    // azimuth angle (radians)
     double za)    // zenith angle (radians)
 {
-    double R[4], S[4];
+    // The FEE beam Jones matrix is
+    //   [ Qθ  Pθ ]
+    //   [ Qφ  Pφ ]
+    // RTS calibration solution is
+    //   [ PP  PQ ]
+    //   [ QP  QQ ]
+    // Therefore, the parallactic rotation must be
+    //   [  0   1 ] [ cos(χ)  -sin(χ) ]  =  [  sin(χ)  cos(χ) ]
+    //   [  1   0 ] [ sin(χ)   cos(χ) ]     [  cos(χ) -sin(χ) ]
 
-    // I'm not sure why this works, but apparently it does...
-    parallactic_angle_correction_analytic( R, lat,         az, za );
-    parallactic_angle_correction_analytic( S ,PAL__DPIBY2, az, za );
+    double el = PAL__DPIBY2 - za;
 
-    // R x S
-    P[0] = R[0]*S[0] + R[1]*S[2];
-    P[1] = R[0]*S[1] + R[1]*S[3];
-    P[2] = R[2]*S[0] + R[3]*S[2];
-    P[3] = R[2]*S[1] + R[3]*S[3];
+    double ha, dec;
+    palDh2e(az, el, lat, &ha, &dec);
+    double pa = palPa( ha, dec, lat );
+
+    P[0] = sin(pa);
+    P[1] = cos(pa);
+    P[2] = cos(pa);
+    P[3] = -sin(pa);
 }
 
