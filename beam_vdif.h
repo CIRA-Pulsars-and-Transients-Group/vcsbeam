@@ -7,7 +7,6 @@
 #ifndef BEAM_VDIF_H
 #define BEAM_VDIF_H
 
-#include <fftw3.h>
 #include "beam_common.h"
 #include "vdifio.h"
 #include "filter.h"
@@ -85,16 +84,5 @@ void get_mean_complex( ComplexFloat *input, int nsamples, float *rmean,
 void normalise_complex( ComplexFloat *input, int nsamples, float scale );
 
 void to_offset_binary( int8_t *i, int n );
-
-#ifndef HAVE_CUDA
-void invert_pfb_ifft( ComplexDouble ***detected_beam, int file_no,
-                      int nsamples, int nchan, int npol,
-                      float *data_buffer_vdif );
-
-void invert_pfb_ord( ComplexDouble ***detected_beam, int file_no,
-                      int nsamples, int nchan, int npol,
-                      ComplexDouble **fils, int fil_size,
-                      float *data_buffer_uvdif )
-#endif
 
 #endif
