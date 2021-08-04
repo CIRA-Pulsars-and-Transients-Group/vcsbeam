@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
-#include "mycomplex.h"
+#include <cuComplex.h>
 #include "star/pal.h"
 #include "star/palmac.h"
 #include "psrfits.h"
@@ -253,7 +253,7 @@ void utc2mjd(char *utc_str, double *intmjd, double *fracmjd) {
     free(utc);
 }
 
-void zero_XY_and_YX( ComplexDouble **M )
+void zero_XY_and_YX( cuDoubleComplex **M )
 /* For M = [ XX, XY ], set XY and YX to 0 for all antennas
  *         [ YX, YY ]
  */
@@ -261,31 +261,31 @@ void zero_XY_and_YX( ComplexDouble **M )
     int ant;
     for (ant = 0; ant < NANT; ant++)
     {
-        M[ant][1] = CMaked( 0.0, 0.0 );
-        M[ant][2] = CMaked( 0.0, 0.0 );
+        M[ant][1] = make_cuDoubleComplex( 0.0, 0.0 );
+        M[ant][2] = make_cuDoubleComplex( 0.0, 0.0 );
     }
 }
 
-void remove_reference_phase( ComplexDouble **M, int ref_ant )
+void remove_reference_phase( cuDoubleComplex **M, int ref_ant )
 {
-    ComplexDouble XX0norm, XY0norm, YX0norm, YY0norm;
-    double XXscale = 1.0/CAbsd( M[ref_ant][0] ); // = 1/|XX|
-    double XYscale = 1.0/CAbsd( M[ref_ant][1] ); // = 1/|XY|
-    double YXscale = 1.0/CAbsd( M[ref_ant][2] ); // = 1/|YX|
-    double YYscale = 1.0/CAbsd( M[ref_ant][3] ); // = 1/|YY|
+    cuDoubleComplex XX0norm, XY0norm, YX0norm, YY0norm;
+    double XXscale = 1.0/cuCabs( M[ref_ant][0] ); // = 1/|XX|
+    double XYscale = 1.0/cuCabs( M[ref_ant][1] ); // = 1/|XY|
+    double YXscale = 1.0/cuCabs( M[ref_ant][2] ); // = 1/|YX|
+    double YYscale = 1.0/cuCabs( M[ref_ant][3] ); // = 1/|YY|
 
-    XX0norm = CScld( M[ref_ant][0], XXscale ); // = XX/|XX|
-    XY0norm = CScld( M[ref_ant][1], XYscale ); // = XY/|XY|
-    YX0norm = CScld( M[ref_ant][2], YXscale ); // = YX/|YX|
-    YY0norm = CScld( M[ref_ant][3], YYscale ); // = YY/|YY|
+    XX0norm = make_cuDoubleComplex( XXscale*cuCreal(M[ref_ant][0]), XXscale*cuCimag(M[ref_ant][0]) ); // = XX/|XX|
+    XY0norm = make_cuDoubleComplex( XYscale*cuCreal(M[ref_ant][1]), XYscale*cuCimag(M[ref_ant][1]) ); // = XY/|XY|
+    YX0norm = make_cuDoubleComplex( YXscale*cuCreal(M[ref_ant][2]), YXscale*cuCimag(M[ref_ant][2]) ); // = YX/|YX|
+    YY0norm = make_cuDoubleComplex( YYscale*cuCreal(M[ref_ant][3]), YYscale*cuCimag(M[ref_ant][3]) ); // = YY/|YY|
 
     int ant;
     for (ant = 0; ant < NANT; ant++)
     {
-        M[ant][0] = CDivd( M[ant][0], XX0norm ); // Essentially phase rotations
-        M[ant][1] = CDivd( M[ant][1], XY0norm );
-        M[ant][2] = CDivd( M[ant][2], YX0norm );
-        M[ant][3] = CDivd( M[ant][3], YY0norm );
+        M[ant][0] = cuCdiv( M[ant][0], XX0norm ); // Essentially phase rotations
+        M[ant][1] = cuCdiv( M[ant][1], XY0norm );
+        M[ant][2] = cuCdiv( M[ant][2], YX0norm );
+        M[ant][3] = cuCdiv( M[ant][3], YY0norm );
     }
 }
 
@@ -301,8 +301,8 @@ void get_delays(
         double                 sec_offset,
         struct delays          delay_vals[],
         struct metafits_info  *mi,
-        ComplexDouble       ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
-        ComplexDouble       ****invJi )                 // output: invJi[ant][ch][pol][pol]
+        cuDoubleComplex       ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
+        cuDoubleComplex       ****invJi )                 // output: invJi[ant][ch][pol][pol]
 {
 
     int row;     // For counting through nstation*npol rows in the metafits file
@@ -326,21 +326,21 @@ void get_delays(
 
     double amp = 0;
 
-    ComplexDouble Jref[NPOL*NPOL];            // Calibration Direction
-    ComplexDouble E[NPOL*NPOL];               // Model Jones in Desired Direction
-    ComplexDouble G[NPOL*NPOL];               // Coarse channel DI Gain
-    ComplexDouble Gf[NPOL*NPOL];              // Fine channel DI Gain
-    ComplexDouble Ji[NPOL*NPOL];              // Gain in Desired Direction
+    cuDoubleComplex Jref[NPOL*NPOL];            // Calibration Direction
+    cuDoubleComplex E[NPOL*NPOL];               // Model Jones in Desired Direction
+    cuDoubleComplex G[NPOL*NPOL];               // Coarse channel DI Gain
+    cuDoubleComplex Gf[NPOL*NPOL];              // Fine channel DI Gain
+    cuDoubleComplex Ji[NPOL*NPOL];              // Gain in Desired Direction
     double        P[NPOL*NPOL];               // Parallactic angle correction rotation matrix
 
-    ComplexDouble  **M  = (ComplexDouble ** ) calloc(NANT, sizeof(ComplexDouble * )); // Gain in direction of Calibration
-    ComplexDouble ***Jf = (ComplexDouble ***) calloc(NANT, sizeof(ComplexDouble **)); // Fitted bandpass solutions
+    cuDoubleComplex  **M  = (cuDoubleComplex ** ) calloc(NANT, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
+    cuDoubleComplex ***Jf = (cuDoubleComplex ***) calloc(NANT, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
 
     for (ant = 0; ant < NANT; ant++) {
-        M[ant]  = (ComplexDouble * ) calloc(NPOL*NPOL,  sizeof(ComplexDouble));
-        Jf[ant] = (ComplexDouble **) calloc(cal->nchan, sizeof(ComplexDouble *));
+        M[ant]  = (cuDoubleComplex * ) calloc(NPOL*NPOL,  sizeof(cuDoubleComplex));
+        Jf[ant] = (cuDoubleComplex **) calloc(cal->nchan, sizeof(cuDoubleComplex *));
         for (ch = 0; ch < cal->nchan; ch++) { // Only need as many channels as used in calibration solution
-            Jf[ant][ch] = (ComplexDouble *) calloc(NPOL*NPOL, sizeof(ComplexDouble));
+            Jf[ant][ch] = (cuDoubleComplex *) calloc(NPOL*NPOL, sizeof(cuDoubleComplex));
         }
     }
 
@@ -383,11 +383,12 @@ void get_delays(
     int config_idx;
     double *jones[nconfigs]; // (see hash_dipole_configs() for explanation of this array)
 
-    ComplexDouble uv_phase; // For the UV phase correction
+    double uv_angle;
+    cuDoubleComplex uv_phase; // For the UV phase correction
 
     double Fnorm;
     // Read in the Jones matrices for this (coarse) channel, if requested
-    ComplexDouble invJref[4];
+    cuDoubleComplex invJref[4];
     if (cal->cal_type == RTS || cal->cal_type == RTS_BANDPASS) {
 
         read_rts_file(M, Jref, &amp, cal->filename); // Read in the RTS DIJones file
@@ -417,10 +418,10 @@ void get_delays(
 
         // Just make Jref (and invJref) the identity matrix since they are already
         // incorporated into Offringa's calibration solutions.
-        Jref[0] = CMaked( 1.0, 0.0 );
-        Jref[1] = CMaked( 0.0, 0.0 );
-        Jref[2] = CMaked( 0.0, 0.0 );
-        Jref[3] = CMaked( 1.0, 0.0 );
+        Jref[0] = make_cuDoubleComplex( 1.0, 0.0 );
+        Jref[1] = make_cuDoubleComplex( 0.0, 0.0 );
+        Jref[2] = make_cuDoubleComplex( 0.0, 0.0 );
+        Jref[3] = make_cuDoubleComplex( 1.0, 0.0 );
         inv2x2(Jref, invJref);
     }
 
@@ -507,18 +508,8 @@ void get_delays(
             }
 
             // Calculate the UV phase correction for this channel
-            uv_phase = CExpd( CMaked( 0.0, cal->phase_slope*freq_ch + cal->phase_offset ) );
-
-            if (beam_model == BEAM_ANALYTIC) {
-                // Analytic beam:
-                calcEjones_analytic(E,                        // pointer to 4-element (2x2) voltage gain Jones matrix
-                        freq_ch,                              // observing freq of fine channel (Hz)
-                        (MWA_LAT*PAL__DD2R),                       // observing latitude (radians)
-                        mi->tile_pointing_az*PAL__DD2R,            // azimuth & zenith angle of tile pointing
-                        (PAL__DPIBY2-(mi->tile_pointing_el*PAL__DD2R)),
-                        az,                                   // azimuth & zenith angle of pencil beam
-                        (PAL__DPIBY2-el));
-            }
+            uv_angle = cal->phase_slope*freq_ch + cal->phase_offset;
+            uv_phase = make_cuDoubleComplex( cos(uv_angle), sin(uv_angle) );
 
             for (row=0; row < (int)(mi->ninput); row++) {
 
@@ -550,18 +541,11 @@ void get_delays(
 
                     // "Convert" the real jones[8] output array into out complex E[4] matrix
                     for (n = 0; n<NPOL*NPOL; n++){
-                        E[n] = CMaked(jones[config_idx][n*2], jones[config_idx][n*2+1]);
+                        E[n] = make_cuDoubleComplex(jones[config_idx][n*2], jones[config_idx][n*2+1]);
                     }
 
                     // Apply parallactic angle correction if Hyperbeam was used
                     mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
-
-                    // For some reason, it is necessary to swap X and Y (perhaps this code implicitly
-                    // defines them differently compared to Hyperbeam). This can be achieved by mapping
-                    // Hyperbeam's output into the Jones matrix thus:
-                    //   [ XX XY ] --> [ XY XX ]
-                    //   [ YX YY ] --> [ YY YX ]
-                    //swap_columns( E, E );
                 }
 
                 mult2x2d(M[ant], invJref, G); // M x J^-1 = G (Forms the "coarse channel" DI gain)
@@ -574,8 +558,8 @@ void get_delays(
                 mult2x2d(Gf, E, Ji); // the gain in the desired look direction
 
                 // Apply the UV phase correction (to the bottom row of the Jones matrix)
-                Ji[2] = CMuld( Ji[2], uv_phase );
-                Ji[3] = CMuld( Ji[3], uv_phase );
+                Ji[2] = cuCmul( Ji[2], uv_phase );
+                Ji[3] = cuCmul( Ji[3], uv_phase );
 
                 // Calculate the complex weights array
                 if (complex_weights_array != NULL) {
@@ -612,11 +596,14 @@ void get_delays(
 
                         // Store result for later use
                         complex_weights_array[p][ant][ch][pol] =
-                            CScld( CExpd( CMaked( 0.0, phase ) ), mi->weights_array[row] );
+                            make_cuDoubleComplex(
+                                    mi->weights_array[row]*cos( phase ),
+                                    mi->weights_array[row]*sin( phase )
+                                    );
 
                     }
                     else {
-                        complex_weights_array[p][ant][ch][pol] = CMaked( mi->weights_array[row], 0.0 ); // i.e. = 0.0
+                        complex_weights_array[p][ant][ch][pol] = make_cuDoubleComplex( mi->weights_array[row], 0.0 ); // i.e. = 0.0
                     }
                 }
 
@@ -635,7 +622,7 @@ void get_delays(
                         else {
                             for (p1 = 0; p1 < NPOL;  p1++)
                             for (p2 = 0; p2 < NPOL;  p2++)
-                                invJi[ant][ch][p1][p2] = CMaked( 0.0, 0.0 );
+                                invJi[ant][ch][p1][p2] = make_cuDoubleComplex( 0.0, 0.0 );
                             }
                         }
                     }
@@ -675,134 +662,6 @@ void get_delays(
     free(Jf);
     free(M);
 
-}
-
-int calcEjones_analytic(ComplexDouble response[MAX_POLS], // pointer to 4-element (2x2) voltage gain Jones matrix
-               const long freq, // observing freq (Hz)
-               const float lat, // observing latitude (radians)
-               const float az0, // azimuth & zenith angle of tile pointing
-               const float za0,
-               const float az, // azimuth & zenith angle of pencil beam
-               const float za) {
-
-    const double c = VLIGHT;                    // speed of light (m/s)
-    float sza, cza, saz, caz;                   // sin & cos of azimuth & zenith angle (pencil beam)
-    float sza0, cza0, saz0, caz0;               // sin & cos of azimuth & zenith angle (tile pointing)
-    double ground_plane, beam_ha, beam_dec;
-
-    float dipl_e,  dipl_n,  dipl_z;  // Location of dipoles relative to
-    float proj_e,  proj_n,  proj_z;  // Components of pencil beam   in local (E,N,Z) coordinates
-    float proj0_e, proj0_n, proj0_z; // Components of tile pointing in local (E,N,Z) coordinates
-
-    double rot[2 * N_COPOL];
-    ComplexDouble PhaseShift, multiplier;
-    int i, j; // For iterating over columns (i; East-West) and rows (j; North-South) of dipoles within tiles
-    int n_cols = 4, n_rows = 4; // Each tile is a 4x4 grid of dipoles
-    int result = 0;
-
-    float lambda = c / freq;                    //
-    float radperm = 2.0 * PAL__DPI / lambda;         // Wavenumber (m^-1}
-    float dpl_sep = 1.10;                       // Separation between dipoles (m)
-    float dpl_hgt = 0.3;                        // Height of dipoles (m)
-    float n_dipoles = (float)(n_cols * n_rows); // 4x4 = 16 dipoles per tile
-
-    const int scaling = 1; /* 0 -> no scaling; 1 -> scale to unity toward zenith; 2 -> scale to unity in look-dir */
-
-    response[0] = CMaked( 0.0, 0.0 );
-    response[1] = CMaked( 0.0, 0.0 );
-    response[2] = CMaked( 0.0, 0.0 );
-    response[3] = CMaked( 0.0, 0.0 );
-
-    sza = sin(za);
-    cza = cos(za);
-    saz = sin(az);
-    caz = cos(az);
-    sza0 = sin(za0);
-    cza0 = cos(za0);
-    saz0 = sin(az0);
-    caz0 = cos(az0);
-
-    proj_e = sza * saz;
-    proj_n = sza * caz;
-    proj_z = cza;
-
-    proj0_e = sza0 * saz0;
-    proj0_n = sza0 * caz0;
-    proj0_z = cza0;
-
-    multiplier = CMaked( 0.0, R2C_SIGN * radperm );
-
-    /* loop over dipoles */
-    for (i = 0; i < n_cols; i++) {
-        for (j = 0; j < n_rows; j++) {
-            dipl_e = (i + 1 - 2.5) * dpl_sep;
-            dipl_n = (j + 1 - 2.5) * dpl_sep;
-            dipl_z = 0.0;
-            PhaseShift = CExpd( CScld( multiplier,
-                                  (dipl_e * (proj_e - proj0_e)
-                                 + dipl_n * (proj_n - proj0_n)
-                                 + dipl_z * (proj_z - proj0_z)) ) );
-            // sum for p receptors
-            response[0] = CAddd( response[0], PhaseShift );
-            response[1] = CAddd( response[1], PhaseShift );
-            // sum for q receptors
-            response[2] = CAddd( response[2], PhaseShift );
-            response[3] = CAddd( response[3], PhaseShift );
-        }
-    }
-    // assuming that the beam centre is normal to the ground plane, the separation should be used instead of the za.
-    // ground_plane = 2.0 * sin( 2.0*pi * dpl_hgt/lambda * cos(za) );
-
-    //fprintf(stdout,"calib: dpl_hgt %f radperm %f za %f\n",dpl_hgt,radperm,za);
-
-    ground_plane = 2.0 * sin(dpl_hgt * radperm * cos(za)) / n_dipoles;
-
-    palDh2e(az0, PAL__DPIBY2 - za0, lat, &beam_ha, &beam_dec);
-
-    // ground_plane = 2.0*sin(2.0*PAL__DPI*dpl_hgt/lambda*cos(palDsep(beam_ha,beam_dec,ha,dec))) / n_dipoles;
-
-    if (scaling == 1) {
-        ground_plane /= (2.0 * sin(dpl_hgt * radperm));
-    }
-    else if (scaling == 2) {
-        ground_plane /= (2.0 * sin( 2.0*PAL__DPI* dpl_hgt/lambda * cos(za) ));
-    }
-
-    parallactic_angle_correction_analytic( rot, lat, az, za );
-
-    //fprintf(stdout,"calib:HA is %f hours \n",ha*PAL__DR2H);
-    // rot is the Jones matrix, response just contains the phases, so this should be an element-wise multiplication.
-    for (i = 0; i < 4; i++)
-        response[i] = CScld( response[i], rot[i] * ground_plane );
-    //fprintf(stdout,"calib:HA is %f groundplane factor is %f\n",ha*PAL__DR2H,ground_plane);
-    return (result);
-
-} /* calcEjones_analytic */
-
-void parallactic_angle_correction_analytic(
-    double *P,    // output rotation matrix
-    double lat,   // observing latitude (radians)
-    double az,    // azimuth angle (radians)
-    double za)    // zenith angle (radians)
-{
-    double el = PAL__DPIBY2 - za;
-
-    double ha, dec;
-    palDh2e(az, el, lat, &ha, &dec);
-
-    double sl = sin(lat);
-    double cl = cos(lat);
-
-    double sh = sin(ha);
-    double ch = cos(ha);
-
-    double sd = sin(dec);
-    double cd = cos(dec);
-
-    P[0] = cl*cd + sl*sd*ch;
-    P[1] = -sl*sh;
-    P[2] = sd*sh;
-    P[3] = ch;
 }
 
 void parallactic_angle_correction_fee2016(
