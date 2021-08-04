@@ -645,6 +645,17 @@ void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 }
 
 
+cuDoubleComplex reciprocal_complex( cuDoubleComplex z )
+{
+    double scale = 1.0/(z.x*z.x + z.y*z.y);
+    return make_cuDoubleComplex( scale*z.x, -scale*z.y );
+}
+
+cuDoubleComplex negate_complex( cuDoubleComplex z )
+{
+    return make_cuDoubleComplex( -z.x, -z.y );
+}
+
 void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 {
     cuDoubleComplex m00 = Min[0];
@@ -656,11 +667,11 @@ void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
     cuDoubleComplex m2 = cuCmul( m01, m10 );
 
     cuDoubleComplex det = cuCsub( m1, m2 );
-    cuDoubleComplex inv_det = CRcpd( det );
+    cuDoubleComplex inv_det = reciprocal_complex( det );
 
     Mout[0] = cuCmul(       inv_det,  m11 );
-    Mout[1] = cuCmul( CNegd(inv_det), m01 );
-    Mout[2] = cuCmul( CNegd(inv_det), m10 );
+    Mout[1] = cuCmul( negate_complex(inv_det), m01 );
+    Mout[2] = cuCmul( negate_complex(inv_det), m10 );
     Mout[3] = cuCmul(       inv_det,  m00 );
 }
 
@@ -691,10 +702,10 @@ void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex **Mout)
     cuDoubleComplex m1 = cuCmul( Min[0], Min[3] );
     cuDoubleComplex m2 = cuCmul( Min[1], Min[2] );
     cuDoubleComplex det = cuCsub( m1, m2 );
-    cuDoubleComplex inv_det = CRcpd( det );
+    cuDoubleComplex inv_det = reciprocal_complex( det );
     Mout[0][0] = cuCmul(       inv_det,  Min[3] );
-    Mout[0][1] = cuCmul( CNegd(inv_det), Min[1] );
-    Mout[1][0] = cuCmul( CNegd(inv_det), Min[2] );
+    Mout[0][1] = cuCmul( negate_complex(inv_det), Min[1] );
+    Mout[1][0] = cuCmul( negate_complex(inv_det), Min[2] );
     Mout[1][1] = cuCmul(       inv_det,  Min[0] );
 }
 
