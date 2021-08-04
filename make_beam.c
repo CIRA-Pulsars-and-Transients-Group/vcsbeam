@@ -199,7 +199,7 @@ int main(int argc, char **argv)
         beam = new_fee_beam( HYPERBEAM_HDF5 );
     }
 
-    // >>>>>
+    // <<<<<
     // Read in info from metafits file
     fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
     struct metafits_info mi;
@@ -210,26 +210,12 @@ int main(int argc, char **argv)
     char error_message[1024];
     VoltageContext *volt_context = NULL;
 
-    int ncoarsechans = 1;
-    int ntimesteps   = nfiles;
+    const char **voltage_files = (const char **)malloc( sizeof(char *) * nfiles );
+    int i;
+    for (i = 0; i < nfiles; i++)
+        voltage_files[i] = filenames[i];
 
-    const char **voltage_files = (const char **)malloc( sizeof(char *) * ncoarsechans * ntimesteps );
-    int i, c, t;
-    for (c = 0; c < ncoarsechans; c++)
-    {
-        for (t = 0; t < ntimesteps; t++)
-        {
-            voltage_files[c*ntimesteps + t] = (const char *)malloc( 64*sizeof(char) );
-            sprintf( voltage_files[c*ntimesteps + t],
-                    "%s/%s_%ld_ch%s.dat",
-                    opts.datadir,
-                    opts.obsid,
-                    opts.begin + t,
-                    opts.rec_channel );
-        }
-    }
-
-    if (mwalib_voltage_context_new( opts.metafits, voltage_files, ncoarsechans*ntimesteps, &volt_context, error_message, 1024) != EXIT_SUCCESS)
+    if (mwalib_voltage_context_new( opts.metafits, voltage_files, nfiles, &volt_context, error_message, 1024) != EXIT_SUCCESS)
     {
         printf("Error creating correlator context: %s\n", error_message);
         exit(EXIT_FAILURE);
@@ -242,8 +228,7 @@ int main(int argc, char **argv)
         printf("Error getting correlator metadata: %s\n", error_message);
         exit(EXIT_FAILURE);
     }
-
-    // <<<<<
+    // >>>>>
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     if (opts.cal.cal_type == RTS_BANDPASS)
@@ -588,8 +573,6 @@ int main(int argc, char **argv)
     fprintf( stderr, "[%f]  Starting clean-up\n", NOW-begintime);
 
     // Free up memory
-    for (i = 0; i < ncoarsechans * ntimesteps; i++)
-        free( voltage_files[i] );
     free( voltage_files );
     mwalib_voltage_context_free(volt_context);
     mwalib_voltage_metadata_free(volt_metadata);
