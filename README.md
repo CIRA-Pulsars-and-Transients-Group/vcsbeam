@@ -8,8 +8,8 @@ Installation
 
  - CUDA
  - [PAL](https://github.com/Starlink/pal)
- - [CFITSIO](https://heasarc.gsfc.nasa.gov/fitsio/)
- - [PSRFITS\_UTILS](https://github.com/demorest/psrfits_utils)
+ - [cfitsio](https://heasarc.gsfc.nasa.gov/fitsio/)
+ - [psrfits\_utils](https://github.com/demorest/psrfits_utils)
  - [mwa\_hyperbeam](https://github.com/mwatelescope/mwa_hyperbeam) (optional)
 
 ### Compiling
