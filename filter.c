@@ -8,18 +8,18 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <cuComplex.h>
 #include "filter.h"
-#include "mycomplex.h"
 
 
-ComplexDouble *roots_of_unity( int N )
+cuDoubleComplex *roots_of_unity( int N )
 /* Creates a complex-valued array containing the N roots of unity.
  * The caller must free this memory (by passing the returned pointer to
  * free()).
  */
 {
     // Allocate memory
-    ComplexDouble *roots = (ComplexDouble *)malloc( N*sizeof(ComplexDouble) );
+    cuDoubleComplex *roots = (cuDoubleComplex *)malloc( N*sizeof(cuDoubleComplex) );
 
     // Make sure memory was allocated correctly
     if (!roots)
@@ -34,8 +34,8 @@ ComplexDouble *roots_of_unity( int N )
     for (n = 0; n < N; n++)
     {
         // e^{2πin/N}
-        double th = (double)n/(double)N;
-        roots[n] = CExpd( CMaked( 0.0, 2*M_PI*th ) );
+        double th = 2*M_PI*(double)n/(double)N;
+        roots[n] = make_cuDoubleComplex( cos(th), sin(th) );
     }
 
     return roots;

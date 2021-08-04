@@ -10,9 +10,9 @@
 #define REAL_COEFFS  0
 #define CPLX_COEFFS  1
 
-#include "mycomplex.h"
+#include <cuComplex.h>
 
-ComplexDouble *roots_of_unity( int N );
+cuDoubleComplex *roots_of_unity( int N );
 
 #define FINE_PFB_FILTER_SIZE    1536
 #define FINE_PFB_FILTER_COEFFS  { \
