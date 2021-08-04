@@ -10,7 +10,7 @@
 #include "beam_common.h"
 #include "vdifio.h"
 #include "filter.h"
-#include "mycomplex.h"
+#include <cuComplex.h>
 
 #define  VDIF_HEADER_SIZE  32
 
@@ -73,15 +73,15 @@ void populate_vdif_header(
         struct delays   *delay_vals,
         int              npointing );
 
-ComplexFloat get_std_dev_complex( ComplexFloat *input, int nsamples );
+cuFloatComplex get_std_dev_complex( cuFloatComplex *input, int nsamples );
 
-void set_level_occupancy( ComplexFloat *input, int nsamples,
+void set_level_occupancy( cuFloatComplex *input, int nsamples,
                           float *new_gain );
 
-void get_mean_complex( ComplexFloat *input, int nsamples, float *rmean,
-                       float *imean, ComplexFloat *cmean );
+void get_mean_complex( cuFloatComplex *input, int nsamples, float *rmean,
+                       float *imean, cuFloatComplex *cmean );
 
-void normalise_complex( ComplexFloat *input, int nsamples, float scale );
+void normalise_complex( cuFloatComplex *input, int nsamples, float scale );
 
 void to_offset_binary( int8_t *i, int n );
 

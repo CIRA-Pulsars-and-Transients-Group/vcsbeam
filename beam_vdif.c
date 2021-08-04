@@ -18,7 +18,7 @@
 #include "vdifio.h"
 #include "ascii_header.h"
 #include "filter.h"
-#include "mycomplex.h"
+#include <cuComplex.h>
 
 void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
                         float *data_buffer_vdif )
@@ -175,7 +175,7 @@ void populate_vdif_header(
 }
 
 
-ComplexFloat get_std_dev_complex(ComplexFloat *input, int nsamples)
+cuFloatComplex get_std_dev_complex(cuFloatComplex *input, int nsamples)
 {
     // assume zero mean
     float rtotal = 0;
@@ -185,17 +185,17 @@ ComplexFloat get_std_dev_complex(ComplexFloat *input, int nsamples)
     int i;
 
     for (i=0;i<nsamples;i++){
-         rtotal = rtotal+(CRealf(input[i])*CRealf(input[i]));
-         itotal = itotal+(CImagf(input[i])*CImagf(input[i]));
+         rtotal = rtotal+(cuCrealf(input[i])*cuCrealf(input[i]));
+         itotal = itotal+(cuCimagf(input[i])*cuCimagf(input[i]));
 
      }
     rsigma = sqrtf((1.0/(nsamples-1))*rtotal);
     isigma = sqrtf((1.0/(nsamples-1))*itotal);
 
-    return CMakef( rsigma, isigma );
+    return make_cuFloatComplex( rsigma, isigma );
 }
 
-void set_level_occupancy(ComplexFloat *input, int nsamples, float *new_gain)
+void set_level_occupancy(cuFloatComplex *input, int nsamples, float *new_gain)
 {
     //float percentage = 0.0;
     //float occupancy = 17.0;
@@ -208,13 +208,13 @@ void set_level_occupancy(ComplexFloat *input, int nsamples, float *new_gain)
     //while (percentage_clipped > 0 && percentage_clipped > limit) {
         int clipped = 0;
         for (i = 0; i < nsamples; i++) {
-            if (isnan(CRealf(input[i])) || isnan(CImagf(input[i])))
+            if (isnan(cuCrealf(input[i])) || isnan(cuCimagf(input[i])))
             {
                 fprintf( stderr, "error: set_level_occupancy: input[%d] = "
                                  "NaN\n", i );
                 exit(EXIT_FAILURE);
             }
-            if (fabs(gain*CRealf(input[i])) > 127 || fabs(gain*CImagf(input[i])) > 127 )
+            if (fabs(gain*cuCrealf(input[i])) > 127 || fabs(gain*cuCimagf(input[i])) > 127 )
             {
                 clipped++;
             }
@@ -233,35 +233,35 @@ void set_level_occupancy(ComplexFloat *input, int nsamples, float *new_gain)
 }
 
 
-void get_mean_complex( ComplexFloat *input, int nsamples, float *rmean,
-                       float *imean, ComplexFloat *cmean)
+void get_mean_complex( cuFloatComplex *input, int nsamples, float *rmean,
+                       float *imean, cuFloatComplex *cmean)
 {
     int i;
 
     float rtotal = 0;
     float itotal = 0 ;
 
-    ComplexFloat ctotal = CMakef( 0.0, 0.0 );
+    cuFloatComplex ctotal = make_cuFloatComplex( 0.0, 0.0 );
 
     for (i = 0; i < nsamples; i++)
     {
-//if (isnan(CRealf(input[i])) || isnan(CImagf(input[i]))) { fprintf(stderr, "\ninput[%d] = %e + %e*I\n\n", i, CRealf(input[i]), CImagf(input[i])); exit(1); }
-        rtotal += CRealf( input[i] );
-        itotal += CImagf( input[i] );
-        ctotal  = CAddf( ctotal, input[i] );
+//if (isnan(cuCrealf(input[i])) || isnan(cuCimagf(input[i]))) { fprintf(stderr, "\ninput[%d] = %e + %e*I\n\n", i, cuCrealf(input[i]), cuCimagf(input[i])); exit(1); }
+        rtotal += cuCrealf( input[i] );
+        itotal += cuCimagf( input[i] );
+        ctotal  = cuCaddf( ctotal, input[i] );
     }
 
     *rmean = rtotal / nsamples;
     *imean = itotal / nsamples;
-    *cmean = CSclf( ctotal, 1.0 / (float)nsamples );
+    *cmean = make_cuFloatComplex( cuCrealf(ctotal)/(float)nsamples, cuCimagf(ctotal)/(float)nsamples );
 }
 
-void normalise_complex(ComplexFloat *input, int nsamples, float scale)
+void normalise_complex(cuFloatComplex *input, int nsamples, float scale)
 {
     int i=0;
 
     for (i=0;i<nsamples;i++){
-        input[i] = CSclf( input[i], scale );
+        input[i] = make_cuFloatComplex( cuCrealf(input[i])*scale, cuCimagf(input[i])*scale );
     }
 }
 
