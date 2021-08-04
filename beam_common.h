@@ -8,8 +8,8 @@
 #define BEAM_COMMON_H
 
 #include <inttypes.h>
-#include "mycomplex.h"
 #include "mwa_hyperbeam.h"
+#include <cuComplex.h>
 
 // Calibration solution types
 #define NO_CALIBRATION  0
@@ -128,11 +128,11 @@ void get_delays(
         double                 sec_offset,
         struct delays          delay_vals[],
         struct metafits_info  *mi,
-        ComplexDouble      ****complex_weights_array,  // output
-        ComplexDouble      ****invJi                   // output
+        cuDoubleComplex      ****complex_weights_array,  // output
+        cuDoubleComplex      ****invJi                   // output
 );
 
-int calcEjones_analytic(ComplexDouble response[MAX_POLS], // pointer to 4-element (2x2) voltage gain Jones matrix
+int calcEjones_analytic(cuDoubleComplex response[MAX_POLS], // pointer to 4-element (2x2) voltage gain Jones matrix
                const long freq, // observing freq (Hz)
                const float lat, // observing latitude (radians)
                const float az0, // azimuth & zenith angle of tile pointing
@@ -169,11 +169,11 @@ void flatten_bandpass(
         void *data);
 
 void read_data( char *filename, uint8_t *data, int nbytes );
-int read_rts_file(ComplexDouble **G, ComplexDouble *Jref,
+int read_rts_file(cuDoubleComplex **G, cuDoubleComplex *Jref,
                   double *amp, char *fname);
-int read_bandpass_file( ComplexDouble ***Jm, ComplexDouble ***Jf,
+int read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
                         int chan_width, int nchan, int nant, char *filename );
-int read_offringa_gains_file( ComplexDouble **antenna_gain, int nant,
+int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
                               int coarse_chan, char *gains_file, int *order );
 
 
@@ -186,15 +186,15 @@ double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
 
 /**** MATRIX OPERATIONS ****/
 
-void cp2x2(ComplexDouble *Min, ComplexDouble *Mout);
-void inv2x2(ComplexDouble *Min, ComplexDouble *Mout);
+void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout);
+void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout);
 void inv2x2d(double *Min, double *Mout);
-void inv2x2S(ComplexDouble *Min, ComplexDouble **Mout);
-void mult2x2d(ComplexDouble *M1, ComplexDouble *M2, ComplexDouble *Mout);
-void mult2x2d_RxC(double *M1, ComplexDouble *M2, ComplexDouble *Mout);
-void mult2x2d_CxR(ComplexDouble *M1, double *M2, ComplexDouble *Mout);
-void conj2x2(ComplexDouble *M, ComplexDouble *Mout);
-double norm2x2(ComplexDouble *M, ComplexDouble *Mout);
-void swap_columns( ComplexDouble *in, ComplexDouble *out );
+void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex **Mout);
+void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout);
+void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout);
+void mult2x2d_CxR(cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout);
+void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout);
+double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout);
+void swap_columns( cuDoubleComplex *in, cuDoubleComplex *out );
 
 #endif

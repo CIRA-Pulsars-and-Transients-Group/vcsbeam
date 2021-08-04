@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <cuComplex.h>
 #include "vdifio.h"
 #include "psrfits.h"
 #include "star/pal.h"
@@ -18,7 +19,6 @@
 #include "vdifio.h"
 #include "ascii_header.h"
 #include "filter.h"
-#include <cuComplex.h>
 
 void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
                         float *data_buffer_vdif )

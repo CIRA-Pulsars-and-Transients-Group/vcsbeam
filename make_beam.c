@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <math.h>
+#include <cuComplex.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
@@ -27,7 +28,6 @@
 #include "vdifio.h"
 #include "filter.h"
 #include "psrfits.h"
-#include <cuComplex.h>
 #include "form_beam.h"
 #include <omp.h>
 

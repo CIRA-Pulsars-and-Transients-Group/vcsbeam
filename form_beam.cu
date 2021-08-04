@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <cuComplex.h>
 #include <time.h>
 #include <cuda_runtime.h>
-#include <cuComplex.h>
 
 extern "C" {
 #include "beam_common.h"

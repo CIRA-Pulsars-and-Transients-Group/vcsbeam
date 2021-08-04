@@ -5,11 +5,11 @@
  ********************************************************/
 
 #include <cuda_runtime.h>
+#include <cuComplex.h>
 
 #ifndef FORM_BEAM_H
 #define FORM_BEAM_H
 
-#include <cuComplex.h>
 #include "beam_common.h"
 
 #define NANT  128

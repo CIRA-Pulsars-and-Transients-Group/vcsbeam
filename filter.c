@@ -35,7 +35,7 @@ cuDoubleComplex *roots_of_unity( int N )
     {
         // e^{2πin/N}
         double th = 2*M_PI*(double)n/(double)N;
-        roots[n] = make_cuDoubleComplex( cos(th), sin(th) );
+        roots[n] = make_cuDoubleComplex(cos(th), sin(th));
     }
 
     return roots;
