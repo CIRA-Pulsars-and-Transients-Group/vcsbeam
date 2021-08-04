@@ -299,7 +299,7 @@ void read_data( char *filename, uint8_t *data, int nbytes ) {
 }
 
 
-int read_rts_file(ComplexDouble **G, ComplexDouble *Jref,
+int read_rts_file(cuDoubleComplex **G, cuDoubleComplex *Jref,
                   double *amp, char *fname)
 {
     FILE *fp = NULL;
@@ -328,19 +328,19 @@ int read_rts_file(ComplexDouble **G, ComplexDouble *Jref,
             sscanf(line, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf", &re0,
                            &im0, &re1, &im1, &re2, &im2, &re3, &im3);
 
-            Jref[0] = CMaked( re0, im0 );
-            Jref[1] = CMaked( re1, im1 );
-            Jref[2] = CMaked( re2, im2 );
-            Jref[3] = CMaked( re3, im3 );
+            Jref[0] = make_cuDoubleComplex( re0, im0 );
+            Jref[1] = make_cuDoubleComplex( re1, im1 );
+            Jref[2] = make_cuDoubleComplex( re2, im2 );
+            Jref[3] = make_cuDoubleComplex( re3, im3 );
 
         }
         if (index > 0) {
             sscanf(line, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf", &re0,
                            &im0, &re1, &im1, &re2, &im2, &re3, &im3);
-            G[index - 1][0] = CMaked( re0, im0 );
-            G[index - 1][1] = CMaked( re1, im1 );
-            G[index - 1][2] = CMaked( re2, im2 );
-            G[index - 1][3] = CMaked( re3, im3 );
+            G[index - 1][0] = make_cuDoubleComplex( re0, im0 );
+            G[index - 1][1] = make_cuDoubleComplex( re1, im1 );
+            G[index - 1][2] = make_cuDoubleComplex( re2, im2 );
+            G[index - 1][3] = make_cuDoubleComplex( re3, im3 );
         }
 
         index++;
@@ -355,8 +355,8 @@ int read_rts_file(ComplexDouble **G, ComplexDouble *Jref,
 
 
 int read_bandpass_file(
-        ComplexDouble ***Jm, // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
-        ComplexDouble ***Jf, // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
+        cuDoubleComplex ***Jm, // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
+        cuDoubleComplex ***Jf, // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
         int chan_width,       // Input:  channel width of one column in file (in Hz)
         int nchan,            // Input:  (max) number of channels in one file (=128/(chan_width/10000))
         int nant,             // Input:  (max) number of antennas in one file (=128)
@@ -411,7 +411,7 @@ int read_bandpass_file(
     double amp,ph;             // For holding the read-in value pairs (real, imaginary)
     int pol;                   // Number between 0 and 3. Corresponds to position in Jm/Jf matrices: [0,1]
                                //                                                                    [2,3]
-    ComplexDouble ***J;       // Either points to Jm or Jf, according to which row we're on
+    cuDoubleComplex ***J;       // Either points to Jm or Jf, according to which row we're on
 
     while (1) {   // Will terminate when EOF is reached
 
@@ -458,7 +458,7 @@ int read_bandpass_file(
             ch = chan_idxs[ci];                 // Get the channel number
             fscanf(f, "%lf,%lf,", &amp, &ph);   // Read in the re,im pairs in each row
 
-            J[ant][ch][pol] = CScld( CExpd( CMaked(0.0, ph) ), amp );
+            J[ant][ch][pol] = make_cuDoubleComplex( amp*cos(ph), amp*sin(ph) );
                                                 // Convert to complex number and store in output array
         }
 
@@ -469,7 +469,7 @@ int read_bandpass_file(
 }
 
 
-int read_offringa_gains_file( ComplexDouble **antenna_gain, int nant,
+int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
                               int coarse_chan, char *gains_file, int *order )
 {
     // Assumes that memory for antenna has already been allocated
@@ -518,11 +518,11 @@ int read_offringa_gains_file( ComplexDouble **antenna_gain, int nant,
 
     // Prepare to jump to the first solution to be read in
     int bytes_left_in_header = 16;
-    int bytes_to_first_jones = bytes_left_in_header + (npols * coarse_chan * sizeof(ComplexDouble));
+    int bytes_to_first_jones = bytes_left_in_header + (npols * coarse_chan * sizeof(cuDoubleComplex));
          //     (See Offringa's specs for details)
          //     Assumes coarse_chan is zero-offset
          //     sizeof(complex double) *must* be 64-bit x 2 = 16-byte
-    int bytes_to_next_jones = npols * (channelCount-1) * sizeof(ComplexDouble);
+    int bytes_to_next_jones = npols * (channelCount-1) * sizeof(cuDoubleComplex);
 
     int ant, pol;           // Iterate through antennas and polarisations
     int pol_idx, ant_idx;   // Used for "re-ordering" the antennas and pols
@@ -565,13 +565,13 @@ int read_offringa_gains_file( ComplexDouble **antenna_gain, int nant,
 
                 // If NaN, set to identity matrix
                 if (pol_idx == 0 || pol_idx == 3)
-                    antenna_gain[ant_idx][pol_idx] = CMaked( 1.0, 0.0 );
+                    antenna_gain[ant_idx][pol_idx] = make_cuDoubleComplex( 1.0, 0.0 );
                 else
-                    antenna_gain[ant_idx][pol_idx] = CMaked( 0.0, 0.0 );
+                    antenna_gain[ant_idx][pol_idx] = make_cuDoubleComplex( 0.0, 0.0 );
 
             }
             else {
-                antenna_gain[ant_idx][pol_idx] = CMaked( re, im );
+                antenna_gain[ant_idx][pol_idx] = make_cuDoubleComplex( re, im );
             }
 
             count++;
@@ -636,7 +636,7 @@ void float_to_unit8(float * in, int n, int8_t *out)
 
 }
 
-void cp2x2(ComplexDouble *Min, ComplexDouble *Mout)
+void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 {
     Mout[0] = Min[0];
     Mout[1] = Min[1];
@@ -645,23 +645,23 @@ void cp2x2(ComplexDouble *Min, ComplexDouble *Mout)
 }
 
 
-void inv2x2(ComplexDouble *Min, ComplexDouble *Mout)
+void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 {
-    ComplexDouble m00 = Min[0];
-    ComplexDouble m01 = Min[1];
-    ComplexDouble m10 = Min[2];
-    ComplexDouble m11 = Min[3];
+    cuDoubleComplex m00 = Min[0];
+    cuDoubleComplex m01 = Min[1];
+    cuDoubleComplex m10 = Min[2];
+    cuDoubleComplex m11 = Min[3];
 
-    ComplexDouble m1 = CMuld( m00, m11 );
-    ComplexDouble m2 = CMuld( m01, m10 );
+    cuDoubleComplex m1 = cuCmul( m00, m11 );
+    cuDoubleComplex m2 = cuCmul( m01, m10 );
 
-    ComplexDouble det = CSubd( m1, m2 );
-    ComplexDouble inv_det = CRcpd( det );
+    cuDoubleComplex det = cuCsub( m1, m2 );
+    cuDoubleComplex inv_det = CRcpd( det );
 
-    Mout[0] = CMuld(       inv_det,  m11 );
-    Mout[1] = CMuld( CNegd(inv_det), m01 );
-    Mout[2] = CMuld( CNegd(inv_det), m10 );
-    Mout[3] = CMuld(       inv_det,  m00 );
+    Mout[0] = cuCmul(       inv_det,  m11 );
+    Mout[1] = cuCmul( CNegd(inv_det), m01 );
+    Mout[2] = cuCmul( CNegd(inv_det), m10 );
+    Mout[3] = cuCmul(       inv_det,  m00 );
 }
 
 void inv2x2d(double *Min, double *Mout)
@@ -684,74 +684,74 @@ void inv2x2d(double *Min, double *Mout)
 }
 
 
-void inv2x2S(ComplexDouble *Min, ComplexDouble **Mout)
+void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex **Mout)
 // Same as inv2x2(), but the output is a 2x2 2D array, instead of a 4-element
 // 1D array
 {
-    ComplexDouble m1 = CMuld( Min[0], Min[3] );
-    ComplexDouble m2 = CMuld( Min[1], Min[2] );
-    ComplexDouble det = CSubd( m1, m2 );
-    ComplexDouble inv_det = CRcpd( det );
-    Mout[0][0] = CMuld(       inv_det,  Min[3] );
-    Mout[0][1] = CMuld( CNegd(inv_det), Min[1] );
-    Mout[1][0] = CMuld( CNegd(inv_det), Min[2] );
-    Mout[1][1] = CMuld(       inv_det,  Min[0] );
+    cuDoubleComplex m1 = cuCmul( Min[0], Min[3] );
+    cuDoubleComplex m2 = cuCmul( Min[1], Min[2] );
+    cuDoubleComplex det = cuCsub( m1, m2 );
+    cuDoubleComplex inv_det = CRcpd( det );
+    Mout[0][0] = cuCmul(       inv_det,  Min[3] );
+    Mout[0][1] = cuCmul( CNegd(inv_det), Min[1] );
+    Mout[1][0] = cuCmul( CNegd(inv_det), Min[2] );
+    Mout[1][1] = cuCmul(       inv_det,  Min[0] );
 }
 
 
-void mult2x2d(ComplexDouble *M1, ComplexDouble *M2, ComplexDouble *Mout)
+void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
 {
-    ComplexDouble m00 = CMuld( M1[0], M2[0] );
-    ComplexDouble m12 = CMuld( M1[1], M2[2] );
-    ComplexDouble m01 = CMuld( M1[0], M2[1] );
-    ComplexDouble m13 = CMuld( M1[1], M2[3] );
-    ComplexDouble m20 = CMuld( M1[2], M2[0] );
-    ComplexDouble m32 = CMuld( M1[3], M2[2] );
-    ComplexDouble m21 = CMuld( M1[2], M2[1] );
-    ComplexDouble m33 = CMuld( M1[3], M2[3] );
-    Mout[0] = CAddd( m00, m12 );
-    Mout[1] = CAddd( m01, m13 );
-    Mout[2] = CAddd( m20, m32 );
-    Mout[3] = CAddd( m21, m33 );
+    cuDoubleComplex m00 = cuCmul( M1[0], M2[0] );
+    cuDoubleComplex m12 = cuCmul( M1[1], M2[2] );
+    cuDoubleComplex m01 = cuCmul( M1[0], M2[1] );
+    cuDoubleComplex m13 = cuCmul( M1[1], M2[3] );
+    cuDoubleComplex m20 = cuCmul( M1[2], M2[0] );
+    cuDoubleComplex m32 = cuCmul( M1[3], M2[2] );
+    cuDoubleComplex m21 = cuCmul( M1[2], M2[1] );
+    cuDoubleComplex m33 = cuCmul( M1[3], M2[3] );
+    Mout[0] = cuCadd( m00, m12 );
+    Mout[1] = cuCadd( m01, m13 );
+    Mout[2] = cuCadd( m20, m32 );
+    Mout[3] = cuCadd( m21, m33 );
 }
 
-void mult2x2d_RxC(double *M1, ComplexDouble *M2, ComplexDouble *Mout)
+void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
 /* Mout = M1 x M2
  */
 {
-    ComplexDouble m00 = CScld( M2[0], M1[0] );
-    ComplexDouble m12 = CScld( M2[2], M1[1] );
-    ComplexDouble m01 = CScld( M2[1], M1[0] );
-    ComplexDouble m13 = CScld( M2[3], M1[1] );
-    ComplexDouble m20 = CScld( M2[0], M1[2] );
-    ComplexDouble m32 = CScld( M2[2], M1[3] );
-    ComplexDouble m21 = CScld( M2[1], M1[2] );
-    ComplexDouble m33 = CScld( M2[3], M1[3] );
-    Mout[0] = CAddd( m00, m12 );
-    Mout[1] = CAddd( m01, m13 );
-    Mout[2] = CAddd( m20, m32 );
-    Mout[3] = CAddd( m21, m33 );
+    cuDoubleComplex m00 = CScld( M2[0], M1[0] );
+    cuDoubleComplex m12 = CScld( M2[2], M1[1] );
+    cuDoubleComplex m01 = CScld( M2[1], M1[0] );
+    cuDoubleComplex m13 = CScld( M2[3], M1[1] );
+    cuDoubleComplex m20 = CScld( M2[0], M1[2] );
+    cuDoubleComplex m32 = CScld( M2[2], M1[3] );
+    cuDoubleComplex m21 = CScld( M2[1], M1[2] );
+    cuDoubleComplex m33 = CScld( M2[3], M1[3] );
+    Mout[0] = cuCadd( m00, m12 );
+    Mout[1] = cuCadd( m01, m13 );
+    Mout[2] = cuCadd( m20, m32 );
+    Mout[3] = cuCadd( m21, m33 );
 }
 
-void mult2x2d_CxR(ComplexDouble *M1, double *M2, ComplexDouble *Mout)
+void mult2x2d_CxR(cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout)
 /* Mout = M1 x M2
  */
 {
-    ComplexDouble m00 = CScld( M1[0], M2[0] );
-    ComplexDouble m21 = CScld( M1[2], M2[1] );
-    ComplexDouble m01 = CScld( M1[0], M2[1] );
-    ComplexDouble m13 = CScld( M1[1], M2[3] );
-    ComplexDouble m20 = CScld( M1[2], M2[0] );
-    ComplexDouble m32 = CScld( M1[3], M2[2] );
-    ComplexDouble m12 = CScld( M1[1], M2[2] );
-    ComplexDouble m33 = CScld( M1[3], M2[3] );
-    Mout[0] = CAddd( m00, m12 );
-    Mout[1] = CAddd( m01, m13 );
-    Mout[2] = CAddd( m20, m32 );
-    Mout[3] = CAddd( m21, m33 );
+    cuDoubleComplex m00 = CScld( M1[0], M2[0] );
+    cuDoubleComplex m21 = CScld( M1[2], M2[1] );
+    cuDoubleComplex m01 = CScld( M1[0], M2[1] );
+    cuDoubleComplex m13 = CScld( M1[1], M2[3] );
+    cuDoubleComplex m20 = CScld( M1[2], M2[0] );
+    cuDoubleComplex m32 = CScld( M1[3], M2[2] );
+    cuDoubleComplex m12 = CScld( M1[1], M2[2] );
+    cuDoubleComplex m33 = CScld( M1[3], M2[3] );
+    Mout[0] = cuCadd( m00, m12 );
+    Mout[1] = cuCadd( m01, m13 );
+    Mout[2] = cuCadd( m20, m32 );
+    Mout[3] = cuCadd( m21, m33 );
 }
 
-void conj2x2(ComplexDouble *M, ComplexDouble *Mout)
+void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 /* Calculate the conjugate of a matrix
  * It is safe for M and Mout to point to the same matrix
  */
@@ -762,7 +762,7 @@ void conj2x2(ComplexDouble *M, ComplexDouble *Mout)
 }
 
 
-double norm2x2(ComplexDouble *M, ComplexDouble *Mout)
+double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 /* Normalise a 2x2 matrix via the Frobenius norm
  * It is safe for M and Mout to point to the same matrix.
  */
@@ -771,7 +771,7 @@ double norm2x2(ComplexDouble *M, ComplexDouble *Mout)
     double Fnorm = 0.0;
     int i;
     for (i = 0; i < 4; i++)
-        Fnorm += CReald( CMuld( M[i], CConjd(M[i]) ) );
+        Fnorm += CReald( cuCmul( M[i], CConjd(M[i]) ) );
 
     Fnorm = sqrt(Fnorm);
 
@@ -779,7 +779,7 @@ double norm2x2(ComplexDouble *M, ComplexDouble *Mout)
     // If norm is 0, then output zeros everywhere
     for (i = 0; i < 4; i++) {
         if (Fnorm == 0.0)
-            Mout[i] = CMaked( 0.0, 0.0 );
+            Mout[i] = make_cuDoubleComplex( 0.0, 0.0 );
         else
             Mout[i] = CScld( M[i], 1.0 / Fnorm );
     }
@@ -832,11 +832,11 @@ void dec2hms( char *out, double in, int sflag )
 }
 
 
-void swap_columns( ComplexDouble *in, ComplexDouble *out )
+void swap_columns( cuDoubleComplex *in, cuDoubleComplex *out )
 {
     // Put it in a temporary array so that this function still behaves as
     // expected when in == out
-    ComplexDouble tmp[4];
+    cuDoubleComplex tmp[4];
     tmp[0] = CScld( in[1], 1.0 );
     tmp[1] = CScld( in[0], 1.0 );
     tmp[2] = CScld( in[3], 1.0 );
