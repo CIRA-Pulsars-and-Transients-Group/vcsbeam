@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <cuComplex.h>
 #include "beam_common.h"
 #include "psrfits.h"
-#include "mycomplex.h"
 #include "mwa_hyperbeam.h"
 
 void get_metafits_info( char *metafits, struct metafits_info *mi, unsigned int chan_width ) {
@@ -730,32 +730,14 @@ void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
 /* Mout = M1 x M2
  */
 {
-    cuDoubleComplex m00 = CScld( M2[0], M1[0] );
-    cuDoubleComplex m12 = CScld( M2[2], M1[1] );
-    cuDoubleComplex m01 = CScld( M2[1], M1[0] );
-    cuDoubleComplex m13 = CScld( M2[3], M1[1] );
-    cuDoubleComplex m20 = CScld( M2[0], M1[2] );
-    cuDoubleComplex m32 = CScld( M2[2], M1[3] );
-    cuDoubleComplex m21 = CScld( M2[1], M1[2] );
-    cuDoubleComplex m33 = CScld( M2[3], M1[3] );
-    Mout[0] = cuCadd( m00, m12 );
-    Mout[1] = cuCadd( m01, m13 );
-    Mout[2] = cuCadd( m20, m32 );
-    Mout[3] = cuCadd( m21, m33 );
-}
-
-void mult2x2d_CxR(cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout)
-/* Mout = M1 x M2
- */
-{
-    cuDoubleComplex m00 = CScld( M1[0], M2[0] );
-    cuDoubleComplex m21 = CScld( M1[2], M2[1] );
-    cuDoubleComplex m01 = CScld( M1[0], M2[1] );
-    cuDoubleComplex m13 = CScld( M1[1], M2[3] );
-    cuDoubleComplex m20 = CScld( M1[2], M2[0] );
-    cuDoubleComplex m32 = CScld( M1[3], M2[2] );
-    cuDoubleComplex m12 = CScld( M1[1], M2[2] );
-    cuDoubleComplex m33 = CScld( M1[3], M2[3] );
+    cuDoubleComplex m00 = make_cuDoubleComplex( M1[0]*cuCreal(M2[0]), M1[0]*cuCimag(M2[0]) );
+    cuDoubleComplex m12 = make_cuDoubleComplex( M1[1]*cuCreal(M2[2]), M1[1]*cuCimag(M2[2]) );
+    cuDoubleComplex m01 = make_cuDoubleComplex( M1[0]*cuCreal(M2[1]), M1[0]*cuCimag(M2[1]) );
+    cuDoubleComplex m13 = make_cuDoubleComplex( M1[1]*cuCreal(M2[3]), M1[1]*cuCimag(M2[3]) );
+    cuDoubleComplex m20 = make_cuDoubleComplex( M1[2]*cuCreal(M2[0]), M1[2]*cuCimag(M2[0]) );
+    cuDoubleComplex m32 = make_cuDoubleComplex( M1[3]*cuCreal(M2[2]), M1[3]*cuCimag(M2[2]) );
+    cuDoubleComplex m21 = make_cuDoubleComplex( M1[2]*cuCreal(M2[1]), M1[2]*cuCimag(M2[1]) );
+    cuDoubleComplex m33 = make_cuDoubleComplex( M1[3]*cuCreal(M2[3]), M1[3]*cuCimag(M2[3]) );
     Mout[0] = cuCadd( m00, m12 );
     Mout[1] = cuCadd( m01, m13 );
     Mout[2] = cuCadd( m20, m32 );
@@ -769,7 +751,7 @@ void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 {
     int i;
     for (i = 0; i < 4; i++)
-        Mout[i] = CConjd(M[i]);
+        Mout[i] = cuConj(M[i]);
 }
 
 
@@ -782,7 +764,7 @@ double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
     double Fnorm = 0.0;
     int i;
     for (i = 0; i < 4; i++)
-        Fnorm += CReald( cuCmul( M[i], CConjd(M[i]) ) );
+        Fnorm += cuCreal( cuCmul( M[i], cuConj(M[i]) ) );
 
     Fnorm = sqrt(Fnorm);
 
@@ -792,7 +774,7 @@ double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
         if (Fnorm == 0.0)
             Mout[i] = make_cuDoubleComplex( 0.0, 0.0 );
         else
-            Mout[i] = CScld( M[i], 1.0 / Fnorm );
+            Mout[i] = make_cuDoubleComplex( cuCreal(M[i])/Fnorm, cuCimag(M[i])/Fnorm );
     }
 
     return Fnorm;
@@ -843,18 +825,4 @@ void dec2hms( char *out, double in, int sflag )
 }
 
 
-void swap_columns( cuDoubleComplex *in, cuDoubleComplex *out )
-{
-    // Put it in a temporary array so that this function still behaves as
-    // expected when in == out
-    cuDoubleComplex tmp[4];
-    tmp[0] = CScld( in[1], 1.0 );
-    tmp[1] = CScld( in[0], 1.0 );
-    tmp[2] = CScld( in[3], 1.0 );
-    tmp[3] = CScld( in[2], 1.0 );
-
-    int i;
-    for (i = 0; i < 4; i++)
-        out[i] = CScld( tmp[i], 1.0 );
-}
 

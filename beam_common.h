@@ -192,9 +192,7 @@ void inv2x2d(double *Min, double *Mout);
 void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex **Mout);
 void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout);
 void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout);
-void mult2x2d_CxR(cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout);
 void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout);
 double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout);
-void swap_columns( cuDoubleComplex *in, cuDoubleComplex *out );
 
 #endif
