@@ -23,7 +23,7 @@ cmake -DCMAKE_INSTALL_PREFIX=[target installation directory] \
       ..
 ```
 
-If some of the dependencies are in non-standard locations, cmake can be helped by setting the following cmake variables (using the -DVARIABLE=key syntax):
+If some of the dependencies are in non-standard locations, cmake can be helped by setting the following cmake variables (using the -DVARIABLE=value syntax):
 ```bash
 PAL_ROOT_DIR
 CFITSIO_ROOT_DIR
