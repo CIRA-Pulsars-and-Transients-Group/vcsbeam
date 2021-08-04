@@ -10,11 +10,11 @@
 #include <string.h>
 #include <time.h>
 #include <cuda_runtime.h>
+#include <cuComplex.h>
 
 extern "C" {
 #include "beam_common.h"
 #include "form_beam.h"
-#include "mycomplex.h"
 }
 
 
@@ -58,10 +58,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 #define NPOINTING 4
 
 __global__ void invj_the_data( uint8_t       *data,
-                               ComplexDouble *J,
-                               ComplexDouble *W,
-                               ComplexDouble *JDx,
-                               ComplexDouble *JDy,
+                               cuDoubleComplex *J,
+                               cuDoubleComplex *W,
+                               cuDoubleComplex *JDx,
+                               cuDoubleComplex *JDy,
                                float         *Ia,
                                int            incoh )
 /* Layout for input arrays:
@@ -80,7 +80,7 @@ __global__ void invj_the_data( uint8_t       *data,
 
     int ant  = threadIdx.x; /* The (ant)enna number */
 
-    ComplexDouble Dx, Dy;
+    cuDoubleComplex Dx, Dy;
     // Convert input data to complex float
     Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,ant,0,nc)]);
     Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,ant,1,nc)]);
@@ -88,10 +88,10 @@ __global__ void invj_the_data( uint8_t       *data,
     // If tile is flagged in the calibration, flag it in the incoherent beam
     if (incoh)
     {
-        if (CReald(W[W_IDX(0,ant,c,0,nc)]) == 0.0 &&
-            CImagd(W[W_IDX(0,ant,c,0,nc)]) == 0.0 &&
-            CReald(W[W_IDX(0,ant,c,1,nc)]) == 0.0 &&
-            CImagd(W[W_IDX(0,ant,c,1,nc)]) == 0.0)
+        if (cuCreal(W[W_IDX(0,ant,c,0,nc)]) == 0.0 &&
+            cuCimag(W[W_IDX(0,ant,c,0,nc)]) == 0.0 &&
+            cuCreal(W[W_IDX(0,ant,c,1,nc)]) == 0.0 &&
+            cuCimag(W[W_IDX(0,ant,c,1,nc)]) == 0.0)
             Ia[JD_IDX(s,c,ant,nc)] = 0.0;
         else
             Ia[JD_IDX(s,c,ant,nc)] = DETECT(Dx) + DETECT(Dy);
@@ -104,17 +104,17 @@ __global__ void invj_the_data( uint8_t       *data,
     // This is what I have implemented (as it produces higher signal-to-noise
     // ratio detections). The original code (the single-pixel beamformer)
     // switched the yx and xy terms but we get similar SNs
-    JDx[JD_IDX(s,c,ant,nc)] = CAddd( CMuld( J[J_IDX(ant,c,0,0,nc)], Dx ),
-                                     CMuld( J[J_IDX(ant,c,0,1,nc)], Dy ) );
-    JDy[JD_IDX(s,c,ant,nc)] = CAddd( CMuld( J[J_IDX(ant,c,1,0,nc)], Dx ),
-                                     CMuld( J[J_IDX(ant,c,1,1,nc)], Dy ) );
+    JDx[JD_IDX(s,c,ant,nc)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc)], Dx ),
+                                     cuCmul( J[J_IDX(ant,c,0,1,nc)], Dy ) );
+    JDy[JD_IDX(s,c,ant,nc)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc)], Dx ),
+                                     cuCmul( J[J_IDX(ant,c,1,1,nc)], Dy ) );
 
 
 }
 
-__global__ void beamform_kernel( ComplexDouble *JDx,
-                                 ComplexDouble *JDy,
-                                 ComplexDouble *W,
+__global__ void beamform_kernel( cuDoubleComplex *JDx,
+                                 cuDoubleComplex *JDy,
+                                 cuDoubleComplex *W,
                                  float *Iin,
                                  double invw,
                                  int p,
@@ -122,7 +122,7 @@ __global__ void beamform_kernel( ComplexDouble *JDx,
                                  int incoh,
                                  int soffset,
                                  int nchunk,
-                                 ComplexDouble *Bd,
+                                 cuDoubleComplex *Bd,
                                  float *C,
                                  float *I )
 /* Layout for input arrays:
@@ -159,9 +159,9 @@ __global__ void beamform_kernel( ComplexDouble *JDx,
 
     // Calculate the beam and the noise floor
     __shared__ double Ia[NSTATION];
-    __shared__ ComplexDouble Bx[NSTATION], By[NSTATION];
+    __shared__ cuDoubleComplex Bx[NSTATION], By[NSTATION];
 
-    __shared__ ComplexDouble Nxx[NSTATION], Nxy[NSTATION],
+    __shared__ cuDoubleComplex Nxx[NSTATION], Nxy[NSTATION],
                             Nyy[NSTATION];//Nyx[NSTATION]
 
 
@@ -169,13 +169,13 @@ __global__ void beamform_kernel( ComplexDouble *JDx,
     Apparently the different compilers and architectures are treating what were
     unintialised variables very differently */
 
-    Bx[ant]  = CMaked( 0.0, 0.0 );
-    By[ant]  = CMaked( 0.0, 0.0 );
+    Bx[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
+    By[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
 
-    Nxx[ant] = CMaked( 0.0, 0.0 );
-    Nxy[ant] = CMaked( 0.0, 0.0 );
-    //Nyx[ant] = CMaked( 0.0, 0.0 );
-    Nyy[ant] = CMaked( 0.0, 0.0 );
+    Nxx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
+    Nxy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
+    //Nyx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
+    Nyy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
 
     if ((p == 0) && (incoh)) Ia[ant] = Iin[JD_IDX(s,c,ant,nc)];
 
@@ -188,13 +188,13 @@ __global__ void beamform_kernel( ComplexDouble *JDx,
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*W*D)
-    Bx[ant] = CMuld( W[W_IDX(p,ant,c,0,nc)], JDx[JD_IDX(s,c,ant,nc)] );
-    By[ant] = CMuld( W[W_IDX(p,ant,c,1,nc)], JDy[JD_IDX(s,c,ant,nc)] );
+    Bx[ant] = cuCmul( W[W_IDX(p,ant,c,0,nc)], JDx[JD_IDX(s,c,ant,nc)] );
+    By[ant] = cuCmul( W[W_IDX(p,ant,c,1,nc)], JDy[JD_IDX(s,c,ant,nc)] );
 
-    Nxx[ant] = CMuld( Bx[ant], CConjd(Bx[ant]) );
-    Nxy[ant] = CMuld( Bx[ant], CConjd(By[ant]) );
-    //Nyx[ant] = CMuld( By[ant], CConjd(Bx[ant]) );
-    Nyy[ant] = CMuld( By[ant], CConjd(By[ant]) );
+    Nxx[ant] = cuCmul( Bx[ant], cuConj(Bx[ant]) );
+    Nxy[ant] = cuCmul( Bx[ant], cuConj(By[ant]) );
+    //Nyx[ant] = cuCmul( By[ant], cuConj(Bx[ant]) );
+    Nyy[ant] = cuCmul( By[ant], cuConj(By[ant]) );
 
     /*if ((p == 0) && (ant == 0) && (c == 0) && (s == 0))
     {
@@ -213,12 +213,12 @@ __global__ void beamform_kernel( ComplexDouble *JDx,
         if (ant < h_ant)
         {
             if ( (p == 0) && (incoh)) Ia[ant] += Ia[ant+h_ant];
-            Bx[ant]  = CAddd( Bx[ant],  Bx[ant  + h_ant] );
-            By[ant]  = CAddd( By[ant],  By[ant  + h_ant] );
-            Nxx[ant] = CAddd( Nxx[ant], Nxx[ant + h_ant] );
-            Nxy[ant] = CAddd( Nxy[ant], Nxy[ant + h_ant] );
-            //Nyx[ant]=CAddd( Nyx[ant], Nyx[ant + h_ant] );
-            Nyy[ant] = CAddd( Nyy[ant], Nyy[ant + h_ant] );
+            Bx[ant]  = cuCadd( Bx[ant],  Bx[ant  + h_ant] );
+            By[ant]  = cuCadd( By[ant],  By[ant  + h_ant] );
+            Nxx[ant] = cuCadd( Nxx[ant], Nxx[ant + h_ant] );
+            Nxy[ant] = cuCadd( Nxy[ant], Nxy[ant + h_ant] );
+            //Nyx[ant]=cuCadd( Nyx[ant], Nyx[ant + h_ant] );
+            Nyy[ant] = cuCadd( Nyy[ant], Nyy[ant + h_ant] );
         }
         // below makes no difference so removed
         // else return;
@@ -237,9 +237,9 @@ __global__ void beamform_kernel( ComplexDouble *JDx,
     // Only doing it for ant 0 so that it only prints once
     if ( ant == 0 )
     {
-        float bnXX = DETECT(Bx[0]) - CReald(Nxx[0]);
-        float bnYY = DETECT(By[0]) - CReald(Nyy[0]);
-        ComplexDouble bnXY = CSubd( CMuld( Bx[0], CConjd( By[0] ) ),
+        float bnXX = DETECT(Bx[0]) - cuCreal(Nxx[0]);
+        float bnYY = DETECT(By[0]) - cuCreal(Nyy[0]);
+        cuDoubleComplex bnXY = cuCsub( cuCmul( Bx[0], cuConj( By[0] ) ),
                                     Nxy[0] );
 
         // The incoherent beam
@@ -250,8 +250,8 @@ __global__ void beamform_kernel( ComplexDouble *JDx,
         if ( coh_pol == 4 )
         {
             C[C_IDX(p,s+soffset,1,c,ns,coh_pol,nc)] = invw*(bnXX - bnYY);
-            C[C_IDX(p,s+soffset,2,c,ns,coh_pol,nc)] =  2.0*invw*CReald( bnXY );
-            C[C_IDX(p,s+soffset,3,c,ns,coh_pol,nc)] = -2.0*invw*CImagd( bnXY );
+            C[C_IDX(p,s+soffset,2,c,ns,coh_pol,nc)] =  2.0*invw*cuCreal( bnXY );
+            C[C_IDX(p,s+soffset,3,c,ns,coh_pol,nc)] = -2.0*invw*cuCimag( bnXY );
         }
 
         // The beamformed products
@@ -355,12 +355,12 @@ __global__ void flatten_bandpass_C_kernel( float *C, int nstep )
 
 
 void cu_form_beam( uint8_t *data, struct make_beam_opts *opts,
-                   ComplexDouble ****complex_weights_array,
-                   ComplexDouble ****invJi, int file_no,
+                   cuDoubleComplex ****complex_weights_array,
+                   cuDoubleComplex ****invJi, int file_no,
                    int npointing, int nstation, int nchan,
                    int npol, int outpol_coh, double invw,
                    struct gpu_formbeam_arrays *g,
-                   ComplexDouble ****detected_beam, float *coh, float *incoh,
+                   cuDoubleComplex ****detected_beam, float *coh, float *incoh,
                    cudaStream_t *streams, int incoh_check, int nchunk )
 /* The CPU version of the beamforming operations, using OpenMP for
 * parallelisation.
@@ -507,11 +507,11 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
     g->incoh_size  = sample_rate * outpol_incoh * nchan * sizeof(float);
     data_base_size = sample_rate * nstation * nchan * npol * sizeof(uint8_t);
     //g->data_size  = sample_rate * nstation * nchan * npol / nchunk * sizeof(uint8_t);
-    g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(ComplexDouble);
-    g->W_size      = npointing * nstation * nchan * npol * sizeof(ComplexDouble);
-    g->J_size      = nstation * nchan * npol * npol * sizeof(ComplexDouble);
-    JD_base_size   = sample_rate * nstation * nchan * sizeof(ComplexDouble);
-    //g->JD_size    = sample_rate * nstation * nchan / nchunk * sizeof(ComplexDouble);
+    g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
+    g->W_size      = npointing * nstation * nchan * npol * sizeof(cuDoubleComplex);
+    g->J_size      = nstation * nchan * npol * npol * sizeof(cuDoubleComplex);
+    JD_base_size   = sample_rate * nstation * nchan * sizeof(cuDoubleComplex);
+    //g->JD_size    = sample_rate * nstation * nchan / nchunk * sizeof(cuDoubleComplex);
     
     size_t gpu_mem;
     if ( gpu_mem_gb == -1.0f ) {
@@ -550,9 +550,9 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
 
 
     // Allocate host memory
-    //g->W  = (ComplexDouble *)malloc( g->W_size );
-    //g->J  = (ComplexDouble *)malloc( g->J_size );
-    //g->Bd = (ComplexDouble *)malloc( g->Bd_size );
+    //g->W  = (cuDoubleComplex *)malloc( g->W_size );
+    //g->J  = (cuDoubleComplex *)malloc( g->J_size );
+    //g->Bd = (cuDoubleComplex *)malloc( g->Bd_size );
     cudaMallocHost( &g->W, g->W_size );
     cudaCheckErrors("cudaMallocHost W fail");
     cudaMallocHost( &g->J, g->J_size );
@@ -624,8 +624,8 @@ float *create_pinned_data_buffer_vdif( size_t size )
 }
 
 void populate_weights_johnes( struct gpu_formbeam_arrays *g,
-                              ComplexDouble ****complex_weights_array,
-                              ComplexDouble *****invJi,
+                              cuDoubleComplex ****complex_weights_array,
+                              cuDoubleComplex *****invJi,
                               int npointing, int nstation, int nchan, int npol )
 {
     // Setup input values (= populate W and J)

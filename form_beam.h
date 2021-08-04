@@ -9,7 +9,7 @@
 #ifndef FORM_BEAM_H
 #define FORM_BEAM_H
 
-#include "mycomplex.h"
+#include <cuComplex.h>
 #include "beam_common.h"
 
 #define NANT  128
@@ -31,11 +31,11 @@ struct gpu_formbeam_arrays
     size_t W_size;
     size_t J_size;
     size_t JD_size;
-    ComplexDouble *W, *d_W;
-    ComplexDouble *J, *d_J;
-    ComplexDouble *Bd, *d_Bd;
-    ComplexDouble *JDx, *d_JDx;
-    ComplexDouble *JDy, *d_JDy;
+    cuDoubleComplex *W, *d_W;
+    cuDoubleComplex *J, *d_J;
+    cuDoubleComplex *Bd, *d_Bd;
+    cuDoubleComplex *JDx, *d_JDx;
+    cuDoubleComplex *JDy, *d_JDy;
     uint8_t *d_data;
     float   *d_coh;
     float   *d_incoh;
@@ -107,17 +107,17 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
 #define UINT8_TO_INT(X)          ((X) >= 0x8 ? (signed int)(X) - 0x10 : (signed int)(X))
 #define RE_UCMPLX4_TO_FLT(X)  ((float)(UINT8_TO_INT(REAL_NIBBLE_TO_UINT8(X))))
 #define IM_UCMPLX4_TO_FLT(X)  ((float)(UINT8_TO_INT(IMAG_NIBBLE_TO_UINT8(X))))
-#define UCMPLX4_TO_CMPLX_FLT(X)  (CMaked((float)(UINT8_TO_INT(REAL_NIBBLE_TO_UINT8(X))), \
+#define UCMPLX4_TO_CMPLX_FLT(X)  (make_cuDoubleComplex((float)(UINT8_TO_INT(REAL_NIBBLE_TO_UINT8(X))), \
                                          (float)(UINT8_TO_INT(IMAG_NIBBLE_TO_UINT8(X)))))
-#define DETECT(X)                (CReald(CMuld(X,CConjd(X))))
+#define DETECT(X)                (cuCreal(cuCmul(X,cuConj(X))))
 
 
 
-void cu_form_beam( uint8_t *data, struct make_beam_opts *opts, ComplexDouble ****W,
-                   ComplexDouble ****J, int file_no, 
+void cu_form_beam( uint8_t *data, struct make_beam_opts *opts, cuDoubleComplex ****W,
+                   cuDoubleComplex ****J, int file_no, 
                    int npointing, int nstation, int nchan,
                    int npol, int outpol_coh, double invw, struct gpu_formbeam_arrays *g,
-                   ComplexDouble ****detected_beam, float *coh, float *incoh,
+                   cuDoubleComplex ****detected_beam, float *coh, float *incoh,
                    cudaStream_t *streams, int incoh_check, int nchunk  );
 
 float *create_pinned_data_buffer_psrfits( size_t size );
@@ -125,8 +125,8 @@ float *create_pinned_data_buffer_psrfits( size_t size );
 float *create_pinned_data_buffer_vdif( size_t size );
 
 void populate_weights_johnes( struct gpu_formbeam_arrays *g,
-                              ComplexDouble ****complex_weights_array,
-                              ComplexDouble *****invJi,
+                              cuDoubleComplex ****complex_weights_array,
+                              cuDoubleComplex *****invJi,
                               int npointing, int nstation, int nchan, int npol );
 
 #endif
