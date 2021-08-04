@@ -27,7 +27,7 @@
 #include "vdifio.h"
 #include "filter.h"
 #include "psrfits.h"
-#include "mycomplex.h"
+#include <cuComplex.h>
 #include "form_beam.h"
 #include <omp.h>
 
@@ -205,9 +205,9 @@ int main(int argc, char **argv)
 
     // Allocate memory
     char **filenames = create_filenames( &opts );
-    ComplexDouble  ****complex_weights_array = create_complex_weights( npointing, nstation, nchan, npol );
-    ComplexDouble  ****invJi                 = create_invJi( nstation, nchan, npol );
-    ComplexDouble  ****detected_beam         = create_detected_beam( npointing, 2*opts.sample_rate, nchan, npol );
+    cuDoubleComplex  ****complex_weights_array = create_complex_weights( npointing, nstation, nchan, npol );
+    cuDoubleComplex  ****invJi                 = create_invJi( nstation, nchan, npol );
+    cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*opts.sample_rate, nchan, npol );
 
     // Load the FEE2016 beam, if requested
     fprintf( stderr, "[%f]  Reading in beam model from %s\n", NOW-begintime, HYPERBEAM_HDF5 );
@@ -343,7 +343,7 @@ int main(int argc, char **argv)
                 opts.synth_filter );
         exit(EXIT_FAILURE);
     }
-    ComplexDouble *twiddles = roots_of_unity( nchan );
+    cuDoubleComplex *twiddles = roots_of_unity( nchan );
 
     // Adjust by the scaling that was introduced by the forward PFB,
     // along with any other scaling that I, Lord and Master of the inverse
@@ -456,7 +456,7 @@ int main(int argc, char **argv)
         if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
         {
             // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
-            // detected_beam = [2*opts.sample_rate][nchan][npol] = [20000][128][2] (ComplexDouble)
+            // detected_beam = [2*opts.sample_rate][nchan][npol] = [20000][128][2] (cuDoubleComplex)
             if (file_no % 2 == 0)
                 offset = 0;
             else
@@ -468,7 +468,7 @@ int main(int argc, char **argv)
             for (pol = 0; pol < npol            ; pol++)
             {
                 detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,opts.out_ant,pol,nchan)]);
-                detected_beam[p][s+offset][ch][pol] = CMuld(detected_beam[p][s+offset][ch][pol], CMaked(128.0, 0.0));
+                detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
             }
         }
         else // beamform (the default mode)
@@ -1033,31 +1033,31 @@ void destroy_filenames( char **filenames, struct make_beam_opts *opts )
 }
 
 
-ComplexDouble ****create_complex_weights( int npointing, int nstation, int nchan, int npol )
+cuDoubleComplex ****create_complex_weights( int npointing, int nstation, int nchan, int npol )
 // Allocate memory for complex weights matrices
 {
     int p, ant, ch; // Loop variables
-    ComplexDouble ****array;
+    cuDoubleComplex ****array;
 
-    array = (ComplexDouble ****)malloc( npointing * sizeof(ComplexDouble ***) );
+    array = (cuDoubleComplex ****)malloc( npointing * sizeof(cuDoubleComplex ***) );
 
     for (p = 0; p < npointing; p++)
     {
-        array[p] = (ComplexDouble ***)malloc( nstation * sizeof(ComplexDouble **) );
+        array[p] = (cuDoubleComplex ***)malloc( nstation * sizeof(cuDoubleComplex **) );
 
         for (ant = 0; ant < nstation; ant++)
         {
-            array[p][ant] = (ComplexDouble **)malloc( nchan * sizeof(ComplexDouble *) );
+            array[p][ant] = (cuDoubleComplex **)malloc( nchan * sizeof(cuDoubleComplex *) );
 
             for (ch = 0; ch < nchan; ch++)
-                array[p][ant][ch] = (ComplexDouble *)malloc( npol * sizeof(ComplexDouble) );
+                array[p][ant][ch] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
         }
     }
     return array;
 }
 
 
-void destroy_complex_weights( ComplexDouble ****array, int npointing, int nstation, int nchan )
+void destroy_complex_weights( cuDoubleComplex ****array, int npointing, int nstation, int nchan )
 {
     int p, ant, ch;
     for (p = 0; p < npointing; p++)
@@ -1074,30 +1074,30 @@ void destroy_complex_weights( ComplexDouble ****array, int npointing, int nstati
     free( array );
 }
 
-ComplexDouble ****create_invJi( int nstation, int nchan, int npol )
+cuDoubleComplex ****create_invJi( int nstation, int nchan, int npol )
 // Allocate memory for (inverse) Jones matrices
 {
     int ant, pol, ch; // Loop variables
-    ComplexDouble ****invJi;
-    invJi = (ComplexDouble ****)malloc( nstation * sizeof(ComplexDouble ***) );
+    cuDoubleComplex ****invJi;
+    invJi = (cuDoubleComplex ****)malloc( nstation * sizeof(cuDoubleComplex ***) );
 
     for (ant = 0; ant < nstation; ant++)
     {
-        invJi[ant] =(ComplexDouble ***)malloc( nchan * sizeof(ComplexDouble **) );
+        invJi[ant] =(cuDoubleComplex ***)malloc( nchan * sizeof(cuDoubleComplex **) );
 
         for (ch = 0; ch < nchan; ch++)
         {
-            invJi[ant][ch] = (ComplexDouble **)malloc( npol * sizeof(ComplexDouble *) );
+            invJi[ant][ch] = (cuDoubleComplex **)malloc( npol * sizeof(cuDoubleComplex *) );
 
             for (pol = 0; pol < npol; pol++)
-                invJi[ant][ch][pol] = (ComplexDouble *)malloc( npol * sizeof(ComplexDouble) );
+                invJi[ant][ch][pol] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
         }
     }
     return invJi;
 }
 
 
-void destroy_invJi( ComplexDouble ****array, int nstation, int nchan, int npol )
+void destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol )
 {
     int ant, ch, pol;
     for (ant = 0; ant < nstation; ant++)
@@ -1115,29 +1115,29 @@ void destroy_invJi( ComplexDouble ****array, int nstation, int nchan, int npol )
 }
 
 
-ComplexDouble ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
+cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
 // Allocate memory for complex weights matrices
 {
     int p, s, ch; // Loop variables
-    ComplexDouble ****array;
+    cuDoubleComplex ****array;
 
-    array = (ComplexDouble ****)malloc( npointing * sizeof(ComplexDouble ***) );
+    array = (cuDoubleComplex ****)malloc( npointing * sizeof(cuDoubleComplex ***) );
     for (p = 0; p < npointing; p++)
     {
-        array[p] = (ComplexDouble ***)malloc( nsamples * sizeof(ComplexDouble **) );
+        array[p] = (cuDoubleComplex ***)malloc( nsamples * sizeof(cuDoubleComplex **) );
 
         for (s = 0; s < nsamples; s++)
         {
-            array[p][s] = (ComplexDouble **)malloc( nchan * sizeof(ComplexDouble *) );
+            array[p][s] = (cuDoubleComplex **)malloc( nchan * sizeof(cuDoubleComplex *) );
 
             for (ch = 0; ch < nchan; ch++)
-                array[p][s][ch] = (ComplexDouble *)malloc( npol * sizeof(ComplexDouble) );
+                array[p][s][ch] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
         }
     }
     return array;
 }
 
-void destroy_detected_beam( ComplexDouble ****array, int npointing, int nsamples, int nchan )
+void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsamples, int nchan )
 {
     int p, s, ch;
     for (p = 0; p < npointing; p++)
