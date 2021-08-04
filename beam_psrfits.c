@@ -13,7 +13,6 @@
 #include "psrfits.h"
 #include "beam_common.h"
 #include "beam_psrfits.h"
-#include "mycomplex.h"
 
 void printf_psrfits( struct psrfits *pf) {
     fprintf(stdout, "\nPSRFITS:\n");

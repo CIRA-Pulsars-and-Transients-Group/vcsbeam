@@ -8,7 +8,6 @@
 #define BEAM_PSRFITS_H
 
 #include "psrfits.h"
-#include "mycomplex.h"
 
 void printf_psrfits( struct psrfits *pf );  /* Prints values in psrfits struct to stdout */
 
