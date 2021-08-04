@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <cuda_runtime.h>
+#include <cuComplex.h>
 
 extern "C" {
-#include "mycomplex.h"
 #include "ipfb.h"
 }
 
@@ -124,7 +124,7 @@ __global__ void filter_kernel( float *in_real, float *in_imag,
 }
 
 extern "C"
-void cu_invert_pfb_ord( ComplexDouble ****detected_beam, int file_no,
+void cu_invert_pfb_ord( cuDoubleComplex ****detected_beam, int file_no,
                         int npointing, int nsamples, int nchan, int npol,
                         int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_vdif )
@@ -182,8 +182,8 @@ void cu_invert_pfb_ord( ComplexDouble ****detected_beam, int file_no,
                 }
                 else
                 {
-                    g->in_real[i] = CReald( detected_beam[p][s][ch][pol] );
-                    g->in_imag[i] = CImagd( detected_beam[p][s][ch][pol] );
+                    g->in_real[i] = cuCreal( detected_beam[p][s][ch][pol] );
+                    g->in_imag[i] = cuCimag( detected_beam[p][s][ch][pol] );
                 }
             }
         }
@@ -210,7 +210,7 @@ void cu_invert_pfb_ord( ComplexDouble ****detected_beam, int file_no,
 }
 
 
-void cu_load_filter( double *coeffs, ComplexDouble *twiddles, struct gpu_ipfb_arrays *g,
+void cu_load_filter( double *coeffs, cuDoubleComplex *twiddles, struct gpu_ipfb_arrays *g,
         int nchan )
 /* This function loads the inverse filter coefficients and the twiddle factors
    into GPU memory. If they were loaded separately (as floats), then the
@@ -239,17 +239,17 @@ void cu_load_filter( double *coeffs, ComplexDouble *twiddles, struct gpu_ipfb_ar
     int fil_size = g->ft_size / nchan / sizeof(float);
 
     // Setup filter values:
-    ComplexDouble ft; // pre-calculated filter coeffs times twiddle factor
-    ComplexDouble cf; // temp variable for complex version of filter coeffs
+    cuDoubleComplex ft; // pre-calculated filter coeffs times twiddle factor
+    cuDoubleComplex cf; // temp variable for complex version of filter coeffs
     for (f = 0; f < fil_size; f++)
     {
-        cf = CMaked( coeffs[f], 0.0 );
+        cf = make_cuDoubleComplex( coeffs[f], 0.0 );
         for (ch = 0; ch < nchan; ch++)
         {
             i = fil_size*ch + f;
-            ft = CMuld( twiddles[ch], cf );
-            g->ft_real[i] = CReald( ft );
-            g->ft_imag[i] = CImagd( ft );
+            ft = cuCmul( twiddles[ch], cf );
+            g->ft_real[i] = cuCreal( ft );
+            g->ft_imag[i] = cuCimag( ft );
         }
     }
 
