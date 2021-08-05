@@ -380,10 +380,10 @@ int main(int argc, char **argv)
     // the two memory allocations
 
     // Create array for holding the raw data
-    int bytes_per_file = opts.sample_rate * nstation * npol * nchan;
+    long int bytes_per_timestep = volt_metadata->num_voltage_blocks_per_timestep * volt_metadata->voltage_block_size_bytes;
 
-    //cudaMallocHost( (void**)&data, bytes_per_file * sizeof(uint8_t) );
-    uint8_t *data = (uint8_t *)malloc( bytes_per_file * sizeof(uint8_t) );
+    //cudaMallocHost( (void**)&data, bytes_per_timestep * sizeof(uint8_t) );
+    uint8_t *data = (uint8_t *)malloc( bytes_per_timestep * sizeof(uint8_t) );
     assert(data);
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
@@ -434,7 +434,7 @@ int main(int argc, char **argv)
         clock_t start = clock();
         fprintf( stderr, "[%f] [%d/%d] Reading in data from %s \n", NOW-begintime,
                 file_no+1, nfiles, filenames[file_no]);
-        read_data( filenames[file_no], data, bytes_per_file  );
+        read_data( filenames[file_no], data, bytes_per_timestep  );
         read_time[file_no] = clock() - start;
 
         // Get the next second's worth of phases / jones matrices, if needed
