@@ -20,8 +20,11 @@ cmake will attempt to locate the dependencies automatically. Assuming it succeed
 mkdir -p build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=[target installation directory] \
       -DCMAKE_CUDA_ARCHITECTURES=[cuda_compute] \
+      -DHYPERBEAM_HDF5=[path to mwa_full_embedded_element_pattern.h5] \
       ..
 ```
+
+The HYPERBEAM\_HDF5 file can be supplied upon request, if it is not provided as part of the mwa\_hyperbeam library.
 
 If some of the dependencies are in non-standard locations, cmake can be helped by setting the following cmake variables (using the -DVARIABLE=value syntax):
 ```bash
