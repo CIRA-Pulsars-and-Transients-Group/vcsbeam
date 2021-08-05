@@ -43,6 +43,8 @@ double now(){
 
 #define NOW now()
 
+#define ERROR_MESSAGE_LEN  1024
+
 int main(int argc, char **argv)
 {
     // A place to hold the beamformer settings
@@ -105,18 +107,54 @@ int main(int argc, char **argv)
         outpol_coh           = 1;  // (I)
     const int outpol_incoh   = 1;  // ("I")
 
+    double begintime = NOW;
+
+    // Calculate the number of files
+    int ntimesteps = opts.end - opts.begin + 1;
+    if (ntimesteps <= 0) {
+        fprintf(stderr, "Cannot beamform on %d files (between %lu and %lu)\n", ntimesteps, opts.begin, opts.end);
+        exit(EXIT_FAILURE);
+    }
+
+    // Create list of filenames
+    char **filenames = create_filenames( &opts ); /* If, in the future, a similar function becomes
+                                                     available in MWALIB, deprecate create_filenames() */
+
+    // <<<<<
+    // Read in info from metafits file
+    fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
+    struct metafits_info mi;
+    get_metafits_info( opts.metafits, &mi, opts.chan_width );
+
+    // =====
+    fprintf( stderr, "[%f]  Creating voltage context via MWALIB\n", NOW-begintime );
+    char error_message[ERROR_MESSAGE_LEN];
+    VoltageContext *volt_context = NULL;
+
+    const char **voltage_files = (const char **)malloc( sizeof(char *) * ntimesteps );
+    int i;
+    for (i = 0; i < ntimesteps; i++)
+        voltage_files[i] = filenames[i];
+
+    if (mwalib_voltage_context_new( opts.metafits, voltage_files, ntimesteps, &volt_context, error_message, ERROR_MESSAGE_LEN) != EXIT_SUCCESS)
+    {
+        printf("error (mwalib): cannot create voltage context: %s\n", error_message);
+        exit(EXIT_FAILURE);
+    }
+
+    VoltageMetadata *volt_metadata = NULL;
+
+    if (mwalib_voltage_metadata_get(volt_context, &volt_metadata, error_message, ERROR_MESSAGE_LEN) != EXIT_SUCCESS)
+    {
+        printf("error (mwalib): cannot get metadata: %s\n", error_message);
+        exit(EXIT_FAILURE);
+    }
+    // >>>>>
+
     //float vgain = 1.0; // This is re-calculated every second for the VDIF output
 
     // Start counting time from here (i.e. after parsing the command line)
-    double begintime = NOW;
     fprintf( stderr, "[%f]  Starting %s with GPU acceleration\n", NOW-begintime, argv[0] );
-
-    // Calculate the number of files
-    int nfiles = opts.end - opts.begin + 1;
-    if (nfiles <= 0) {
-        fprintf(stderr, "Cannot beamform on %d files (between %lu and %lu)\n", nfiles, opts.begin, opts.end);
-        exit(EXIT_FAILURE);
-    }
 
     // Parse input pointings
     int max_npointing = 120; // Could be more
@@ -187,7 +225,6 @@ int main(int argc, char **argv)
     }
 
     // Allocate memory
-    char **filenames = create_filenames( &opts );
     cuDoubleComplex  ****complex_weights_array = create_complex_weights( npointing, nstation, nchan, npol );
     cuDoubleComplex  ****invJi                 = create_invJi( nstation, nchan, npol );
     cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*opts.sample_rate, nchan, npol );
@@ -198,37 +235,6 @@ int main(int argc, char **argv)
     if (opts.beam_model == BEAM_FEE2016) {
         beam = new_fee_beam( HYPERBEAM_HDF5 );
     }
-
-    // <<<<<
-    // Read in info from metafits file
-    fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
-    struct metafits_info mi;
-    get_metafits_info( opts.metafits, &mi, opts.chan_width );
-
-    // =====
-    fprintf( stderr, "[%f]  Creating voltage context via MWALIB\n", NOW-begintime );
-    char error_message[1024];
-    VoltageContext *volt_context = NULL;
-
-    const char **voltage_files = (const char **)malloc( sizeof(char *) * nfiles );
-    int i;
-    for (i = 0; i < nfiles; i++)
-        voltage_files[i] = filenames[i];
-
-    if (mwalib_voltage_context_new( opts.metafits, voltage_files, nfiles, &volt_context, error_message, 1024) != EXIT_SUCCESS)
-    {
-        printf("Error creating correlator context: %s\n", error_message);
-        exit(EXIT_FAILURE);
-    }
-
-    VoltageMetadata *volt_metadata = NULL;
-
-    if (mwalib_voltage_metadata_get(volt_context, &volt_metadata, error_message, 1024) != EXIT_SUCCESS)
-    {
-        printf("Error getting correlator metadata: %s\n", error_message);
-        exit(EXIT_FAILURE);
-    }
-    // >>>>>
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     if (opts.cal.cal_type == RTS_BANDPASS)
@@ -425,22 +431,44 @@ int main(int argc, char **argv)
     int ch, pol;
 
     // Set up timing for each section
-    long read_time[nfiles], delay_time[nfiles], calc_time[nfiles], write_time[nfiles][npointing];
-    int file_no;
+    long read_time[ntimesteps], delay_time[ntimesteps], calc_time[ntimesteps], write_time[ntimesteps][npointing];
+    int timestep_idx;
+    long timestep;
+    int coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
+                                ever processes one coarse chan. However, in the future,
+                                this should be flexible, with mpi or threads managing
+                                different coarse channels. */
+    int coarse_chan;
 
-    for (file_no = 0; file_no < nfiles; file_no++)
+    for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
         // Read in data from next file
         clock_t start = clock();
         fprintf( stderr, "[%f] [%d/%d] Reading in data from %s \n", NOW-begintime,
-                file_no+1, nfiles, filenames[file_no]);
-        read_data( filenames[file_no], data, bytes_per_timestep  );
-        read_time[file_no] = clock() - start;
+                timestep_idx+1, ntimesteps, filenames[timestep_idx]);
+
+        timestep = volt_metadata->provided_timestep_indices[timestep_idx];
+        coarse_chan = volt_metadata->provided_coarse_chan_indices[coarse_chan_idx];
+
+        if (mwalib_voltage_context_read_file(
+                    volt_context,
+                    timestep,
+                    coarse_chan,
+                    data,
+                    bytes_per_timestep,
+                    error_message,
+                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+        {
+            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s\n", error_message );
+            exit(EXIT_FAILURE);
+        }
+        //read_data( filenames[timestep_idx], data, bytes_per_timestep  );
+        read_time[timestep_idx] = clock() - start;
 
         // Get the next second's worth of phases / jones matrices, if needed
         start = clock();
         fprintf( stderr, "[%f] [%d/%d] Calculating delays\n", NOW-begintime,
-                                file_no+1, nfiles );
+                                timestep_idx+1, ntimesteps );
         get_delays(
                 pointing_array,     // an array of pointings [pointing][ra/dec][characters]
                 npointing,          // number of pointings
@@ -449,23 +477,23 @@ int main(int argc, char **argv)
                 opts.sample_rate,       // = 10000 samples per sec
                 opts.beam_model,        // beam model type
                 beam,                   // Hyperbeam struct
-                (double)(file_no + opts.begin - atoi(opts.obsid)),        // seconds offset from the beginning of the obseration at which to calculate delays
+                (double)(timestep_idx + opts.begin - atoi(opts.obsid)),        // seconds offset from the beginning of the obseration at which to calculate delays
                 NULL,                   // Don't update delay_vals
                 &mi,                    // Struct containing info from metafits file
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
-        delay_time[file_no] = clock() - start;
+        delay_time[timestep_idx] = clock() - start;
 
 
         fprintf( stderr, "[%f] [%d/%d] Calculating beam\n", NOW-begintime,
-                                file_no+1, nfiles);
+                                timestep_idx+1, ntimesteps);
         start = clock();
 
         if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
         {
             // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
             // detected_beam = [2*opts.sample_rate][nchan][npol] = [20000][128][2] (cuDoubleComplex)
-            if (file_no % 2 == 0)
+            if (timestep_idx % 2 == 0)
                 offset = 0;
             else
                 offset = opts.sample_rate;
@@ -481,7 +509,7 @@ int main(int argc, char **argv)
         }
         else // beamform (the default mode)
         {
-            cu_form_beam( data, &opts, complex_weights_array, invJi, file_no,
+            cu_form_beam( data, &opts, complex_weights_array, invJi, timestep_idx,
                     npointing, nstation, nchan, npol, outpol_coh, invw, &gf,
                     detected_beam, data_buffer_coh, data_buffer_incoh,
                     streams, opts.out_incoh, nchunk );
@@ -491,12 +519,12 @@ int main(int argc, char **argv)
         if (opts.out_vdif)
         {
             fprintf( stderr, "[%f] [%d/%d] Inverting the PFB (full)\n",
-                            NOW-begintime, file_no+1, nfiles);
-            cu_invert_pfb_ord( detected_beam, file_no, npointing,
+                            NOW-begintime, timestep_idx+1, ntimesteps);
+            cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
                                opts.sample_rate, nchan, npol, vf->sizeof_buffer,
                                &gi, data_buffer_vdif );
         }
-        calc_time[file_no] = clock() - start;
+        calc_time[timestep_idx] = clock() - start;
 
 
         // Write out for each pointing
@@ -504,7 +532,7 @@ int main(int argc, char **argv)
         {
             start = clock();
             fprintf( stderr, "[%f] [%d/%d] [%d/%d] Writing data to file(s)\n",
-                    NOW-begintime, file_no+1, nfiles, p+1, npointing );
+                    NOW-begintime, timestep_idx+1, ntimesteps, p+1, npointing );
 
             if (opts.out_coh)
                 psrfits_write_second( &pf[p], data_buffer_coh, nchan,
@@ -515,40 +543,40 @@ int main(int argc, char **argv)
             if (opts.out_vdif)
                 vdif_write_second( &vf[p], &vhdr,
                                    data_buffer_vdif + p * vf->sizeof_buffer );
-            write_time[file_no][p] = clock() - start;
+            write_time[timestep_idx][p] = clock() - start;
         }
     }
 
     // Calculate total processing times
     float read_sum = 0, delay_sum = 0, calc_sum = 0, write_sum = 0;
-    for (file_no = 0; file_no < nfiles; file_no++)
+    for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
-        read_sum  += (float) read_time[file_no];
-        delay_sum += (float) delay_time[file_no];
-        calc_sum  += (float) calc_time[file_no];
+        read_sum  += (float) read_time[timestep_idx];
+        delay_sum += (float) delay_time[timestep_idx];
+        calc_sum  += (float) calc_time[timestep_idx];
         for ( p = 0; p < npointing; p++)
-            write_sum += (float) write_time[file_no][p];
+            write_sum += (float) write_time[timestep_idx][p];
     }
     float read_mean, delay_mean, calc_mean, write_mean;
-    read_mean  = read_sum  / nfiles;
-    delay_mean = delay_sum / nfiles / npointing;
-    calc_mean  = calc_sum  / nfiles / npointing;
-    write_mean = write_sum / nfiles / npointing;
+    read_mean  = read_sum  / ntimesteps;
+    delay_mean = delay_sum / ntimesteps / npointing;
+    calc_mean  = calc_sum  / ntimesteps / npointing;
+    write_mean = write_sum / ntimesteps / npointing;
 
     // Calculate the standard deviations
     float read_std = 0, delay_std = 0, calc_std = 0, write_std = 0;
-    for (file_no = 0; file_no < nfiles; file_no++)
+    for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
-        read_std  += pow((float)read_time[file_no]  - read_mean,  2);
-        delay_std += pow((float)delay_time[file_no] - delay_mean / npointing, 2);
-        calc_std  += pow((float)calc_time[file_no]  - calc_mean / npointing,  2);
+        read_std  += pow((float)read_time[timestep_idx]  - read_mean,  2);
+        delay_std += pow((float)delay_time[timestep_idx] - delay_mean / npointing, 2);
+        calc_std  += pow((float)calc_time[timestep_idx]  - calc_mean / npointing,  2);
         for ( p = 0; p < npointing; p++)
-            write_std += pow((float)write_time[file_no][p] - write_mean / npointing, 2);
+            write_std += pow((float)write_time[timestep_idx][p] - write_mean / npointing, 2);
     }
-    read_std  = sqrt( read_std  / nfiles );
-    delay_std = sqrt( delay_std / nfiles / npointing );
-    calc_std  = sqrt( calc_std  / nfiles / npointing );
-    write_std = sqrt( write_std / nfiles / npointing );
+    read_std  = sqrt( read_std  / ntimesteps );
+    delay_std = sqrt( delay_std / ntimesteps / npointing );
+    calc_std  = sqrt( calc_std  / ntimesteps / npointing );
+    write_std = sqrt( write_std / ntimesteps / npointing );
 
 
     fprintf( stderr, "[%f]  **FINISHED BEAMFORMING**\n", NOW-begintime);
@@ -1008,20 +1036,20 @@ void make_beam_parse_cmdline(
 char **create_filenames( struct make_beam_opts *opts )
 {
     // Calculate the number of files
-    int nfiles = opts->end - opts->begin + 1;
-    if (nfiles <= 0) {
+    int ntimesteps = opts->end - opts->begin + 1;
+    if (ntimesteps <= 0) {
         fprintf( stderr, "Cannot beamform on %d files (between %lu and %lu)\n",
-                 nfiles, opts->begin, opts->end);
+                 ntimesteps, opts->begin, opts->end);
         exit(EXIT_FAILURE);
     }
     // Allocate memory for the file name list
     char **filenames = NULL;
-    filenames = (char **)malloc( nfiles*sizeof(char *) );
+    filenames = (char **)malloc( ntimesteps*sizeof(char *) );
 
     // Allocate memory and write filenames
     int second;
     unsigned long int timestamp;
-    for (second = 0; second < nfiles; second++) {
+    for (second = 0; second < ntimesteps; second++) {
         timestamp = second + opts->begin;
         filenames[second] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
         sprintf( filenames[second], "%s/%s_%ld_ch%s.dat",
@@ -1033,9 +1061,9 @@ char **create_filenames( struct make_beam_opts *opts )
 
 void destroy_filenames( char **filenames, struct make_beam_opts *opts )
 {
-    int nfiles = opts->end - opts->begin + 1;
+    int ntimesteps = opts->end - opts->begin + 1;
     int second;
-    for (second = 0; second < nfiles; second++)
+    for (second = 0; second < ntimesteps; second++)
         free( filenames[second] );
     free( filenames );
 }
