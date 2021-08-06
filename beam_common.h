@@ -88,7 +88,6 @@ struct make_beam_opts {
     char              *metafits;      // filename of the metafits file
     int                rec_channel;   // 0 - 255 receiver 1.28MHz channel
     long int           frequency;     // = rec_channel expressed in Hz
-    int                beam_model;    // Either BEAM_FEE2016 or BEAM_ANALYTIC
 
     // Variables for MWA/VCS configuration
     char              *custom_flags;  // Use custom list for flagging antennas
@@ -118,7 +117,6 @@ void get_delays(
         long int               frequency,
         struct                 calibration *cal,
         float                  samples_per_sec,
-        int                    beam_model,
         FEEBeam               *beam,
         double                 sec_offset,
         struct delays          delay_vals[],

@@ -296,7 +296,6 @@ void get_delays(
         long int               frequency,
         struct                 calibration *cal,
         float                  samples_per_sec,
-        int                    beam_model,
         FEEBeam               *beam,
         double                 sec_offset,
         struct delays          delay_vals[],
@@ -517,36 +516,34 @@ void get_delays(
                 ant = row / NPOL;
                 pol = row % NPOL;
 
-                if (beam_model == BEAM_FEE2016) {
-                    // FEE2016 beam:
-                    // Check to see whether or not this configuration has already been calculated.
-                    // The point of this is to save recalculating the jones matrix, which is
-                    // computationally expensive.
-                    config_idx = hash_dipole_config( mi->amps[row] );
-                    if (config_idx == -1)
-                        config_idx = multiple_dead;
+                // FEE2016 beam:
+                // Check to see whether or not this configuration has already been calculated.
+                // The point of this is to save recalculating the jones matrix, which is
+                // computationally expensive.
+                config_idx = hash_dipole_config( mi->amps[row] );
+                if (config_idx == -1)
+                    config_idx = multiple_dead;
 
-                    if (ch == 0 && (jones[config_idx] == NULL || config_idx == multiple_dead))
-                    {
-                        // The Jones matrix for this configuration has not yet been calculated, so do it now.
-                        // The FEE beam only needs to be calculated once per coarse channel, because it will
-                        // not produce unique answers for different fine channels within a coarse channel anyway
-                        // (it only calculates the jones matrix for the nearest coarse channel centre)
-                        // Strictly speaking, the condition (ch == 0) above is redundant, as the dipole configuration
-                        // array takes care of that implicitly, but I'll leave it here so that the above argument
-                        // is "explicit" in the code.
-                        jones[config_idx] = calc_jones( beam, az, PAL__DPIBY2-el, frequency + mi->chan_width/2,
-                                (unsigned int*)mi->delays[row], mi->amps[row], zenith_norm );
-                    }
-
-                    // "Convert" the real jones[8] output array into out complex E[4] matrix
-                    for (n = 0; n<NPOL*NPOL; n++){
-                        E[n] = make_cuDoubleComplex(jones[config_idx][n*2], jones[config_idx][n*2+1]);
-                    }
-
-                    // Apply parallactic angle correction if Hyperbeam was used
-                    mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
+                if (ch == 0 && (jones[config_idx] == NULL || config_idx == multiple_dead))
+                {
+                    // The Jones matrix for this configuration has not yet been calculated, so do it now.
+                    // The FEE beam only needs to be calculated once per coarse channel, because it will
+                    // not produce unique answers for different fine channels within a coarse channel anyway
+                    // (it only calculates the jones matrix for the nearest coarse channel centre)
+                    // Strictly speaking, the condition (ch == 0) above is redundant, as the dipole configuration
+                    // array takes care of that implicitly, but I'll leave it here so that the above argument
+                    // is "explicit" in the code.
+                    jones[config_idx] = calc_jones( beam, az, PAL__DPIBY2-el, frequency + mi->chan_width/2,
+                            (unsigned int*)mi->delays[row], mi->amps[row], zenith_norm );
                 }
+
+                // "Convert" the real jones[8] output array into out complex E[4] matrix
+                for (n = 0; n<NPOL*NPOL; n++){
+                    E[n] = make_cuDoubleComplex(jones[config_idx][n*2], jones[config_idx][n*2+1]);
+                }
+
+                // Apply parallactic angle correction if Hyperbeam was used
+                mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
 
                 mult2x2d(M[ant], invJref, G); // M x J^-1 = G (Forms the "coarse channel" DI gain)
 

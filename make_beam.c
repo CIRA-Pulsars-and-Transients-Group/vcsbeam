@@ -59,7 +59,6 @@ int main(int argc, char **argv)
     opts.datadir     = NULL; // The path to where the recombined data live
     opts.metafits    = NULL; // filename of the metafits file
     opts.rec_channel = -1;   // 0 - 255 receiver 1.28MHz channel
-    opts.beam_model  = BEAM_FEE2016;
 
     // Variables for MWA/VCS configuration
     opts.custom_flags  = NULL;   // Use custom list for flagging antennas
@@ -268,9 +267,7 @@ int main(int argc, char **argv)
     // Load the FEE2016 beam, if requested
     fprintf( stderr, "[%f]  Reading in beam model from %s\n", NOW-begintime, HYPERBEAM_HDF5 );
     FEEBeam *beam = NULL;
-    if (opts.beam_model == BEAM_FEE2016) {
-        beam = new_fee_beam( HYPERBEAM_HDF5 );
-    }
+    beam = new_fee_beam( HYPERBEAM_HDF5 );
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     if (opts.cal.cal_type == RTS_BANDPASS)
@@ -351,7 +348,6 @@ int main(int argc, char **argv)
             metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz,
             &opts.cal,          // struct holding info about calibration
             sample_rate,        // in Hz
-            opts.beam_model,    // beam model type
             beam,               // Hyperbeam struct
             0.0,                // seconds offset from the beginning of the observation at which to calculate delays
             delay_vals,        // Populate psrfits header info
@@ -467,8 +463,7 @@ int main(int argc, char **argv)
     for ( p = 0; p < npointing; p++ )
         cudaStreamCreate(&(streams[p])) ;
 
-    fprintf( stderr, "[%f]  **BEGINNING BEAMFORMING WITH %s BEAM MODEL**\n", NOW-begintime,
-        (opts.beam_model == BEAM_ANALYTIC ? "ANALYTIC" : "FEE2016") );
+    fprintf( stderr, "[%f]  **BEGINNING BEAMFORMING WITH FEE2016 BEAM MODEL**\n", NOW-begintime );
 
     int offset;
     unsigned int s;
@@ -513,7 +508,6 @@ int main(int argc, char **argv)
                 metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz,
                 &opts.cal,              // struct holding info about calibration
                 sample_rate,            // Hz
-                opts.beam_model,        // beam model type
                 beam,                   // Hyperbeam struct
                 (double)(timestep_idx + opts.begin - metafits_metadata->obs_id),        // seconds offset from the beginning of the obseration at which to calculate delays
                 NULL,                   // Don't update delay_vals
@@ -699,10 +693,7 @@ int main(int argc, char **argv)
     }
 
     // Clean up Hyperbeam
-    if (opts.beam_model == BEAM_FEE2016) {
-        free_fee_beam( beam );
-    }
-
+    free_fee_beam( beam );
 
     return 0;
 }
@@ -908,7 +899,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:B:C:d:e:f:F:g:hHiJ:m:O:pP:R:sS:t:U:vVW:X",
+                             "A:b:B:C:d:e:f:F:g:hiJ:m:O:pP:R:sS:t:U:vVW:X",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -947,9 +938,6 @@ void make_beam_parse_cmdline(
                 case 'h':
                     usage();
                     exit(0);
-                    break;
-                case 'H':
-                    opts->beam_model = BEAM_ANALYTIC;
                     break;
                 case 'i':
                     opts->out_incoh = 1;
