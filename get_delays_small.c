@@ -15,6 +15,7 @@
 #include "psrfits.h"
 #include "fitsio.h"
 #include <string.h>
+#include <mwalib.h>
 #include "beam_common.h"
 #include "mwa_hyperbeam.h"
 
@@ -36,7 +37,7 @@
 #define VLIGHT 299792458.0        // speed of light. m/s
 double arr_lat_rad=MWA_LAT*(M_PI/180.0),arr_lon_rad=MWA_LON*(M_PI/180.0),height=MWA_HGT;
 
-/* these externals are needed for the mwac_utils library */
+// These externals are needed for the mwac_utils library
 int nfrequency;
 int npol;
 int nstation;
@@ -293,7 +294,9 @@ void get_delays(
         // an array of pointings [pointing][ra/dec][characters]
         char                   pointing_array[][2][64],
         int                    npointing, // number of pointings
-        long int               frequency,
+        VoltageMetadata*       volt_metadata,
+        MetafitsMetadata*      metafits_metadata,
+        int                    coarse_chan_idx,
         struct                 calibration *cal,
         float                  samples_per_sec,
         FEEBeam               *beam,
@@ -304,6 +307,9 @@ void get_delays(
         cuDoubleComplex       ****invJi )                 // output: invJi[ant][ch][pol][pol]
 {
 
+    // Give "shorthand" variables for often-used values in metafits
+    int coarse_chan = volt_metadata->common_coarse_chan_indices[coarse_chan_idx];
+    long int frequency = metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz;
     int row;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
     int pol;     // Polarisation number

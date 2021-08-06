@@ -10,6 +10,7 @@
 #include <inttypes.h>
 #include "mwa_hyperbeam.h"
 #include <cuComplex.h>
+#include <mwalib.h>
 
 // Calibration solution types
 #define NO_CALIBRATION  0
@@ -114,7 +115,9 @@ void get_delays(
         // an array of pointings [pointing][ra/dec][characters]
         char                   pointing_array[][2][64],
         int                    npointing, // number of pointings
-        long int               frequency,
+        VoltageMetadata*       volt_metadata,
+        MetafitsMetadata      *metafits_metadata,
+        int                    coarse_chan_idx,
         struct                 calibration *cal,
         float                  samples_per_sec,
         FEEBeam               *beam,

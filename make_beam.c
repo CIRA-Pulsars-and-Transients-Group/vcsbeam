@@ -345,7 +345,9 @@ int main(int argc, char **argv)
     get_delays(
             pointing_array,     // an array of pointings [pointing][ra/dec][characters]
             npointing,          // number of pointings
-            metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz,
+            volt_metadata,
+            metafits_metadata,
+            coarse_chan_idx,
             &opts.cal,          // struct holding info about calibration
             sample_rate,        // in Hz
             beam,               // Hyperbeam struct
@@ -505,7 +507,9 @@ int main(int argc, char **argv)
         get_delays(
                 pointing_array,     // an array of pointings [pointing][ra/dec][characters]
                 npointing,          // number of pointings
-                metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz,
+                volt_metadata,
+                metafits_metadata,
+                coarse_chan_idx,
                 &opts.cal,              // struct holding info about calibration
                 sample_rate,            // Hz
                 beam,                   // Hyperbeam struct
@@ -757,33 +761,11 @@ void usage() {
     fprintf(stderr, "\n");
     fprintf(stderr, "MWA/VCS CONFIGURATION OPTIONS\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "\t-a, --antennas=N          ");
-    fprintf(stderr, "The number of antennas in the array. For MWA Phase 2, N=128.     ");
-    fprintf(stderr, "[default: 128]\n");
-    fprintf(stderr, "\t-n, --num-fine-chans=N    ");
-    fprintf(stderr, "The number of fine channels per coarse channel.                  ");
-    fprintf(stderr, "[default: 128]\n");
-    fprintf(stderr, "\t-w, --fine-chan-width=N   ");
-    fprintf(stderr, "The bandwidth of an individual fine channel (Hz).                ");
-    fprintf(stderr, "[default: 10000]\n");
-    fprintf(stderr, "\t-r, --sample-rate=N       ");
-    fprintf(stderr, "The VCS sample rate, in Hz. (The sample rate given in the meta-  ");
-    fprintf(stderr, "[default: 10000]\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "metafits file matches the correlator settings at the time of\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "the observation, which is not necessarily the same as that of\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "the VCS. Hence the necessity of this option.)\n");
     fprintf(stderr, "\t-F, --custom-flags=file   ");
     fprintf(stderr, "Flag the antennas listed in file instead of those flagged in the ");
     fprintf(stderr, "[default: none]\n");
     fprintf(stderr, "\t                          ");
     fprintf(stderr, "metafits file given by the -m option.\n");
-    fprintf(stderr, "\t-H, --analytic-beam       ");
-    fprintf(stderr, "Force use of analytic beam (No change in behaviour if FEE2016 beam\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "is unavailable).\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "CALIBRATION OPTIONS (RTS)\n");
