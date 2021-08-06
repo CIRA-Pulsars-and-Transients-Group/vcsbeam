@@ -171,13 +171,12 @@ int main(int argc, char **argv)
     int nstation             = metafits_metadata->num_ants;
     int nchan                = metafits_metadata->num_volt_fine_chans_per_coarse;
     int chan_width           = metafits_metadata->volt_fine_chan_width_hz;
-    const int npol           = metafits_metadata->num_ant_pols;   // (X,Y)
+    int npol                 = metafits_metadata->num_ant_pols;   // (X,Y)
     int outpol_coh           = 4;  // (I,Q,U,V)
     if ( opts.out_summed )
         outpol_coh           = 1;  // (I)
     const int outpol_incoh   = 1;  // ("I")
     unsigned int sample_rate = volt_metadata->num_samples_per_voltage_block * volt_metadata->num_voltage_blocks_per_second;
-    fprintf( stderr, "sample_rate = %d\n", sample_rate );
 
     // =====
 

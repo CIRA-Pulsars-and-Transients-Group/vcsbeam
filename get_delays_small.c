@@ -228,25 +228,6 @@ void mjd2lst(double mjd, double *lst) {
     *lst = lmst;
 }
 
-void utc2mjd(char *utc_str, double *intmjd, double *fracmjd) {
-
-    int J=0;
-    struct tm *utc;
-    utc = calloc(1,sizeof(struct tm));
-
-    sscanf(utc_str, "%d-%d-%dT%d:%d:%d",
-            &utc->tm_year, &utc->tm_mon, &utc->tm_mday,
-            &utc->tm_hour, &utc->tm_min, &utc->tm_sec);
-
-    palCaldj(utc->tm_year, utc->tm_mon, utc->tm_mday, intmjd, &J);
-
-    if (J !=0) {
-        fprintf(stderr,"Failed to calculate MJD\n");
-    }
-    *fracmjd = (utc->tm_hour + (utc->tm_min/60.0) + (utc->tm_sec/3600.0))/24.0;
-    free(utc);
-}
-
 void zero_XY_and_YX( cuDoubleComplex **M, int nant )
 /* For M = [ XX, XY ], set XY and YX to 0 for all antennas
  *         [ YX, YY ]
@@ -341,10 +322,11 @@ void get_delays(
     }
 
     // Choose a reference tile
-    int refinp = 84; // Tile012
-    double N_ref = mi->N_array[refinp];
-    double E_ref = mi->E_array[refinp];
-    double H_ref = mi->H_array[refinp];
+    int refinp = 84; // Tile012 (?)
+    Antenna ref_ant = metafits_metadata->antennas[refinp];
+    double N_ref = ref_ant.north_m;
+    double E_ref = ref_ant.east_m;
+    double H_ref = ref_ant.height_m;
 
     double intmjd;
     double fracmjd;
@@ -406,8 +388,10 @@ void get_delays(
     else if (cal->cal_type == OFFRINGA) {
 
         // Find the ordering of antennas in Offringa solutions from metafits file
-        for (n = 0; n < nant; n++) {
-            order[mi->antenna_num[n*2]] = n;
+        for (n = 0; n < nant; n++)
+        {
+            Antenna A = metafits_metadata->antennas[n];
+            order[A.ant*2] = n;
         }
         read_offringa_gains_file(M, nant, cal->offr_chan_num, cal->filename, order);
         free(order);
@@ -438,11 +422,13 @@ void get_delays(
     // Calculate the LST
 
     /* get mjd */
-    utc2mjd(mi->date_obs, &intmjd, &fracmjd);
+    mjd = metafits_metadata->sched_start_mjd;
+    intmjd = floor(mjd);
+    fracmjd = mjd - intmjd;
 
     /* get requested Az/El from command line */
 
-    mjd = intmjd + fracmjd;
+    //mjd = intmjd + fracmjd;
     mjd += (sec_offset+0.5)/86400.0;
     mjd2lst(mjd, &lmst);
 
