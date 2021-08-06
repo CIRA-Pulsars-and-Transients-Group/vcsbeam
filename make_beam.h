@@ -17,8 +17,8 @@
 void usage();
 void make_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts );
 
-char **create_filenames( struct make_beam_opts *opts, int obsid );
-void  destroy_filenames( char **filenames, struct make_beam_opts *opts );
+char **create_filenames( int obsid, int begin, int end, int coarse_chan, char *datadir );
+void  destroy_filenames( char **filenames, int nfiles );
 
 cuDoubleComplex ****create_complex_weights( int npointing, int nstation, int nchan, int npol );
 void              destroy_complex_weights( cuDoubleComplex ****array, int npointing,

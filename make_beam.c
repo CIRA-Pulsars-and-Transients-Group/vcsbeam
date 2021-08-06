@@ -58,8 +58,7 @@ int main(int argc, char **argv)
     opts.pointings   = NULL; // list of pointings "dd:mm:ss_hh:mm:ss,dd:mm:ss_hh:mm:ss"
     opts.datadir     = NULL; // The path to where the recombined data live
     opts.metafits    = NULL; // filename of the metafits file
-    opts.rec_channel = NULL; // 0 - 255 receiver 1.28MHz channel
-    opts.frequency   = 0;    // = rec_channel expressed in Hz
+    opts.rec_channel = -1;   // 0 - 255 receiver 1.28MHz channel
     opts.beam_model  = BEAM_FEE2016;
 
     // Variables for MWA/VCS configuration
@@ -143,8 +142,8 @@ int main(int argc, char **argv)
     }
 
     // Create list of filenames
-    char **filenames = create_filenames( &opts, metafits_metadata->obs_id ); /* If, in the future, a similar function becomes
-                                                     available in MWALIB, deprecate create_filenames() */
+    // If, in the future, a similar function becomes available in MWALIB, deprecate create_filenames()
+    char **filenames = create_filenames( metafits_metadata->obs_id, opts.begin, opts.end, opts.rec_channel, opts.datadir );
 
     fprintf( stderr, "[%f]  Creating voltage context via MWALIB\n", NOW-begintime );
     VoltageContext *volt_context = NULL;
@@ -336,10 +335,18 @@ int main(int argc, char **argv)
     // Run get_delays to populate the delay_vals struct
     fprintf( stderr, "[%f]  Setting up output header information\n", NOW-begintime);
     struct delays delay_vals[npointing];
+
+    int coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
+                                ever processes one coarse chan. However, in the future,
+                                this should be flexible, with mpi or threads managing
+                                different coarse channels. */
+
+    int coarse_chan = volt_metadata->provided_coarse_chan_indices[coarse_chan_idx];
+
     get_delays(
             pointing_array,     // an array of pointings [pointing][ra/dec][characters]
             npointing,          // number of pointings
-            opts.frequency,     // middle of the first frequency channel in Hz
+            metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz,
             &opts.cal,          // struct holding info about calibration
             opts.sample_rate,   // = 10000 samples per sec
             opts.beam_model,    // beam model type
@@ -403,16 +410,16 @@ int main(int argc, char **argv)
 
     // Populate the relevant header structs
     populate_psrfits_header( pf,       opts.metafits, metafits_metadata->obs_id,
-            mi.date_obs, opts.sample_rate, opts.max_sec_per_file, opts.frequency, nchan,
+            mi.date_obs, opts.sample_rate, opts.max_sec_per_file, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
             opts.chan_width,outpol_coh, opts.rec_channel, delay_vals,
             mi, npointing, 1 );
     populate_psrfits_header( pf_incoh, opts.metafits, metafits_metadata->obs_id,
-            mi.date_obs, opts.sample_rate, opts.max_sec_per_file, opts.frequency, nchan,
+            mi.date_obs, opts.sample_rate, opts.max_sec_per_file, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
             opts.chan_width, outpol_incoh, opts.rec_channel, delay_vals,
             mi, 1, 0 );
 
     populate_vdif_header( vf, &vhdr, opts.metafits, metafits_metadata->obs_id,
-            mi.date_obs, opts.sample_rate, opts.frequency, nchan,
+            mi.date_obs, opts.sample_rate, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
             opts.chan_width, opts.rec_channel, delay_vals, npointing );
 
     // To run asynchronously we require two memory allocations for each data
@@ -469,12 +476,6 @@ int main(int argc, char **argv)
     long read_time[ntimesteps], delay_time[ntimesteps], calc_time[ntimesteps], write_time[ntimesteps][npointing];
     int timestep_idx;
     long timestep;
-    int coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
-                                ever processes one coarse chan. However, in the future,
-                                this should be flexible, with mpi or threads managing
-                                different coarse channels. */
-    int coarse_chan;
-
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
         // Read in data from next file
@@ -504,10 +505,11 @@ int main(int argc, char **argv)
         start = clock();
         fprintf( stderr, "[%f] [%d/%d] Calculating delays\n", NOW-begintime,
                                 timestep_idx+1, ntimesteps );
+        fprintf( stderr, "Metafits[%d] = %d\n", coarse_chan, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz );
         get_delays(
                 pointing_array,     // an array of pointings [pointing][ra/dec][characters]
                 npointing,          // number of pointings
-                opts.frequency,         // middle of the first frequency channel in Hz
+                metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz,
                 &opts.cal,              // struct holding info about calibration
                 opts.sample_rate,       // = 10000 samples per sec
                 opts.beam_model,        // beam model type
@@ -641,7 +643,7 @@ int main(int argc, char **argv)
     mwalib_voltage_context_free(volt_context);
     mwalib_voltage_metadata_free(volt_metadata);
 
-    destroy_filenames( filenames, &opts );
+    destroy_filenames( filenames, ntimesteps );
     destroy_complex_weights( complex_weights_array, npointing, nstation, nchan );
     destroy_invJi( invJi, nstation, nchan, npol );
     destroy_detected_beam( detected_beam, npointing, 2*opts.sample_rate, nchan );
@@ -661,7 +663,6 @@ int main(int argc, char **argv)
     free( opts.pointings    );
     free( opts.datadir      );
     free( opts.metafits     );
-    free( opts.rec_channel  );
     free( opts.cal.filename );
     free( opts.custom_flags );
     free( opts.synth_filter );
@@ -937,9 +938,7 @@ void make_beam_parse_cmdline(
                     opts->end = atol(optarg);
                     break;
                 case 'f':
-                    opts->rec_channel = strdup(optarg);
-                    // The base frequency of the coarse channel in Hz
-                    opts->frequency = atoi(optarg) * 1.28e6 - 640e3;
+                    opts->rec_channel = atoi(optarg);
                     break;
                 case 'F':
                     opts->custom_flags = strdup(optarg);
@@ -1038,7 +1037,7 @@ void make_beam_parse_cmdline(
     assert( opts->pointings    != NULL );
     assert( opts->datadir      != NULL );
     assert( opts->metafits     != NULL );
-    assert( opts->rec_channel  != NULL );
+    assert( opts->rec_channel  != -1   );
     assert( opts->cal.cal_type != NO_CALIBRATION );
 
     // If neither -i, -p, nor -v were chosen, set -p by default
@@ -1061,13 +1060,15 @@ void make_beam_parse_cmdline(
 
 
 
-char **create_filenames( struct make_beam_opts *opts, int obsid )
+char **create_filenames( int obsid, int begin, int end, int coarse_chan, char *datadir )
+// This function is only valid for legacy VCS recombined filenames
+// Will be deprecated in a future release (and replaced by equivalent function in mwalib)
 {
     // Calculate the number of files
-    int ntimesteps = opts->end - opts->begin + 1;
+    int ntimesteps = end - begin + 1;
     if (ntimesteps <= 0) {
-        fprintf( stderr, "Cannot beamform on %d files (between %lu and %lu)\n",
-                 ntimesteps, opts->begin, opts->end);
+        fprintf( stderr, "Cannot beamform on %d files (between %d and %d)\n",
+                 ntimesteps, begin, end);
         exit(EXIT_FAILURE);
     }
     // Allocate memory for the file name list
@@ -1076,23 +1077,22 @@ char **create_filenames( struct make_beam_opts *opts, int obsid )
 
     // Allocate memory and write filenames
     int second;
-    unsigned long int timestamp;
+    unsigned long int t;
     for (second = 0; second < ntimesteps; second++) {
-        timestamp = second + opts->begin;
+        t = begin + second;
         filenames[second] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
-        sprintf( filenames[second], "%s/%d_%ld_ch%s.dat",
-                 opts->datadir, obsid, timestamp, opts->rec_channel );
+        sprintf( filenames[second], "%s/%d_%ld_ch%d.dat",
+                 datadir, obsid, t, coarse_chan );
     }
 
     return filenames;
 }
 
-void destroy_filenames( char **filenames, struct make_beam_opts *opts )
+void destroy_filenames( char **filenames, int nfiles )
 {
-    int ntimesteps = opts->end - opts->begin + 1;
-    int second;
-    for (second = 0; second < ntimesteps; second++)
-        free( filenames[second] );
+    int i;
+    for (i = 0; i < nfiles; i++)
+        free( filenames[i] );
     free( filenames );
 }
 

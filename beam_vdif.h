@@ -69,7 +69,7 @@ void populate_vdif_header(
         long int         frequency,
         int              nchan, 
         long int         chan_width,
-        char            *rec_channel,
+        int              rec_channel,
         struct delays   *delay_vals,
         int              npointing );
 

@@ -97,7 +97,7 @@ void populate_vdif_header(
         long int         frequency,
         int              nchan, 
         long int         chan_width,
-        char            *rec_channel,
+        int              rec_channel,
         struct delays   *delay_vals,
         int              npointing )
 {
@@ -168,7 +168,7 @@ void populate_vdif_header(
         strncpy( vf[p].source, "unset", 24 );
 
         // The output file basename
-        int ch = atoi(rec_channel);
+        int ch = rec_channel;
         sprintf( vf[p].basefilename, "%s_%s_%s_%s_ch%03d",
                  vf[p].exp_name, vf[p].scan_name, vf[p].ra_str, vf[p].dec_str, ch);
     }

@@ -22,7 +22,7 @@ void populate_psrfits_header(
         int             nchan,
         long int        chan_width,
         int             outpol,
-        char           *rec_channel,
+        int             rec_channel,
         struct delays  *delay_vals,
         struct metafits_info mi,
         int             npointing,

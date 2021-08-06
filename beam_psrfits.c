@@ -96,7 +96,7 @@ void populate_psrfits_header(
         int             nchan,
         long int        chan_width,
         int             outpol,
-        char           *rec_channel,
+        int             rec_channel,
         struct delays  *delay_vals,
         struct metafits_info mi,
         int             npointing,
@@ -251,7 +251,7 @@ void populate_psrfits_header(
             pf[p].sub.tel_az   = pf[p].hdr.azimuth;
             pf[p].sub.tel_zen  = pf[p].hdr.zenith_ang;
 
-            int ch = atoi(rec_channel);
+            int ch = rec_channel;
             if (is_coherent)
             {
                 sprintf(pf[p].basefilename, "%s_%s/%s_%s_%s_%s_ch%03d",

@@ -86,7 +86,7 @@ struct make_beam_opts {
     char              *pointings;     // pointing list"dd:mm:ss_hh:mm:ss, dd:mm:ss_hh:mm:ss"
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // filename of the metafits file
-    char              *rec_channel;   // 0 - 255 receiver 1.28MHz channel
+    int                rec_channel;   // 0 - 255 receiver 1.28MHz channel
     long int           frequency;     // = rec_channel expressed in Hz
     int                beam_model;    // Either BEAM_FEE2016 or BEAM_ANALYTIC
 
