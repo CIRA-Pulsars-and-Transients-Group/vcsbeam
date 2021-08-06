@@ -91,7 +91,7 @@ void populate_vdif_header(
         struct vdifinfo *vf,
         vdif_header     *vhdr,
         char            *metafits,
-        char            *obsid,
+        int              obsid,
         char            *time_utc,
         int              sample_rate,
         long int         frequency,
@@ -145,7 +145,7 @@ void populate_vdif_header(
         fits_read_key(fptr, TSTRING, "PROJECT", vf[p].exp_name, NULL, &status);
         fits_close_file(fptr, &status);
 
-        strncpy( vf[p].scan_name, obsid, 17 );
+        snprintf( vf[p].scan_name, 17, "%d", obsid );
 
         vf[p].b_scales   = (float *)malloc( sizeof(float) * vf[p].nchan );
         vf[p].b_offsets  = (float *)malloc( sizeof(float) * vf[p].nchan );

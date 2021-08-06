@@ -81,7 +81,6 @@ struct calibration {
 
 struct make_beam_opts {
     // Variables for required options
-    char              *obsid;         // The observation ID
     unsigned long int  begin;         // GPS time -- when to start beamforming
     unsigned long int  end;           // GPS time -- when to stop beamforming
     char              *pointings;     // pointing list"dd:mm:ss_hh:mm:ss, dd:mm:ss_hh:mm:ss"

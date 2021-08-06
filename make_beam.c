@@ -53,7 +53,6 @@ int main(int argc, char **argv)
     /* Set default beamformer settings */
 
     // Variables for required options
-    opts.obsid       = NULL; // The observation ID
     opts.begin       = 0;    // GPS time -- when to start beamforming
     opts.end         = 0;    // GPS time -- when to stop beamforming
     opts.pointings   = NULL; // list of pointings "dd:mm:ss_hh:mm:ss,dd:mm:ss_hh:mm:ss"
@@ -116,10 +115,6 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    // Create list of filenames
-    char **filenames = create_filenames( &opts ); /* If, in the future, a similar function becomes
-                                                     available in MWALIB, deprecate create_filenames() */
-
     // <<<<<
     // Read in info from metafits file
     fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
@@ -127,31 +122,71 @@ int main(int argc, char **argv)
     get_metafits_info( opts.metafits, &mi, opts.chan_width );
 
     // =====
-    fprintf( stderr, "[%f]  Creating voltage context via MWALIB\n", NOW-begintime );
     char error_message[ERROR_MESSAGE_LEN];
+
+    // Create an mwalib metafits context and associated metadata
+    fprintf( stderr, "[%f]  Creating metafits context via MWALIB\n", NOW-begintime );
+
+    MetafitsContext  *metafits_context  = NULL;
+    MetafitsMetadata *metafits_metadata = NULL;
+
+    if (mwalib_metafits_context_new( opts.metafits, VCSLegacyRecombined, &metafits_context, error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", error_message );
+        exit(EXIT_FAILURE);
+    }
+
+    if (mwalib_metafits_metadata_get( metafits_context, NULL, NULL, &metafits_metadata, error_message, ERROR_MESSAGE_LEN ))
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", error_message );
+        exit(EXIT_FAILURE);
+    }
+
+    // Create list of filenames
+    char **filenames = create_filenames( &opts, metafits_metadata->obs_id ); /* If, in the future, a similar function becomes
+                                                     available in MWALIB, deprecate create_filenames() */
+
+    fprintf( stderr, "[%f]  Creating voltage context via MWALIB\n", NOW-begintime );
     VoltageContext *volt_context = NULL;
 
+    // Create an mwalib voltage context
     const char **voltage_files = (const char **)malloc( sizeof(char *) * ntimesteps );
     int i;
     for (i = 0; i < ntimesteps; i++)
         voltage_files[i] = filenames[i];
 
-    if (mwalib_voltage_context_new( opts.metafits, voltage_files, ntimesteps, &volt_context, error_message, ERROR_MESSAGE_LEN) != EXIT_SUCCESS)
+    if (mwalib_voltage_context_new( opts.metafits, voltage_files, ntimesteps, &volt_context, error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
     {
-        printf("error (mwalib): cannot create voltage context: %s\n", error_message);
+        fprintf( stderr, "error (mwalib): cannot create voltage context: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
 
+    // Only beamform on valid gps times
+    /*
+    if (ntimesteps != volt_context->num_common_good_timesteps)
+    {
+        fprintf( stderr, "warning: only %d out of %d requested timesteps (-b %ld -e %ld) are valid, ",
+                volt_context->num_common_good_timesteps, ntimesteps,
+                opts.begin, opts.end );
+
+        opts.begin = volt_context->common_good_timestep_indices[0];
+        opts.end   = volt_context->common_good_timestep_indices[volt_context->num_common_good_timesteps - 1];
+        ntimesteps = volt_context->num_common_good_timesteps;
+
+        fprintf( stderr, "beamforming now with parameters '-b %ld -e %ld'\n",
+                opts.begin, opts.end );
+    }
+    */
+
+    // Create an mwalib metadata context
     VoltageMetadata *volt_metadata = NULL;
 
     if (mwalib_voltage_metadata_get(volt_context, &volt_metadata, error_message, ERROR_MESSAGE_LEN) != EXIT_SUCCESS)
     {
-        printf("error (mwalib): cannot get metadata: %s\n", error_message);
+        fprintf( stderr, "error (mwalib): cannot get metadata: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
     // >>>>>
-
-    //float vgain = 1.0; // This is re-calculated every second for the VDIF output
 
     // Start counting time from here (i.e. after parsing the command line)
     fprintf( stderr, "[%f]  Starting %s with GPU acceleration\n", NOW-begintime, argv[0] );
@@ -367,16 +402,16 @@ int main(int argc, char **argv)
         coeffs[i] *= approx_filter_scale;
 
     // Populate the relevant header structs
-    populate_psrfits_header( pf,       opts.metafits, opts.obsid,
+    populate_psrfits_header( pf,       opts.metafits, metafits_metadata->obs_id,
             mi.date_obs, opts.sample_rate, opts.max_sec_per_file, opts.frequency, nchan,
             opts.chan_width,outpol_coh, opts.rec_channel, delay_vals,
             mi, npointing, 1 );
-    populate_psrfits_header( pf_incoh, opts.metafits, opts.obsid,
+    populate_psrfits_header( pf_incoh, opts.metafits, metafits_metadata->obs_id,
             mi.date_obs, opts.sample_rate, opts.max_sec_per_file, opts.frequency, nchan,
             opts.chan_width, outpol_incoh, opts.rec_channel, delay_vals,
             mi, 1, 0 );
 
-    populate_vdif_header( vf, &vhdr, opts.metafits, opts.obsid,
+    populate_vdif_header( vf, &vhdr, opts.metafits, metafits_metadata->obs_id,
             mi.date_obs, opts.sample_rate, opts.frequency, nchan,
             opts.chan_width, opts.rec_channel, delay_vals, npointing );
 
@@ -477,7 +512,7 @@ int main(int argc, char **argv)
                 opts.sample_rate,       // = 10000 samples per sec
                 opts.beam_model,        // beam model type
                 beam,                   // Hyperbeam struct
-                (double)(timestep_idx + opts.begin - atoi(opts.obsid)),        // seconds offset from the beginning of the obseration at which to calculate delays
+                (double)(timestep_idx + opts.begin - metafits_metadata->obs_id),        // seconds offset from the beginning of the obseration at which to calculate delays
                 NULL,                   // Don't update delay_vals
                 &mi,                    // Struct containing info from metafits file
                 complex_weights_array,  // complex weights array (answer will be output here)
@@ -602,6 +637,7 @@ int main(int argc, char **argv)
 
     // Free up memory
     free( voltage_files );
+    mwalib_metafits_context_free(metafits_context);
     mwalib_voltage_context_free(volt_context);
     mwalib_voltage_metadata_free(volt_metadata);
 
@@ -622,7 +658,6 @@ int main(int argc, char **argv)
     cudaFreeHost( data_buffer_vdif  );
     cudaFreeHost( data );
 
-    free( opts.obsid        );
     free( opts.pointings    );
     free( opts.datadir      );
     free( opts.metafits     );
@@ -678,8 +713,6 @@ void usage() {
     fprintf(stderr, "\n");
     fprintf(stderr, "REQUIRED OPTIONS\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "\t-o, --obsid=GPSTIME       ");
-    fprintf(stderr, "Observation ID (GPS seconds).\n");
     fprintf(stderr, "\t-b, --begin=GPSTIME       ");
     fprintf(stderr, "Begin time of observation, in GPS seconds\n");
     fprintf(stderr, "\t-e, --end=GPSTIME         ");
@@ -839,7 +872,6 @@ void make_beam_parse_cmdline(
         while (1) {
 
             static struct option long_options[] = {
-                {"obsid",           required_argument, 0, 'o'},
                 {"begin",           required_argument, 0, 'b'},
                 {"end",             required_argument, 0, 'e'},
                 {"incoh",           no_argument,       0, 'i'},
@@ -874,7 +906,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "a:A:b:B:C:d:e:f:F:g:hHiJ:m:n:o:O:pP:r:R:sS:t:U:vVw:W:X",
+                             "a:A:b:B:C:d:e:f:F:g:hHiJ:m:n:O:pP:r:R:sS:t:U:vVw:W:X",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -935,9 +967,6 @@ void make_beam_parse_cmdline(
                     break;
                 case 'n':
                     opts->nchan = atoi(optarg);
-                    break;
-                case 'o':
-                    opts->obsid = strdup(optarg);
                     break;
                 case 'O':
                     opts->cal.filename = strdup(optarg);
@@ -1004,7 +1033,6 @@ void make_beam_parse_cmdline(
 
 
     // Check that all the required options were supplied
-    assert( opts->obsid        != NULL );
     assert( opts->begin        != 0    );
     assert( opts->end          != 0    );
     assert( opts->pointings    != NULL );
@@ -1033,7 +1061,7 @@ void make_beam_parse_cmdline(
 
 
 
-char **create_filenames( struct make_beam_opts *opts )
+char **create_filenames( struct make_beam_opts *opts, int obsid )
 {
     // Calculate the number of files
     int ntimesteps = opts->end - opts->begin + 1;
@@ -1052,8 +1080,8 @@ char **create_filenames( struct make_beam_opts *opts )
     for (second = 0; second < ntimesteps; second++) {
         timestamp = second + opts->begin;
         filenames[second] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
-        sprintf( filenames[second], "%s/%s_%ld_ch%s.dat",
-                 opts->datadir, opts->obsid, timestamp, opts->rec_channel );
+        sprintf( filenames[second], "%s/%d_%ld_ch%s.dat",
+                 opts->datadir, obsid, timestamp, opts->rec_channel );
     }
 
     return filenames;

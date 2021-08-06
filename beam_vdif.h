@@ -63,7 +63,7 @@ void populate_vdif_header(
         struct vdifinfo *vf,
         vdif_header     *vhdr,
         char            *metafits,
-        char            *obsid,
+        int              obsid,
         char            *time_utc,
         int              sample_rate,
         long int         frequency,

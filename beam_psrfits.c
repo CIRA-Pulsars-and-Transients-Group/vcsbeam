@@ -88,7 +88,7 @@ void printf_psrfits( struct psrfits *pf) {
 void populate_psrfits_header(
         struct psrfits *pf,
         char           *metafits,
-        char           *obsid,
+        int             obsid,
         char           *time_utc,
         unsigned int    sample_rate,
         int             max_sec_per_file,
@@ -126,7 +126,7 @@ void populate_psrfits_header(
         strcpy(pf[p].hdr.obs_mode,  "SEARCH");
         strcpy(pf[p].hdr.observer,  "MWA User");
         strcpy(pf[p].hdr.telescope, "MWA");
-        strncpy(pf[p].hdr.source, obsid, 23);
+        snprintf(pf[p].hdr.source, 23, "%d", obsid);
         pf[p].hdr.scanlen = 1.0; // in sec
 
         strcpy(pf[p].hdr.frontend, "MWA-RECVR");

@@ -14,7 +14,7 @@ void printf_psrfits( struct psrfits *pf );  /* Prints values in psrfits struct t
 void populate_psrfits_header(
         struct psrfits  pf[],
         char           *metafits,
-        char           *obsid,
+        int             obsid,
         char           *time_utc,
         unsigned int    sample_rate,
         int             max_sec_per_file,
