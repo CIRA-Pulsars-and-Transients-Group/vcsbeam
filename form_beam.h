@@ -113,7 +113,7 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
 
 
 
-void cu_form_beam( uint8_t *data, struct make_beam_opts *opts, cuDoubleComplex ****W,
+void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex ****W,
                    cuDoubleComplex ****J, int file_no, 
                    int npointing, int nstation, int nchan,
                    int npol, int outpol_coh, double invw, struct gpu_formbeam_arrays *g,

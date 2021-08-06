@@ -91,10 +91,6 @@ struct make_beam_opts {
     int                beam_model;    // Either BEAM_FEE2016 or BEAM_ANALYTIC
 
     // Variables for MWA/VCS configuration
-    int                nstation;      // The number of antennas
-    int                nchan;         // The number of fine channels (per coarse channel)
-    unsigned int       chan_width;    // The bandwidth of an individual fine chanel (Hz)
-    unsigned int       sample_rate;   // The VCS sample rate (Hz)
     char              *custom_flags;  // Use custom list for flagging antennas
 
     // Output options

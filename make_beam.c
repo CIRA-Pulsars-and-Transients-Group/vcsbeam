@@ -62,10 +62,6 @@ int main(int argc, char **argv)
     opts.beam_model  = BEAM_FEE2016;
 
     // Variables for MWA/VCS configuration
-    opts.nstation      = 128;    // The number of antennas
-    opts.nchan         = 128;    // The number of fine channels (per coarse channel)
-    opts.chan_width    = 10000;  // The bandwidth of an individual fine chanel (Hz)
-    opts.sample_rate   = 10000;  // The VCS sample rate (Hz)
     opts.custom_flags  = NULL;   // Use custom list for flagging antennas
 
     // Output options
@@ -96,14 +92,6 @@ int main(int argc, char **argv)
     // Parse command line arguments
     make_beam_parse_cmdline( argc, argv, &opts );
 
-    // Create "shorthand" variables for options that are used frequently
-    int nstation             = opts.nstation;
-    int nchan                = opts.nchan;
-    const int npol           = 2;   // (X,Y)
-    int outpol_coh           = 4;  // (I,Q,U,V)
-    if ( opts.out_summed )
-        outpol_coh           = 1;  // (I)
-    const int outpol_incoh   = 1;  // ("I")
 
     double begintime = NOW;
 
@@ -115,12 +103,6 @@ int main(int argc, char **argv)
     }
 
     // <<<<<
-    // Read in info from metafits file
-    fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
-    struct metafits_info mi;
-    get_metafits_info( opts.metafits, &mi, opts.chan_width );
-
-    // =====
     char error_message[ERROR_MESSAGE_LEN];
 
     // Create an mwalib metafits context and associated metadata
@@ -185,6 +167,26 @@ int main(int argc, char **argv)
         fprintf( stderr, "error (mwalib): cannot get metadata: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
+
+    // Create some "shorthand" variables for code brevity
+    int nstation             = metafits_metadata->num_ants;
+    int nchan                = metafits_metadata->num_volt_fine_chans_per_coarse;
+    int chan_width           = metafits_metadata->volt_fine_chan_width_hz;
+    const int npol           = metafits_metadata->num_ant_pols;   // (X,Y)
+    int outpol_coh           = 4;  // (I,Q,U,V)
+    if ( opts.out_summed )
+        outpol_coh           = 1;  // (I)
+    const int outpol_incoh   = 1;  // ("I")
+    unsigned int sample_rate = volt_metadata->num_samples_per_voltage_block * volt_metadata->num_voltage_blocks_per_second;
+    fprintf( stderr, "sample_rate = %d\n", sample_rate );
+
+    // =====
+
+    // Read in info from metafits file
+    fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
+    struct metafits_info mi;
+    get_metafits_info( opts.metafits, &mi, chan_width );
+
     // >>>>>
 
     // Start counting time from here (i.e. after parsing the command line)
@@ -261,7 +263,7 @@ int main(int argc, char **argv)
     // Allocate memory
     cuDoubleComplex  ****complex_weights_array = create_complex_weights( npointing, nstation, nchan, npol );
     cuDoubleComplex  ****invJi                 = create_invJi( nstation, nchan, npol );
-    cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*opts.sample_rate, nchan, npol );
+    cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*sample_rate, nchan, npol );
 
     // Load the FEE2016 beam, if requested
     fprintf( stderr, "[%f]  Reading in beam model from %s\n", NOW-begintime, HYPERBEAM_HDF5 );
@@ -272,7 +274,7 @@ int main(int argc, char **argv)
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     if (opts.cal.cal_type == RTS_BANDPASS)
-        opts.cal.nchan = (nchan * opts.chan_width) / opts.cal.chan_width;
+        opts.cal.nchan = (nchan * chan_width) / opts.cal.chan_width;
 
     // If a custom flag file has been provided, use that instead of the metafits flags
     if (opts.custom_flags != NULL)
@@ -348,7 +350,7 @@ int main(int argc, char **argv)
             npointing,          // number of pointings
             metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz,
             &opts.cal,          // struct holding info about calibration
-            opts.sample_rate,   // = 10000 samples per sec
+            sample_rate,        // in Hz
             opts.beam_model,    // beam model type
             beam,               // Hyperbeam struct
             0.0,                // seconds offset from the beginning of the observation at which to calculate delays
@@ -410,17 +412,17 @@ int main(int argc, char **argv)
 
     // Populate the relevant header structs
     populate_psrfits_header( pf,       opts.metafits, metafits_metadata->obs_id,
-            mi.date_obs, opts.sample_rate, opts.max_sec_per_file, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            opts.chan_width,outpol_coh, opts.rec_channel, delay_vals,
+            mi.date_obs, sample_rate, opts.max_sec_per_file, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
+            chan_width,outpol_coh, opts.rec_channel, delay_vals,
             mi, npointing, 1 );
     populate_psrfits_header( pf_incoh, opts.metafits, metafits_metadata->obs_id,
-            mi.date_obs, opts.sample_rate, opts.max_sec_per_file, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            opts.chan_width, outpol_incoh, opts.rec_channel, delay_vals,
+            mi.date_obs, sample_rate, opts.max_sec_per_file, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
+            chan_width, outpol_incoh, opts.rec_channel, delay_vals,
             mi, 1, 0 );
 
     populate_vdif_header( vf, &vhdr, opts.metafits, metafits_metadata->obs_id,
-            mi.date_obs, opts.sample_rate, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            opts.chan_width, opts.rec_channel, delay_vals, npointing );
+            mi.date_obs, sample_rate, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
+            chan_width, opts.rec_channel, delay_vals, npointing );
 
     // To run asynchronously we require two memory allocations for each data
     // set so multiple parts of the memory can be worked on at once.
@@ -439,7 +441,7 @@ int main(int argc, char **argv)
     struct gpu_formbeam_arrays gf;
     struct gpu_ipfb_arrays gi;
     int nchunk;
-    malloc_formbeam( &gf, opts.sample_rate, nstation, nchan, npol, &nchunk, opts.gpu_mem,
+    malloc_formbeam( &gf, sample_rate, nstation, nchan, npol, &nchunk, opts.gpu_mem,
                      outpol_coh, outpol_incoh, npointing, NOW-begintime );
 
     // Create output buffer arrays
@@ -456,7 +458,7 @@ int main(int argc, char **argv)
 
     if (opts.out_vdif)
     {
-        malloc_ipfb( &gi, ntaps, opts.sample_rate, nchan, npol, fil_size, npointing );
+        malloc_ipfb( &gi, ntaps, sample_rate, nchan, npol, fil_size, npointing );
         cu_load_filter( coeffs, twiddles, &gi, nchan );
     }
 
@@ -505,13 +507,12 @@ int main(int argc, char **argv)
         start = clock();
         fprintf( stderr, "[%f] [%d/%d] Calculating delays\n", NOW-begintime,
                                 timestep_idx+1, ntimesteps );
-        fprintf( stderr, "Metafits[%d] = %d\n", coarse_chan, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz );
         get_delays(
                 pointing_array,     // an array of pointings [pointing][ra/dec][characters]
                 npointing,          // number of pointings
                 metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz,
                 &opts.cal,              // struct holding info about calibration
-                opts.sample_rate,       // = 10000 samples per sec
+                sample_rate,            // Hz
                 opts.beam_model,        // beam model type
                 beam,                   // Hyperbeam struct
                 (double)(timestep_idx + opts.begin - metafits_metadata->obs_id),        // seconds offset from the beginning of the obseration at which to calculate delays
@@ -529,16 +530,16 @@ int main(int argc, char **argv)
         if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
         {
             // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
-            // detected_beam = [2*opts.sample_rate][nchan][npol] = [20000][128][2] (cuDoubleComplex)
+            // detected_beam = [2*sample_rate][nchan][npol] = [20000][128][2] (cuDoubleComplex)
             if (timestep_idx % 2 == 0)
                 offset = 0;
             else
-                offset = opts.sample_rate;
+                offset = sample_rate;
 
-            for (p   = 0; p   < npointing;        p++  )
-            for (s   = 0; s   < opts.sample_rate; s++  )
-            for (ch  = 0; ch  < nchan           ; ch++ )
-            for (pol = 0; pol < npol            ; pol++)
+            for (p   = 0; p   < npointing;   p++  )
+            for (s   = 0; s   < sample_rate; s++  )
+            for (ch  = 0; ch  < nchan;       ch++ )
+            for (pol = 0; pol < npol;        pol++)
             {
                 detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,opts.out_ant,pol,nchan)]);
                 detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
@@ -546,7 +547,7 @@ int main(int argc, char **argv)
         }
         else // beamform (the default mode)
         {
-            cu_form_beam( data, &opts, complex_weights_array, invJi, timestep_idx,
+            cu_form_beam( data, sample_rate, complex_weights_array, invJi, timestep_idx,
                     npointing, nstation, nchan, npol, outpol_coh, invw, &gf,
                     detected_beam, data_buffer_coh, data_buffer_incoh,
                     streams, opts.out_incoh, nchunk );
@@ -558,7 +559,7 @@ int main(int argc, char **argv)
             fprintf( stderr, "[%f] [%d/%d] Inverting the PFB (full)\n",
                             NOW-begintime, timestep_idx+1, ntimesteps);
             cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
-                               opts.sample_rate, nchan, npol, vf->sizeof_buffer,
+                               sample_rate, nchan, npol, vf->sizeof_buffer,
                                &gi, data_buffer_vdif );
         }
         calc_time[timestep_idx] = clock() - start;
@@ -646,7 +647,7 @@ int main(int argc, char **argv)
     destroy_filenames( filenames, ntimesteps );
     destroy_complex_weights( complex_weights_array, npointing, nstation, nchan );
     destroy_invJi( invJi, nstation, nchan, npol );
-    destroy_detected_beam( detected_beam, npointing, 2*opts.sample_rate, nchan );
+    destroy_detected_beam( detected_beam, npointing, 2*sample_rate, nchan );
 
     free( twiddles );
     free( coeffs );
@@ -907,16 +908,13 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "a:A:b:B:C:d:e:f:F:g:hHiJ:m:n:O:pP:r:R:sS:t:U:vVw:W:X",
+                             "A:b:B:C:d:e:f:F:g:hHiJ:m:O:pP:R:sS:t:U:vVW:X",
                              long_options, &option_index);
             if (c == -1)
                 break;
 
             switch(c) {
 
-                case 'a':
-                    opts->nstation = atoi(optarg);
-                    break;
                 case 'A':
                     opts->out_bf = 0; // Turn off normal beamforming
                     opts->out_ant = atoi(optarg); // 0-127
@@ -964,9 +962,6 @@ void make_beam_parse_cmdline(
                 case 'm':
                     opts->metafits = strdup(optarg);
                     break;
-                case 'n':
-                    opts->nchan = atoi(optarg);
-                    break;
                 case 'O':
                     opts->cal.filename = strdup(optarg);
                     opts->cal.cal_type = OFFRINGA;
@@ -976,9 +971,6 @@ void make_beam_parse_cmdline(
                     break;
                 case 'P':
                     opts->pointings = strdup(optarg);
-                    break;
-                case 'r':
-                    opts->sample_rate = atoi(optarg);
                     break;
                 case 'R':
                     opts->cal.ref_ant = atoi(optarg);
@@ -1007,9 +999,6 @@ void make_beam_parse_cmdline(
                 case 'V':
                     fprintf( stderr, "MWA Beamformer %s\n", VERSION_BEAMFORMER);
                     exit(0);
-                    break;
-                case 'w':
-                    opts->chan_width = atoi(optarg);
                     break;
                 case 'W':
                     opts->cal.chan_width = atoi(optarg);
@@ -1048,14 +1037,14 @@ void make_beam_parse_cmdline(
 
     // If the reference antenna is outside the range of antennas, issue
     // a warning and turn off phase rotation.
-    if (opts->cal.ref_ant < 0 || opts->cal.ref_ant >= opts->nstation)
+    /*if (opts->cal.ref_ant < 0 || opts->cal.ref_ant >= opts->nstation)
     {
         fprintf( stderr, "warning: tile %d outside of range 0-%d. "
                 "Calibration phase rotation turned off.\n",
                 opts->cal.ref_ant, opts->nstation-1 );
         opts->cal.ref_ant = -1; // This defines the meaning of -1
                                 // = don't do phase rotation
-    }
+    }*/
 }
 
 

@@ -354,7 +354,7 @@ __global__ void flatten_bandpass_C_kernel( float *C, int nstep )
 
 
 
-void cu_form_beam( uint8_t *data, struct make_beam_opts *opts,
+void cu_form_beam( uint8_t *data, unsigned int sample_rate,
                    cuDoubleComplex ****complex_weights_array,
                    cuDoubleComplex ****invJi, int file_no,
                    int npointing, int nstation, int nchan,
@@ -362,14 +362,10 @@ void cu_form_beam( uint8_t *data, struct make_beam_opts *opts,
                    struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh, float *incoh,
                    cudaStream_t *streams, int incoh_check, int nchunk )
-/* The CPU version of the beamforming operations, using OpenMP for
-* parallelisation.
-*
-* Inputs:
+/* Inputs:
 *   data    = array of 4bit+4bit complex numbers. For data order, refer to the
 *             documentation.
-*   opts    = passed option parameters, containing meta information about the
-*             obs and the data
+*   sample_rate = The voltage sample rate, in Hz
 *   W       = complex weights array. [npointing][nstation][nchan][npol]
 *   J       = inverse Jones matrix.  [nstation][nchan][npol][npol]
 *   file_no = number of file we are processing, starting at 0.
@@ -433,8 +429,8 @@ void cu_form_beam( uint8_t *data, struct make_beam_opts *opts,
         //              index=blockIdx.y  size=gridDim.y)
         // stat_point  (index=threadIdx.x size=blockDim.x,
         //              index=threadIdx.y size=blockDim.y)
-        //dim3 samples_chan(opts->sample_rate, nchan);
-        dim3 chan_samples( nchan, opts->sample_rate / nchunk );
+        //dim3 samples_chan(sample_rate, nchan);
+        dim3 chan_samples( nchan, sample_rate / nchunk );
         dim3 stat( NSTATION );
 
         // convert the data and multiply it by J
@@ -446,7 +442,7 @@ void cu_form_beam( uint8_t *data, struct make_beam_opts *opts,
         {
             beamform_kernel<<<chan_samples, stat, 0, streams[p]>>>( g->d_JDx, g->d_JDy,
                             g->d_W, g->d_Ia, invw,
-                            p, outpol_coh , incoh_check, ichunk*opts->sample_rate/nchunk, nchunk,
+                            p, outpol_coh , incoh_check, ichunk*sample_rate/nchunk, nchunk,
                             g->d_Bd, g->d_coh, g->d_incoh );
 
             gpuErrchk( cudaPeekAtLastError() );
@@ -459,13 +455,13 @@ void cu_form_beam( uint8_t *data, struct make_beam_opts *opts,
     if ( incoh_check )
     {
         flatten_bandpass_I_kernel<<<1, nchan, 0, streams[0]>>>( g->d_incoh,
-                                                                opts->sample_rate );
+                                                                sample_rate );
         gpuErrchk( cudaPeekAtLastError() );
     }
     // Now do the same for the coherent beam
     dim3 chan_stokes(nchan, outpol_coh);
     flatten_bandpass_C_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh,
-                                                                opts->sample_rate );
+                                                                sample_rate );
     gpuErrchk( cudaPeekAtLastError() );
 
     gpuErrchk( cudaDeviceSynchronize() );
@@ -479,14 +475,14 @@ void cu_form_beam( uint8_t *data, struct make_beam_opts *opts,
     // Make sure we put it back into the correct half of the array, depending
     // on whether this is an even or odd second.
     int offset, i;
-    offset = file_no % 2 * opts->sample_rate;
+    offset = file_no % 2 * sample_rate;
 
-    for ( int p   = 0; p   < npointing        ; p++  )
-    for ( int s   = 0; s   < opts->sample_rate; s++  )
-    for ( int ch  = 0; ch  < nchan            ; ch++ )
-    for ( int pol = 0; pol < npol             ; pol++)
+    for ( int p   = 0; p   < npointing  ; p++  )
+    for ( int s   = 0; s   < sample_rate; s++  )
+    for ( int ch  = 0; ch  < nchan      ; ch++ )
+    for ( int pol = 0; pol < npol       ; pol++)
     {
-        i = p  * (npol*nchan*opts->sample_rate) +
+        i = p  * (npol*nchan*sample_rate) +
             s  * (npol*nchan)                   +
             ch * (npol)                         +
             pol;
