@@ -31,16 +31,9 @@
  */
 
 #define MAXREQUEST 3000000
-#define NCHAN   128
-#define NANT    128
-#define NPOL    2
 #define VLIGHT 299792458.0        // speed of light. m/s
 double arr_lat_rad=MWA_LAT*(M_PI/180.0),arr_lon_rad=MWA_LON*(M_PI/180.0),height=MWA_HGT;
 
-// These externals are needed for the mwac_utils library
-int nfrequency;
-int npol;
-int nstation;
 //=====================//
 
 int hash_dipole_config( double *amps )
@@ -254,20 +247,20 @@ void utc2mjd(char *utc_str, double *intmjd, double *fracmjd) {
     free(utc);
 }
 
-void zero_XY_and_YX( cuDoubleComplex **M )
+void zero_XY_and_YX( cuDoubleComplex **M, int nant )
 /* For M = [ XX, XY ], set XY and YX to 0 for all antennas
  *         [ YX, YY ]
  */
 {
     int ant;
-    for (ant = 0; ant < NANT; ant++)
+    for (ant = 0; ant < nant; ant++)
     {
         M[ant][1] = make_cuDoubleComplex( 0.0, 0.0 );
         M[ant][2] = make_cuDoubleComplex( 0.0, 0.0 );
     }
 }
 
-void remove_reference_phase( cuDoubleComplex **M, int ref_ant )
+void remove_reference_phase( cuDoubleComplex **M, int ref_ant, int nant )
 {
     cuDoubleComplex XX0norm, XY0norm, YX0norm, YY0norm;
     double XXscale = 1.0/cuCabs( M[ref_ant][0] ); // = 1/|XX|
@@ -281,7 +274,7 @@ void remove_reference_phase( cuDoubleComplex **M, int ref_ant )
     YY0norm = make_cuDoubleComplex( YYscale*cuCreal(M[ref_ant][3]), YYscale*cuCimag(M[ref_ant][3]) ); // = YY/|YY|
 
     int ant;
-    for (ant = 0; ant < NANT; ant++)
+    for (ant = 0; ant < nant; ant++)
     {
         M[ant][0] = cuCdiv( M[ant][0], XX0norm ); // Essentially phase rotations
         M[ant][1] = cuCdiv( M[ant][1], XY0norm );
@@ -308,8 +301,12 @@ void get_delays(
 {
 
     // Give "shorthand" variables for often-used values in metafits
-    int coarse_chan = volt_metadata->common_coarse_chan_indices[coarse_chan_idx];
+    int coarse_chan    = volt_metadata->common_coarse_chan_indices[coarse_chan_idx];
     long int frequency = metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz;
+    int nant           = metafits_metadata->num_ants;
+    int nchan          = metafits_metadata->num_volt_fine_chans_per_coarse;
+    int npol           = metafits_metadata->num_ant_pols;   // (X,Y)
+
     int row;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
     int pol;     // Polarisation number
@@ -323,29 +320,23 @@ void get_delays(
 
     double phase;
 
-    /* Calibration related defines */
-    /* set these here for the library */
-    nfrequency = NCHAN;
-    nstation   = NANT;
-    npol       = NPOL;
-
     double amp = 0;
 
-    cuDoubleComplex Jref[NPOL*NPOL];            // Calibration Direction
-    cuDoubleComplex E[NPOL*NPOL];               // Model Jones in Desired Direction
-    cuDoubleComplex G[NPOL*NPOL];               // Coarse channel DI Gain
-    cuDoubleComplex Gf[NPOL*NPOL];              // Fine channel DI Gain
-    cuDoubleComplex Ji[NPOL*NPOL];              // Gain in Desired Direction
-    double        P[NPOL*NPOL];               // Parallactic angle correction rotation matrix
+    cuDoubleComplex Jref[npol*npol];            // Calibration Direction
+    cuDoubleComplex E[npol*npol];               // Model Jones in Desired Direction
+    cuDoubleComplex G[npol*npol];               // Coarse channel DI Gain
+    cuDoubleComplex Gf[npol*npol];              // Fine channel DI Gain
+    cuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
+    double        P[npol*npol];               // Parallactic angle correction rotation matrix
 
-    cuDoubleComplex  **M  = (cuDoubleComplex ** ) calloc(NANT, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
-    cuDoubleComplex ***Jf = (cuDoubleComplex ***) calloc(NANT, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
+    cuDoubleComplex  **M  = (cuDoubleComplex ** ) calloc(nant, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
+    cuDoubleComplex ***Jf = (cuDoubleComplex ***) calloc(nant, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
 
-    for (ant = 0; ant < NANT; ant++) {
-        M[ant]  = (cuDoubleComplex * ) calloc(NPOL*NPOL,  sizeof(cuDoubleComplex));
+    for (ant = 0; ant < nant; ant++) {
+        M[ant]  = (cuDoubleComplex * ) calloc(npol*npol,  sizeof(cuDoubleComplex));
         Jf[ant] = (cuDoubleComplex **) calloc(cal->nchan, sizeof(cuDoubleComplex *));
         for (ch = 0; ch < cal->nchan; ch++) { // Only need as many channels as used in calibration solution
-            Jf[ant][ch] = (cuDoubleComplex *) calloc(NPOL*NPOL, sizeof(cuDoubleComplex));
+            Jf[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
         }
     }
 
@@ -369,7 +360,7 @@ void get_delays(
     double unit_H;
     int    n;
 
-    int *order = (int *)malloc( NANT*sizeof(int) );
+    int *order = (int *)malloc( nant*sizeof(int) );
 
     double dec_degs;
     double ra_hours;
@@ -406,7 +397,7 @@ void get_delays(
                     Jf,                      // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
                     cal->chan_width,         // Input:  channel width of one column in file (in Hz)
                     cal->nchan,              // Input:  (max) number of channels in one file (=128/(chan_width/10000))
-                    NANT,                    // Input:  (max) number of antennas in one file (=128)
+                    nant,                    // Input:  (max) number of antennas in one file (=128)
                     cal->bandpass_filename); // Input:  name of bandpass file
 
         }
@@ -415,10 +406,10 @@ void get_delays(
     else if (cal->cal_type == OFFRINGA) {
 
         // Find the ordering of antennas in Offringa solutions from metafits file
-        for (n = 0; n < NANT; n++) {
+        for (n = 0; n < nant; n++) {
             order[mi->antenna_num[n*2]] = n;
         }
-        read_offringa_gains_file(M, NANT, cal->offr_chan_num, cal->filename, order);
+        read_offringa_gains_file(M, nant, cal->offr_chan_num, cal->filename, order);
         free(order);
 
         // Just make Jref (and invJref) the identity matrix since they are already
@@ -437,12 +428,12 @@ void get_delays(
     //      reference antennas are aligned.
 
     if (cal->ref_ant != -1) // -1 = don't do any phase rotation
-        remove_reference_phase( M, cal->ref_ant );
+        remove_reference_phase( M, cal->ref_ant, nant );
 
     //   2) The XY and YX terms are set to zero.
 
     if (cal->cross_terms == 0)
-        zero_XY_and_YX( M );
+        zero_XY_and_YX( M, nant );
 
     // Calculate the LST
 
@@ -498,7 +489,7 @@ void get_delays(
                 az, (PAL__DPIBY2-el));   // azimuth & zenith angle of pencil beam
 
         // Everything from this point on is frequency-dependent
-        for (ch = 0; ch < NCHAN; ch++) {
+        for (ch = 0; ch < nchan; ch++) {
 
             // Calculating direction-dependent matrices
             freq_ch = frequency + ch*mi->chan_width;    // The frequency of this fine channel
@@ -519,8 +510,8 @@ void get_delays(
             for (row=0; row < (int)(mi->ninput); row++) {
 
                 // Get the antenna and polarisation number from the row
-                ant = row / NPOL;
-                pol = row % NPOL;
+                ant = row / npol;
+                pol = row % npol;
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
@@ -544,7 +535,7 @@ void get_delays(
                 }
 
                 // "Convert" the real jones[8] output array into out complex E[4] matrix
-                for (n = 0; n<NPOL*NPOL; n++){
+                for (n = 0; n<npol*npol; n++){
                     E[n] = make_cuDoubleComplex(jones[config_idx][n*2], jones[config_idx][n*2+1]);
                 }
 
@@ -623,8 +614,8 @@ void get_delays(
                         if (Fnorm != 0.0)
                             inv2x2S( Ji, invJi[ant][ch] );
                         else {
-                            for (p1 = 0; p1 < NPOL;  p1++)
-                            for (p2 = 0; p2 < NPOL;  p2++)
+                            for (p1 = 0; p1 < npol;  p1++)
+                            for (p2 = 0; p2 < npol;  p2++)
                                 invJi[ant][ch][p1][p2] = make_cuDoubleComplex( 0.0, 0.0 );
                             }
                         }
@@ -656,7 +647,7 @@ void get_delays(
 
     // Free up dynamically allocated memory
 
-    for (ant = 0; ant < NANT; ant++) {
+    for (ant = 0; ant < nant; ant++) {
         for (ch = 0; ch < cal->nchan; ch++)
             free(Jf[ant][ch]);
         free(Jf[ant]);
