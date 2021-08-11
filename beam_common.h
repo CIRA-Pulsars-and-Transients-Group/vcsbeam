@@ -56,7 +56,7 @@ struct metafits_info {
     int         exposure;
 };
 
-struct delays {
+struct beam_geom {
     double mean_ra;
     double mean_dec;
     double az;
@@ -121,12 +121,17 @@ void get_delays(
         struct                 calibration *cal,
         float                  samples_per_sec,
         FEEBeam               *beam,
+        int                  **delays,
+        double               **amps,
         double                 sec_offset,
-        struct delays          delay_vals[],
+        struct beam_geom       beam_geom_vals[],
         struct metafits_info  *mi,
         cuDoubleComplex      ****complex_weights_array,  // output
         cuDoubleComplex      ****invJi                   // output
 );
+
+void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int ***delays, double ***amps );
+void free_delays_amps( MetafitsMetadata *metafits_metadata, int **delays, double **amps );
 
 int calcEjones_analytic(cuDoubleComplex response[MAX_POLS], // pointer to 4-element (2x2) voltage gain Jones matrix
                const long freq, // observing freq (Hz)

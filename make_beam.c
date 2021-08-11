@@ -263,10 +263,17 @@ int main(int argc, char **argv)
     cuDoubleComplex  ****invJi                 = create_invJi( nstation, nchan, npol );
     cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*sample_rate, nchan, npol );
 
-    // Load the FEE2016 beam, if requested
+    // Load the FEE2016 beam and set up the "delays" and "amps" arrays
     fprintf( stderr, "[%f]  Reading in beam model from %s\n", NOW-begintime, HYPERBEAM_HDF5 );
     FEEBeam *beam = NULL;
     beam = new_fee_beam( HYPERBEAM_HDF5 );
+    // Also, to prep for the FEE beam function call, create an "amps" array
+    // based on the delays array from the metafits
+    //int ninputs = metafits_metadata->num_rf_inputs;
+    int **delays;
+    double **amps;
+    create_delays_amps_from_metafits( metafits_metadata, &delays, &amps );
+
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     if (opts.cal.cal_type == RTS_BANDPASS)
@@ -330,9 +337,9 @@ int main(int argc, char **argv)
         wgt_sum += mi.weights_array[i];
     double invw = 1.0/wgt_sum;
 
-    // Run get_delays to populate the delay_vals struct
+    // Run get_delays to populate the beam_geom_vals struct
     fprintf( stderr, "[%f]  Setting up output header information\n", NOW-begintime);
-    struct delays delay_vals[npointing];
+    struct beam_geom beam_geom_vals[npointing];
 
     int coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
                                 ever processes one coarse chan. However, in the future,
@@ -350,8 +357,10 @@ int main(int argc, char **argv)
             &opts.cal,          // struct holding info about calibration
             sample_rate,        // in Hz
             beam,               // Hyperbeam struct
+            delays,             // } Analogue beamforming pointing direction information needed for Hyperbeam
+            amps,               // }
             0.0,                // seconds offset from the beginning of the observation at which to calculate delays
-            delay_vals,        // Populate psrfits header info
+            beam_geom_vals,     // Populate psrfits header info
             &mi,                // Struct containing info from metafits file
             NULL,               // complex weights array (ignore this time)
             NULL                // invJi array           (ignore this time)
@@ -410,16 +419,16 @@ int main(int argc, char **argv)
     // Populate the relevant header structs
     populate_psrfits_header( pf,       opts.metafits, metafits_metadata->obs_id,
             mi.date_obs, sample_rate, opts.max_sec_per_file, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            chan_width,outpol_coh, opts.rec_channel, delay_vals,
+            chan_width,outpol_coh, opts.rec_channel, beam_geom_vals,
             mi, npointing, 1 );
     populate_psrfits_header( pf_incoh, opts.metafits, metafits_metadata->obs_id,
             mi.date_obs, sample_rate, opts.max_sec_per_file, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            chan_width, outpol_incoh, opts.rec_channel, delay_vals,
+            chan_width, outpol_incoh, opts.rec_channel, beam_geom_vals,
             mi, 1, 0 );
 
     populate_vdif_header( vf, &vhdr, opts.metafits, metafits_metadata->obs_id,
             mi.date_obs, sample_rate, metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            chan_width, opts.rec_channel, delay_vals, npointing );
+            chan_width, opts.rec_channel, beam_geom_vals, npointing );
 
     // To run asynchronously we require two memory allocations for each data
     // set so multiple parts of the memory can be worked on at once.
@@ -512,8 +521,10 @@ int main(int argc, char **argv)
                 &opts.cal,              // struct holding info about calibration
                 sample_rate,            // Hz
                 beam,                   // Hyperbeam struct
+                delays,                 // } Analogue beamforming pointing direction information needed for Hyperbeam
+                amps,                   // }
                 (double)(timestep_idx + opts.begin - metafits_metadata->obs_id),        // seconds offset from the beginning of the obseration at which to calculate delays
-                NULL,                   // Don't update delay_vals
+                NULL,                   // Don't update beam_geom_vals
                 &mi,                    // Struct containing info from metafits file
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
@@ -697,6 +708,7 @@ int main(int argc, char **argv)
 
     // Clean up Hyperbeam
     free_fee_beam( beam );
+    free_delays_amps( metafits_metadata, delays, amps );
 
     return 0;
 }

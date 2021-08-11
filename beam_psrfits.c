@@ -97,7 +97,7 @@ void populate_psrfits_header(
         long int        chan_width,
         int             outpol,
         int             rec_channel,
-        struct delays  *delay_vals,
+        struct beam_geom *beam_geom_vals,
         struct metafits_info mi,
         int             npointing,
         int             is_coherent )
@@ -214,12 +214,12 @@ void populate_psrfits_header(
         pf[p].sub.rawdata = pf[p].sub.data;
 
         // Update values that depend on get_delays()
-        if (delay_vals != NULL) {
+        if (beam_geom_vals != NULL) {
 
             if (is_coherent) 
             {
-                pf[p].hdr.ra2000  = delay_vals[p].mean_ra  * PAL__DR2D;
-                pf[p].hdr.dec2000 = delay_vals[p].mean_dec * PAL__DR2D;
+                pf[p].hdr.ra2000  = beam_geom_vals[p].mean_ra  * PAL__DR2D;
+                pf[p].hdr.dec2000 = beam_geom_vals[p].mean_dec * PAL__DR2D;
             } 
             else
             {
@@ -231,14 +231,14 @@ void populate_psrfits_header(
             dec2hms(pf[p].hdr.ra_str,  pf[p].hdr.ra2000/15.0, 0);
             dec2hms(pf[p].hdr.dec_str, pf[p].hdr.dec2000,     1);
 
-            pf[p].hdr.azimuth    = delay_vals[p].az*PAL__DR2D;
-            pf[p].hdr.zenith_ang = 90.0 - (delay_vals[p].el*PAL__DR2D);
+            pf[p].hdr.azimuth    = beam_geom_vals[p].az*PAL__DR2D;
+            pf[p].hdr.zenith_ang = 90.0 - (beam_geom_vals[p].el*PAL__DR2D);
 
             pf[p].hdr.beam_FWHM = 0.25;
-            pf[p].hdr.start_lst = delay_vals[p].lmst * 60.0 * 60.0;        // Local Apparent Sidereal Time in seconds
-            pf[p].hdr.start_sec = roundf(delay_vals[p].fracmjd*86400.0);   // this will always be a whole second
-            pf[p].hdr.start_day = delay_vals[p].intmjd;
-            pf[p].hdr.MJD_epoch = delay_vals[p].intmjd + delay_vals[p].fracmjd;
+            pf[p].hdr.start_lst = beam_geom_vals[p].lmst * 60.0 * 60.0;        // Local Apparent Sidereal Time in seconds
+            pf[p].hdr.start_sec = roundf(beam_geom_vals[p].fracmjd*86400.0);   // this will always be a whole second
+            pf[p].hdr.start_day = beam_geom_vals[p].intmjd;
+            pf[p].hdr.MJD_epoch = beam_geom_vals[p].intmjd + beam_geom_vals[p].fracmjd;
 
             // Now set values for our subint structure
             pf[p].sub.lst      = pf[p].hdr.start_lst;

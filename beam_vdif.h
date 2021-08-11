@@ -60,18 +60,18 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
         float *data_buffer_vdif );
 
 void populate_vdif_header(
-        struct vdifinfo *vf,
-        vdif_header     *vhdr,
-        char            *metafits,
-        int              obsid,
-        char            *time_utc,
-        int              sample_rate,
-        long int         frequency,
-        int              nchan, 
-        long int         chan_width,
-        int              rec_channel,
-        struct delays   *delay_vals,
-        int              npointing );
+        struct vdifinfo  *vf,
+        vdif_header      *vhdr,
+        char             *metafits,
+        int               obsid,
+        char             *time_utc,
+        int               sample_rate,
+        long int          frequency,
+        int               nchan, 
+        long int          chan_width,
+        int               rec_channel,
+        struct beam_geom *beam_geom_vals,
+        int               npointing );
 
 cuFloatComplex get_std_dev_complex( cuFloatComplex *input, int nsamples );
 

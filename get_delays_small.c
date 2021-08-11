@@ -36,6 +36,58 @@ double arr_lat_rad=MWA_LAT*(M_PI/180.0),arr_lon_rad=MWA_LON*(M_PI/180.0),height=
 
 //=====================//
 
+void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int ***delays, double ***amps )
+/* Costruct "delay" and "amp" arrays required by Hyperbeam.
+ * Delays can be brought directly across from the MetafitsMetadata struct.
+ * The "conversion" from delays to amps is straightforward: All amps are "1.0"
+ * unless the delay is 32, in which case the amp should be "0.0".
+ * (The value 32 is the number assigned to a faulty or broken dipole.)
+ *
+ * Both the delays array (input) and the amps array (output) should
+ * have dimensions [ninputs][ndipoles]
+ *
+ * This function allocates memory for both delays and amps. This can be freed
+ * by a call to free_delays_amps().
+ */
+{
+    int ndipoles = metafits_metadata->num_delays; // <--- *** I just made this variable up! Greg has yet to define something for me! ***
+    int ninputs  = metafits_metadata->num_rf_inputs;
+
+    *delays = (int **)malloc( ninputs * sizeof(int *) );
+    *amps = (double **)malloc( ninputs * sizeof(double *) );
+
+    int input, dipole;
+
+    // For the delays, we will just point each delay array to the
+    // corresponding array in the metafits, but for amps, we need
+    // to allocate new memory for each set of ndipoles (=16) numbers
+    // and populate them
+    for (input = 0; input < ninputs; input++)
+    {
+        (*delays)[input] = metafits_metadata->rf_inputs[input].dipole_delays;
+
+        (*amps)[input] = (double *)malloc( ndipoles * sizeof(double) );
+        for (dipole = 0; dipole < ndipoles; dipole++)
+        {
+            (*amps)[input][dipole] = ((*delays)[input][dipole] == 32 ? 0.0 : 1.0);
+        }
+    }
+}
+
+void free_delays_amps( MetafitsMetadata *metafits_metadata, int **delays, double **amps )
+/* Frees the memory allocated in create_delays_amps_from_metafits().
+ */
+{
+    int ninputs  = metafits_metadata->num_rf_inputs;
+    int input;
+    for (input = 0; input < ninputs; input++)
+        free( amps[input] );
+
+    free( amps );
+    free( delays );
+}
+
+
 int hash_dipole_config( double *amps )
 /* In order to avoid recalculating the FEE beam for repeated dipole
  * configurations, we have to keep track of which configurations have already
@@ -274,8 +326,10 @@ void get_delays(
         struct                 calibration *cal,
         float                  samples_per_sec,
         FEEBeam               *beam,
+        int                  **delays,
+        double               **amps,
         double                 sec_offset,
-        struct delays          delay_vals[],
+        struct beam_geom       beam_geom_vals[],
         struct metafits_info  *mi,
         cuDoubleComplex       ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
         cuDoubleComplex       ****invJi )                 // output: invJi[ant][ch][pol][pol]
@@ -287,6 +341,8 @@ void get_delays(
     int nant           = metafits_metadata->num_ants;
     int nchan          = metafits_metadata->num_volt_fine_chans_per_coarse;
     int npol           = metafits_metadata->num_ant_pols;   // (X,Y)
+    int chan_width     = metafits_metadata->corr_fine_chan_width_hz;
+    int ninput         = metafits_metadata->num_rf_inputs;
 
     int row;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
@@ -478,10 +534,10 @@ void get_delays(
         for (ch = 0; ch < nchan; ch++) {
 
             // Calculating direction-dependent matrices
-            freq_ch = frequency + ch*mi->chan_width;    // The frequency of this fine channel
+            freq_ch = frequency + ch*chan_width;    // The frequency of this fine channel
             cal_chan = 0;
             if (cal->cal_type == RTS_BANDPASS) {
-                cal_chan = ch*mi->chan_width / cal->chan_width;  // The corresponding "calibration channel number"
+                cal_chan = ch*chan_width / cal->chan_width;  // The corresponding "calibration channel number"
                 if (cal_chan >= cal->nchan) {                        // Just check that the channel number is reasonable
                     fprintf(stderr, "Error: \"calibration channel\" %d cannot be ", cal_chan);
                     fprintf(stderr, ">= than total number of channels %d\n", cal->nchan);
@@ -493,11 +549,11 @@ void get_delays(
             uv_angle = cal->phase_slope*freq_ch + cal->phase_offset;
             uv_phase = make_cuDoubleComplex( cos(uv_angle), sin(uv_angle) );
 
-            for (row=0; row < (int)(mi->ninput); row++) {
+            for (row=0; row < (int)(ninput); row++) {
 
                 // Get the antenna and polarisation number from the row
-                ant = row / npol;
-                pol = row % npol;
+                ant = metafits_metadata->rf_inputs[row].ant;
+                pol = *(metafits_metadata->rf_inputs[row].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
@@ -516,7 +572,7 @@ void get_delays(
                     // Strictly speaking, the condition (ch == 0) above is redundant, as the dipole configuration
                     // array takes care of that implicitly, but I'll leave it here so that the above argument
                     // is "explicit" in the code.
-                    jones[config_idx] = calc_jones( beam, az, PAL__DPIBY2-el, frequency + mi->chan_width/2,
+                    jones[config_idx] = calc_jones( beam, az, PAL__DPIBY2-el, frequency + chan_width/2,
                             (unsigned int*)mi->delays[row], mi->amps[row], zenith_norm );
                 }
 
@@ -611,15 +667,15 @@ void get_delays(
         } // end loop through fine channels (ch)
 
         // Populate a structure with some of the calculated values
-        if (delay_vals != NULL) {
+        if (beam_geom_vals != NULL) {
 
-            delay_vals[p].mean_ra  = mean_ra;
-            delay_vals[p].mean_dec = mean_dec;
-            delay_vals[p].az       = az;
-            delay_vals[p].el       = el;
-            delay_vals[p].lmst     = lmst;
-            delay_vals[p].fracmjd  = fracmjd;
-            delay_vals[p].intmjd   = intmjd;
+            beam_geom_vals[p].mean_ra  = mean_ra;
+            beam_geom_vals[p].mean_dec = mean_dec;
+            beam_geom_vals[p].az       = az;
+            beam_geom_vals[p].el       = el;
+            beam_geom_vals[p].lmst     = lmst;
+            beam_geom_vals[p].fracmjd  = fracmjd;
+            beam_geom_vals[p].intmjd   = intmjd;
 
         }
 

@@ -88,18 +88,18 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
 
 
 void populate_vdif_header(
-        struct vdifinfo *vf,
-        vdif_header     *vhdr,
-        char            *metafits,
-        int              obsid,
-        char            *time_utc,
-        int              sample_rate,
-        long int         frequency,
-        int              nchan, 
-        long int         chan_width,
-        int              rec_channel,
-        struct delays   *delay_vals,
-        int              npointing )
+        struct vdifinfo  *vf,
+        vdif_header      *vhdr,
+        char             *metafits,
+        int               obsid,
+        char             *time_utc,
+        int               sample_rate,
+        long int          frequency,
+        int               nchan, 
+        long int          chan_width,
+        int               rec_channel,
+        struct beam_geom *beam_geom_vals,
+        int               npointing )
 {
     for ( int p=0; p<npointing; p++ )
     {
@@ -129,8 +129,8 @@ void populate_vdif_header(
                                 vf[p].iscomplex, vf[p].stationid);
 
         // Now we have to add the time
-        uint64_t start_day = delay_vals->intmjd;
-        uint64_t start_sec = roundf( delay_vals->fracmjd * 86400.0 );
+        uint64_t start_day = beam_geom_vals->intmjd;
+        uint64_t start_sec = roundf( beam_geom_vals->fracmjd * 86400.0 );
         uint64_t mjdsec    = (start_day * 86400) + start_sec; // Note the VDIFEpoch is strange - from the standard
 
         setVDIFEpoch( vhdr, start_day );
@@ -155,15 +155,15 @@ void populate_vdif_header(
         strncpy( vf[p].obs_mode,  "PSR", 8);
 
         // Determine the RA and Dec strings
-        double ra2000  = delay_vals[p].mean_ra  * PAL__DR2D;
-        double dec2000 = delay_vals[p].mean_dec * PAL__DR2D;
+        double ra2000  = beam_geom_vals[p].mean_ra  * PAL__DR2D;
+        double dec2000 = beam_geom_vals[p].mean_dec * PAL__DR2D;
 
         dec2hms(vf[p].ra_str,  ra2000/15.0, 0); // 0 = no '+' sign
         dec2hms(vf[p].dec_str, dec2000,     1); // 1 = with '+' sign
 
         strncpy( vf[p].date_obs, time_utc, 24);
 
-        vf[p].MJD_epoch = delay_vals->intmjd + delay_vals->fracmjd;
+        vf[p].MJD_epoch = beam_geom_vals->intmjd + beam_geom_vals->fracmjd;
         vf[p].fctr      = (frequency + (nchan/2.0)*chan_width)/1.0e6; // (MHz)
         strncpy( vf[p].source, "unset", 24 );
 

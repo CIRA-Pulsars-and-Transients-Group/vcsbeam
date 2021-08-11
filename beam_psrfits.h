@@ -23,7 +23,7 @@ void populate_psrfits_header(
         long int        chan_width,
         int             outpol,
         int             rec_channel,
-        struct delays  *delay_vals,
+        struct beam_geom  *beam_geom_vals,
         struct metafits_info mi,
         int             npointing,
         int             is_coherent );
