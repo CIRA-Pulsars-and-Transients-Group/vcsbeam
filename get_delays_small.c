@@ -573,7 +573,7 @@ void get_delays(
                     // array takes care of that implicitly, but I'll leave it here so that the above argument
                     // is "explicit" in the code.
                     jones[config_idx] = calc_jones( beam, az, PAL__DPIBY2-el, frequency + chan_width/2,
-                            (unsigned int*)mi->delays[row], mi->amps[row], zenith_norm );
+                            (unsigned int*)delays[row], amps[row], zenith_norm );
                 }
 
                 // "Convert" the real jones[8] output array into out complex E[4] matrix
