@@ -343,6 +343,7 @@ void get_delays(
     int npol           = metafits_metadata->num_ant_pols;   // (X,Y)
     int chan_width     = metafits_metadata->corr_fine_chan_width_hz;
     int ninput         = metafits_metadata->num_rf_inputs;
+    bool flagged;
 
     int row;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
@@ -554,12 +555,13 @@ void get_delays(
                 // Get the antenna and polarisation number from the row
                 ant = metafits_metadata->rf_inputs[row].ant;
                 pol = *(metafits_metadata->rf_inputs[row].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
+                flagged = metafits_metadata->rf_inputs[row].flagged;
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
                 // The point of this is to save recalculating the jones matrix, which is
                 // computationally expensive.
-                config_idx = hash_dipole_config( mi->amps[row] );
+                config_idx = hash_dipole_config( amps[row] );
                 if (config_idx == -1)
                     config_idx = multiple_dead;
 
@@ -599,12 +601,19 @@ void get_delays(
 
                 // Calculate the complex weights array
                 if (complex_weights_array != NULL) {
-                    if (mi->weights_array[row] != 0.0) {
-
+                    if (!flagged)
+                    {
                         cable = mi->cable_array[row] - mi->cable_array[refinp];
                         double El = mi->E_array[row];
                         double N = mi->N_array[row];
                         double H = mi->H_array[row];
+                        //cable = metafits_metadata->rf_inputs[row].electrical_length_m - ref_ant.electrical_length_m;
+                        //double El = metafits_metadata->rf_inputs[row].east_m;
+                        //double N  = metafits_metadata->rf_inputs[row].north_m;
+                        //double H  = metafits_metadata->rf_inputs[row].height_m;
+                        fprintf( stderr, "row = %d, cable_array[%d] = %f, rf_inputs[%d], electrical_length_m = %f\n",
+                                row, row, mi->cable_array[row], row,
+                                metafits_metadata->rf_inputs[row].electrical_length_m );
 
                         ENH2XYZ_local(El,N,H, MWA_LAT*PAL__DD2R, &X, &Y, &Z);
 
@@ -612,9 +621,7 @@ void get_delays(
 
                         // shift the origin of ENH to Antenna 0 and hoping the Far Field Assumption still applies ...
 
-                        geometry = (El-E_ref)*unit_E + (N-N_ref)*unit_N + (H-H_ref)*unit_H ;
-                        // double geometry = E*unit_E + N*unit_N + H*unit_H ;
-                        // Above is just w as you should see from the check.
+                        geometry = (El - E_ref)*unit_E + (N - N_ref)*unit_N + (H - H_ref)*unit_H ;
 
                         delay_time = (geometry + (invert*(cable)))/(VLIGHT);
                         delay_samples = delay_time * samples_per_sec;

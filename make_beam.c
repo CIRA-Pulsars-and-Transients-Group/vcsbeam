@@ -141,6 +141,18 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    // Now that we have a voltage context, get a new metafits_metadata struct from the voltage context
+    // so that the antenna ordering is correct
+    mwalib_metafits_context_free( metafits_context );
+    /*
+    mwalib_metafits_metadata_free( metafits_metadata );
+    if (mwalib_metafits_metadata_get( NULL, NULL, volt_context, &metafits_metadata, error_message, ERROR_MESSAGE_LEN ))
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits metadata from voltage context: %s\n", error_message );
+        exit(EXIT_FAILURE);
+    }
+    */
+
     // Only beamform on valid gps times
     /*
     if (ntimesteps != volt_context->num_common_good_timesteps)
@@ -361,7 +373,7 @@ int main(int argc, char **argv)
             amps,               // }
             0.0,                // seconds offset from the beginning of the observation at which to calculate delays
             beam_geom_vals,     // Populate psrfits header info
-            &mi,                // Struct containing info from metafits file
+            &mi,
             NULL,               // complex weights array (ignore this time)
             NULL                // invJi array           (ignore this time)
     );
@@ -525,7 +537,7 @@ int main(int argc, char **argv)
                 amps,                   // }
                 (double)(timestep_idx + opts.begin - metafits_metadata->obs_id),        // seconds offset from the beginning of the obseration at which to calculate delays
                 NULL,                   // Don't update beam_geom_vals
-                &mi,                    // Struct containing info from metafits file
+                &mi,
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
         delay_time[timestep_idx] = clock() - start;
@@ -647,11 +659,6 @@ int main(int argc, char **argv)
     fprintf( stderr, "[%f]  Starting clean-up\n", NOW-begintime);
 
     // Free up memory
-    free( voltage_files );
-    mwalib_metafits_context_free(metafits_context);
-    mwalib_voltage_context_free(volt_context);
-    mwalib_voltage_metadata_free(volt_metadata);
-
     destroy_filenames( filenames, ntimesteps );
     destroy_complex_weights( complex_weights_array, npointing, nstation, nchan );
     destroy_invJi( invJi, nstation, nchan, npol );
@@ -709,6 +716,12 @@ int main(int argc, char **argv)
     // Clean up Hyperbeam
     free_fee_beam( beam );
     free_delays_amps( metafits_metadata, delays, amps );
+
+    free( voltage_files );
+    mwalib_metafits_metadata_free( metafits_metadata );
+    mwalib_voltage_context_free( volt_context );
+    mwalib_voltage_metadata_free( volt_metadata );
+
 
     return 0;
 }

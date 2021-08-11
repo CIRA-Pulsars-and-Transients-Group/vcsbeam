@@ -13,6 +13,7 @@
 #include "beam_common.h"
 
 #define NANT  128
+#define NPOL  2
 #define NPFB  4
 #define NREC  16
 #define NINC  4
@@ -55,6 +56,12 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
                             ANT2PFB(a)  * (NINC*NREC)           + \
                             AP2REC(a,p) * (NINC)                + \
                             ANT2INC(a))
+/*
+#define D_IDX(s,c,a,p,nc)  ((s)         * (NPOL*NANT*(nc)) + \
+                            (c)         * (NPOL*NANT)      + \
+                            (a)         * (NPOL)           + \
+                            (p))
+*/
 
 #define W_IDX(p,a,c,pol,nc)   ((p) * (NPOL*(nc)*NANT)  + \
                                (a) * (NPOL*(nc))       + \
