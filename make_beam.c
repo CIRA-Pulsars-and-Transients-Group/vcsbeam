@@ -188,6 +188,12 @@ int main(int argc, char **argv)
     const int outpol_incoh   = 1;  // ("I")
     unsigned int sample_rate = volt_metadata->num_samples_per_voltage_block * volt_metadata->num_voltage_blocks_per_second;
 
+    int ant;
+    int offset;
+    unsigned int s;
+    int ch, pol;
+
+
     // =====
 
     // Read in info from metafits file
@@ -307,7 +313,7 @@ int main(int argc, char **argv)
 
         // Read in flags from file
         int nitems;
-        int flag, ant;
+        int flag;
         while (!feof(flagfile))
         {
             // Read in next item
@@ -347,6 +353,81 @@ int main(int argc, char **argv)
         wgt_sum += mi.weights_array[i];
     double invw = 1.0/wgt_sum;
 
+    // GET CALIBRATION SOLUTION
+    // ------------------------
+    // 1. Allocate memory
+    double amp = 0.0;  // Not actually used yet
+    cuDoubleComplex  **M  = (cuDoubleComplex ** ) calloc(nstation, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
+    cuDoubleComplex ***Jf = (cuDoubleComplex ***) calloc(nstation, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
+    cuDoubleComplex Jref[npol*npol];            // Calibration Direction
+    cuDoubleComplex invJref[npol*npol];
+
+    int *order = (int *)malloc( nstation*sizeof(int) ); // <-- just for OFFRINGA calibration solutions
+
+    for (ant = 0; ant < nstation; ant++) {
+        M[ant]  = (cuDoubleComplex * ) calloc(npol*npol,  sizeof(cuDoubleComplex));
+        Jf[ant] = (cuDoubleComplex **) calloc(opts.cal.nchan, sizeof(cuDoubleComplex *));
+        for (ch = 0; ch < opts.cal.nchan; ch++) { // Only need as many channels as used in calibration solution
+            Jf[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
+        }
+    }
+
+    // 2. Read files
+    if (opts.cal.cal_type == RTS || opts.cal.cal_type == RTS_BANDPASS)
+    {
+
+        read_rts_file(M, Jref, &amp, opts.cal.filename); // Read in the RTS DIJones file
+        inv2x2(Jref, invJref);
+
+        if  (opts.cal.cal_type == RTS_BANDPASS) {
+
+            read_bandpass_file(              // Read in the RTS Bandpass file
+                    NULL,                    // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
+                    Jf,                      // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
+                    opts.cal.chan_width,         // Input:  channel width of one column in file (in Hz)
+                    opts.cal.nchan,              // Input:  (max) number of channels in one file (=128/(chan_width/10000))
+                    nstation,                    // Input:  (max) number of antennas in one file (=128)
+                    opts.cal.bandpass_filename); // Input:  name of bandpass file
+
+        }
+
+    }
+    else if (opts.cal.cal_type == OFFRINGA) {
+
+        // Find the ordering of antennas in Offringa solutions from metafits file
+        for (ant = 0; ant < nstation; ant++)
+        {
+            Antenna A = metafits_metadata->antennas[ant];
+            order[A.ant*2] = ant;
+        }
+        read_offringa_gains_file(M, nstation, opts.cal.offr_chan_num, opts.cal.filename, order);
+        free(order);
+
+        // Just make Jref (and invJref) the identity matrix since they are already
+        // incorporated into Offringa's calibration solutions.
+        //Jref[0] = make_cuDoubleComplex( 1.0, 0.0 );
+        //Jref[1] = make_cuDoubleComplex( 0.0, 0.0 );
+        //Jref[2] = make_cuDoubleComplex( 0.0, 0.0 );
+        //Jref[3] = make_cuDoubleComplex( 1.0, 0.0 );
+        inv2x2(Jref, invJref);
+    }
+
+    // 3. In order to mitigate errors introduced by the calibration scheme, the calibration
+    // solution Jones matrix for each antenna may be altered in the following ways:
+    //
+    //   1) The XX and YY terms are phase-rotated so that those of the supplied
+    //      reference antennas are aligned.
+
+    if (opts.cal.ref_ant != -1) // -1 = don't do any phase rotation
+        remove_reference_phase( M, opts.cal.ref_ant, nstation );
+
+    //   2) The XY and YX terms are set to zero.
+
+    if (opts.cal.cross_terms == 0)
+        zero_XY_and_YX( M, nstation );
+
+    // ------------------------
+
     // Run get_delays to populate the beam_geom_vals struct
     fprintf( stderr, "[%f]  Setting up output header information\n", NOW-begintime);
     struct beam_geom beam_geom_vals[npointing];
@@ -365,6 +446,9 @@ int main(int argc, char **argv)
             metafits_metadata,
             coarse_chan_idx,
             &opts.cal,          // struct holding info about calibration
+            M,                  // Calibration Jones matrix information
+            Jf,                 // Calibration Jones matrix information
+            invJref,            // Calibration Jones matrix information
             sample_rate,        // in Hz
             beam,               // Hyperbeam struct
             delays,             // } Analogue beamforming pointing direction information needed for Hyperbeam
@@ -492,10 +576,6 @@ int main(int argc, char **argv)
 
     fprintf( stderr, "[%f]  **BEGINNING BEAMFORMING WITH FEE2016 BEAM MODEL**\n", NOW-begintime );
 
-    int offset;
-    unsigned int s;
-    int ch, pol;
-
     // Set up timing for each section
     long read_time[ntimesteps], delay_time[ntimesteps], calc_time[ntimesteps], write_time[ntimesteps][npointing];
     int timestep_idx;
@@ -536,6 +616,9 @@ int main(int argc, char **argv)
                 metafits_metadata,
                 coarse_chan_idx,
                 &opts.cal,              // struct holding info about calibration
+                M,                      // Calibration Jones matrix information
+                Jf,                     // Calibration Jones matrix information
+                invJref,                // Calibration Jones matrix information
                 sample_rate,            // Hz
                 beam,                   // Hyperbeam struct
                 delays,                 // } Analogue beamforming pointing direction information needed for Hyperbeam
@@ -731,8 +814,19 @@ int main(int argc, char **argv)
     mwalib_voltage_context_free( volt_context );
     mwalib_voltage_metadata_free( volt_metadata );
 
+    // Clean up memory used for calibration solutions
+    for (ant = 0; ant < nstation; ant++) {
+        for (ch = 0; ch < opts.cal.nchan; ch++)
+            free( Jf[ant][ch] );
+        free( Jf[ant] );
+        free( M[ant] );
+    }
 
-    return 0;
+    free( Jf );
+    free( M );
+    free( order );
+
+    return EXIT_SUCCESS;
 }
 
 

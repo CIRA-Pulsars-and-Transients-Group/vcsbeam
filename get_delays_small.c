@@ -342,6 +342,9 @@ void get_delays(
         MetafitsMetadata*      metafits_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
+        cuDoubleComplex      **M,
+        cuDoubleComplex     ***Jf,
+        cuDoubleComplex       *invJref,
         float                  samples_per_sec,
         FEEBeam               *beam,
         int                  **delays,
@@ -356,7 +359,7 @@ void get_delays(
     // Give "shorthand" variables for often-used values in metafits
     int coarse_chan    = volt_metadata->common_coarse_chan_indices[coarse_chan_idx];
     long int frequency = metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz;
-    int nant           = metafits_metadata->num_ants;
+    //int nant           = metafits_metadata->num_ants;
     int nchan          = metafits_metadata->num_volt_fine_chans_per_coarse;
     int npol           = metafits_metadata->num_ant_pols;   // (X,Y)
     int chan_width     = metafits_metadata->corr_fine_chan_width_hz;
@@ -376,25 +379,11 @@ void get_delays(
 
     double phase;
 
-    double amp = 0;
-
-    cuDoubleComplex Jref[npol*npol];            // Calibration Direction
     cuDoubleComplex E[npol*npol];               // Model Jones in Desired Direction
     cuDoubleComplex G[npol*npol];               // Coarse channel DI Gain
     cuDoubleComplex Gf[npol*npol];              // Fine channel DI Gain
     cuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
     double        P[npol*npol];               // Parallactic angle correction rotation matrix
-
-    cuDoubleComplex  **M  = (cuDoubleComplex ** ) calloc(nant, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
-    cuDoubleComplex ***Jf = (cuDoubleComplex ***) calloc(nant, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
-
-    for (ant = 0; ant < nant; ant++) {
-        M[ant]  = (cuDoubleComplex * ) calloc(npol*npol,  sizeof(cuDoubleComplex));
-        Jf[ant] = (cuDoubleComplex **) calloc(cal->nchan, sizeof(cuDoubleComplex *));
-        for (ch = 0; ch < cal->nchan; ch++) { // Only need as many channels as used in calibration solution
-            Jf[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
-        }
-    }
 
     // Choose a reference tile
     int refinp = 84; // Tile012 (?)
@@ -417,8 +406,6 @@ void get_delays(
     double unit_H;
     int    n;
 
-    int *order = (int *)malloc( nant*sizeof(int) );
-
     double dec_degs;
     double ra_hours;
     long int freq_ch;
@@ -440,59 +427,6 @@ void get_delays(
     cuDoubleComplex uv_phase; // For the UV phase correction
 
     double Fnorm;
-    // Read in the Jones matrices for this (coarse) channel, if requested
-    cuDoubleComplex invJref[4];
-    if (cal->cal_type == RTS || cal->cal_type == RTS_BANDPASS) {
-
-        read_rts_file(M, Jref, &amp, cal->filename); // Read in the RTS DIJones file
-        inv2x2(Jref, invJref);
-
-        if  (cal->cal_type == RTS_BANDPASS) {
-
-            read_bandpass_file(              // Read in the RTS Bandpass file
-                    NULL,                    // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
-                    Jf,                      // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
-                    cal->chan_width,         // Input:  channel width of one column in file (in Hz)
-                    cal->nchan,              // Input:  (max) number of channels in one file (=128/(chan_width/10000))
-                    nant,                    // Input:  (max) number of antennas in one file (=128)
-                    cal->bandpass_filename); // Input:  name of bandpass file
-
-        }
-
-    }
-    else if (cal->cal_type == OFFRINGA) {
-
-        // Find the ordering of antennas in Offringa solutions from metafits file
-        for (n = 0; n < nant; n++)
-        {
-            Antenna A = metafits_metadata->antennas[n];
-            order[A.ant*2] = n;
-        }
-        read_offringa_gains_file(M, nant, cal->offr_chan_num, cal->filename, order);
-        free(order);
-
-        // Just make Jref (and invJref) the identity matrix since they are already
-        // incorporated into Offringa's calibration solutions.
-        Jref[0] = make_cuDoubleComplex( 1.0, 0.0 );
-        Jref[1] = make_cuDoubleComplex( 0.0, 0.0 );
-        Jref[2] = make_cuDoubleComplex( 0.0, 0.0 );
-        Jref[3] = make_cuDoubleComplex( 1.0, 0.0 );
-        inv2x2(Jref, invJref);
-    }
-
-    // In order to mitigate errors introduced by the calibration scheme, the calibration
-    // solution Jones matrix for each antenna may be altered in the following ways:
-    //
-    //   1) The XX and YY terms are phase-rotated so that those of the supplied
-    //      reference antennas are aligned.
-
-    if (cal->ref_ant != -1) // -1 = don't do any phase rotation
-        remove_reference_phase( M, cal->ref_ant, nant );
-
-    //   2) The XY and YX terms are set to zero.
-
-    if (cal->cross_terms == 0)
-        zero_XY_and_YX( M, nant );
 
     // Calculate the LST
 
@@ -714,17 +648,6 @@ void get_delays(
                 free( jones[n] );
         }
     } // end loop through pointings (p)
-
-    // Free up dynamically allocated memory
-
-    for (ant = 0; ant < nant; ant++) {
-        for (ch = 0; ch < cal->nchan; ch++)
-            free(Jf[ant][ch]);
-        free(Jf[ant]);
-        free(M[ant]);
-    }
-    free(Jf);
-    free(M);
 
 }
 
