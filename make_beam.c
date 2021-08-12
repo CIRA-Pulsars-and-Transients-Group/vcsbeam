@@ -116,7 +116,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if (mwalib_metafits_metadata_get( metafits_context, NULL, NULL, &metafits_metadata, error_message, ERROR_MESSAGE_LEN ))
+    if (mwalib_metafits_metadata_get( metafits_context, NULL, NULL, &metafits_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", error_message );
         exit(EXIT_FAILURE);
@@ -144,14 +144,12 @@ int main(int argc, char **argv)
     // Now that we have a voltage context, get a new metafits_metadata struct from the voltage context
     // so that the antenna ordering is correct
     mwalib_metafits_context_free( metafits_context );
-    /*
     mwalib_metafits_metadata_free( metafits_metadata );
-    if (mwalib_metafits_metadata_get( NULL, NULL, volt_context, &metafits_metadata, error_message, ERROR_MESSAGE_LEN ))
+    if (mwalib_metafits_metadata_get( NULL, NULL, volt_context, &metafits_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create metafits metadata from voltage context: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
-    */
 
     // Only beamform on valid gps times
     /*
@@ -457,10 +455,17 @@ int main(int argc, char **argv)
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
     struct gpu_formbeam_arrays gf;
+
     struct gpu_ipfb_arrays gi;
     int nchunk;
     malloc_formbeam( &gf, sample_rate, nstation, nchan, npol, &nchunk, opts.gpu_mem,
                      outpol_coh, outpol_incoh, npointing, NOW-begintime );
+
+    // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
+    create_antenna_lists( metafits_metadata, gf.polX_idxs, gf.polY_idxs );
+
+    // ... and upload them to the gpu, ready for use!
+    cu_upload_pol_idx_lists( &gf );
 
     // Create output buffer arrays
     float *data_buffer_coh    = NULL;
@@ -561,7 +566,11 @@ int main(int argc, char **argv)
             for (ch  = 0; ch  < nchan;       ch++ )
             for (pol = 0; pol < npol;        pol++)
             {
-                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,opts.out_ant,pol,nchan)]);
+                if (pol == 0)
+                    i = gf.polX_idxs[opts.out_ant];
+                else
+                    i = gf.polY_idxs[opts.out_ant];
+                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,i,nchan)]);
                 detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
             }
         }

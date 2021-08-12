@@ -17,6 +17,7 @@
 #define NPFB  4
 #define NREC  16
 #define NINC  4
+#define NINPUTS 256
 
 #define ANT2PFB(ant)    ((ant)>>5)                 /* pfb = ant/32           */
 #define ANT2INC(ant)    (((ant)>>3)&0x03)          /* inc = (ant/8) % 4      */
@@ -32,6 +33,7 @@ struct gpu_formbeam_arrays
     size_t W_size;
     size_t J_size;
     size_t JD_size;
+    size_t pol_idxs_size;
     cuDoubleComplex *W, *d_W;
     cuDoubleComplex *J, *d_J;
     cuDoubleComplex *Bd, *d_Bd;
@@ -41,6 +43,8 @@ struct gpu_formbeam_arrays
     float   *d_coh;
     float   *d_incoh;
     float   *d_Ia;
+    uint32_t *polX_idxs, *d_polX_idxs;
+    uint32_t *polY_idxs, *d_polY_idxs;
 };
 
 
@@ -51,17 +55,16 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
 
 /* Calculating array indices for GPU inputs and outputs */
 
+/*
 #define D_IDX(s,c,a,p,nc)  ((s)         * (NINC*NREC*NPFB*(nc)) + \
                             (c)         * (NINC*NREC*NPFB)      + \
                             ANT2PFB(a)  * (NINC*NREC)           + \
                             AP2REC(a,p) * (NINC)                + \
                             ANT2INC(a))
-/*
-#define D_IDX(s,c,a,p,nc)  ((s)         * (NPOL*NANT*(nc)) + \
-                            (c)         * (NPOL*NANT)      + \
-                            (a)         * (NPOL)           + \
-                            (p))
 */
+#define D_IDX(s,c,i,nc)    ((s)         * (NINPUTS*(nc)) + \
+                            (c)         * (NINPUTS)      + \
+                            (i))
 
 #define W_IDX(p,a,c,pol,nc)   ((p) * (NPOL*(nc)*NANT)  + \
                                (a) * (NPOL*(nc))       + \
@@ -131,9 +134,12 @@ float *create_pinned_data_buffer_psrfits( size_t size );
         
 float *create_pinned_data_buffer_vdif( size_t size );
 
-void populate_weights_johnes( struct gpu_formbeam_arrays *g,
-                              cuDoubleComplex ****complex_weights_array,
-                              cuDoubleComplex *****invJi,
-                              int npointing, int nstation, int nchan, int npol );
+void cu_upload_pol_idx_lists( struct gpu_formbeam_arrays *g );
+
+/*** THE BELOW FUNCTION DOES NOT APPEAR TO BE USED -- DEPRECATE ***/
+void populate_weights_jones( struct gpu_formbeam_arrays *g,
+                             cuDoubleComplex ****complex_weights_array,
+                             cuDoubleComplex *****invJi,
+                             int npointing, int nstation, int nchan, int npol );
 
 #endif

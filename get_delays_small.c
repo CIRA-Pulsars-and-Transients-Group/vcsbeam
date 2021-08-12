@@ -87,6 +87,24 @@ void free_delays_amps( MetafitsMetadata *metafits_metadata, int **delays, double
     free( delays );
 }
 
+void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs )
+/* Creates a list of indexes into the data for the X and Y polarisations,
+ * ordered by antenna number. Assumption: polX_idxs and polY_idxs have
+ * sufficient allocated memory.
+ */
+{
+    // Go through the rf_inputs and construct the lookup table for the antennas
+    unsigned int ninputs = metafits_metadata->num_rf_inputs;
+    unsigned int i, ant;
+    for (i = 0; i < ninputs; i++)
+    {
+        ant = metafits_metadata->rf_inputs[i].ant;
+        if (*(metafits_metadata->rf_inputs[i].pol) == 'X')
+            polX_idxs[ant] = i;
+        else // if (*(metafits_metadata->rf_inputs.pol) == 'Y')
+            polY_idxs[ant] = i;
+    }
+}
 
 int hash_dipole_config( double *amps )
 /* In order to avoid recalculating the FEE beam for repeated dipole
@@ -345,7 +363,7 @@ void get_delays(
     int ninput         = metafits_metadata->num_rf_inputs;
     bool flagged;
 
-    int row;     // For counting through nstation*npol rows in the metafits file
+    int rf_input;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
     int pol;     // Polarisation number
     int ch;      // Channel number
@@ -550,18 +568,18 @@ void get_delays(
             uv_angle = cal->phase_slope*freq_ch + cal->phase_offset;
             uv_phase = make_cuDoubleComplex( cos(uv_angle), sin(uv_angle) );
 
-            for (row=0; row < (int)(ninput); row++) {
+            for (rf_input = 0; rf_input < (int)(ninput); rf_input++) {
 
-                // Get the antenna and polarisation number from the row
-                ant = metafits_metadata->rf_inputs[row].ant;
-                pol = *(metafits_metadata->rf_inputs[row].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
-                flagged = metafits_metadata->rf_inputs[row].flagged;
+                // Get the antenna and polarisation number from the rf_input
+                ant = metafits_metadata->rf_inputs[rf_input].ant;
+                pol = *(metafits_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
+                flagged = metafits_metadata->rf_inputs[rf_input].flagged;
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
                 // The point of this is to save recalculating the jones matrix, which is
                 // computationally expensive.
-                config_idx = hash_dipole_config( amps[row] );
+                config_idx = hash_dipole_config( amps[rf_input] );
                 if (config_idx == -1)
                     config_idx = multiple_dead;
 
@@ -575,7 +593,7 @@ void get_delays(
                     // array takes care of that implicitly, but I'll leave it here so that the above argument
                     // is "explicit" in the code.
                     jones[config_idx] = calc_jones( beam, az, PAL__DPIBY2-el, frequency + chan_width/2,
-                            (unsigned int*)delays[row], amps[row], zenith_norm );
+                            (unsigned int*)delays[rf_input], amps[rf_input], zenith_norm );
                 }
 
                 // "Convert" the real jones[8] output array into out complex E[4] matrix
@@ -603,17 +621,23 @@ void get_delays(
                 if (complex_weights_array != NULL) {
                     if (!flagged)
                     {
-                        cable = mi->cable_array[row] - mi->cable_array[refinp];
-                        double El = mi->E_array[row];
-                        double N = mi->N_array[row];
-                        double H = mi->H_array[row];
-                        //cable = metafits_metadata->rf_inputs[row].electrical_length_m - ref_ant.electrical_length_m;
-                        //double El = metafits_metadata->rf_inputs[row].east_m;
-                        //double N  = metafits_metadata->rf_inputs[row].north_m;
-                        //double H  = metafits_metadata->rf_inputs[row].height_m;
-                        fprintf( stderr, "row = %d, cable_array[%d] = %f, rf_inputs[%d], electrical_length_m = %f\n",
-                                row, row, mi->cable_array[row], row,
-                                metafits_metadata->rf_inputs[row].electrical_length_m );
+                        //cable = mi->cable_array[rf_input] - mi->cable_array[refinp];
+                        //double El = mi->E_array[rf_input];
+                        //double N = mi->N_array[rf_input];
+                        //double H = mi->H_array[rf_input];
+                        cable = metafits_metadata->rf_inputs[rf_input].electrical_length_m - ref_ant.electrical_length_m;
+                        double El = metafits_metadata->rf_inputs[rf_input].east_m;
+                        double N  = metafits_metadata->rf_inputs[rf_input].north_m;
+                        double H  = metafits_metadata->rf_inputs[rf_input].height_m;
+                        //fprintf( stderr, "vcs_order[%u] = %u, subfile_order = %u, antenna = %u, input = %u\n",
+                        //        rf_input,
+                        //        metafits_metadata->rf_inputs[rf_input].vcs_order,
+                        //        metafits_metadata->rf_inputs[rf_input].subfile_order,
+                        //        metafits_metadata->rf_inputs[rf_input].ant,
+                        //        metafits_metadata->rf_inputs[rf_input].input
+                        //        );
+                        //fprintf( stderr, "  E: metafits order: %f, rf_inputs order: %f\n",
+                        //        mi->E_array[rf_input], metafits_metadata->rf_inputs[rf_input].east_m );
 
                         ENH2XYZ_local(El,N,H, MWA_LAT*PAL__DD2R, &X, &Y, &Z);
 
@@ -639,14 +663,11 @@ void get_delays(
 
                         // Store result for later use
                         complex_weights_array[p][ant][ch][pol] =
-                            make_cuDoubleComplex(
-                                    mi->weights_array[row]*cos( phase ),
-                                    mi->weights_array[row]*sin( phase )
-                                    );
+                            make_cuDoubleComplex( cos( phase ), sin( phase ));
 
                     }
                     else {
-                        complex_weights_array[p][ant][ch][pol] = make_cuDoubleComplex( mi->weights_array[row], 0.0 ); // i.e. = 0.0
+                        complex_weights_array[p][ant][ch][pol] = make_cuDoubleComplex( 0.0, 0.0 );
                     }
                 }
 
@@ -670,7 +691,7 @@ void get_delays(
                         }
                     }
 
-            } // end loop through antenna/pol (row)
+            } // end loop through antenna/pol (rf_input)
         } // end loop through fine channels (ch)
 
         // Populate a structure with some of the calculated values

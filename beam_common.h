@@ -133,6 +133,8 @@ void get_delays(
 void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int ***delays, double ***amps );
 void free_delays_amps( MetafitsMetadata *metafits_metadata, int **delays, double **amps );
 
+void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
+
 int calcEjones_analytic(cuDoubleComplex response[MAX_POLS], // pointer to 4-element (2x2) voltage gain Jones matrix
                const long freq, // observing freq (Hz)
                const float lat, // observing latitude (radians)

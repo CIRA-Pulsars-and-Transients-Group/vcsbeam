@@ -63,7 +63,9 @@ __global__ void invj_the_data( uint8_t       *data,
                                cuDoubleComplex *JDx,
                                cuDoubleComplex *JDy,
                                float         *Ia,
-                               int            incoh )
+                               int            incoh,
+                               uint32_t      *polX_idxs,
+                               uint32_t      *polY_idxs )
 /* Layout for input arrays:
 *   data [nsamples] [nchan] [NPFB] [NREC] [NINC] -- see docs
 *   J    [NSTATION] [nchan] [NPOL] [NPOL]        -- jones matrix
@@ -80,10 +82,15 @@ __global__ void invj_the_data( uint8_t       *data,
 
     int ant  = threadIdx.x; /* The (ant)enna number */
 
+    int iX   = polX_idxs[ant]; /* The input index for the X pol for this antenna */
+    int iY   = polY_idxs[ant]; /* The input index for the Y pol for this antenna */
+
     cuDoubleComplex Dx, Dy;
     // Convert input data to complex float
-    Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,ant,0,nc)]);
-    Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,ant,1,nc)]);
+    //Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,ant,0,nc)]);
+    //Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,ant,1,nc)]);
+    Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iX,nc)]);
+    Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iY,nc)]);
 
     // If tile is flagged in the calibration, flag it in the incoherent beam
     if (incoh)
@@ -435,7 +442,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
         // convert the data and multiply it by J
         invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, g->d_W, g->d_JDx, g->d_JDy,
-                                               g->d_Ia, incoh_check );
+                                               g->d_Ia, incoh_check, g->d_polX_idxs, g->d_polY_idxs );
 
         // Send off a parrellel cuda stream for each pointing
         for ( int p = 0; p < npointing; p++ )
@@ -583,6 +590,18 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
     gpuErrchk(cudaMalloc( (void **)&g->d_coh,   g->coh_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_incoh, g->incoh_size ));
 
+    // Allocate memory on both host and device for polX and polY idx arrays
+    g->pol_idxs_size = nstation * sizeof(uint32_t);
+    cudaMallocHost( &g->polX_idxs, g->pol_idxs_size );
+    cudaMallocHost( &g->polY_idxs, g->pol_idxs_size );
+    gpuErrchk(cudaMalloc( (void **)&g->d_polX_idxs, g->pol_idxs_size ));
+    gpuErrchk(cudaMalloc( (void **)&g->d_polY_idxs, g->pol_idxs_size ));
+}
+
+void cu_upload_pol_idx_lists( struct gpu_formbeam_arrays *g )
+{
+    gpuErrchk(cudaMemcpy( g->d_polX_idxs, g->polX_idxs, g->pol_idxs_size, cudaMemcpyHostToDevice ));
+    gpuErrchk(cudaMemcpy( g->d_polY_idxs, g->polY_idxs, g->pol_idxs_size, cudaMemcpyHostToDevice ));
 }
 
 void free_formbeam( struct gpu_formbeam_arrays *g )
@@ -591,12 +610,16 @@ void free_formbeam( struct gpu_formbeam_arrays *g )
     cudaFreeHost( g->W );
     cudaFreeHost( g->J );
     cudaFreeHost( g->Bd );
+    cudaFreeHost( g->polX_idxs );
+    cudaFreeHost( g->polY_idxs );
     cudaFree( g->d_W );
     cudaFree( g->d_J );
     cudaFree( g->d_Bd );
     cudaFree( g->d_data );
     cudaFree( g->d_coh );
     cudaFree( g->d_incoh );
+    cudaFree( g->d_polX_idxs );
+    cudaFree( g->d_polY_idxs );
 }
 
 float *create_pinned_data_buffer_psrfits( size_t size )
@@ -619,10 +642,10 @@ float *create_pinned_data_buffer_vdif( size_t size )
     return ptr;
 }
 
-void populate_weights_johnes( struct gpu_formbeam_arrays *g,
-                              cuDoubleComplex ****complex_weights_array,
-                              cuDoubleComplex *****invJi,
-                              int npointing, int nstation, int nchan, int npol )
+void populate_weights_jones( struct gpu_formbeam_arrays *g,
+                             cuDoubleComplex ****complex_weights_array,
+                             cuDoubleComplex *****invJi,
+                             int npointing, int nstation, int nchan, int npol )
 {
     // Setup input values (= populate W and J)
     int p, ant, ch, pol, pol2;
