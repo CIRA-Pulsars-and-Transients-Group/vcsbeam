@@ -365,7 +365,7 @@ void get_delays(
     int npol           = obs_metadata->num_ant_pols;   // (X,Y)
     int chan_width     = obs_metadata->corr_fine_chan_width_hz;
     int ninput         = obs_metadata->num_rf_inputs;
-    bool flagged;
+    bool flagged, cal_flagged;
 
     int rf_input;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
@@ -507,10 +507,11 @@ void get_delays(
             for (rf_input = 0; rf_input < (int)(ninput); rf_input++) {
 
                 // Get the antenna and polarisation number from the rf_input
-                ant = obs_metadata->rf_inputs[rf_input].ant;
-                pol = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
-                flagged = obs_metadata->rf_inputs[rf_input].flagged;
-                cal_ant = get_idx_for_vcs_antenna_in_cal( cal_metadata, obs_metadata, ant );
+                ant         = obs_metadata->rf_inputs[rf_input].ant;
+                pol         = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
+                flagged     = obs_metadata->rf_inputs[rf_input].flagged;
+                cal_ant     = get_idx_for_vcs_antenna_in_cal( cal_metadata, obs_metadata, ant );
+                cal_flagged = cal_metadata->rf_inputs[rf_input].flagged;
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
@@ -557,7 +558,7 @@ void get_delays(
 
                 // Calculate the complex weights array
                 if (complex_weights_array != NULL) {
-                    if (!flagged)
+                    if (!flagged && !cal_flagged)
                     {
                         //cable = mi->cable_array[rf_input] - mi->cable_array[refinp];
                         //double El = mi->E_array[rf_input];
