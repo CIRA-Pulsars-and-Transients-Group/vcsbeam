@@ -370,6 +370,7 @@ void get_delays(
     int rf_input;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
     int pol;     // Polarisation number
+    int cal_ant; // Antenna index for the calibration solutions
     int ch;      // Channel number
     int p1, p2;  // Counters for polarisation
 
@@ -509,6 +510,7 @@ void get_delays(
                 ant = obs_metadata->rf_inputs[rf_input].ant;
                 pol = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
                 flagged = obs_metadata->rf_inputs[rf_input].flagged;
+                cal_ant = get_idx_for_vcs_antenna_in_cal( cal_metadata, obs_metadata, ant );
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
@@ -539,10 +541,11 @@ void get_delays(
                 // Apply parallactic angle correction if Hyperbeam was used
                 mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
 
-                mult2x2d(M[ant], invJref, G); // M x J^-1 = G (Forms the "coarse channel" DI gain)
+                fprintf( stderr, "ant = %u, cal_ant = %u\n", ant, cal_ant );
+                mult2x2d(M[cal_ant], invJref, G); // M x J^-1 = G (Forms the "coarse channel" DI gain)
 
                 if (cal->cal_type == RTS_BANDPASS)
-                    mult2x2d(G, Jf[ant][cal_chan], Gf); // G x Jf = Gf (Forms the "fine channel" DI gain)
+                    mult2x2d(G, Jf[cal_ant][cal_chan], Gf); // G x Jf = Gf (Forms the "fine channel" DI gain)
                 else
                     cp2x2(G, Gf); //Set the fine channel DI gain equal to the coarse channel DI gain
 
