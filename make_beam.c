@@ -248,7 +248,7 @@ int main(int argc, char **argv)
     if (cal.cal_type == RTS_BANDPASS)
         cal.nchan = (nchan * chan_width) / cal_chan_width;
 
-    // If a custom flag file has been provided, use that instead of the metafits flags
+    // If a custom flag file has been provided, UNION it with other flags
     if (opts.custom_flags != NULL)
     {
         // Reset the weights to 1
