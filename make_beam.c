@@ -59,7 +59,8 @@ int main(int argc, char **argv)
     opts.end         = 0;    // GPS time -- when to stop beamforming
     opts.pointings   = NULL; // list of pointings "dd:mm:ss_hh:mm:ss,dd:mm:ss_hh:mm:ss"
     opts.datadir     = NULL; // The path to where the recombined data live
-    opts.metafits    = NULL; // filename of the metafits file
+    opts.metafits    = NULL; // filename of the metafits file for the target observation
+    opts.cal_metafits = NULL; // filename of the metafits file for the calibration observation
     opts.rec_channel = -1;   // 0 - 255 receiver 1.28MHz channel
 
     // Variables for MWA/VCS configuration
@@ -457,7 +458,6 @@ int main(int argc, char **argv)
             amps,               // }
             0.0,                // seconds offset from the beginning of the observation at which to calculate delays
             beam_geom_vals,     // Populate psrfits header info
-            &mi,
             NULL,               // complex weights array (ignore this time)
             NULL                // invJi array           (ignore this time)
     );
@@ -627,7 +627,6 @@ int main(int argc, char **argv)
                 amps,                   // }
                 (double)(timestep_idx + opts.begin - metafits_metadata->obs_id),        // seconds offset from the beginning of the obseration at which to calculate delays
                 NULL,                   // Don't update beam_geom_vals
-                &mi,
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
         delay_time[timestep_idx] = clock() - start;
@@ -849,11 +848,8 @@ void usage() {
     fprintf(stderr, "\n");
     fprintf(stderr, "\t-d, --data-location=PATH  ");
     fprintf(stderr, "PATH is the directory containing the recombined data\n");
-    fprintf(stderr, "\t-m, --metafits-file=FILE  ");
-    fprintf(stderr, "FILE is the metafits file pertaining to the OBSID given by the\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr,  "-o option\n");
-    fprintf(stderr, "\n");
+    fprintf(stderr, "\t-m, --metafits=FILE  ");
+    fprintf(stderr, "FILE is the metafits file for the target observation\n");
     fprintf(stderr, "\t-f, --coarse-chan=N       ");
     fprintf(stderr, "Absolute coarse channel number (0-255)\n");
 
@@ -899,6 +895,8 @@ void usage() {
     fprintf(stderr, "\n");
     fprintf(stderr, "CALIBRATION OPTIONS (RTS)\n");
     fprintf(stderr, "\n");
+    fprintf(stderr, "\t-c, --cal-metafits=FILE  ");
+    fprintf(stderr, "FILE is the metafits file pertaining to the calibration solution\n");
     fprintf(stderr, "\t-J, --dijones-file=PATH   ");
     fprintf(stderr, "The direction-independent Jones matrix file that is output from\n");
     fprintf(stderr, "\t                          ");
@@ -987,7 +985,8 @@ void make_beam_parse_cmdline(
                 {"antpol",          required_argument, 0, 'A'},
                 {"pointings",       required_argument, 0, 'P'},
                 {"data-location",   required_argument, 0, 'd'},
-                {"metafits-file",   required_argument, 0, 'm'},
+                {"metafits",        required_argument, 0, 'm'},
+                {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
                 {"custom-flags",    required_argument, 0, 'F'},
                 {"dijones-file",    required_argument, 0, 'J'},
@@ -1005,7 +1004,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:B:C:d:e:f:F:g:hiJ:m:O:pP:R:sS:t:U:vVW:X",
+                             "A:b:B:c:C:d:e:f:F:g:hiJ:m:O:pP:R:sS:t:U:vVW:X",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -1022,6 +1021,9 @@ void make_beam_parse_cmdline(
                 case 'B':
                     cal->bandpass_filename = strdup(optarg);
                     cal->cal_type = RTS_BANDPASS;
+                    break;
+                case 'c':
+                    opts->cal_metafits = strdup(optarg);
                     break;
                 case 'C':
                     cal->offr_chan_num = atoi(optarg);
@@ -1120,6 +1122,7 @@ void make_beam_parse_cmdline(
     assert( opts->pointings    != NULL );
     assert( opts->datadir      != NULL );
     assert( opts->metafits     != NULL );
+    assert( opts->cal_metafits != NULL );
     assert( opts->rec_channel  != -1   );
     assert( cal->cal_type != NO_CALIBRATION );
 

@@ -352,7 +352,6 @@ void get_delays(
         double               **amps,
         double                 sec_offset,
         struct beam_geom       beam_geom_vals[],
-        struct metafits_info  *mi,
         cuDoubleComplex       ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
         cuDoubleComplex       ****invJi )                 // output: invJi[ant][ch][pol][pol]
 {

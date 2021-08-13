@@ -67,6 +67,7 @@ struct make_beam_opts {
     char              *pointings;     // pointing list"dd:mm:ss_hh:mm:ss, dd:mm:ss_hh:mm:ss"
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // filename of the metafits file
+    char              *cal_metafits;  // filename of the metafits file
     int                rec_channel;   // 0 - 255 receiver 1.28MHz channel
     long int           frequency;     // = rec_channel expressed in Hz
 
@@ -106,7 +107,6 @@ void get_delays(
         double               **amps,
         double                 sec_offset,
         struct beam_geom       beam_geom_vals[],
-        struct metafits_info  *mi,
         cuDoubleComplex      ****complex_weights_array,  // output
         cuDoubleComplex      ****invJi                   // output
 );
