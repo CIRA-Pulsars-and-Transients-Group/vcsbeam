@@ -9,13 +9,14 @@
 
 #include <stdlib.h>
 #include "beam_common.h"
+#include "calibration.h"
 #include <cuComplex.h>
 
 
 #define MAX_COMMAND_LENGTH 1024
 
 void usage();
-void make_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts );
+void make_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal );
 
 char **create_filenames( int obsid, int begin, int end, int coarse_chan, char *datadir );
 void  destroy_filenames( char **filenames, int nfiles );

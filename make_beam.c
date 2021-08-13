@@ -30,6 +30,7 @@
 #include "filter.h"
 #include "psrfits.h"
 #include "form_beam.h"
+#include "calibration.h"
 #include <omp.h>
 
 #include <cuda_runtime.h>
@@ -49,6 +50,7 @@ int main(int argc, char **argv)
 {
     // A place to hold the beamformer settings
     struct make_beam_opts opts;
+    struct calibration cal;           // Variables for calibration settings
 
     /* Set default beamformer settings */
 
@@ -74,22 +76,22 @@ int main(int argc, char **argv)
     opts.max_sec_per_file = 200; // Number of seconds per fits files
 
     // Variables for calibration settings
-    opts.cal.filename          = NULL;
-    opts.cal.bandpass_filename = NULL;
-    opts.cal.chan_width        = 40000;
-    opts.cal.nchan             = 0;
-    opts.cal.cal_type          = NO_CALIBRATION;
-    opts.cal.offr_chan_num     = 0;
-    opts.cal.ref_ant           = 0;
-    opts.cal.cross_terms       = 0;
-    opts.cal.phase_offset      = 0.0;
-    opts.cal.phase_slope       = 0.0;
+    cal.filename          = NULL;
+    cal.bandpass_filename = NULL;
+    cal.chan_width        = 40000;
+    cal.nchan             = 0;
+    cal.cal_type          = NO_CALIBRATION;
+    cal.offr_chan_num     = 0;
+    cal.ref_ant           = 0;
+    cal.cross_terms       = 0;
+    cal.phase_offset      = 0.0;
+    cal.phase_slope       = 0.0;
 
     // GPU options
     opts.gpu_mem               = -1.0;
 
     // Parse command line arguments
-    make_beam_parse_cmdline( argc, argv, &opts );
+    make_beam_parse_cmdline( argc, argv, &opts, &cal );
 
 
     double begintime = NOW;
@@ -292,8 +294,8 @@ int main(int argc, char **argv)
 
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
-    if (opts.cal.cal_type == RTS_BANDPASS)
-        opts.cal.nchan = (nchan * chan_width) / opts.cal.chan_width;
+    if (cal.cal_type == RTS_BANDPASS)
+        cal.nchan = (nchan * chan_width) / cal.chan_width;
 
     // If a custom flag file has been provided, use that instead of the metafits flags
     if (opts.custom_flags != NULL)
@@ -366,33 +368,33 @@ int main(int argc, char **argv)
 
     for (ant = 0; ant < nstation; ant++) {
         M[ant]  = (cuDoubleComplex * ) calloc(npol*npol,  sizeof(cuDoubleComplex));
-        Jf[ant] = (cuDoubleComplex **) calloc(opts.cal.nchan, sizeof(cuDoubleComplex *));
-        for (ch = 0; ch < opts.cal.nchan; ch++) { // Only need as many channels as used in calibration solution
+        Jf[ant] = (cuDoubleComplex **) calloc(cal.nchan, sizeof(cuDoubleComplex *));
+        for (ch = 0; ch < cal.nchan; ch++) { // Only need as many channels as used in calibration solution
             Jf[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
         }
     }
 
     // 2. Read files
-    if (opts.cal.cal_type == RTS || opts.cal.cal_type == RTS_BANDPASS)
+    if (cal.cal_type == RTS || cal.cal_type == RTS_BANDPASS)
     {
 
-        read_rts_file(M, Jref, &amp, opts.cal.filename); // Read in the RTS DIJones file
+        read_rts_file(M, Jref, &amp, cal.filename); // Read in the RTS DIJones file
         inv2x2(Jref, invJref);
 
-        if  (opts.cal.cal_type == RTS_BANDPASS) {
+        if  (cal.cal_type == RTS_BANDPASS) {
 
             read_bandpass_file(              // Read in the RTS Bandpass file
                     NULL,                    // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
                     Jf,                      // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
-                    opts.cal.chan_width,         // Input:  channel width of one column in file (in Hz)
-                    opts.cal.nchan,              // Input:  (max) number of channels in one file (=128/(chan_width/10000))
+                    cal.chan_width,         // Input:  channel width of one column in file (in Hz)
+                    cal.nchan,              // Input:  (max) number of channels in one file (=128/(chan_width/10000))
                     nstation,                    // Input:  (max) number of antennas in one file (=128)
-                    opts.cal.bandpass_filename); // Input:  name of bandpass file
+                    cal.bandpass_filename); // Input:  name of bandpass file
 
         }
 
     }
-    else if (opts.cal.cal_type == OFFRINGA) {
+    else if (cal.cal_type == OFFRINGA) {
 
         // Find the ordering of antennas in Offringa solutions from metafits file
         for (ant = 0; ant < nstation; ant++)
@@ -400,7 +402,7 @@ int main(int argc, char **argv)
             Antenna A = metafits_metadata->antennas[ant];
             order[A.ant*2] = ant;
         }
-        read_offringa_gains_file(M, nstation, opts.cal.offr_chan_num, opts.cal.filename, order);
+        read_offringa_gains_file(M, nstation, cal.offr_chan_num, cal.filename, order);
         free(order);
 
         // Just make Jref (and invJref) the identity matrix since they are already
@@ -418,12 +420,12 @@ int main(int argc, char **argv)
     //   1) The XX and YY terms are phase-rotated so that those of the supplied
     //      reference antennas are aligned.
 
-    if (opts.cal.ref_ant != -1) // -1 = don't do any phase rotation
-        remove_reference_phase( M, opts.cal.ref_ant, nstation );
+    if (cal.ref_ant != -1) // -1 = don't do any phase rotation
+        remove_reference_phase( M, cal.ref_ant, nstation );
 
     //   2) The XY and YX terms are set to zero.
 
-    if (opts.cal.cross_terms == 0)
+    if (cal.cross_terms == 0)
         zero_XY_and_YX( M, nstation );
 
     // ------------------------
@@ -445,7 +447,7 @@ int main(int argc, char **argv)
             volt_metadata,
             metafits_metadata,
             coarse_chan_idx,
-            &opts.cal,          // struct holding info about calibration
+            &cal,          // struct holding info about calibration
             M,                  // Calibration Jones matrix information
             Jf,                 // Calibration Jones matrix information
             invJref,            // Calibration Jones matrix information
@@ -615,7 +617,7 @@ int main(int argc, char **argv)
                 volt_metadata,
                 metafits_metadata,
                 coarse_chan_idx,
-                &opts.cal,              // struct holding info about calibration
+                &cal,              // struct holding info about calibration
                 M,                      // Calibration Jones matrix information
                 Jf,                     // Calibration Jones matrix information
                 invJref,                // Calibration Jones matrix information
@@ -771,7 +773,7 @@ int main(int argc, char **argv)
     free( opts.pointings    );
     free( opts.datadir      );
     free( opts.metafits     );
-    free( opts.cal.filename );
+    free( cal.filename );
     free( opts.custom_flags );
     free( opts.synth_filter );
 
@@ -816,7 +818,7 @@ int main(int argc, char **argv)
 
     // Clean up memory used for calibration solutions
     for (ant = 0; ant < nstation; ant++) {
-        for (ch = 0; ch < opts.cal.nchan; ch++)
+        for (ch = 0; ch < cal.nchan; ch++)
             free( Jf[ant][ch] );
         free( Jf[ant] );
         free( M[ant] );
@@ -966,7 +968,7 @@ void usage() {
 
 
 void make_beam_parse_cmdline(
-        int argc, char **argv, struct make_beam_opts *opts )
+        int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal )
 {
     if (argc > 1) {
 
@@ -1023,11 +1025,11 @@ void make_beam_parse_cmdline(
                     opts->begin = atol(optarg);
                     break;
                 case 'B':
-                    opts->cal.bandpass_filename = strdup(optarg);
-                    opts->cal.cal_type = RTS_BANDPASS;
+                    cal->bandpass_filename = strdup(optarg);
+                    cal->cal_type = RTS_BANDPASS;
                     break;
                 case 'C':
-                    opts->cal.offr_chan_num = atoi(optarg);
+                    cal->offr_chan_num = atoi(optarg);
                     break;
                 case 'd':
                     opts->datadir = strdup(optarg);
@@ -1052,16 +1054,16 @@ void make_beam_parse_cmdline(
                     opts->out_incoh = 1;
                     break;
                 case 'J':
-                    opts->cal.filename = strdup(optarg);
-                    if (opts->cal.cal_type != RTS_BANDPASS)
-                        opts->cal.cal_type = RTS;
+                    cal->filename = strdup(optarg);
+                    if (cal->cal_type != RTS_BANDPASS)
+                        cal->cal_type = RTS;
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);
                     break;
                 case 'O':
-                    opts->cal.filename = strdup(optarg);
-                    opts->cal.cal_type = OFFRINGA;
+                    cal->filename = strdup(optarg);
+                    cal->cal_type = OFFRINGA;
                     break;
                 case 'p':
                     opts->out_coh = 1;
@@ -1070,7 +1072,7 @@ void make_beam_parse_cmdline(
                     opts->pointings = strdup(optarg);
                     break;
                 case 'R':
-                    opts->cal.ref_ant = atoi(optarg);
+                    cal->ref_ant = atoi(optarg);
                     break;
                 case 'S':
                     opts->synth_filter = strdup(optarg);
@@ -1082,8 +1084,8 @@ void make_beam_parse_cmdline(
                     opts->max_sec_per_file = atoi(optarg);
                     break;
                 case 'U':
-                    if (sscanf( optarg, "%lf,%lf", &(opts->cal.phase_slope),
-                                &(opts->cal.phase_offset) ) != 2)
+                    if (sscanf( optarg, "%lf,%lf", &(cal->phase_slope),
+                                &(cal->phase_offset) ) != 2)
                     {
                         fprintf( stderr, "error: badly formed argument to -Y "
                                 "('%s')\n", optarg );
@@ -1098,10 +1100,10 @@ void make_beam_parse_cmdline(
                     exit(0);
                     break;
                 case 'W':
-                    opts->cal.chan_width = atoi(optarg);
+                    cal->chan_width = atoi(optarg);
                     break;
                 case 'X':
-                    opts->cal.cross_terms = 1;
+                    cal->cross_terms = 1;
                     break;
                 default:
                     fprintf(stderr, "error: make_beam_parse_cmdline: "
@@ -1124,7 +1126,7 @@ void make_beam_parse_cmdline(
     assert( opts->datadir      != NULL );
     assert( opts->metafits     != NULL );
     assert( opts->rec_channel  != -1   );
-    assert( opts->cal.cal_type != NO_CALIBRATION );
+    assert( cal->cal_type != NO_CALIBRATION );
 
     // If neither -i, -p, nor -v were chosen, set -p by default
     if ( !opts->out_incoh && !opts->out_coh && !opts->out_vdif )
@@ -1134,12 +1136,12 @@ void make_beam_parse_cmdline(
 
     // If the reference antenna is outside the range of antennas, issue
     // a warning and turn off phase rotation.
-    /*if (opts->cal.ref_ant < 0 || opts->cal.ref_ant >= opts->nstation)
+    /*if (cal->ref_ant < 0 || cal->ref_ant >= opts->nstation)
     {
         fprintf( stderr, "warning: tile %d outside of range 0-%d. "
                 "Calibration phase rotation turned off.\n",
-                opts->cal.ref_ant, opts->nstation-1 );
-        opts->cal.ref_ant = -1; // This defines the meaning of -1
+                cal->ref_ant, opts->nstation-1 );
+        cal->ref_ant = -1; // This defines the meaning of -1
                                 // = don't do phase rotation
     }*/
 }

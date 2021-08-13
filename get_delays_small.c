@@ -18,6 +18,7 @@
 #include <mwalib.h>
 #include "beam_common.h"
 #include "mwa_hyperbeam.h"
+#include "calibration.h"
 
 /* make a connection to the MWA database and get the antenna positions.
  * Then: calculate the geometric delay to a source for each antenna

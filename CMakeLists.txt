@@ -28,7 +28,7 @@ find_package(MWALIB)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 
-set(sources "beam_common.c;beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;get_delays_small.c;ipfb.cu;make_beam.c;ascii_header.c;vdifio.c")
+set(sources "beam_common.c;beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;get_delays_small.c;ipfb.cu;make_beam.c;ascii_header.c;vdifio.c;calibration.c")
 
 add_executable(make_beam ${sources})
 

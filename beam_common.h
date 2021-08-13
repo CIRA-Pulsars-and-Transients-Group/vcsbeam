@@ -9,18 +9,12 @@
 
 #include <inttypes.h>
 #include "mwa_hyperbeam.h"
+#include "calibration.h"
 #include <cuComplex.h>
 #include <mwalib.h>
 
-// Calibration solution types
-#define NO_CALIBRATION  0
-#define RTS             1
-#define RTS_BANDPASS    2
-#define OFFRINGA        3
-
 #define MAX_POLS   4
 
-#define BUFSIZE    4096
 #define VEL_LIGHT  299792458.0
 #define N_COPOL    2
 #define R2C_SIGN   -1.0
@@ -66,20 +60,6 @@ struct beam_geom {
     double intmjd;
 };
 
-struct calibration {
-    char  *filename;           // The file that houses the calibration solution
-    char  *bandpass_filename;  // The file that houses the RTS bandpass information
-    int    chan_width;         // Channel width used in RTS bandpass solutions (in Hz)
-    int    nchan;              // The number of channels in the RTS bandpass solutions
-    int    cal_type;           // Either RTS or OFFRINGA
-    int    offr_chan_num;      // The channel number in the Offringa calibration solution file
-    int    ref_ant;            // Reference antenna for calibration phases
-    int    cross_terms;        // Include XY and YX of calibration Jones matrices
-    double phase_offset;       // Rotate the phase of Y by m*freq + c, where
-    double phase_slope;        //   m = phase_slope (rad/Hz)
-                               //   c = phase_offset (rad)
-};
-
 struct make_beam_opts {
     // Variables for required options
     unsigned long int  begin;         // GPS time -- when to start beamforming
@@ -106,8 +86,6 @@ struct make_beam_opts {
     int                out_summed;    // Default = output only Stokes I output turned OFF
     int                max_sec_per_file;    // Number of seconds per fits files
     float              gpu_mem  ;     // Default = -1.0. If -1.0 use all GPU mem
-
-    struct calibration cal;           // Variables for calibration settings
 };
 
 /* Running get_delays from within make_beam */
@@ -177,13 +155,6 @@ void flatten_bandpass(
         void *data);
 
 void read_data( char *filename, uint8_t *data, int nbytes );
-int read_rts_file(cuDoubleComplex **G, cuDoubleComplex *Jref,
-                  double *amp, char *fname);
-int read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
-                        int chan_width, int nchan, int nant, char *filename );
-int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
-                              int coarse_chan, char *gains_file, int *order );
-
 
 void dec2hms( char *out, double in, int sflag );
 void utc2mjd( char *, double *, double * ); // "2000-01-01T00:00:00" --> MJD_int + MJD_fraction
