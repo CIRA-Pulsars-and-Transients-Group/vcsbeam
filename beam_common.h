@@ -96,6 +96,7 @@ void get_delays(
         int                    npointing, // number of pointings
         VoltageMetadata*       volt_metadata,
         MetafitsMetadata      *metafits_metadata,
+        MetafitsMetadata*      cal_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex      **M,

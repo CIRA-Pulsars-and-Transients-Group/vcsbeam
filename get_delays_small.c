@@ -37,7 +37,7 @@ double arr_lat_rad=MWA_LAT*(M_PI/180.0),arr_lon_rad=MWA_LON*(M_PI/180.0),height=
 
 //=====================//
 
-void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int ***delays, double ***amps )
+void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, int ***delays, double ***amps )
 /* Costruct "delay" and "amp" arrays required by Hyperbeam.
  * Delays can be brought directly across from the MetafitsMetadata struct.
  * The "conversion" from delays to amps is straightforward: All amps are "1.0"
@@ -51,8 +51,8 @@ void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int 
  * by a call to free_delays_amps().
  */
 {
-    int ndipoles = metafits_metadata->num_delays; // <--- *** I just made this variable up! Greg has yet to define something for me! ***
-    int ninputs  = metafits_metadata->num_rf_inputs;
+    int ndipoles = obs_metadata->num_delays;
+    int ninputs  = obs_metadata->num_rf_inputs;
 
     *delays = (int **)malloc( ninputs * sizeof(int *) );
     *amps = (double **)malloc( ninputs * sizeof(double *) );
@@ -65,7 +65,7 @@ void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int 
     // and populate them
     for (input = 0; input < ninputs; input++)
     {
-        (*delays)[input] = metafits_metadata->rf_inputs[input].dipole_delays;
+        (*delays)[input] = obs_metadata->rf_inputs[input].dipole_delays;
 
         (*amps)[input] = (double *)malloc( ndipoles * sizeof(double) );
         for (dipole = 0; dipole < ndipoles; dipole++)
@@ -75,11 +75,11 @@ void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int 
     }
 }
 
-void free_delays_amps( MetafitsMetadata *metafits_metadata, int **delays, double **amps )
+void free_delays_amps( MetafitsMetadata *obs_metadata, int **delays, double **amps )
 /* Frees the memory allocated in create_delays_amps_from_metafits().
  */
 {
-    int ninputs  = metafits_metadata->num_rf_inputs;
+    int ninputs  = obs_metadata->num_rf_inputs;
     int input;
     for (input = 0; input < ninputs; input++)
         free( amps[input] );
@@ -88,21 +88,21 @@ void free_delays_amps( MetafitsMetadata *metafits_metadata, int **delays, double
     free( delays );
 }
 
-void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs )
+void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs )
 /* Creates a list of indexes into the data for the X and Y polarisations,
  * ordered by antenna number. Assumption: polX_idxs and polY_idxs have
  * sufficient allocated memory.
  */
 {
     // Go through the rf_inputs and construct the lookup table for the antennas
-    unsigned int ninputs = metafits_metadata->num_rf_inputs;
+    unsigned int ninputs = obs_metadata->num_rf_inputs;
     unsigned int i, ant;
     for (i = 0; i < ninputs; i++)
     {
-        ant = metafits_metadata->rf_inputs[i].ant;
-        if (*(metafits_metadata->rf_inputs[i].pol) == 'X')
+        ant = obs_metadata->rf_inputs[i].ant;
+        if (*(obs_metadata->rf_inputs[i].pol) == 'X')
             polX_idxs[ant] = i;
-        else // if (*(metafits_metadata->rf_inputs.pol) == 'Y')
+        else // if (*(obs_metadata->rf_inputs.pol) == 'Y')
             polY_idxs[ant] = i;
     }
 }
@@ -339,8 +339,9 @@ void get_delays(
         // an array of pointings [pointing][ra/dec][characters]
         char                   pointing_array[][2][64],
         int                    npointing, // number of pointings
-        VoltageMetadata*       volt_metadata,
-        MetafitsMetadata*      metafits_metadata,
+        VoltageMetadata*       vcs_metadata,
+        MetafitsMetadata*      obs_metadata,
+        MetafitsMetadata*      cal_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex      **M,
@@ -357,13 +358,13 @@ void get_delays(
 {
 
     // Give "shorthand" variables for often-used values in metafits
-    int coarse_chan    = volt_metadata->common_coarse_chan_indices[coarse_chan_idx];
-    long int frequency = metafits_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz;
-    //int nant           = metafits_metadata->num_ants;
-    int nchan          = metafits_metadata->num_volt_fine_chans_per_coarse;
-    int npol           = metafits_metadata->num_ant_pols;   // (X,Y)
-    int chan_width     = metafits_metadata->corr_fine_chan_width_hz;
-    int ninput         = metafits_metadata->num_rf_inputs;
+    int coarse_chan    = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
+    long int frequency = obs_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz;
+    //int nant           = obs_metadata->num_ants;
+    int nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
+    int npol           = obs_metadata->num_ant_pols;   // (X,Y)
+    int chan_width     = obs_metadata->corr_fine_chan_width_hz;
+    int ninput         = obs_metadata->num_rf_inputs;
     bool flagged;
 
     int rf_input;     // For counting through nstation*npol rows in the metafits file
@@ -387,7 +388,7 @@ void get_delays(
 
     // Choose a reference tile
     int refinp = 84; // Tile012 (?)
-    Antenna ref_ant = metafits_metadata->antennas[refinp];
+    Antenna ref_ant = obs_metadata->antennas[refinp];
     double N_ref = ref_ant.north_m;
     double E_ref = ref_ant.east_m;
     double H_ref = ref_ant.height_m;
@@ -431,7 +432,7 @@ void get_delays(
     // Calculate the LST
 
     /* get mjd */
-    mjd = metafits_metadata->sched_start_mjd;
+    mjd = obs_metadata->sched_start_mjd;
     intmjd = floor(mjd);
     fracmjd = mjd - intmjd;
 
@@ -490,7 +491,7 @@ void get_delays(
             freq_ch = frequency + ch*chan_width;    // The frequency of this fine channel
             cal_chan = 0;
             if (cal->cal_type == RTS_BANDPASS) {
-                cal_chan = ch*chan_width / cal->chan_width;  // The corresponding "calibration channel number"
+                cal_chan = ch*chan_width / cal_metadata->corr_fine_chan_width_hz;  // The corresponding "calibration channel number"
                 if (cal_chan >= cal->nchan) {                        // Just check that the channel number is reasonable
                     fprintf(stderr, "Error: \"calibration channel\" %d cannot be ", cal_chan);
                     fprintf(stderr, ">= than total number of channels %d\n", cal->nchan);
@@ -505,9 +506,9 @@ void get_delays(
             for (rf_input = 0; rf_input < (int)(ninput); rf_input++) {
 
                 // Get the antenna and polarisation number from the rf_input
-                ant = metafits_metadata->rf_inputs[rf_input].ant;
-                pol = *(metafits_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
-                flagged = metafits_metadata->rf_inputs[rf_input].flagged;
+                ant = obs_metadata->rf_inputs[rf_input].ant;
+                pol = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
+                flagged = obs_metadata->rf_inputs[rf_input].flagged;
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
@@ -559,19 +560,19 @@ void get_delays(
                         //double El = mi->E_array[rf_input];
                         //double N = mi->N_array[rf_input];
                         //double H = mi->H_array[rf_input];
-                        cable = metafits_metadata->rf_inputs[rf_input].electrical_length_m - ref_ant.electrical_length_m;
-                        double El = metafits_metadata->rf_inputs[rf_input].east_m;
-                        double N  = metafits_metadata->rf_inputs[rf_input].north_m;
-                        double H  = metafits_metadata->rf_inputs[rf_input].height_m;
+                        cable = obs_metadata->rf_inputs[rf_input].electrical_length_m - ref_ant.electrical_length_m;
+                        double El = obs_metadata->rf_inputs[rf_input].east_m;
+                        double N  = obs_metadata->rf_inputs[rf_input].north_m;
+                        double H  = obs_metadata->rf_inputs[rf_input].height_m;
                         //fprintf( stderr, "vcs_order[%u] = %u, subfile_order = %u, antenna = %u, input = %u\n",
                         //        rf_input,
-                        //        metafits_metadata->rf_inputs[rf_input].vcs_order,
-                        //        metafits_metadata->rf_inputs[rf_input].subfile_order,
-                        //        metafits_metadata->rf_inputs[rf_input].ant,
-                        //        metafits_metadata->rf_inputs[rf_input].input
+                        //        obs_metadata->rf_inputs[rf_input].vcs_order,
+                        //        obs_metadata->rf_inputs[rf_input].subfile_order,
+                        //        obs_metadata->rf_inputs[rf_input].ant,
+                        //        obs_metadata->rf_inputs[rf_input].input
                         //        );
                         //fprintf( stderr, "  E: metafits order: %f, rf_inputs order: %f\n",
-                        //        mi->E_array[rf_input], metafits_metadata->rf_inputs[rf_input].east_m );
+                        //        mi->E_array[rf_input], obs_metadata->rf_inputs[rf_input].east_m );
 
                         ENH2XYZ_local(El,N,H, MWA_LAT*PAL__DD2R, &X, &Y, &Z);
 

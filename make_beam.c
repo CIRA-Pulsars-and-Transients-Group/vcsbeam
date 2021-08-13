@@ -88,7 +88,6 @@ int main(int argc, char **argv)
     // Variables for calibration settings
     cal.filename          = NULL;
     cal.bandpass_filename = NULL;
-    cal.chan_width        = 40000;
     cal.nchan             = 0;
     cal.cal_type          = NO_CALIBRATION;
     cal.offr_chan_num     = 0;
@@ -139,6 +138,8 @@ int main(int argc, char **argv)
         outpol_coh           = 1;  // (I)
     const int outpol_incoh   = 1;  // ("I")
     unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
+    int cal_chan_width       = cal_metadata->corr_fine_chan_width_hz;
+
 
     int ant;
     int offset;
@@ -245,7 +246,7 @@ int main(int argc, char **argv)
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     if (cal.cal_type == RTS_BANDPASS)
-        cal.nchan = (nchan * chan_width) / cal.chan_width;
+        cal.nchan = (nchan * chan_width) / cal_chan_width;
 
     // If a custom flag file has been provided, use that instead of the metafits flags
     if (opts.custom_flags != NULL)
@@ -336,7 +337,7 @@ int main(int argc, char **argv)
             read_bandpass_file(              // Read in the RTS Bandpass file
                     NULL,                    // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
                     Jf,                      // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
-                    cal.chan_width,         // Input:  channel width of one column in file (in Hz)
+                    cal_chan_width,         // Input:  channel width of one column in file (in Hz)
                     cal.nchan,              // Input:  (max) number of channels in one file (=128/(chan_width/10000))
                     nstation,                    // Input:  (max) number of antennas in one file (=128)
                     cal.bandpass_filename); // Input:  name of bandpass file
@@ -396,6 +397,7 @@ int main(int argc, char **argv)
             npointing,          // number of pointings
             vcs_metadata,
             obs_metadata,
+            cal_metadata,
             coarse_chan_idx,
             &cal,          // struct holding info about calibration
             M,                  // Calibration Jones matrix information
@@ -525,7 +527,7 @@ int main(int argc, char **argv)
     for ( p = 0; p < npointing; p++ )
         cudaStreamCreate(&(streams[p])) ;
 
-    fprintf( stderr, "[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
+    fprintf( stderr, "\n[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
 
     // Set up timing for each section
     long read_time[ntimesteps], delay_time[ntimesteps], calc_time[ntimesteps], write_time[ntimesteps][npointing];
@@ -538,7 +540,7 @@ int main(int argc, char **argv)
 
         // Read in data from next file
         clock_t start = clock();
-        fprintf( stderr, "[%f] [%d/%d] Reading in data for gps second %ld \n", NOW-begintime,
+        fprintf( stderr, "\n[%f] [%d/%d] Reading in data for gps second %ld \n", NOW-begintime,
                 timestep_idx+1, ntimesteps, vcs_metadata->timesteps[timestep].gps_time_ms / 1000 );
 
         if (mwalib_voltage_context_read_file(
@@ -564,6 +566,7 @@ int main(int argc, char **argv)
                 npointing,          // number of pointings
                 vcs_metadata,
                 obs_metadata,
+                cal_metadata,
                 coarse_chan_idx,
                 &cal,              // struct holding info about calibration
                 M,                      // Calibration Jones matrix information
@@ -677,8 +680,8 @@ int main(int argc, char **argv)
     calc_std  = sqrt( calc_std  / ntimesteps / npointing );
     write_std = sqrt( write_std / ntimesteps / npointing );
 
+    fprintf( stderr, "\n[%f]  *****FINISHED BEAMFORMING*****\n\n", NOW-begintime );
 
-    fprintf( stderr, "[%f]  **FINISHED BEAMFORMING**\n", NOW-begintime);
     fprintf( stderr, "[%f]  Total read  processing time: %9.3f s\n",
                      NOW-begintime, read_sum / CLOCKS_PER_SEC);
     fprintf( stderr, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n",
@@ -876,9 +879,6 @@ void usage() {
     fprintf(stderr, "\t-U, --UV-phase=M,C        ");
     fprintf(stderr, "Rotate the Y pol by M*f+C, where M is in rad/Hz and C is in rad  ");
     fprintf(stderr, "[default: 0.0,0.0]\n");
-    fprintf(stderr, "\t-W, --rts-chan-width      ");
-    fprintf(stderr, "RTS calibration channel bandwidth (Hz)                           ");
-    fprintf(stderr, "[default: 40000]\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "CALIBRATION OPTIONS (OFFRINGA)\n");
     fprintf(stderr, "\n");
@@ -942,7 +942,6 @@ void make_beam_parse_cmdline(
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"UV-phase",        required_argument, 0, 'U'},
-                {"rts-chan-width",  required_argument, 0, 'W'},
                 {"offringa-file",   required_argument, 0, 'O'},
                 {"offringa-chan",   required_argument, 0, 'C'},
                 {"gpu-mem",         required_argument, 0, 'g'},
@@ -952,7 +951,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:B:c:C:d:e:f:F:g:hiJ:m:O:pP:R:sS:t:U:vVW:X",
+                             "A:b:B:c:C:d:e:f:F:g:hiJ:m:O:pP:R:sS:t:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -1043,9 +1042,6 @@ void make_beam_parse_cmdline(
                 case 'V':
                     fprintf( stderr, "MWA Beamformer %s\n", VERSION_BEAMFORMER);
                     exit(0);
-                    break;
-                case 'W':
-                    cal->chan_width = atoi(optarg);
                     break;
                 case 'X':
                     cal->cross_terms = 1;
