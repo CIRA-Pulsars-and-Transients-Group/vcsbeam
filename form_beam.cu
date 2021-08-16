@@ -50,13 +50,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
 
-// define constants to be used in the kernel
-#define NSTATION  128
-#define NPOL      2
-#define NSTOKES   4
-// maximum number of pointings (currently)
-#define NPOINTING 4
-
 __global__ void invj_the_data( uint8_t       *data,
                                cuDoubleComplex *J,
                                cuDoubleComplex *W,
@@ -68,7 +61,7 @@ __global__ void invj_the_data( uint8_t       *data,
                                uint32_t      *polY_idxs )
 /* Layout for input arrays:
 *   data [nsamples] [nchan] [NPFB] [NREC] [NINC] -- see docs
-*   J    [NSTATION] [nchan] [NPOL] [NPOL]        -- jones matrix
+*   J    [nstation] [nchan] [npol] [npol]        -- jones matrix
 *   incoh --true if outputing an incoherent beam
 * Layout for output arrays:
 *   JDx  [nsamples] [nchan] [NPFB] [NREC] [NINC]
@@ -77,8 +70,9 @@ __global__ void invj_the_data( uint8_t       *data,
 {
     // Translate GPU block/thread numbers into meaning->l names
     int c    = blockIdx.x;  /* The (c)hannel number */
-    int nc   = gridDim.x;   /* The (n)umber of (c)hannels (=128) */
+    int nc   = gridDim.x;   /* The (n)umber of (c)hannels */
     int s    = blockIdx.y;  /* The (s)ample number */
+    int nant = blockDim.x;  /* The (n)umber of (a)ntennas */
 
     int ant  = threadIdx.x; /* The (ant)enna number */
 
@@ -131,9 +125,9 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
                                  float *C,
                                  float *I )
 /* Layout for input arrays:
-*   JDx  [nsamples] [nchan] [NPFB] [NREC] [NINC] -- calibrated voltages
-*   JDy  [nsamples] [nchan] [NPFB] [NREC] [NINC]
-*   W    [NSTATION] [nchan] [NPOL]               -- weights array
+*   JDx  [nsamples] [nchan] [nant]               -- calibrated voltages
+*   JDy  [nsamples] [nchan] [nant]
+*   W    [nant    ] [nchan] [npol]               -- weights array
 *   Iin  [nsamples] [nchan] [nant]               -- detected incoh
 *   invw                                         -- inverse atrix
 * Layout of input options
@@ -143,8 +137,8 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
 *   soffset                                      -- sample offset (10000/nchunk)
 *   nchunk                                       -- number of chunks each second is split into
 * Layout for output arrays:
-*   Bd   [nsamples] [nchan]   [NPOL]             -- detected beam
-*   C    [nsamples] [NSTOKES] [nchan]            -- coherent full stokes
+*   Bd   [nsamples] [nchan]   [npol]             -- detected beam
+*   C    [nsamples] [nstokes] [nchan]            -- coherent full stokes
 *   I    [nsamples] [nchan]                      -- incoherent
 */
 {
@@ -162,13 +156,17 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
     double setup_t, detect_t, sum_t, stokes_t;
     if ((p == 0) && (ant == 0) && (c == 0) && (s == 0)) start = clock();*/
 
+    // Organise dynamically allocated shared arrays (see tag 11NSTATION for kernel call)
+    extern __shared__ double arrays[];
+
+    double *Ia           = arrays;
+    cuDoubleComplex *Bx  = (cuDoubleComplex *)(&arrays[1*nant]);
+    cuDoubleComplex *By  = (cuDoubleComplex *)(&arrays[3*nant]);
+    cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[5*nant]);
+    cuDoubleComplex *Nxy = (cuDoubleComplex *)(&arrays[7*nant]);
+    cuDoubleComplex *Nyy = (cuDoubleComplex *)(&arrays[9*nant]);
+
     // Calculate the beam and the noise floor
-    __shared__ double Ia[NSTATION];
-    __shared__ cuDoubleComplex Bx[NSTATION], By[NSTATION];
-
-    __shared__ cuDoubleComplex Nxx[NSTATION], Nxy[NSTATION],
-                            Nyy[NSTATION];//Nyx[NSTATION]
-
 
     /* Fix from Maceij regarding NaNs in output when running on Athena, 13 April 2018.
     Apparently the different compilers and architectures are treating what were
@@ -184,13 +182,6 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
 
     if ((p == 0) && (incoh)) Ia[ant] = Iin[JD_IDX(s,c,ant,nc)];
 
-    /*if ((p == 0) && (ant == 0) && (c == 0) && (s == 0))
-    {
-        stop = clock();
-        setup_t = (double)(stop - start) / CLOCKS_PER_SEC * NPOINTING * NANT;
-        start = clock();
-    }*/
-
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*W*D)
     Bx[ant] = cuCmul( W[W_IDX(p,ant,c,0,nc)], JDx[JD_IDX(s,c,ant,nc)] );
@@ -198,15 +189,8 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
 
     Nxx[ant] = cuCmul( Bx[ant], cuConj(Bx[ant]) );
     Nxy[ant] = cuCmul( Bx[ant], cuConj(By[ant]) );
-    //Nyx[ant] = cuCmul( By[ant], cuConj(Bx[ant]) );
+    //Nyx[ant] = cuCmul( By[ant], cuConj(Bx[ant]) ); // Not needed as it's degenerate with Nxy[]
     Nyy[ant] = cuCmul( By[ant], cuConj(By[ant]) );
-
-    /*if ((p == 0) && (ant == 0) && (c == 0) && (s == 0))
-    {
-        stop = clock();
-        detect_t = (double)(stop - start) / CLOCKS_PER_SEC * NPOINTING * NANT;
-        start = clock();
-    }*/
 
     // Detect the coherent beam
     // A summation over an array is faster on a GPU if you add half on array
@@ -229,14 +213,6 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
         // else return;
         __syncthreads();
     }
-
-    /*if ((p == 0) && (ant == 0) && (c == 0) && (s == 0))
-    {
-        stop = clock();
-        sum_t = (double)(stop - start) / CLOCKS_PER_SEC * NPOINTING * NANT;
-        start = clock();
-
-    }*/
 
     // Form the stokes parameters for the coherent beam
     // Only doing it for ant 0 so that it only prints once
@@ -263,13 +239,6 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
         Bd[B_IDX(p,s+soffset,c,0,ns,nc)] = Bx[0];
         Bd[B_IDX(p,s+soffset,c,1,ns,nc)] = By[0];
     }
-    /*if ((p == 0) && (ant == 0) && (c == 0) && (s == 0))
-    {
-        stop = clock();
-        stokes_t = (double)(stop - start) / CLOCKS_PER_SEC * NPOINTING * NANT;
-        printf("Time:  setup: % f detect: %f    sum: %f     stokes: %f\n", setup_t, detect_t, sum_t, stokes_t);
-    }*/
-
 }
 
 __global__ void flatten_bandpass_I_kernel( float *I,
@@ -436,7 +405,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
         //              index=threadIdx.y size=blockDim.y)
         //dim3 samples_chan(sample_rate, nchan);
         dim3 chan_samples( nchan, sample_rate / nchunk );
-        dim3 stat( NSTATION );
+        dim3 stat( nstation );
 
         // convert the data and multiply it by J
         invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, g->d_W, g->d_JDx, g->d_JDy,
@@ -445,7 +414,9 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
         // Send off a parrellel cuda stream for each pointing
         for ( int p = 0; p < npointing; p++ )
         {
-            beamform_kernel<<<chan_samples, stat, 0, streams[p]>>>( g->d_JDx, g->d_JDy,
+            // Call the beamformer kernel
+            // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
+            beamform_kernel<<<chan_samples, stat, 11*nstation*sizeof(double), streams[p]>>>( g->d_JDx, g->d_JDy,
                             g->d_W, g->d_Ia, invw,
                             p, outpol_coh , incoh_check, ichunk*sample_rate/nchunk, nchunk,
                             g->d_Bd, g->d_coh, g->d_incoh );
