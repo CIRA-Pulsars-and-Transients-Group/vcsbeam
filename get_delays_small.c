@@ -255,37 +255,6 @@ double parse_ra( char* ra_hhmmss ) {
     return ra_rad*PAL__DR2H;
 }
 
-/*********************************
- convert coords in local topocentric East, North, Height units to
- 'local' XYZ units. Local means Z point north, X points through the equator from the geocenter
- along the local meridian and Y is East.
- This is like the absolute system except that zero lon is now
- the local meridian rather than prime meridian.
- Latitude is geodetic, in radian.
- This is what you want for constructing the local antenna positions in a UVFITS antenna table.
- **********************************/
-
-void ENH2XYZ_local(double E,double N, double H, double lat, double *X, double *Y, double *Z) {
-    double sl,cl;
-
-    sl = sin(lat);
-    cl = cos(lat);
-    *X = -N*sl + H*cl;
-    *Y = E;
-    *Z = N*cl + H*sl;
-}
-
-void calcUVW(double ha,double dec,double x,double y,double z,double *u,double *v,double *w) {
-    double sh,ch,sd,cd;
-
-    sh = sin(ha); sd = sin(dec);
-    ch = cos(ha); cd = cos(dec);
-    *u  = sh*x + ch*y;
-    *v  = -sd*ch*x + sd*sh*y + cd*z;
-    *w  = cd*ch*x  - cd*sh*y + sd*z;
-}
-
-
 
 void mjd2lst(double mjd, double *lst) {
 
@@ -397,7 +366,7 @@ void get_delays(
     double mjd;
     double pr=0, pd=0, px=0, rv=0, eq=2000, ra_ap=0, dec_ap=0;
     double mean_ra, mean_dec, ha;
-    double app_ha_rad, app_dec_rad;
+    double app_ha_rad;
     double az,el;
 
     double unit_N;
@@ -413,7 +382,6 @@ void get_delays(
     double cable;
 
     double integer_phase;
-    double X,Y,Z,u,v,w;
     double geometry, delay_time, delay_samples, cycles_per_sample;
 
     int nconfigs = 139;
@@ -460,14 +428,13 @@ void get_delays(
 
         // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
 
-        ha = palRanorm(lmst-ra_ap)*PAL__DR2H;
+        ha = palRanorm( lmst - ra_ap )*PAL__DR2H;
 
         /* now HA/Dec to Az/El */
 
         app_ha_rad = ha * PAL__DH2R;
-        app_dec_rad = dec_ap;
 
-        palDe2h(app_ha_rad, dec_ap, MWA_LATITUDE_RADIANS, &az, &el);
+        palDe2h( app_ha_rad, dec_ap, MWA_LATITUDE_RADIANS, &az, &el );
 
         /* now we need the direction cosines */
 
@@ -571,10 +538,6 @@ void get_delays(
                         //        );
                         //fprintf( stderr, "  E: metafits order: %f, rf_inputs order: %f\n",
                         //        mi->E_array[rf_input], obs_metadata->rf_inputs[rf_input].east_m );
-
-                        ENH2XYZ_local( El, N, H, MWA_LATITUDE_RADIANS, &X, &Y, &Z );
-
-                        calcUVW (app_ha_rad,app_dec_rad,X,Y,Z,&u,&v,&w);
 
                         // shift the origin of ENH to Antenna 0 and hoping the Far Field Assumption still applies ...
 
@@ -687,6 +650,8 @@ void calc_beam_geom(
         )
 {
     // Calculate the LST
+    // Arguments for palMap()
+    double pr = 0, pd = 0, px = 0, rv = 0, eq = 2000, ra_ap = 0, dec_ap = 0;
 
     // get mjd
     double mjd  = obs_metadata->sched_start_mjd;
@@ -709,26 +674,24 @@ void calc_beam_geom(
         bg[p]->intmjd   = intmjd;
         bg[p]->fracmjd  = fracmjd;
 
-        palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
+        palMap(bg[p]->mean_ra, bg[p]->mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
 
         // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
 
-        ha = palRanorm( bg->lmst - ra_ap)*PAL__DR2H;
+        ha = palRanorm( bg[p]->lmst - ra_ap)*PAL__DR2H;
 
         // now HA/Dec to Az/El
 
         app_ha_rad = ha * PAL__DH2R;
-        app_dec_rad = dec_ap;
 
         palDe2h(app_ha_rad, dec_ap, MWA_LATITUDE_RADIANS, &az, &el);
 
         // now we need the direction cosines
 
-        unit_N = cos(el) * cos(az);
-        unit_E = cos(el) * sin(az);
-        unit_H = sin(el);
-
-
+        bg[p]->unit_N = cos(el) * cos(az);
+        bg[p]->unit_E = cos(el) * sin(az);
+        bg[p]->unit_H = sin(el);
+    }
 }
 
 */
