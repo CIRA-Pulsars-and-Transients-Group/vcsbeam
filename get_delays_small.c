@@ -319,8 +319,8 @@ void get_delays(
         double               **amps,
         double                 sec_offset,
         struct beam_geom       beam_geom_vals[],
-        cuDoubleComplex       ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
-        cuDoubleComplex       ****invJi )                 // output: invJi[ant][ch][pol][pol]
+        cuDoubleComplex    ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
+        cuDoubleComplex    ****invJi )                 // output: invJi[ant][ch][pol][pol]
 {
 
     // Give "shorthand" variables for often-used values in metafits
@@ -365,13 +365,12 @@ void get_delays(
     double lmst;
     double mjd;
     double pr=0, pd=0, px=0, rv=0, eq=2000, ra_ap=0, dec_ap=0;
-    double mean_ra, mean_dec, ha;
-    double app_ha_rad;
-    double az,el;
+    double mean_ra[npointing], mean_dec[npointing], ha;
+    double az[npointing], el[npointing];
 
-    double unit_N;
-    double unit_E;
-    double unit_H;
+    double unit_N[npointing];
+    double unit_E[npointing];
+    double unit_H[npointing];
     int    n;
 
     double dec_degs;
@@ -404,14 +403,10 @@ void get_delays(
     fracmjd = mjd - intmjd;
 
     /* get requested Az/El from command line */
-    mjd2lst(mjd, &lmst);
+    mjd2lst( mjd, &lmst );
 
-    // Set settings for the FEE2016 beam model using Hyperbeam
-    int zenith_norm = 1; // Boolean value: unsure if/how this makes a difference
-
-    for ( int p = 0; p < npointing; p++ )
+    for (int p = 0; p < npointing; p++)
     {
-
         // Reset the Jones matrices (for the FEE beam)
         for (n = 0; n < nconfigs; n++)
             jones[n] = NULL; // i.e. no Jones matrices have been calculated for any configurations so far
@@ -421,31 +416,36 @@ void get_delays(
 
         /* for the look direction <not the tile> */
 
-        mean_ra = ra_hours * PAL__DH2R;
-        mean_dec = dec_degs * PAL__DD2R;
+        mean_ra[p] = ra_hours * PAL__DH2R;
+        mean_dec[p] = dec_degs * PAL__DD2R;
 
-        palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
+        palMap(mean_ra[p], mean_dec[p], pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
 
         // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
 
-        ha = palRanorm( lmst - ra_ap )*PAL__DR2H;
+        ha = palRanorm( lmst - ra_ap ); // in radians
 
         /* now HA/Dec to Az/El */
 
-        app_ha_rad = ha * PAL__DH2R;
-
-        palDe2h( app_ha_rad, dec_ap, MWA_LATITUDE_RADIANS, &az, &el );
+        palDe2h( ha, dec_ap, MWA_LATITUDE_RADIANS, &az[p], &el[p] );
 
         /* now we need the direction cosines */
 
-        unit_N = cos(el) * cos(az);
-        unit_E = cos(el) * sin(az);
-        unit_H = sin(el);
+        unit_N[p] = cos(el[p]) * cos(az[p]);
+        unit_E[p] = cos(el[p]) * sin(az[p]);
+        unit_H[p] = sin(el[p]);
 
+    }
+
+    // Set settings for the FEE2016 beam model using Hyperbeam
+    int zenith_norm = 1; // Boolean value: unsure if/how this makes a difference
+
+    for (int p = 0; p < npointing; p++)
+    {
         parallactic_angle_correction_fee2016(
                 P,                       // output = rotation matrix
                 MWA_LATITUDE_RADIANS,    // observing latitude (radians)
-                az, (PAL__DPIBY2-el));   // azimuth & zenith angle of pencil beam
+                az[p], (PAL__DPIBY2-el[p]));   // azimuth & zenith angle of pencil beam
 
         // Everything from this point on is frequency-dependent
         for (ch = 0; ch < nchan; ch++) {
@@ -492,7 +492,7 @@ void get_delays(
                     // Strictly speaking, the condition (ch == 0) above is redundant, as the dipole configuration
                     // array takes care of that implicitly, but I'll leave it here so that the above argument
                     // is "explicit" in the code.
-                    jones[config_idx] = calc_jones( beam, az, PAL__DPIBY2-el, frequency + chan_width/2,
+                    jones[config_idx] = calc_jones( beam, az[p], PAL__DPIBY2-el[p], frequency + chan_width/2,
                             (unsigned int*)delays[rf_input], amps[rf_input], zenith_norm );
                 }
 
@@ -541,7 +541,7 @@ void get_delays(
 
                         // shift the origin of ENH to Antenna 0 and hoping the Far Field Assumption still applies ...
 
-                        geometry = (El - E_ref)*unit_E + (N - N_ref)*unit_N + (H - H_ref)*unit_H ;
+                        geometry = (El - E_ref)*unit_E[p] + (N - N_ref)*unit_N[p] + (H - H_ref)*unit_H[p];
 
                         delay_time = (geometry + (invert*(cable)))/(SPEED_OF_LIGHT_IN_VACUUM_M_PER_S);
                         delay_samples = delay_time * samples_per_sec;
@@ -593,10 +593,10 @@ void get_delays(
         // Populate a structure with some of the calculated values
         if (beam_geom_vals != NULL) {
 
-            beam_geom_vals[p].mean_ra  = mean_ra;
-            beam_geom_vals[p].mean_dec = mean_dec;
-            beam_geom_vals[p].az       = az;
-            beam_geom_vals[p].el       = el;
+            beam_geom_vals[p].mean_ra  = mean_ra[p];
+            beam_geom_vals[p].mean_dec = mean_dec[p];
+            beam_geom_vals[p].az       = az[p];
+            beam_geom_vals[p].el       = el[p];
             beam_geom_vals[p].lmst     = lmst;
             beam_geom_vals[p].fracmjd  = fracmjd;
             beam_geom_vals[p].intmjd   = intmjd;
