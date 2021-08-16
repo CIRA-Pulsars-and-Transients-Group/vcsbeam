@@ -12,13 +12,6 @@
 
 #include "beam_common.h"
 
-#define NANT  128
-#define NPOL  2
-#define NPFB  4
-#define NREC  16
-#define NINC  4
-#define NINPUTS 256
-
 /* structure for managing data arrays to be allocated on both host and device */
 struct gpu_formbeam_arrays
 {
@@ -51,28 +44,28 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
 
 /* Calculating array indices for GPU inputs and outputs */
 
-#define D_IDX(s,c,i,nc)    ((s)         * (NINPUTS*(nc)) + \
-                            (c)         * (NINPUTS)      + \
-                            (i))
+#define D_IDX(s,c,i,nc,ni)    ((s) * (ni)*(nc) + \
+                               (c) * (ni)      + \
+                               (i))
 
-#define W_IDX(p,a,c,pol,nc)   ((p) * (NPOL*(nc)*NANT)  + \
-                               (a) * (NPOL*(nc))       + \
-                               (c) * (NPOL)            + \
-                               (pol))
+#define W_IDX(p,a,c,pol,na,nc,npol)   ((p) * (npol)*(nc)*(na)  + \
+                                       (a) * (npol)*(nc)       + \
+                                       (c) * (npol)            + \
+                                       (pol))
 
-#define J_IDX(a,c,p1,p2,nc)   ((a)  * (NPOL*NPOL*(nc))      + \
-                               (c)  * (NPOL*NPOL)           + \
-                               (p1) * (NPOL)                + \
-                               (p2))
+#define J_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol*npol*(nc))      + \
+                                    (c)  * (npol*npol)           + \
+                                    (p1) * (npol)                + \
+                                    (p2))
 
-#define JD_IDX(s,c,a,nc)      ((s) * (NANT*(nc)) + \
-                               (c) * (NANT)      + \
-                               (a))
+#define JD_IDX(s,c,a,nc,na)  ((s) * (na)*(nc) + \
+                              (c) * (na)      + \
+                              (a))
 
-#define B_IDX(p,s,c,pol,ns,nc) ((p)  * (NPOL*(nc)*(ns))   + \
-                                (s)  * (NPOL*(nc))        + \
-                                (c)  * (NPOL)             + \
-                                (pol))
+#define B_IDX(p,s,c,pol,ns,nc,npol) ((p)  * (npol)*(nc)*(ns)   + \
+                                     (s)  * (npol)*(nc)        + \
+                                     (c)  * (npol)             + \
+                                     (pol))
  
 #define C_IDX(p,s,st,c,ns,nst,nc)  ((p)  * ((nc)*(nst)*(ns)) + \
                                     (s)  * ((nc)*(nst))      + \
@@ -80,22 +73,6 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
                                     (c))
 
 #define I_IDX(s,c,nc)          ((s)*(nc) + (c))
-
-#define BN_IDX(p,a)            ((p) * NANT + (a))
-
-
-
-
-#define W_FLAT_IDX(ch,ant,pol)   (((ch) <<8)         + \
-                                 (((ant)<<1) & 0xC0) + \
-                                 (((ant)<<2) & 0x38) + \
-                                 (((ant)>>3) & 0x03) + \
-                                 (((pol)<<2)))
-#define J_FLAT_IDX(ch,ant,p1,p2) (((ch) <<9)          + \
-                                 (((ant)<<2) & 0x180) + \
-                                 (((ant)<<3) & 0x70)  + \
-                                 (((ant)>>2) & 0x06)  + \
-                                 (((p1 )<<3)))
 
 
 

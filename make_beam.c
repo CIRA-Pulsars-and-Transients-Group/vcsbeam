@@ -133,6 +133,7 @@ int main(int argc, char **argv)
     int nchan                = obs_metadata->num_volt_fine_chans_per_coarse;
     int chan_width           = obs_metadata->volt_fine_chan_width_hz;
     int npol                 = obs_metadata->num_ant_pols;   // (X,Y)
+    int ninput               = obs_metadata->num_rf_inputs;
     int outpol_coh           = 4;  // (I,Q,U,V)
     if ( opts.out_summed )
         outpol_coh           = 1;  // (I)
@@ -605,7 +606,7 @@ int main(int argc, char **argv)
                     i = gf.polX_idxs[opts.out_ant];
                 else
                     i = gf.polY_idxs[opts.out_ant];
-                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,i,nchan)]);
+                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,i,nchan,ninput)]);
                 detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
             }
         }

@@ -58,14 +58,15 @@ __global__ void invj_the_data( uint8_t       *data,
                                float         *Ia,
                                int            incoh,
                                uint32_t      *polX_idxs,
-                               uint32_t      *polY_idxs )
+                               uint32_t      *polY_idxs,
+                               int npol )
 /* Layout for input arrays:
-*   data [nsamples] [nchan] [NPFB] [NREC] [NINC] -- see docs
+*   data [nsamples] [nchan] [ninputs]            -- see docs
 *   J    [nstation] [nchan] [npol] [npol]        -- jones matrix
 *   incoh --true if outputing an incoherent beam
 * Layout for output arrays:
-*   JDx  [nsamples] [nchan] [NPFB] [NREC] [NINC]
-*   JDy  [nsamples] [nchan] [NPFB] [NREC] [NINC]
+*   JDx  [nsamples] [nchan] [nant]
+*   JDy  [nsamples] [nchan] [nant]
 */
 {
     // Translate GPU block/thread numbers into meaning->l names
@@ -76,24 +77,26 @@ __global__ void invj_the_data( uint8_t       *data,
 
     int ant  = threadIdx.x; /* The (ant)enna number */
 
+    int ni   = nant*npol;   /* The (n)umber of RF (i)nputs */
+
     int iX   = polX_idxs[ant]; /* The input index for the X pol for this antenna */
     int iY   = polY_idxs[ant]; /* The input index for the Y pol for this antenna */
 
     cuDoubleComplex Dx, Dy;
     // Convert input data to complex float
-    Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iX,nc)]);
-    Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iY,nc)]);
+    Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iX,nc,ni)]);
+    Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iY,nc,ni)]);
 
     // If tile is flagged in the calibration, flag it in the incoherent beam
     if (incoh)
     {
-        if (cuCreal(W[W_IDX(0,ant,c,0,nc)]) == 0.0 &&
-            cuCimag(W[W_IDX(0,ant,c,0,nc)]) == 0.0 &&
-            cuCreal(W[W_IDX(0,ant,c,1,nc)]) == 0.0 &&
-            cuCimag(W[W_IDX(0,ant,c,1,nc)]) == 0.0)
-            Ia[JD_IDX(s,c,ant,nc)] = 0.0;
+        if (cuCreal(W[W_IDX(0,ant,c,0,nant,nc,npol)]) == 0.0 &&
+            cuCimag(W[W_IDX(0,ant,c,0,nant,nc,npol)]) == 0.0 &&
+            cuCreal(W[W_IDX(0,ant,c,1,nant,nc,npol)]) == 0.0 &&
+            cuCimag(W[W_IDX(0,ant,c,1,nant,nc,npol)]) == 0.0)
+            Ia[JD_IDX(s,c,ant,nc,nant)] = 0.0;
         else
-            Ia[JD_IDX(s,c,ant,nc)] = DETECT(Dx) + DETECT(Dy);
+            Ia[JD_IDX(s,c,ant,nc,nant)] = DETECT(Dx) + DETECT(Dy);
     }
 
     // Calculate the first step (J*D) of the coherent beam (B = J*W*D)
@@ -103,10 +106,10 @@ __global__ void invj_the_data( uint8_t       *data,
     // This is what I have implemented (as it produces higher signal-to-noise
     // ratio detections). The original code (the single-pixel beamformer)
     // switched the yx and xy terms but we get similar SNs
-    JDx[JD_IDX(s,c,ant,nc)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc)], Dx ),
-                                     cuCmul( J[J_IDX(ant,c,0,1,nc)], Dy ) );
-    JDy[JD_IDX(s,c,ant,nc)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc)], Dx ),
-                                     cuCmul( J[J_IDX(ant,c,1,1,nc)], Dy ) );
+    JDx[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], Dx ),
+                                           cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], Dy ) );
+    JDy[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dx ),
+                                           cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], Dy ) );
 
 
 }
@@ -123,7 +126,8 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
                                  int nchunk,
                                  cuDoubleComplex *Bd,
                                  float *C,
-                                 float *I )
+                                 float *I,
+                                 int npol )
 /* Layout for input arrays:
 *   JDx  [nsamples] [nchan] [nant]               -- calibrated voltages
 *   JDy  [nsamples] [nchan] [nant]
@@ -180,12 +184,12 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
     //Nyx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     Nyy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
 
-    if ((p == 0) && (incoh)) Ia[ant] = Iin[JD_IDX(s,c,ant,nc)];
+    if ((p == 0) && (incoh)) Ia[ant] = Iin[JD_IDX(s,c,ant,nc,nant)];
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*W*D)
-    Bx[ant] = cuCmul( W[W_IDX(p,ant,c,0,nc)], JDx[JD_IDX(s,c,ant,nc)] );
-    By[ant] = cuCmul( W[W_IDX(p,ant,c,1,nc)], JDy[JD_IDX(s,c,ant,nc)] );
+    Bx[ant] = cuCmul( W[W_IDX(p,ant,c,0,nant,nc,npol)], JDx[JD_IDX(s,c,ant,nc,nant)] );
+    By[ant] = cuCmul( W[W_IDX(p,ant,c,1,nant,nc,npol)], JDy[JD_IDX(s,c,ant,nc,nant)] );
 
     Nxx[ant] = cuCmul( Bx[ant], cuConj(Bx[ant]) );
     Nxy[ant] = cuCmul( Bx[ant], cuConj(By[ant]) );
@@ -236,8 +240,8 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
         }
 
         // The beamformed products
-        Bd[B_IDX(p,s+soffset,c,0,ns,nc)] = Bx[0];
-        Bd[B_IDX(p,s+soffset,c,1,ns,nc)] = By[0];
+        Bd[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = Bx[0];
+        Bd[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = By[0];
     }
 }
 
@@ -343,9 +347,9 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 *   W       = complex weights array. [npointing][nstation][nchan][npol]
 *   J       = inverse Jones matrix.  [nstation][nchan][npol][npol]
 *   file_no = number of file we are processing, starting at 0.
-*   nstation     = 128
-*   nchan        = 128
-*   npol         = 2 (X,Y)
+*   nstation     = number of antennas
+*   nchan        = number of channels
+*   npol         = number of polarisations (=2)
 *   outpol_coh   = 4 (I,Q,U,V)
 *   invw         = the reciprocal of the sum of the antenna weights
 *   g            = struct containing pointers to various arrays on
@@ -409,7 +413,8 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
         // convert the data and multiply it by J
         invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, g->d_W, g->d_JDx, g->d_JDy,
-                                               g->d_Ia, incoh_check, g->d_polX_idxs, g->d_polY_idxs );
+                                               g->d_Ia, incoh_check, g->d_polX_idxs, g->d_polY_idxs,
+                                               npol );
 
         // Send off a parrellel cuda stream for each pointing
         for ( int p = 0; p < npointing; p++ )
@@ -419,7 +424,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
             beamform_kernel<<<chan_samples, stat, 11*nstation*sizeof(double), streams[p]>>>( g->d_JDx, g->d_JDy,
                             g->d_W, g->d_Ia, invw,
                             p, outpol_coh , incoh_check, ichunk*sample_rate/nchunk, nchunk,
-                            g->d_Bd, g->d_coh, g->d_incoh );
+                            g->d_Bd, g->d_coh, g->d_incoh, npol );
 
             gpuErrchk( cudaPeekAtLastError() );
         }
