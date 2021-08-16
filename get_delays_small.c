@@ -32,8 +32,6 @@
  */
 
 #define MAXREQUEST 3000000
-#define VLIGHT 299792458.0        // speed of light. m/s
-double arr_lat_rad=MWA_LAT*(M_PI/180.0),arr_lon_rad=MWA_LON*(M_PI/180.0),height=MWA_HGT;
 
 //=====================//
 
@@ -293,8 +291,7 @@ void mjd2lst(double mjd, double *lst) {
 
     // Greenwich Mean Sidereal Time to LMST
     // east longitude in hours at the epoch of the MJD
-    double arr_lon_rad = MWA_LON * M_PI/180.0;
-    double lmst = palRanorm(palGmst(mjd) + arr_lon_rad);
+    double lmst = palRanorm(palGmst(mjd) + MWA_LONGITUDE_RADIANS);
 
     *lst = lmst;
 }
@@ -472,7 +469,7 @@ void get_delays(
         app_ha_rad = ha * PAL__DH2R;
         app_dec_rad = dec_ap;
 
-        palDe2h(app_ha_rad, dec_ap, MWA_LAT*PAL__DD2R, &az, &el);
+        palDe2h(app_ha_rad, dec_ap, MWA_LATITUDE_RADIANS, &az, &el);
 
         /* now we need the direction cosines */
 
@@ -481,8 +478,8 @@ void get_delays(
         unit_H = sin(el);
 
         parallactic_angle_correction_fee2016(
-                P,                  // output = rotation matrix
-                (MWA_LAT*PAL__DD2R),     // observing latitude (radians)
+                P,                       // output = rotation matrix
+                MWA_LATITUDE_RADIANS,    // observing latitude (radians)
                 az, (PAL__DPIBY2-el));   // azimuth & zenith angle of pencil beam
 
         // Everything from this point on is frequency-dependent
@@ -542,7 +539,6 @@ void get_delays(
                 // Apply parallactic angle correction if Hyperbeam was used
                 mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
 
-                fprintf( stderr, "ant = %u, cal_ant = %u\n", ant, cal_ant );
                 mult2x2d(M[cal_ant], invJref, G); // M x J^-1 = G (Forms the "coarse channel" DI gain)
 
                 if (cal->cal_type == RTS_BANDPASS)
@@ -578,7 +574,7 @@ void get_delays(
                         //fprintf( stderr, "  E: metafits order: %f, rf_inputs order: %f\n",
                         //        mi->E_array[rf_input], obs_metadata->rf_inputs[rf_input].east_m );
 
-                        ENH2XYZ_local(El,N,H, MWA_LAT*PAL__DD2R, &X, &Y, &Z);
+                        ENH2XYZ_local( El, N, H, MWA_LATITUDE_RADIANS, &X, &Y, &Z );
 
                         calcUVW (app_ha_rad,app_dec_rad,X,Y,Z,&u,&v,&w);
 
@@ -586,7 +582,7 @@ void get_delays(
 
                         geometry = (El - E_ref)*unit_E + (N - N_ref)*unit_N + (H - H_ref)*unit_H ;
 
-                        delay_time = (geometry + (invert*(cable)))/(VLIGHT);
+                        delay_time = (geometry + (invert*(cable)))/(SPEED_OF_LIGHT_IN_VACUUM_M_PER_S);
                         delay_samples = delay_time * samples_per_sec;
 
                         // freq should be in cycles per sample and delay in samples

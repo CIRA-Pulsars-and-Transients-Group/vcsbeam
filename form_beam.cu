@@ -87,8 +87,6 @@ __global__ void invj_the_data( uint8_t       *data,
 
     cuDoubleComplex Dx, Dy;
     // Convert input data to complex float
-    //Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,ant,0,nc)]);
-    //Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,ant,1,nc)]);
     Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iX,nc)]);
     Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iY,nc)]);
 

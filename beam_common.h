@@ -15,13 +15,9 @@
 
 #define MAX_POLS   4
 
-#define VEL_LIGHT  299792458.0
 #define N_COPOL    2
 #define R2C_SIGN   -1.0
 #define NDELAYS    16
-
-#define BEAM_ANALYTIC 0
-#define BEAM_FEE2016  1
 
 #define MWA_LAT -26.703319        /* Array latitude. degrees North */
 #define MWA_LON 116.67081         /* Array longitude. degrees East */

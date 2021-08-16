@@ -19,10 +19,6 @@
 #define NINC  4
 #define NINPUTS 256
 
-#define ANT2PFB(ant)    ((ant)>>5)                 /* pfb = ant/32           */
-#define ANT2INC(ant)    (((ant)>>3)&0x03)          /* inc = (ant/8) % 4      */
-#define AP2REC(ant,pol) ((((ant)<<1)+(pol))&0x0F)  /* rec = (2*ant+pol) % 16 */
-
 /* structure for managing data arrays to be allocated on both host and device */
 struct gpu_formbeam_arrays
 {
@@ -55,13 +51,6 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
 
 /* Calculating array indices for GPU inputs and outputs */
 
-/*
-#define D_IDX(s,c,a,p,nc)  ((s)         * (NINC*NREC*NPFB*(nc)) + \
-                            (c)         * (NINC*NREC*NPFB)      + \
-                            ANT2PFB(a)  * (NINC*NREC)           + \
-                            AP2REC(a,p) * (NINC)                + \
-                            ANT2INC(a))
-*/
 #define D_IDX(s,c,i,nc)    ((s)         * (NINPUTS*(nc)) + \
                             (c)         * (NINPUTS)      + \
                             (i))
