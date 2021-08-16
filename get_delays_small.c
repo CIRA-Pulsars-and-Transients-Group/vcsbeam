@@ -336,9 +336,9 @@ void get_delays(
         // an array of pointings [pointing][ra/dec][characters]
         char                   pointing_array[][2][64],
         int                    npointing, // number of pointings
-        VoltageMetadata*       vcs_metadata,
-        MetafitsMetadata*      obs_metadata,
-        MetafitsMetadata*      cal_metadata,
+        VoltageMetadata       *vcs_metadata,
+        MetafitsMetadata      *obs_metadata,
+        MetafitsMetadata      *cal_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex      **M,
@@ -431,13 +431,11 @@ void get_delays(
 
     /* get mjd */
     mjd = obs_metadata->sched_start_mjd;
+    mjd += (sec_offset + 0.5)/86400.0;
     intmjd = floor(mjd);
     fracmjd = mjd - intmjd;
 
     /* get requested Az/El from command line */
-
-    //mjd = intmjd + fracmjd;
-    mjd += (sec_offset+0.5)/86400.0;
     mjd2lst(mjd, &lmst);
 
     // Set settings for the FEE2016 beam model using Hyperbeam
@@ -680,3 +678,57 @@ void parallactic_angle_correction_fee2016(
     P[3] = -sin(pa);
 }
 
+/*
+void calc_beam_geom(
+        char              pointing_array[][2][64],
+        MetafitsMetadata *obs_metadata,
+        double            sec_offset,
+        struct beam_geom *bg[]
+        )
+{
+    // Calculate the LST
+
+    // get mjd
+    double mjd  = obs_metadata->sched_start_mjd;
+    mjd        += (sec_offset + 0.5)/86400.0; // Go to the middle of the current second
+    double intmjd  = floor(mjd);
+    double fracmjd = mjd - intmjd;
+
+    // get requested Az/El from command line
+
+    mjd2lst( mjd, &bg->lmst );
+
+    for ( int p = 0; p < npointing; p++ )
+    {
+        // for the look direction <not the tile>
+        double dec_degs = parse_dec( pointing_array[p][1] );
+        double ra_hours = parse_ra( pointing_array[p][0] );
+
+        bg[p]->mean_ra  = ra_hours * PAL__DH2R;
+        bg[p]->mean_dec = dec_degs * PAL__DD2R;
+        bg[p]->intmjd   = intmjd;
+        bg[p]->fracmjd  = fracmjd;
+
+        palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
+
+        // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
+
+        ha = palRanorm( bg->lmst - ra_ap)*PAL__DR2H;
+
+        // now HA/Dec to Az/El
+
+        app_ha_rad = ha * PAL__DH2R;
+        app_dec_rad = dec_ap;
+
+        palDe2h(app_ha_rad, dec_ap, MWA_LATITUDE_RADIANS, &az, &el);
+
+        // now we need the direction cosines
+
+        unit_N = cos(el) * cos(az);
+        unit_E = cos(el) * sin(az);
+        unit_H = sin(el);
+
+
+}
+
+*/
