@@ -338,9 +338,6 @@ void get_delays(
     int ch;      // Channel number
     int p1, p2;  // Counters for polarisation
 
-    int conjugate = -1;
-    int invert = -1;
-
     /* easy -- now the positions from the database */
 
     double phase;
@@ -491,7 +488,7 @@ void get_delays(
                                    (N  - N_ref)*beam_geom_vals[p].unit_N +
                                    (H  - H_ref)*beam_geom_vals[p].unit_H;
 
-                        delay_time = (geometry + (invert*(cable)))/(SPEED_OF_LIGHT_IN_VACUUM_M_PER_S);
+                        delay_time = (geometry - cable)/(SPEED_OF_LIGHT_IN_VACUUM_M_PER_S);
                         delay_samples = delay_time * samples_per_sec;
 
                         // freq should be in cycles per sample and delay in samples
@@ -501,9 +498,9 @@ void get_delays(
                         cycles_per_sample = (double)freq_ch/samples_per_sec;
 
                         phase = cycles_per_sample*delay_samples;
-                        phase = modf(phase, &integer_phase);
+                        phase = modf( phase, &integer_phase );
 
-                        phase = phase*2*M_PI*conjugate;
+                        phase *= -2.0*M_PI;
 
                         // Store result for later use
                         complex_weights_array[p][ant][ch][pol] =
