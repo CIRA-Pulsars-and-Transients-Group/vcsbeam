@@ -393,26 +393,9 @@ int main(int argc, char **argv)
 
     int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
 
-    get_delays(
-            pointing_array,     // an array of pointings [pointing][ra/dec][characters]
-            npointing,          // number of pointings
-            vcs_metadata,
-            obs_metadata,
-            cal_metadata,
-            coarse_chan_idx,
-            &cal,          // struct holding info about calibration
-            M,                  // Calibration Jones matrix information
-            Jf,                 // Calibration Jones matrix information
-            invJref,            // Calibration Jones matrix information
-            sample_rate,        // in Hz
-            beam,               // Hyperbeam struct
-            delays,             // } Analogue beamforming pointing direction information needed for Hyperbeam
-            amps,               // }
-            0.0,                // seconds offset from the beginning of the observation at which to calculate delays
-            beam_geom_vals,     // Populate psrfits header info
-            NULL,               // complex weights array (ignore this time)
-            NULL                // invJi array           (ignore this time)
-    );
+    double mjd, sec_offset;
+    mjd = obs_metadata->sched_start_mjd;
+    calc_beam_geom( pointing_array, npointing, mjd, beam_geom_vals );
 
     // Create structures for holding header information
     struct psrfits  *pf;
@@ -562,8 +545,12 @@ int main(int argc, char **argv)
         start = clock();
         fprintf( stderr, "[%f] [%d/%d] Calculating delays\n", NOW-begintime,
                                 timestep_idx+1, ntimesteps );
+
+        sec_offset = (double)(timestep_idx + opts.begin - obs_metadata->obs_id);
+        mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
+        calc_beam_geom( pointing_array, npointing, mjd, beam_geom_vals );
+
         get_delays(
-                pointing_array,     // an array of pointings [pointing][ra/dec][characters]
                 npointing,          // number of pointings
                 vcs_metadata,
                 obs_metadata,
@@ -577,8 +564,7 @@ int main(int argc, char **argv)
                 beam,                   // Hyperbeam struct
                 delays,                 // } Analogue beamforming pointing direction information needed for Hyperbeam
                 amps,                   // }
-                (double)(timestep_idx + opts.begin - obs_metadata->obs_id),        // seconds offset from the beginning of the obseration at which to calculate delays
-                NULL,                   // Don't update beam_geom_vals
+                beam_geom_vals,         // Geometric information about pointings
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
         delay_time[timestep_idx] = clock() - start;

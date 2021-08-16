@@ -54,6 +54,9 @@ struct beam_geom {
     double lmst;
     double fracmjd;
     double intmjd;
+    double unit_N;
+    double unit_E;
+    double unit_H;
 };
 
 struct make_beam_opts {
@@ -88,7 +91,6 @@ struct make_beam_opts {
 /* Running get_delays from within make_beam */
 void get_delays(
         // an array of pointings [pointing][ra/dec][characters]
-        char                   pointing_array[][2][64],
         int                    npointing, // number of pointings
         VoltageMetadata*       volt_metadata,
         MetafitsMetadata      *metafits_metadata,
@@ -102,11 +104,16 @@ void get_delays(
         FEEBeam               *beam,
         int                  **delays,
         double               **amps,
-        double                 sec_offset,
         struct beam_geom       beam_geom_vals[],
         cuDoubleComplex      ****complex_weights_array,  // output
         cuDoubleComplex      ****invJi                   // output
 );
+
+void calc_beam_geom(
+        char              pointing_array[][2][64],
+        int               npointing,
+        double            mjd,
+        struct beam_geom  bg[] );
 
 void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int ***delays, double ***amps );
 void free_delays_amps( MetafitsMetadata *metafits_metadata, int **delays, double **amps );

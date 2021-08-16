@@ -303,7 +303,6 @@ void remove_reference_phase( cuDoubleComplex **M, int ref_ant, int nant )
 
 void get_delays(
         // an array of pointings [pointing][ra/dec][characters]
-        char                   pointing_array[][2][64],
         int                    npointing, // number of pointings
         VoltageMetadata       *vcs_metadata,
         MetafitsMetadata      *obs_metadata,
@@ -317,7 +316,6 @@ void get_delays(
         FEEBeam               *beam,
         int                  **delays,
         double               **amps,
-        double                 sec_offset,
         struct beam_geom       beam_geom_vals[],
         cuDoubleComplex    ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
         cuDoubleComplex    ****invJi )                 // output: invJi[ant][ch][pol][pol]
@@ -360,21 +358,8 @@ void get_delays(
     double E_ref = ref_ant.east_m;
     double H_ref = ref_ant.height_m;
 
-    double intmjd;
-    double fracmjd;
-    double lmst;
-    double mjd;
-    double pr=0, pd=0, px=0, rv=0, eq=2000, ra_ap=0, dec_ap=0;
-    double mean_ra[npointing], mean_dec[npointing], ha;
-    double az[npointing], el[npointing];
-
-    double unit_N[npointing];
-    double unit_E[npointing];
-    double unit_H[npointing];
     int    n;
 
-    double dec_degs;
-    double ra_hours;
     long int freq_ch;
     int cal_chan;
 
@@ -394,16 +379,8 @@ void get_delays(
 
     double Fnorm;
 
-    // Calculate the LST
-
-    /* get mjd */
-    mjd = obs_metadata->sched_start_mjd;
-    mjd += (sec_offset + 0.5)/86400.0;
-    intmjd = floor(mjd);
-    fracmjd = mjd - intmjd;
-
-    /* get requested Az/El from command line */
-    mjd2lst( mjd, &lmst );
+    // Set settings for the FEE2016 beam model using Hyperbeam
+    int zenith_norm = 1; // Boolean value: unsure if/how this makes a difference
 
     for (int p = 0; p < npointing; p++)
     {
@@ -411,41 +388,10 @@ void get_delays(
         for (n = 0; n < nconfigs; n++)
             jones[n] = NULL; // i.e. no Jones matrices have been calculated for any configurations so far
 
-        dec_degs = parse_dec( pointing_array[p][1] );
-        ra_hours = parse_ra( pointing_array[p][0] );
-
-        /* for the look direction <not the tile> */
-
-        mean_ra[p] = ra_hours * PAL__DH2R;
-        mean_dec[p] = dec_degs * PAL__DD2R;
-
-        palMap(mean_ra[p], mean_dec[p], pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
-
-        // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
-
-        ha = palRanorm( lmst - ra_ap ); // in radians
-
-        /* now HA/Dec to Az/El */
-
-        palDe2h( ha, dec_ap, MWA_LATITUDE_RADIANS, &az[p], &el[p] );
-
-        /* now we need the direction cosines */
-
-        unit_N[p] = cos(el[p]) * cos(az[p]);
-        unit_E[p] = cos(el[p]) * sin(az[p]);
-        unit_H[p] = sin(el[p]);
-
-    }
-
-    // Set settings for the FEE2016 beam model using Hyperbeam
-    int zenith_norm = 1; // Boolean value: unsure if/how this makes a difference
-
-    for (int p = 0; p < npointing; p++)
-    {
         parallactic_angle_correction_fee2016(
                 P,                       // output = rotation matrix
                 MWA_LATITUDE_RADIANS,    // observing latitude (radians)
-                az[p], (PAL__DPIBY2-el[p]));   // azimuth & zenith angle of pencil beam
+                beam_geom_vals[p].az, (PAL__DPIBY2-beam_geom_vals[p].el));   // azimuth & zenith angle of pencil beam
 
         // Everything from this point on is frequency-dependent
         for (ch = 0; ch < nchan; ch++) {
@@ -492,7 +438,7 @@ void get_delays(
                     // Strictly speaking, the condition (ch == 0) above is redundant, as the dipole configuration
                     // array takes care of that implicitly, but I'll leave it here so that the above argument
                     // is "explicit" in the code.
-                    jones[config_idx] = calc_jones( beam, az[p], PAL__DPIBY2-el[p], frequency + chan_width/2,
+                    jones[config_idx] = calc_jones( beam, beam_geom_vals[p].az, PAL__DPIBY2 - beam_geom_vals[p].el, frequency + chan_width/2,
                             (unsigned int*)delays[rf_input], amps[rf_input], zenith_norm );
                 }
 
@@ -541,7 +487,9 @@ void get_delays(
 
                         // shift the origin of ENH to Antenna 0 and hoping the Far Field Assumption still applies ...
 
-                        geometry = (El - E_ref)*unit_E[p] + (N - N_ref)*unit_N[p] + (H - H_ref)*unit_H[p];
+                        geometry = (El - E_ref)*beam_geom_vals[p].unit_E +
+                                   (N  - N_ref)*beam_geom_vals[p].unit_N +
+                                   (H  - H_ref)*beam_geom_vals[p].unit_H;
 
                         delay_time = (geometry + (invert*(cable)))/(SPEED_OF_LIGHT_IN_VACUUM_M_PER_S);
                         delay_samples = delay_time * samples_per_sec;
@@ -590,19 +538,6 @@ void get_delays(
             } // end loop through antenna/pol (rf_input)
         } // end loop through fine channels (ch)
 
-        // Populate a structure with some of the calculated values
-        if (beam_geom_vals != NULL) {
-
-            beam_geom_vals[p].mean_ra  = mean_ra[p];
-            beam_geom_vals[p].mean_dec = mean_dec[p];
-            beam_geom_vals[p].az       = az[p];
-            beam_geom_vals[p].el       = el[p];
-            beam_geom_vals[p].lmst     = lmst;
-            beam_geom_vals[p].fracmjd  = fracmjd;
-            beam_geom_vals[p].intmjd   = intmjd;
-
-        }
-
         // Free Jones matrices from hyperbeam -- in prep for reclaculating the next pointing
         for (n = 0; n < nconfigs; n++)
         {
@@ -641,57 +576,72 @@ void parallactic_angle_correction_fee2016(
     P[3] = -sin(pa);
 }
 
-/*
 void calc_beam_geom(
         char              pointing_array[][2][64],
-        MetafitsMetadata *obs_metadata,
-        double            sec_offset,
-        struct beam_geom *bg[]
-        )
+        int               npointing,
+        double            mjd,
+        struct beam_geom  bg[] )
 {
-    // Calculate the LST
-    // Arguments for palMap()
+    // Calculate geometry of pointings
+
+    double intmjd;
+    double fracmjd;
+    double lmst;
+    double mean_ra, mean_dec, ha;
+    double az, el;
+
+    double unit_N;
+    double unit_E;
+    double unit_H;
+
+    double dec_degs;
+    double ra_hours;
+
     double pr = 0, pd = 0, px = 0, rv = 0, eq = 2000, ra_ap = 0, dec_ap = 0;
 
-    // get mjd
-    double mjd  = obs_metadata->sched_start_mjd;
-    mjd        += (sec_offset + 0.5)/86400.0; // Go to the middle of the current second
-    double intmjd  = floor(mjd);
-    double fracmjd = mjd - intmjd;
+    /* get mjd */
+    intmjd = floor(mjd);
+    fracmjd = mjd - intmjd;
 
-    // get requested Az/El from command line
+    /* get requested Az/El from command line */
+    mjd2lst( mjd, &lmst );
 
-    mjd2lst( mjd, &bg->lmst );
-
-    for ( int p = 0; p < npointing; p++ )
+    for (int p = 0; p < npointing; p++)
     {
-        // for the look direction <not the tile>
-        double dec_degs = parse_dec( pointing_array[p][1] );
-        double ra_hours = parse_ra( pointing_array[p][0] );
+        dec_degs = parse_dec( pointing_array[p][1] );
+        ra_hours = parse_ra( pointing_array[p][0] );
 
-        bg[p]->mean_ra  = ra_hours * PAL__DH2R;
-        bg[p]->mean_dec = dec_degs * PAL__DD2R;
-        bg[p]->intmjd   = intmjd;
-        bg[p]->fracmjd  = fracmjd;
+        /* for the look direction <not the tile> */
 
-        palMap(bg[p]->mean_ra, bg[p]->mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
+        mean_ra = ra_hours * PAL__DH2R;
+        mean_dec = dec_degs * PAL__DD2R;
+
+        palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
 
         // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
 
-        ha = palRanorm( bg[p]->lmst - ra_ap)*PAL__DR2H;
+        ha = palRanorm( lmst - ra_ap ); // in radians
 
-        // now HA/Dec to Az/El
+        /* now HA/Dec to Az/El */
 
-        app_ha_rad = ha * PAL__DH2R;
+        palDe2h( ha, dec_ap, MWA_LATITUDE_RADIANS, &az, &el );
 
-        palDe2h(app_ha_rad, dec_ap, MWA_LATITUDE_RADIANS, &az, &el);
+        /* now we need the direction cosines */
 
-        // now we need the direction cosines
+        unit_N = cos(el) * cos(az);
+        unit_E = cos(el) * sin(az);
+        unit_H = sin(el);
 
-        bg[p]->unit_N = cos(el) * cos(az);
-        bg[p]->unit_E = cos(el) * sin(az);
-        bg[p]->unit_H = sin(el);
+        // Populate a structure with some of the calculated values
+        bg[p].mean_ra  = mean_ra;
+        bg[p].mean_dec = mean_dec;
+        bg[p].az       = az;
+        bg[p].el       = el;
+        bg[p].lmst     = lmst;
+        bg[p].fracmjd  = fracmjd;
+        bg[p].intmjd   = intmjd;
+        bg[p].unit_N   = unit_N;
+        bg[p].unit_E   = unit_E;
+        bg[p].unit_H   = unit_H;
     }
 }
-
-*/
