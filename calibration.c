@@ -22,7 +22,7 @@ void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
 {
     // Find the "GPUBox" number for this coarse channel
     uintptr_t c;
-    uintptr_t gpubox_number = 0;
+    uintptr_t gpubox_number;
     for (c = 0; c < cal_metadata->num_metafits_coarse_chans; c++)
     {
         if (cal_metadata->metafits_coarse_chans[c].rec_chan_number == rec_channel)
@@ -38,6 +38,7 @@ void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
     {
         fprintf( stderr, "error: coarse channel %lu not found in calibration "
                 "observation %u\n", rec_channel, cal_metadata->obs_id );
+        exit(EXIT_FAILURE);
     }
 
     // With the gpubox number in hand, construct the filenames for the
@@ -48,7 +49,22 @@ void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
     sprintf( dijones_path,  "%s/DI_JonesMatrices_node%03lu.dat", caldir, gpubox_number );
     sprintf( bandpass_path, "%s/BandpassCalibration_node%03lu.dat", caldir, gpubox_number );
 
-    read_dijones_file((double **)D, NULL, cal_metadata->num_ants, dijones_path); // Read in the gains Jones
+    // Read in the DI Jones files
+    read_dijones_file((double **)D, NULL, cal_metadata->num_ants, dijones_path);
+
+    // v--- Get the bandpass solutions to work next ---v
+    /*
+        read_bandpass_file(              // Read in the RTS Bandpass file
+                NULL,                    // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
+                Jf,                      // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
+                cal_chan_width,         // Input:  channel width of one column in file (in Hz)
+                cal.nchan,              // Input:  (max) number of channels in one file (=128/(chan_width/10000))
+                nstation,                    // Input:  (max) number of antennas in one file (=128)
+                cal.bandpass_filename); // Input:  name of bandpass file
+
+        mult2x2d( D[cal_ant], Jf[cal_ant][cal_chan], Gf ); // G x Jf = Gf (Forms the "fine channel" DI gain)
+        // (This "Gf" will actually become the output "D")
+    */
 }
 
 

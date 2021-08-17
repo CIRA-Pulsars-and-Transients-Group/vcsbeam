@@ -310,7 +310,6 @@ void get_jones(
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex      **D,
-        cuDoubleComplex     ***Jf,
         float                  samples_per_sec,
         FEEBeam               *beam,
         uint32_t             **delays,
@@ -342,7 +341,6 @@ void get_jones(
     double phase;
 
     cuDoubleComplex E[npol*npol];               // Model Jones in Desired Direction
-    cuDoubleComplex Gf[npol*npol];              // Fine channel DI Gain
     cuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
     double        P[npol*npol];               // Parallactic angle correction rotation matrix
 
@@ -353,10 +351,9 @@ void get_jones(
     double E_ref = ref_ant.east_m;
     double H_ref = ref_ant.height_m;
 
-    int    n;
+    int n;
 
     long int freq_ch;
-    int cal_chan;
 
     double cable;
 
@@ -393,15 +390,6 @@ void get_jones(
 
             // Calculating direction-dependent matrices
             freq_ch = frequency + ch*chan_width;    // The frequency of this fine channel
-            cal_chan = 0;
-            if (cal->cal_type == RTS_BANDPASS) {
-                cal_chan = ch*chan_width / cal_metadata->corr_fine_chan_width_hz;  // The corresponding "calibration channel number"
-                if (cal_chan >= cal->nchan) {                        // Just check that the channel number is reasonable
-                    fprintf(stderr, "Error: \"calibration channel\" %d cannot be ", cal_chan);
-                    fprintf(stderr, ">= than total number of channels %d\n", cal->nchan);
-                    exit(EXIT_FAILURE);
-                }
-            }
 
             // Calculate the UV phase correction for this channel
             uv_angle = cal->phase_slope*freq_ch + cal->phase_offset;
@@ -445,12 +433,7 @@ void get_jones(
                 // Apply parallactic angle correction if Hyperbeam was used
                 mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
 
-                if (cal->cal_type == RTS_BANDPASS)
-                    mult2x2d( D[cal_ant], Jf[cal_ant][cal_chan], Gf ); // G x Jf = Gf (Forms the "fine channel" DI gain)
-                else
-                    cp2x2(D[cal_ant], Gf); //Set the fine channel DI gain equal to the coarse channel DI gain
-
-                mult2x2d(Gf, E, Ji); // the gain in the desired look direction
+                mult2x2d(D[cal_ant], E, Ji); // the gain in the desired look direction
 
                 // Apply the UV phase correction (to the bottom row of the Jones matrix)
                 Ji[2] = cuCmul( Ji[2], uv_phase );

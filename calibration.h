@@ -6,10 +6,9 @@
 #include <cuComplex.h>
 
 // Calibration solution types
-#define NO_CALIBRATION  0
-#define RTS             1
-#define RTS_BANDPASS    2
-#define OFFRINGA        3
+#define CAL_NONE      0
+#define CAL_RTS       1
+#define CAL_OFFRINGA  2
 
 #define NDBL_PER_JONES  8
 
