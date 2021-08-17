@@ -68,6 +68,7 @@ int main(int argc, char **argv)
     opts.end         = 0;    // GPS time -- when to stop beamforming
     opts.pointings   = NULL; // list of pointings "dd:mm:ss_hh:mm:ss,dd:mm:ss_hh:mm:ss"
     opts.datadir     = NULL; // The path to where the recombined data live
+    opts.caldir      = NULL; // The path to where the calibration solutions live
     opts.metafits    = NULL; // filename of the metafits file for the target observation
     opts.cal_metafits = NULL; // filename of the metafits file for the calibration observation
     opts.rec_channel = -1;   // 0 - 255 receiver 1.28MHz channel
@@ -310,7 +311,6 @@ int main(int argc, char **argv)
     // GET CALIBRATION SOLUTION
     // ------------------------
     // 1. Allocate memory
-    double amp = 0.0;  // Not actually used yet
     cuDoubleComplex  **D  = (cuDoubleComplex ** ) calloc(nstation, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
     cuDoubleComplex ***Jf = (cuDoubleComplex ***) calloc(nstation, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
 
@@ -327,8 +327,7 @@ int main(int argc, char **argv)
     // 2. Read files
     if (cal.cal_type == RTS || cal.cal_type == RTS_BANDPASS)
     {
-
-        read_rts_file((double **)D, &amp, nstation, cal.filename); // Read in the gains Jones
+        get_rts_solution( D, cal_metadata, opts.caldir, opts.rec_channel );
 
         if  (cal.cal_type == RTS_BANDPASS) {
 
@@ -697,8 +696,9 @@ int main(int argc, char **argv)
 
     free( opts.pointings    );
     free( opts.datadir      );
+    free( opts.caldir       );
     free( opts.metafits     );
-    free( cal.filename );
+    free( cal.filename      );
     free( opts.custom_flags );
     free( opts.synth_filter );
 
@@ -824,6 +824,8 @@ void usage() {
     fprintf(stderr, "\n");
     fprintf(stderr, "\t-c, --cal-metafits=FILE  ");
     fprintf(stderr, "FILE is the metafits file pertaining to the calibration solution\n");
+    fprintf(stderr, "\t-D, --cal-location=PATH  ");
+    fprintf(stderr, "PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n");
     fprintf(stderr, "\t-J, --dijones-file=PATH   ");
     fprintf(stderr, "The direction-independent Jones matrix file that is output from\n");
     fprintf(stderr, "\t                          ");
@@ -909,6 +911,7 @@ void make_beam_parse_cmdline(
                 {"antpol",          required_argument, 0, 'A'},
                 {"pointings",       required_argument, 0, 'P'},
                 {"data-location",   required_argument, 0, 'd'},
+                {"cal-location",    required_argument, 0, 'D'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
@@ -927,7 +930,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:B:c:C:d:e:f:F:g:hiJ:m:O:pP:R:sS:t:U:vVX",
+                             "A:b:B:c:C:d:D:e:f:F:g:hiJ:m:O:pP:R:sS:t:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -953,6 +956,9 @@ void make_beam_parse_cmdline(
                     break;
                 case 'd':
                     opts->datadir = strdup(optarg);
+                    break;
+                case 'D':
+                    opts->caldir = strdup(optarg);
                     break;
                 case 'e':
                     opts->end = atol(optarg);
@@ -1042,7 +1048,6 @@ void make_beam_parse_cmdline(
     assert( opts->pointings    != NULL );
     assert( opts->datadir      != NULL );
     assert( opts->metafits     != NULL );
-    assert( opts->rec_channel  != -1   );
     assert( cal->cal_type != NO_CALIBRATION );
     if (opts->out_coh || opts->out_vdif)
         assert( opts->cal_metafits );

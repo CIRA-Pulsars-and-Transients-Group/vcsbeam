@@ -13,7 +13,47 @@
 #include <cuComplex.h>
 #include "beam_common.h"
 
-int read_rts_file( double **D, double *amp, int nant, char *fname )
+void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
+        const char *caldir, uintptr_t rec_channel )
+/* Read in the RTS solution from the DI_Jones... and Bandpass... files in
+ * the CALDIR directory. The output is a set of Jones matrices (D) for each
+ * antenna and (non-flagged) fine channel
+ */
+{
+    // Find the "GPUBox" number for this coarse channel
+    uintptr_t c;
+    uintptr_t gpubox_number = 0;
+    for (c = 0; c < cal_metadata->num_metafits_coarse_chans; c++)
+    {
+        if (cal_metadata->metafits_coarse_chans[c].rec_chan_number == rec_channel)
+        {
+            gpubox_number = cal_metadata->metafits_coarse_chans[c].gpubox_number;
+            break;
+        }
+    }
+
+    // If this coarse channel was not found in the calibration obs, complain
+    // and exit
+    if (c == cal_metadata->num_metafits_coarse_chans)
+    {
+        fprintf( stderr, "error: coarse channel %lu not found in calibration "
+                "observation %u\n", rec_channel, cal_metadata->obs_id );
+    }
+
+    // With the gpubox number in hand, construct the filenames for the
+    // DI_Jones and Bandpass files
+    char dijones_path[CAL_PATHSIZE];
+    char bandpass_path[CAL_PATHSIZE];
+
+    sprintf( dijones_path,  "%s/DI_JonesMatrices_node%03lu.dat", caldir, gpubox_number );
+    sprintf( bandpass_path, "%s/BandpassCalibration_node%03lu.dat", caldir, gpubox_number );
+
+    read_dijones_file((double **)D, NULL, cal_metadata->num_ants, dijones_path); // Read in the gains Jones
+}
+
+
+
+int read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
 /* Read in an RTS file and return the direction independent Jones matrix
  * for each antenna. This implements Eq. (29) in Ord et al. (2019).
  *
@@ -53,7 +93,7 @@ int read_rts_file( double **D, double *amp, int nant, char *fname )
 
     // Finally, read in the Jones ("J") matrices and multiply them each by the
     // inverted alignment matrix ("invA")
-    int ant;
+    uintptr_t ant;
     for (ant = 0; ant < nant; ant++)
     {
         for (i = 0; i < NDBL_PER_JONES; i++)

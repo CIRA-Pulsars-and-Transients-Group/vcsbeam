@@ -13,7 +13,7 @@
 
 #define NDBL_PER_JONES  8
 
-#define BUFSIZE    4096
+#define CAL_PATHSIZE    4096
 
 struct calibration {
     char  *filename;           // The file that houses the calibration solution
@@ -28,8 +28,10 @@ struct calibration {
                                //   c = phase_offset (rad)
 };
 
+void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
+        const char *caldir, uintptr_t rec_channel );
 
-int read_rts_file( double **D, double *amp, int nant, char *fname );
+int read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname );
 int read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
         int chan_width, int nchan, int nant, char *filename );
 int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
