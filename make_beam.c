@@ -240,7 +240,7 @@ int main(int argc, char **argv)
     // Also, to prep for the FEE beam function call, create an "amps" array
     // based on the delays array from the metafits
     //int ninputs = obs_metadata->num_rf_inputs;
-    int **delays;
+    uint32_t **delays;
     double **amps;
     create_delays_amps_from_metafits( obs_metadata, &delays, &amps );
 

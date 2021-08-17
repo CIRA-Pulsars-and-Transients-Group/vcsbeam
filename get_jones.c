@@ -35,7 +35,7 @@
 
 //=====================//
 
-void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, int ***delays, double ***amps )
+void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, uint32_t ***delays, double ***amps )
 /* Costruct "delay" and "amp" arrays required by Hyperbeam.
  * Delays can be brought directly across from the MetafitsMetadata struct.
  * The "conversion" from delays to amps is straightforward: All amps are "1.0"
@@ -52,7 +52,7 @@ void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, int ***de
     int ndipoles = obs_metadata->num_delays;
     int ninputs  = obs_metadata->num_rf_inputs;
 
-    *delays = (int **)malloc( ninputs * sizeof(int *) );
+    *delays = (uint32_t **)malloc( ninputs * sizeof(uint32_t *) );
     *amps = (double **)malloc( ninputs * sizeof(double *) );
 
     int input, dipole;
@@ -73,7 +73,7 @@ void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, int ***de
     }
 }
 
-void free_delays_amps( MetafitsMetadata *obs_metadata, int **delays, double **amps )
+void free_delays_amps( MetafitsMetadata *obs_metadata, uint32_t **delays, double **amps )
 /* Frees the memory allocated in create_delays_amps_from_metafits().
  */
 {
@@ -314,7 +314,7 @@ void get_jones(
         cuDoubleComplex       *invJref,
         float                  samples_per_sec,
         FEEBeam               *beam,
-        int                  **delays,
+        uint32_t             **delays,
         double               **amps,
         struct beam_geom       beam_geom_vals[],
         cuDoubleComplex    ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]

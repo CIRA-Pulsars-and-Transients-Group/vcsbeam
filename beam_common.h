@@ -102,7 +102,7 @@ void get_jones(
         cuDoubleComplex       *invJref,
         float                  samples_per_sec,
         FEEBeam               *beam,
-        int                  **delays,
+        uint32_t             **delays,
         double               **amps,
         struct beam_geom       beam_geom_vals[],
         cuDoubleComplex      ****complex_weights_array,  // output
@@ -115,8 +115,8 @@ void calc_beam_geom(
         double            mjd,
         struct beam_geom  bg[] );
 
-void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, int ***delays, double ***amps );
-void free_delays_amps( MetafitsMetadata *metafits_metadata, int **delays, double **amps );
+void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, uint32_t ***delays, double ***amps );
+void free_delays_amps( MetafitsMetadata *metafits_metadata, uint32_t **delays, double **amps );
 
 void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
 void remove_reference_phase( cuDoubleComplex **M, int ref_ant, int nant );
