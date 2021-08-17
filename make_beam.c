@@ -382,7 +382,7 @@ int main(int argc, char **argv)
 
     // ------------------------
 
-    // Run get_delays to populate the beam_geom_vals struct
+    // Run get_jones to populate the beam_geom_vals struct
     fprintf( stderr, "[%f]  Setting up output header information\n", NOW-begintime);
     struct beam_geom beam_geom_vals[npointing];
 
@@ -550,7 +550,7 @@ int main(int argc, char **argv)
         mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
         calc_beam_geom( pointing_array, npointing, mjd, beam_geom_vals );
 
-        get_delays(
+        get_jones(
                 npointing,          // number of pointings
                 vcs_metadata,
                 obs_metadata,

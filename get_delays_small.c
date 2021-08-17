@@ -301,7 +301,7 @@ void remove_reference_phase( cuDoubleComplex **M, int ref_ant, int nant )
     }
 }
 
-void get_delays(
+void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
         VoltageMetadata       *vcs_metadata,
@@ -464,23 +464,10 @@ void get_delays(
                 if (complex_weights_array != NULL) {
                     if (!flagged && !cal_flagged)
                     {
-                        //cable = mi->cable_array[rf_input] - mi->cable_array[refinp];
-                        //double El = mi->E_array[rf_input];
-                        //double N = mi->N_array[rf_input];
-                        //double H = mi->H_array[rf_input];
                         cable = obs_metadata->rf_inputs[rf_input].electrical_length_m - ref_ant.electrical_length_m;
                         double El = obs_metadata->rf_inputs[rf_input].east_m;
                         double N  = obs_metadata->rf_inputs[rf_input].north_m;
                         double H  = obs_metadata->rf_inputs[rf_input].height_m;
-                        //fprintf( stderr, "vcs_order[%u] = %u, subfile_order = %u, antenna = %u, input = %u\n",
-                        //        rf_input,
-                        //        obs_metadata->rf_inputs[rf_input].vcs_order,
-                        //        obs_metadata->rf_inputs[rf_input].subfile_order,
-                        //        obs_metadata->rf_inputs[rf_input].ant,
-                        //        obs_metadata->rf_inputs[rf_input].input
-                        //        );
-                        //fprintf( stderr, "  E: metafits order: %f, rf_inputs order: %f\n",
-                        //        mi->E_array[rf_input], obs_metadata->rf_inputs[rf_input].east_m );
 
                         // shift the origin of ENH to Antenna 0 and hoping the Far Field Assumption still applies ...
 
@@ -513,7 +500,8 @@ void get_delays(
                 }
 
                 // Now, calculate the inverse Jones matrix
-                if (invJi != NULL) {
+                if (invJi != NULL)
+                {
                     if (pol == 0) { // This is just to avoid doing the same calculation twice
 
                         // Ord's original comment for the following line is:
@@ -528,9 +516,9 @@ void get_delays(
                             for (p1 = 0; p1 < npol;  p1++)
                             for (p2 = 0; p2 < npol;  p2++)
                                 invJi[ant][ch][p1][p2] = make_cuDoubleComplex( 0.0, 0.0 );
-                            }
                         }
                     }
+                }
 
             } // end loop through antenna/pol (rf_input)
         } // end loop through fine channels (ch)

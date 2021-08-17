@@ -6,7 +6,7 @@ project (vcsbeam LANGUAGES C CUDA)
 
 # Set up version number
 execute_process(
-  COMMAND bash -c "git describe --tags --long | sed 's/-/./' | sed 's/-/_/'"
+  COMMAND bash -c "git describe --tags --long | sed 's/-/./' | sed 's/-g/_/'"
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE VCSBEAM_VERSION
   OUTPUT_STRIP_TRAILING_WHITESPACE

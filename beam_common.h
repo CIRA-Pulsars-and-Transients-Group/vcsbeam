@@ -88,8 +88,8 @@ struct make_beam_opts {
     float              gpu_mem  ;     // Default = -1.0. If -1.0 use all GPU mem
 };
 
-/* Running get_delays from within make_beam */
-void get_delays(
+/* Running get_jones from within make_beam */
+void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
         VoltageMetadata*       volt_metadata,

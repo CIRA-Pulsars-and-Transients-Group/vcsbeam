@@ -130,7 +130,7 @@ void populate_psrfits_header(
         pf[p].hdr.scanlen = 1.0; // in sec
 
         strcpy(pf[p].hdr.frontend, "MWA-RECVR");
-        snprintf(pf[p].hdr.backend, 24*sizeof(char), "vcstools %s", VERSION_BEAMFORMER );
+        snprintf(pf[p].hdr.backend, 24*sizeof(char), "vcsbeam %s", VERSION_BEAMFORMER );
 
         // Now let us finally get the time right
         strcpy(pf[p].hdr.date_obs,   time_utc);
