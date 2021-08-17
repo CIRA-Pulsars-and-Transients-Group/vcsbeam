@@ -265,39 +265,39 @@ void mjd2lst(double mjd, double *lst) {
     *lst = lmst;
 }
 
-void zero_XY_and_YX( cuDoubleComplex **M, int nant )
-/* For M = [ XX, XY ], set XY and YX to 0 for all antennas
+void zero_XY_and_YX( cuDoubleComplex **D, int nant )
+/* For D = [ XX, XY ], set XY and YX to 0 for all antennas
  *         [ YX, YY ]
  */
 {
     int ant;
     for (ant = 0; ant < nant; ant++)
     {
-        M[ant][1] = make_cuDoubleComplex( 0.0, 0.0 );
-        M[ant][2] = make_cuDoubleComplex( 0.0, 0.0 );
+        D[ant][1] = make_cuDoubleComplex( 0.0, 0.0 );
+        D[ant][2] = make_cuDoubleComplex( 0.0, 0.0 );
     }
 }
 
-void remove_reference_phase( cuDoubleComplex **M, int ref_ant, int nant )
+void remove_reference_phase( cuDoubleComplex **D, int ref_ant, int nant )
 {
     cuDoubleComplex XX0norm, XY0norm, YX0norm, YY0norm;
-    double XXscale = 1.0/cuCabs( M[ref_ant][0] ); // = 1/|XX|
-    double XYscale = 1.0/cuCabs( M[ref_ant][1] ); // = 1/|XY|
-    double YXscale = 1.0/cuCabs( M[ref_ant][2] ); // = 1/|YX|
-    double YYscale = 1.0/cuCabs( M[ref_ant][3] ); // = 1/|YY|
+    double XXscale = 1.0/cuCabs( D[ref_ant][0] ); // = 1/|XX|
+    double XYscale = 1.0/cuCabs( D[ref_ant][1] ); // = 1/|XY|
+    double YXscale = 1.0/cuCabs( D[ref_ant][2] ); // = 1/|YX|
+    double YYscale = 1.0/cuCabs( D[ref_ant][3] ); // = 1/|YY|
 
-    XX0norm = make_cuDoubleComplex( XXscale*cuCreal(M[ref_ant][0]), XXscale*cuCimag(M[ref_ant][0]) ); // = XX/|XX|
-    XY0norm = make_cuDoubleComplex( XYscale*cuCreal(M[ref_ant][1]), XYscale*cuCimag(M[ref_ant][1]) ); // = XY/|XY|
-    YX0norm = make_cuDoubleComplex( YXscale*cuCreal(M[ref_ant][2]), YXscale*cuCimag(M[ref_ant][2]) ); // = YX/|YX|
-    YY0norm = make_cuDoubleComplex( YYscale*cuCreal(M[ref_ant][3]), YYscale*cuCimag(M[ref_ant][3]) ); // = YY/|YY|
+    XX0norm = make_cuDoubleComplex( XXscale*cuCreal(D[ref_ant][0]), XXscale*cuCimag(D[ref_ant][0]) ); // = XX/|XX|
+    XY0norm = make_cuDoubleComplex( XYscale*cuCreal(D[ref_ant][1]), XYscale*cuCimag(D[ref_ant][1]) ); // = XY/|XY|
+    YX0norm = make_cuDoubleComplex( YXscale*cuCreal(D[ref_ant][2]), YXscale*cuCimag(D[ref_ant][2]) ); // = YX/|YX|
+    YY0norm = make_cuDoubleComplex( YYscale*cuCreal(D[ref_ant][3]), YYscale*cuCimag(D[ref_ant][3]) ); // = YY/|YY|
 
     int ant;
     for (ant = 0; ant < nant; ant++)
     {
-        M[ant][0] = cuCdiv( M[ant][0], XX0norm ); // Essentially phase rotations
-        M[ant][1] = cuCdiv( M[ant][1], XY0norm );
-        M[ant][2] = cuCdiv( M[ant][2], YX0norm );
-        M[ant][3] = cuCdiv( M[ant][3], YY0norm );
+        D[ant][0] = cuCdiv( D[ant][0], XX0norm ); // Essentially phase rotations
+        D[ant][1] = cuCdiv( D[ant][1], XY0norm );
+        D[ant][2] = cuCdiv( D[ant][2], YX0norm );
+        D[ant][3] = cuCdiv( D[ant][3], YY0norm );
     }
 }
 
@@ -309,9 +309,8 @@ void get_jones(
         MetafitsMetadata      *cal_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
-        cuDoubleComplex      **M,
+        cuDoubleComplex      **D,
         cuDoubleComplex     ***Jf,
-        cuDoubleComplex       *invJref,
         float                  samples_per_sec,
         FEEBeam               *beam,
         uint32_t             **delays,
@@ -343,7 +342,6 @@ void get_jones(
     double phase;
 
     cuDoubleComplex E[npol*npol];               // Model Jones in Desired Direction
-    cuDoubleComplex G[npol*npol];               // Coarse channel DI Gain
     cuDoubleComplex Gf[npol*npol];              // Fine channel DI Gain
     cuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
     double        P[npol*npol];               // Parallactic angle correction rotation matrix
@@ -447,12 +445,10 @@ void get_jones(
                 // Apply parallactic angle correction if Hyperbeam was used
                 mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
 
-                mult2x2d(M[cal_ant], invJref, G); // M x J^-1 = G (Forms the "coarse channel" DI gain)
-
                 if (cal->cal_type == RTS_BANDPASS)
-                    mult2x2d(G, Jf[cal_ant][cal_chan], Gf); // G x Jf = Gf (Forms the "fine channel" DI gain)
+                    mult2x2d( D[cal_ant], Jf[cal_ant][cal_chan], Gf ); // G x Jf = Gf (Forms the "fine channel" DI gain)
                 else
-                    cp2x2(G, Gf); //Set the fine channel DI gain equal to the coarse channel DI gain
+                    cp2x2(D[cal_ant], Gf); //Set the fine channel DI gain equal to the coarse channel DI gain
 
                 mult2x2d(Gf, E, Ji); // the gain in the desired look direction
 

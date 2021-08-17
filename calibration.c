@@ -11,10 +11,18 @@
 #include <math.h>
 #include <mwalib.h>
 #include <cuComplex.h>
+#include "beam_common.h"
 
-int read_rts_file(cuDoubleComplex **G, cuDoubleComplex *Jref,
-                  double *amp, char *fname)
+int read_rts_file( double **D, double *amp, int nant, char *fname )
+/* Read in an RTS file and return the direction independent Jones matrix
+ * for each antenna. This implements Eq. (29) in Ord et al. (2019).
+ *
+ * This function assumes that the RTS "DIJones" files are in a very specific
+ * format. However, this code is maintained independently from the RTS,
+ * so if the RTS changes, this code may break.
+ */
 {
+    // Open the file for reading
     FILE *fp = NULL;
     if ((fp = fopen(fname, "r")) == NULL) {
         fprintf(stderr, "Error: cannot open gain Jones matrix file: %s\n",
@@ -22,48 +30,42 @@ int read_rts_file(cuDoubleComplex **G, cuDoubleComplex *Jref,
         exit(EXIT_FAILURE);
     }
 
-    char line[BUFSIZE];
-    int index = 0;
-    double re0, im0, re1, im1, re2, im2, re3, im3;
+    // Set up some variables for reading in
+    double val;
+    double invA[NDBL_PER_JONES]; // The alignment matrix
+    double J[NDBL_PER_JONES]; // "Raw" Jones matrix
 
-    while ((fgets(line, BUFSIZE - 1, fp)) != NULL) {
+    // Read in the amplitude (SM: I have no idea what this value represents)
+    fscanf( fp, "%lf", &val );
+    if (amp != NULL)
+        *amp = val;
 
-        if (line[0] == '\n' || line[0] == '#' || line[0] == '\0')
-            continue; // skip blank/comment lines
-        if (line[0] == '/' && line[1] == '/')
-            continue; // also a comment (to match other input files using this style)
+    // Read in the alignment ("A") matrix and invert it ("invA")
+    // (Just use the "invA" array for both reading and inverting)
 
-        if (index == 0) {
+    // Reading:
+    int i;
+    for (i = 0; i < NDBL_PER_JONES; i++)
+        fscanf( fp, "%lf,", &invA[i] );
 
-            // read the amplitude and the Alignment Line
-            sscanf(line, "%lf", amp);
-            fgets(line, BUFSIZE - 1, fp);
-            sscanf(line, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf", &re0,
-                           &im0, &re1, &im1, &re2, &im2, &re3, &im3);
+    // Inverting (inv2x2() expects cuDoubleComplex arrays):
+    inv2x2( (cuDoubleComplex *)invA, (cuDoubleComplex *)invA );
 
-            Jref[0] = make_cuDoubleComplex( re0, im0 );
-            Jref[1] = make_cuDoubleComplex( re1, im1 );
-            Jref[2] = make_cuDoubleComplex( re2, im2 );
-            Jref[3] = make_cuDoubleComplex( re3, im3 );
+    // Finally, read in the Jones ("J") matrices and multiply them each by the
+    // inverted alignment matrix ("invA")
+    int ant;
+    for (ant = 0; ant < nant; ant++)
+    {
+        for (i = 0; i < NDBL_PER_JONES; i++)
+            fscanf( fp, "%lf,", &J[i] );
 
-        }
-        if (index > 0) {
-            sscanf(line, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf", &re0,
-                           &im0, &re1, &im1, &re2, &im2, &re3, &im3);
-            G[index - 1][0] = make_cuDoubleComplex( re0, im0 );
-            G[index - 1][1] = make_cuDoubleComplex( re1, im1 );
-            G[index - 1][2] = make_cuDoubleComplex( re2, im2 );
-            G[index - 1][3] = make_cuDoubleComplex( re3, im3 );
-        }
-
-        index++;
-
+        mult2x2d( (cuDoubleComplex *)J, (cuDoubleComplex *)invA,
+                (cuDoubleComplex *)(D[ant]) );
     }
 
     fclose(fp);
 
     return 0;
-
 }
 
 

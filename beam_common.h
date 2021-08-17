@@ -99,7 +99,6 @@ void get_jones(
         struct                 calibration *cal,
         cuDoubleComplex      **M,
         cuDoubleComplex     ***Jf,
-        cuDoubleComplex       *invJref,
         float                  samples_per_sec,
         FEEBeam               *beam,
         uint32_t             **delays,

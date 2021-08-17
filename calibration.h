@@ -11,6 +11,8 @@
 #define RTS_BANDPASS    2
 #define OFFRINGA        3
 
+#define NDBL_PER_JONES  8
+
 #define BUFSIZE    4096
 
 struct calibration {
@@ -27,12 +29,11 @@ struct calibration {
 };
 
 
-int read_rts_file(cuDoubleComplex **G, cuDoubleComplex *Jref,
-                  double *amp, char *fname);
+int read_rts_file( double **D, double *amp, int nant, char *fname );
 int read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
-                        int chan_width, int nchan, int nant, char *filename );
+        int chan_width, int nchan, int nant, char *filename );
 int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
-                              int coarse_chan, char *gains_file, int *order );
+        int coarse_chan, char *gains_file, int *order );
 
 uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, MetafitsMetadata *obs_metadata, uint32_t vcs_ant );
 

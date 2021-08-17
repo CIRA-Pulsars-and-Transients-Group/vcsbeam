@@ -311,15 +311,13 @@ int main(int argc, char **argv)
     // ------------------------
     // 1. Allocate memory
     double amp = 0.0;  // Not actually used yet
-    cuDoubleComplex  **M  = (cuDoubleComplex ** ) calloc(nstation, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
+    cuDoubleComplex  **D  = (cuDoubleComplex ** ) calloc(nstation, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
     cuDoubleComplex ***Jf = (cuDoubleComplex ***) calloc(nstation, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
-    cuDoubleComplex Jref[npol*npol];            // Calibration Direction
-    cuDoubleComplex invJref[npol*npol];
 
     int *order = (int *)malloc( nstation*sizeof(int) ); // <-- just for OFFRINGA calibration solutions
 
     for (ant = 0; ant < nstation; ant++) {
-        M[ant]  = (cuDoubleComplex * ) calloc(npol*npol,  sizeof(cuDoubleComplex));
+        D[ant]  = (cuDoubleComplex * ) calloc(npol*npol,  sizeof(cuDoubleComplex));
         Jf[ant] = (cuDoubleComplex **) calloc(cal.nchan, sizeof(cuDoubleComplex *));
         for (ch = 0; ch < cal.nchan; ch++) { // Only need as many channels as used in calibration solution
             Jf[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
@@ -330,8 +328,7 @@ int main(int argc, char **argv)
     if (cal.cal_type == RTS || cal.cal_type == RTS_BANDPASS)
     {
 
-        read_rts_file(M, Jref, &amp, cal.filename); // Read in the RTS DIJones file
-        inv2x2(Jref, invJref);
+        read_rts_file((double **)D, &amp, nstation, cal.filename); // Read in the gains Jones
 
         if  (cal.cal_type == RTS_BANDPASS) {
 
@@ -354,16 +351,9 @@ int main(int argc, char **argv)
             Antenna A = obs_metadata->antennas[ant];
             order[A.ant*2] = ant;
         }
-        read_offringa_gains_file(M, nstation, cal.offr_chan_num, cal.filename, order);
+        read_offringa_gains_file(D, nstation, cal.offr_chan_num, cal.filename, order);
         free(order);
 
-        // Just make Jref (and invJref) the identity matrix since they are already
-        // incorporated into Offringa's calibration solutions.
-        //Jref[0] = make_cuDoubleComplex( 1.0, 0.0 );
-        //Jref[1] = make_cuDoubleComplex( 0.0, 0.0 );
-        //Jref[2] = make_cuDoubleComplex( 0.0, 0.0 );
-        //Jref[3] = make_cuDoubleComplex( 1.0, 0.0 );
-        inv2x2(Jref, invJref);
     }
 
     // 3. In order to mitigate errors introduced by the calibration scheme, the calibration
@@ -373,12 +363,12 @@ int main(int argc, char **argv)
     //      reference antennas are aligned.
 
     if (cal.ref_ant != -1) // -1 = don't do any phase rotation
-        remove_reference_phase( M, cal.ref_ant, nstation );
+        remove_reference_phase( D, cal.ref_ant, nstation );
 
     //   2) The XY and YX terms are set to zero.
 
     if (cal.cross_terms == 0)
-        zero_XY_and_YX( M, nstation );
+        zero_XY_and_YX( D, nstation );
 
     // ------------------------
 
@@ -557,9 +547,8 @@ int main(int argc, char **argv)
                 cal_metadata,
                 coarse_chan_idx,
                 &cal,              // struct holding info about calibration
-                M,                      // Calibration Jones matrix information
+                D,                      // Calibration Jones matrix information
                 Jf,                     // Calibration Jones matrix information
-                invJref,                // Calibration Jones matrix information
                 sample_rate,            // Hz
                 beam,                   // Hyperbeam struct
                 delays,                 // } Analogue beamforming pointing direction information needed for Hyperbeam
@@ -758,11 +747,11 @@ int main(int argc, char **argv)
         for (ch = 0; ch < cal.nchan; ch++)
             free( Jf[ant][ch] );
         free( Jf[ant] );
-        free( M[ant] );
+        free( D[ant] );
     }
 
     free( Jf );
-    free( M );
+    free( D );
     free( order );
 
     return EXIT_SUCCESS;
@@ -1285,11 +1274,12 @@ void get_mwalib_metadata(
  * obs_metadata applies to the metafits metadata for the target observation, and cannot be null
  * vcs_metadata applies to the voltage metadata for the target observation, and cannot be null
  * cal_metadata applies to the metafits metadata for the calibration observation, and may be NULL
- * vcs_context applies to the voltage context for the target observation, and cannot be null
  *     (if only an incoherent beam is requested)
+ * vcs_context applies to the voltage context for the target observation, and cannot be null
  */
 {
     char error_message[ERROR_MESSAGE_LEN];
+    error_message[0] = '\0'; // <-- Just to avoid a compiler warning about uninitialised variables
 
     // Each metadata is constructed from mwalib "contexts"
     // These are only temporarily needed to construct the other metadata/context structs,
