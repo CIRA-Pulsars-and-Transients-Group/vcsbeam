@@ -14,7 +14,7 @@
 #include "beam_common.h"
 
 void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
-        const char *caldir, uintptr_t rec_channel )
+        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t rec_channel )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel
@@ -43,33 +43,55 @@ void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
 
     // With the gpubox number in hand, construct the filenames for the
     // DI_Jones and Bandpass files
-    char dijones_path[CAL_PATHSIZE];
-    char bandpass_path[CAL_PATHSIZE];
+    char dijones_path[CAL_BUFSIZE];
+    char bandpass_path[CAL_BUFSIZE];
 
     sprintf( dijones_path,  "%s/DI_JonesMatrices_node%03lu.dat", caldir, gpubox_number );
     sprintf( bandpass_path, "%s/BandpassCalibration_node%03lu.dat", caldir, gpubox_number );
 
-    // Read in the DI Jones files
-    read_dijones_file((double **)D, NULL, cal_metadata->num_ants, dijones_path);
+    // Allocate memory for the Jones arrays
+    uintptr_t nant  = cal_metadata->num_ants;
+    uintptr_t npol  = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+    uintptr_t nchan = cal_metafits->num_corr_fine_chans_per_coarse;
 
-    // v--- Get the bandpass solutions to work next ---v
-    /*
-        read_bandpass_file(              // Read in the RTS Bandpass file
-                NULL,                    // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
-                Jf,                      // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
-                cal_chan_width,         // Input:  channel width of one column in file (in Hz)
-                cal.nchan,              // Input:  (max) number of channels in one file (=128/(chan_width/10000))
-                nstation,                    // Input:  (max) number of antennas in one file (=128)
-                cal.bandpass_filename); // Input:  name of bandpass file
+    cuDoubleComplex  **Jd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
+    cuDoubleComplex ***Jf = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
 
-        mult2x2d( D[cal_ant], Jf[cal_ant][cal_chan], Gf ); // G x Jf = Gf (Forms the "fine channel" DI gain)
-        // (This "Gf" will actually become the output "D")
-    */
+    uintptr_t ant, ch;
+    for (ant = 0; ant < nant; ant++)
+    {
+        Jd[ant] = (cuDoubleComplex * )calloc( npol,  sizeof(cuDoubleComplex  ) );
+        Jf[ant] = (cuDoubleComplex **)calloc( nchan, sizeof(cuDoubleComplex *) );
+
+        for (ch = 0; ch < nchan; ch++)
+            Jf[ant][ch] = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
+    }
+
+    // Read in the DI Jones file
+    read_dijones_file((double **)Jd, NULL, cal_metadata->num_ants, dijones_path);
+
+    // Read in the Bandpass file
+    read_bandpass_file( NULL, Jf, cal_metafits, bandpass_path );
+
+    // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
+    // Do this for each of the _voltage_ observation's fine channels (use
+    // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
+    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t interp_factor = vcs_nchan / nchan;
+    uintptr_t cal_ch;
+    for (ant = 0; ant < nant; ant++)
+    {
+        for (ch = 0; ch < vcs_nchan; ch++)
+        {
+            cal_ch = ch / interp_factor;
+            mult2x2d( Jd[ant], Jf[ant][cal_ch], D[ant][ch] ); // Jd x Jf = D
+        }
+    }
 }
 
 
 
-int read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
+void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
 /* Read in an RTS file and return the direction independent Jones matrix
  * for each antenna. This implements Eq. (29) in Ord et al. (2019).
  *
@@ -120,21 +142,29 @@ int read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
     }
 
     fclose(fp);
-
-    return 0;
 }
 
 
 
-int read_bandpass_file(
+void read_bandpass_file(
         cuDoubleComplex ***Jm, // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
         cuDoubleComplex ***Jf, // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
-        int chan_width,       // Input:  channel width of one column in file (in Hz)
-        int nchan,            // Input:  (max) number of channels in one file (=128/(chan_width/10000))
-        int nant,             // Input:  (max) number of antennas in one file (=128)
-        char *filename        // Input:  name of bandpass file
+        MetafitsMetadata   *cal_metafits,
+        char *filename         // Input:  name of bandpass file
         )
+/* This function populates the Jm and Jf arrays with values read in from the
+ * given bandpass file. The bandpass files contain only values for antennas
+ * and fine channels that have not been flagged. Nothing is done for those
+ * antennas/channels that have been flagged, so the onus is on the caller to
+ * initialise the Jm and Jf arrays to values to their preferred values.
+ */
 {
+
+    // Some shortcut variables
+    int chan_width = cal_metafits->corr_fine_chan_width_hz;        // TODO: Check whether this should sometimes be volt_fine_chan_width_hz
+    int nchan      = cal_metafits->num_corr_fine_chans_per_coarse; //       and num_volt_fine_chans_per_coarse
+    int nant       = cal_metafits->num_ants;
+    int npol       = cal_metadata->num_visibility_pols;            // = 4 (XX, XY, YX, YY)
 
     // Open the file for reading
     FILE *f = NULL;
@@ -143,10 +173,10 @@ int read_bandpass_file(
         exit(EXIT_FAILURE);
     }
 
-    // Read in top row = frequency offsets
-    int max_len = 4096; // Overkill
-    char freqline[max_len];
-    if (fgets( freqline, max_len, f ) == NULL) {
+    // Read in top row = frequency offsets within coarse channel
+    // Turn these frequencies into a list of indexes into the channel dimension
+    char freqline[CAL_BUFSIZE];
+    if (fgets( freqline, CAL_BUFSIZE, f ) == NULL) {
         fprintf(stderr, "Error: could not read first line of %s\n", filename);
         exit(EXIT_FAILURE);
     }
@@ -154,14 +184,14 @@ int read_bandpass_file(
     // Parse top row
     // Find out which channels are actually in the Bandpass file
     // (i.e. which channels have not been flagged)
+    int chan_idxs[nchan];
     char *freqline_ptr = freqline;
     int pos;
-    double freq_offset;
+    double chan_MHz;
     int chan_count = 0;
-    int chan_idxs[nchan];
     int chan_idx;
-    while (sscanf(freqline_ptr, "%lf,%n", &freq_offset, &pos) == 1) {
-
+    while (sscanf( freqline_ptr, "%lf,%n", &chan_MHz, &pos ) == 1)
+    {
         chan_count++;
 
         // Make sure we haven't exceeded the total
@@ -169,74 +199,88 @@ int read_bandpass_file(
             fprintf(stderr, "Error: More than nchan = %d columns in Bandpass file %s\n", nchan, filename);
             exit(EXIT_FAILURE);
         }
-        chan_idx = (int)roundf( freq_offset*1e6 / (double)chan_width );
-        chan_idxs[chan_count-1] = chan_idx;
+
+        // Convert the channel frequencies (in MHz) to channel indices
+        chan_idx = (int)roundf( chan_MHz*1e6 / (double)chan_width );
+        chan_idxs[chan_count - 1] = chan_idx;
 
         freqline_ptr += pos;
     }
+
     // Read in all the values
-    int ant, curr_ant = 0;     // The antenna number, read in from the file
-    int ant_row       = 0;     // Number between 0 and 7. Each antenna has 8 rows.
+    int ant, curr_ant;         // The antenna number, read in from the file
+    int ant_row;               // Number between 0 and 7. Each antenna has 8 rows.
     int ch;                    // A counter for channel numbers
     int ci;                    // A counter for channel number indices
     double amp,ph;             // For holding the read-in value pairs (real, imaginary)
     int pol;                   // Number between 0 and 3. Corresponds to position in Jm/Jf matrices: [0,1]
                                //                                                                    [2,3]
-    cuDoubleComplex ***J;       // Either points to Jm or Jf, according to which row we're on
+    cuDoubleComplex ***J;      // Either points to Jm or Jf, according to which row we're on
 
-    while (1) {   // Will terminate when EOF is reached
-
-        if (fscanf(f, "%d,", &ant) == EOF)     // Read in first number = antenna number
+    for (ant = 0; ant < nant; ant++)
+    {
+        // Read in first number = antenna number + 1
+        if (fscanf( f, "%d,", &curr_ant ) == EOF)
             break;
 
-        if (ant > nant) {                      // Check that the antenna number is not bigger than expected
-            fprintf(stderr, "Error: More than nant = %d antennas in Bandpass file %s\n", nant, filename);
-            exit(EXIT_FAILURE);
-        }
+        // (The antenna numbers in the Bandpass files start at 1, not 0)
+        curr_ant--;
 
-        ant--;                                 // Convert to 0-offset
+        // If the current row is not for this ant, then skip to the current row
+        if (ant < curr_ant)  ant = curr_ant;
 
-        if (ant == curr_ant) {                 // Ensure that there is not an unusual (!=8) number of rows for this antenna
-            ant_row++;
-            if (ant_row > 8) {
-                fprintf(stderr, "Error: More than 8 rows for antenna %d in Bandpass file %s\n",
-                        ant, filename);
-                exit(EXIT_FAILURE);
+        // Now we've caught up to the next non-absent antenna in the bandpass file, so
+        // go through the next 8 rows, which should all pertain to this antenna
+        for (ant_row = 0; ant_row < BANDPASS_ROWS_PER_ANT; ant_row)
+        {
+            // If we're on the first of 8 lines, then we've already consumed
+            // the antenna number at the beginning of that row. Otherwise, we
+            // still need to do it. We will re-purpose "curr_ant" for this.
+            if (ant_row > 0)
+            {
+                fscanf( f, "%d,", &curr_ant );
+                curr_ant--;
+
+                // Sanity check: the antenna number hasn't changed within the 8 rows
+                if (ant != curr_ant)
+                {
+                    fprintf( stderr, "error: read_bandpass_file: fewer than eight rows "
+                            "detected for antenna %u (labelled '%u') in %s\n",
+                            ant, ant + 1, filename );
+                    exit(EXIT_FAILURE);
+                }
             }
-        }
-        else {
-            if (ant_row < 7) {
-                fprintf(stderr, "Error: Fewer than 8 rows for antenna %d in Bandpass file %s\n",
-                        ant, filename);
-                exit(EXIT_FAILURE);
+
+            // Decide if the row corresponds to the Jm values (even rows)
+            // or Jf values (odd rows)
+            if ((ant_row - 1) % 2 == 0)
+                J = Jm;
+            else
+                J = Jf;
+
+            // If the caller doesn't care about this row, skip the rest of
+            // this line (freqline isn't needed any more, so use it as a dummy
+            // buffer) and start afresh on the next line
+            if (J == NULL)
+            {
+                fgets( freqline, CAL_BUFSIZE, f );
+                continue;
             }
-            curr_ant = ant;
-            ant_row  = 1;
-        }
 
-        if ((ant_row-1) % 2 == 0)  J = Jm;      // Decide if the row corresponds to the Jm values (even rows)
-        else                       J = Jf;      // or Jf values (odd rows)
+            // Get the polarisation index
+            pol = (ant_row - 1) / 2;
 
-        if (J == NULL) {                        // If the caller doesn't care about this row
-            fgets( freqline, max_len, f );      // Skip the rest of this line (freqline isn't needed any more)
-            continue;                           // And start afresh on the next line
-        }
+            // Loop over the row and read in values
+            for (ci = 0; ci < chan_count; ci++)
+            {
+                ch = chan_idxs[ci];                 // Get the channel number
+                fscanf( f, "%lf,%lf,", &amp, &ph ); // Read in the re,im pairs in each row
 
-        pol = (ant_row-1) / 2;                  // Get the polarisation index
-
-        for (ci = 0; ci < chan_count; ci++) {   // Loop over the row
-
-            ch = chan_idxs[ci];                 // Get the channel number
-            fscanf(f, "%lf,%lf,", &amp, &ph);   // Read in the re,im pairs in each row
-
-            J[ant][ch][pol] = make_cuDoubleComplex( amp*cos(ph), amp*sin(ph) );
-                                                // Convert to complex number and store in output array
-        }
-
-        // (Assumes that the number of values in each row are correct)
+                // Convert to complex number and store in output array
+                J[ant][ch][pol] = make_cuDoubleComplex( amp*cos(ph), amp*sin(ph) );
+            }
+        } // End for loop over 8 rows (for one antenna)
     }
-
-    return 1;
 }
 
 
