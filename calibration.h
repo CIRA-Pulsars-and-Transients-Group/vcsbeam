@@ -26,8 +26,10 @@ struct calibration {
                                //   c = phase_offset (rad)
 };
 
-void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
+cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
         MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t rec_channel );
+
+void free_rts( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata );
 
 void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,

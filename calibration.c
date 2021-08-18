@@ -13,11 +13,13 @@
 #include <cuComplex.h>
 #include "beam_common.h"
 
-void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
+cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
         MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t rec_channel )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
- * antenna and (non-flagged) fine channel
+ * antenna and (non-flagged) fine channel.
+ *
+ * This function allocates memory, which should be freed with free_rts().
  */
 {
     // Find the "GPUBox" number for this coarse channel
@@ -56,15 +58,20 @@ void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
 
     cuDoubleComplex  **Dd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
     cuDoubleComplex ***Db = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
+    cuDoubleComplex ***D  = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
 
     uintptr_t ant, ch;
     for (ant = 0; ant < nant; ant++)
     {
         Dd[ant] = (cuDoubleComplex * )calloc( npol,  sizeof(cuDoubleComplex  ) );
         Db[ant] = (cuDoubleComplex **)calloc( nchan, sizeof(cuDoubleComplex *) );
+        D[ant]  = (cuDoubleComplex **)calloc( nchan, sizeof(cuDoubleComplex *) );
 
         for (ch = 0; ch < nchan; ch++)
+        {
             Db[ant][ch] = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
+            D[ant][ch]  = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
+        }
     }
 
     // Read in the DI Jones file
@@ -113,6 +120,25 @@ void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
 
     free( Db );
     free( Dd );
+
+    return D;
+}
+
+void free_rts( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata )
+/* This function frees the memory allocated in get_rts_solution()
+ */
+{
+    uintptr_t nant  = cal_metadata->num_ants;
+    uintptr_t nchan = cal_metadata->num_corr_fine_chans_per_coarse;
+
+    uintptr_t ant, ch;
+    for (ant = 0; ant < nant; ant++)
+    {
+        for (ch = 0; ch < nchan; ch++)
+            free( D[ant][ch] );
+        free( D[ant] );
+    }
+    free( D );
 }
 
 void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )

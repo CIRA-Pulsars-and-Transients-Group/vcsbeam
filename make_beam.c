@@ -31,7 +31,7 @@
 #include "psrfits.h"
 #include "form_beam.h"
 #include "calibration.h"
-#include <omp.h>
+#include "primary_beam.h"
 
 #include <cuda_runtime.h>
 #include "ipfb.h"
@@ -134,8 +134,6 @@ int main(int argc, char **argv)
     const uintptr_t outpol_incoh   = 1;  // ("I")
     unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
-
-    uintptr_t ant;
     int offset;
     unsigned int s;
     uintptr_t ch;
@@ -169,27 +167,14 @@ int main(int argc, char **argv)
 
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
-    uintptr_t cal_nchan = cal_metadata->num_corr_fine_chans_per_coarse;
     double invw = 1.0/nant;
 
     // GET CALIBRATION SOLUTION
     // ------------------------
-    // 1. Allocate memory
-    cuDoubleComplex ***D = (cuDoubleComplex ***) calloc(nant, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
-    for (ant = 0; ant < nant; ant++)
-    {
-        D[ant] = (cuDoubleComplex **) calloc(cal_nchan, sizeof(cuDoubleComplex *));
-        for (ch = 0; ch < cal_nchan; ch++) // Only need as many channels as used in calibration solution
-        {
-            D[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
-        }
-    }
-    int *order = (int *)malloc( nant*sizeof(int) ); // <-- just for OFFRINGA calibration solutions
-
-    // 2. Read files
+    cuDoubleComplex ***D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
     if (cal.cal_type == CAL_RTS)
     {
-        get_rts_solution( D, cal_metadata, obs_metadata, cal.caldir, opts.rec_channel );
+        D = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, opts.rec_channel );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
@@ -561,14 +546,7 @@ int main(int argc, char **argv)
         mwalib_metafits_metadata_free( cal_metadata );
 
     // Clean up memory used for calibration solutions
-    for (ant = 0; ant < nant; ant++)
-    {
-        for (ch = 0; ch < cal_nchan; ch++)
-            free( D[ant][ch] );
-        free( D[ant] );
-    }
-    free( D );
-    free( order );
+    free_rts( D, cal_metadata );
 
     return EXIT_SUCCESS;
 }
