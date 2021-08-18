@@ -95,10 +95,9 @@ void get_jones(
         int                    npointing, // number of pointings
         VoltageMetadata*       volt_metadata,
         MetafitsMetadata      *metafits_metadata,
-        MetafitsMetadata*      cal_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
-        cuDoubleComplex      **D,
+        cuDoubleComplex     ***D,
         float                  samples_per_sec,
         FEEBeam               *beam,
         uint32_t             **delays,
@@ -118,8 +117,6 @@ void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, uint
 void free_delays_amps( MetafitsMetadata *metafits_metadata, uint32_t **delays, double **amps );
 
 void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
-void remove_reference_phase( cuDoubleComplex **M, int ref_ant, int nant );
-void zero_XY_and_YX( cuDoubleComplex **M, int nant );
 
 int calcEjones_analytic(cuDoubleComplex response[MAX_POLS], // pointer to 4-element (2x2) voltage gain Jones matrix
                const long freq, // observing freq (Hz)

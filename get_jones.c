@@ -265,51 +265,14 @@ void mjd2lst(double mjd, double *lst) {
     *lst = lmst;
 }
 
-void zero_XY_and_YX( cuDoubleComplex **D, int nant )
-/* For D = [ XX, XY ], set XY and YX to 0 for all antennas
- *         [ YX, YY ]
- */
-{
-    int ant;
-    for (ant = 0; ant < nant; ant++)
-    {
-        D[ant][1] = make_cuDoubleComplex( 0.0, 0.0 );
-        D[ant][2] = make_cuDoubleComplex( 0.0, 0.0 );
-    }
-}
-
-void remove_reference_phase( cuDoubleComplex **D, int ref_ant, int nant )
-{
-    cuDoubleComplex XX0norm, XY0norm, YX0norm, YY0norm;
-    double XXscale = 1.0/cuCabs( D[ref_ant][0] ); // = 1/|XX|
-    double XYscale = 1.0/cuCabs( D[ref_ant][1] ); // = 1/|XY|
-    double YXscale = 1.0/cuCabs( D[ref_ant][2] ); // = 1/|YX|
-    double YYscale = 1.0/cuCabs( D[ref_ant][3] ); // = 1/|YY|
-
-    XX0norm = make_cuDoubleComplex( XXscale*cuCreal(D[ref_ant][0]), XXscale*cuCimag(D[ref_ant][0]) ); // = XX/|XX|
-    XY0norm = make_cuDoubleComplex( XYscale*cuCreal(D[ref_ant][1]), XYscale*cuCimag(D[ref_ant][1]) ); // = XY/|XY|
-    YX0norm = make_cuDoubleComplex( YXscale*cuCreal(D[ref_ant][2]), YXscale*cuCimag(D[ref_ant][2]) ); // = YX/|YX|
-    YY0norm = make_cuDoubleComplex( YYscale*cuCreal(D[ref_ant][3]), YYscale*cuCimag(D[ref_ant][3]) ); // = YY/|YY|
-
-    int ant;
-    for (ant = 0; ant < nant; ant++)
-    {
-        D[ant][0] = cuCdiv( D[ant][0], XX0norm ); // Essentially phase rotations
-        D[ant][1] = cuCdiv( D[ant][1], XY0norm );
-        D[ant][2] = cuCdiv( D[ant][2], YX0norm );
-        D[ant][3] = cuCdiv( D[ant][3], YY0norm );
-    }
-}
-
 void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
         VoltageMetadata       *vcs_metadata,
         MetafitsMetadata      *obs_metadata,
-        MetafitsMetadata      *cal_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
-        cuDoubleComplex      **D,
+        cuDoubleComplex     ***D,
         float                  samples_per_sec,
         FEEBeam               *beam,
         uint32_t             **delays,
@@ -327,12 +290,10 @@ void get_jones(
     int npol           = obs_metadata->num_ant_pols;   // (X,Y)
     int chan_width     = obs_metadata->corr_fine_chan_width_hz;
     int ninput         = obs_metadata->num_rf_inputs;
-    bool flagged, cal_flagged;
 
     int rf_input;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
     int pol;     // Polarisation number
-    int cal_ant; // Antenna index for the calibration solutions
     int ch;      // Channel number
     int p1, p2;  // Counters for polarisation
 
@@ -400,9 +361,6 @@ void get_jones(
                 // Get the antenna and polarisation number from the rf_input
                 ant         = obs_metadata->rf_inputs[rf_input].ant;
                 pol         = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
-                flagged     = obs_metadata->rf_inputs[rf_input].flagged;
-                cal_ant     = get_idx_for_vcs_antenna_in_cal( cal_metadata, obs_metadata, ant );
-                cal_flagged = cal_metadata->rf_inputs[rf_input].flagged;
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
@@ -426,56 +384,51 @@ void get_jones(
                 }
 
                 // "Convert" the real jones[8] output array into out complex E[4] matrix
-                for (n = 0; n<npol*npol; n++){
+                for (n = 0; n < npol*npol; n++)
+                {
                     E[n] = make_cuDoubleComplex(jones[config_idx][n*2], jones[config_idx][n*2+1]);
                 }
 
                 // Apply parallactic angle correction if Hyperbeam was used
                 mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
 
-                mult2x2d(D[cal_ant], E, Ji); // the gain in the desired look direction
+                mult2x2d(D[ant][ch], E, Ji); // the gain in the desired look direction
 
                 // Apply the UV phase correction (to the bottom row of the Jones matrix)
                 Ji[2] = cuCmul( Ji[2], uv_phase );
                 Ji[3] = cuCmul( Ji[3], uv_phase );
 
                 // Calculate the complex weights array
-                if (complex_weights_array != NULL) {
-                    if (!flagged && !cal_flagged)
-                    {
-                        cable = obs_metadata->rf_inputs[rf_input].electrical_length_m - ref_ant.electrical_length_m;
-                        double El = obs_metadata->rf_inputs[rf_input].east_m;
-                        double N  = obs_metadata->rf_inputs[rf_input].north_m;
-                        double H  = obs_metadata->rf_inputs[rf_input].height_m;
+                if (complex_weights_array != NULL)
+                {
+                    cable = obs_metadata->rf_inputs[rf_input].electrical_length_m - ref_ant.electrical_length_m;
+                    double El = obs_metadata->rf_inputs[rf_input].east_m;
+                    double N  = obs_metadata->rf_inputs[rf_input].north_m;
+                    double H  = obs_metadata->rf_inputs[rf_input].height_m;
 
-                        // shift the origin of ENH to Antenna 0 and hoping the Far Field Assumption still applies ...
+                    // shift the origin of ENH to Antenna 0 and hoping the Far Field Assumption still applies ...
 
-                        geometry = (El - E_ref)*beam_geom_vals[p].unit_E +
-                                   (N  - N_ref)*beam_geom_vals[p].unit_N +
-                                   (H  - H_ref)*beam_geom_vals[p].unit_H;
+                    geometry = (El - E_ref)*beam_geom_vals[p].unit_E +
+                               (N  - N_ref)*beam_geom_vals[p].unit_N +
+                               (H  - H_ref)*beam_geom_vals[p].unit_H;
 
-                        delay_time = (geometry - cable)/(SPEED_OF_LIGHT_IN_VACUUM_M_PER_S);
-                        delay_samples = delay_time * samples_per_sec;
+                    delay_time = (geometry - cable)/(SPEED_OF_LIGHT_IN_VACUUM_M_PER_S);
+                    delay_samples = delay_time * samples_per_sec;
 
-                        // freq should be in cycles per sample and delay in samples
-                        // which essentially means that the samples_per_sec cancels
+                    // freq should be in cycles per sample and delay in samples
+                    // which essentially means that the samples_per_sec cancels
 
-                        // and we only need the fractional part of the turn
-                        cycles_per_sample = (double)freq_ch/samples_per_sec;
+                    // and we only need the fractional part of the turn
+                    cycles_per_sample = (double)freq_ch/samples_per_sec;
 
-                        phase = cycles_per_sample*delay_samples;
-                        phase = modf( phase, &integer_phase );
+                    phase = cycles_per_sample*delay_samples;
+                    phase = modf( phase, &integer_phase );
 
-                        phase *= -2.0*M_PI;
+                    phase *= -2.0*M_PI;
 
-                        // Store result for later use
-                        complex_weights_array[p][ant][ch][pol] =
-                            make_cuDoubleComplex( cos( phase ), sin( phase ));
-
-                    }
-                    else {
-                        complex_weights_array[p][ant][ch][pol] = make_cuDoubleComplex( 0.0, 0.0 );
-                    }
+                    // Store result for later use
+                    complex_weights_array[p][ant][ch][pol] =
+                        make_cuDoubleComplex( cos( phase ), sin( phase ));
                 }
 
                 // Now, calculate the inverse Jones matrix

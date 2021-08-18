@@ -28,14 +28,17 @@ struct calibration {
                                //   c = phase_offset (rad)
 };
 
-void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
-        const char *caldir, uintptr_t rec_channel );
+void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
+        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t rec_channel );
 
 void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
         MetafitsMetadata *cal_metafits, char *filename );
 int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
         int coarse_chan, char *gains_file, int *order );
+
+void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
+void zero_XY_and_YX( cuDoubleComplex *J );
 
 uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, MetafitsMetadata *obs_metadata, uint32_t vcs_ant );
 

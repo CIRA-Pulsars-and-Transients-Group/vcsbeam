@@ -73,9 +73,6 @@ int main(int argc, char **argv)
     opts.cal_metafits = NULL; // filename of the metafits file for the calibration observation
     opts.rec_channel = -1;   // 0 - 255 receiver 1.28MHz channel
 
-    // Variables for MWA/VCS configuration
-    opts.custom_flags  = NULL;   // Use custom list for flagging antennas
-
     // Output options
     opts.out_incoh     = 0;  // Default = PSRFITS (incoherent) output turned OFF
     opts.out_coh       = 0;  // Default = PSRFITS (coherent)   output turned OFF
@@ -130,7 +127,7 @@ int main(int argc, char **argv)
         get_mwalib_metadata( &opts, &obs_metadata, &vcs_metadata, &vcs_context, NULL );
 
     // Create some "shorthand" variables for code brevity
-    int nstation             = obs_metadata->num_ants;
+    int nant             = obs_metadata->num_ants;
     int nchan                = obs_metadata->num_volt_fine_chans_per_coarse;
     int chan_width           = obs_metadata->volt_fine_chan_width_hz;
     int npol                 = obs_metadata->num_ant_pols;   // (X,Y)
@@ -229,8 +226,8 @@ int main(int argc, char **argv)
     }
 
     // Allocate memory
-    cuDoubleComplex  ****complex_weights_array = create_complex_weights( npointing, nstation, nchan, npol );
-    cuDoubleComplex  ****invJi                 = create_invJi( nstation, nchan, npol );
+    cuDoubleComplex  ****complex_weights_array = create_complex_weights( npointing, nant, nchan, npol );
+    cuDoubleComplex  ****invJi                 = create_invJi( nant, nchan, npol );
     cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*sample_rate, nchan, npol );
 
     // Load the FEE2016 beam and set up the "delays" and "amps" arrays
@@ -248,111 +245,44 @@ int main(int argc, char **argv)
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     cal.nchan = cal_metadata->num_metafits_fine_chan_freqs_hz;
 
-    // If a custom flag file has been provided, UNION it with other flags
-    if (opts.custom_flags != NULL)
-    {
-        // Reset the weights to 1
-        for (i = 0; i < nstation*npol; i++)
-            mi.weights_array[i] = 1.0;
-
-        // Open custom flag file for reading
-        FILE *flagfile = fopen( opts.custom_flags, "r" );
-        if (flagfile == NULL)
-        {
-            fprintf( stderr, "error: couldn't open flag file \"%s\" for "
-                             "reading\n", opts.custom_flags );
-            exit(EXIT_FAILURE);
-        }
-
-        // Read in flags from file
-        int nitems;
-        int flag;
-        while (!feof(flagfile))
-        {
-            // Read in next item
-            nitems = fscanf( flagfile, "%d", &ant );
-            if (nitems != 1 && !feof(flagfile))
-            {
-                fprintf( stderr, "error: couldn't parse flag file \"%s\"\n",
-                        opts.custom_flags );
-                exit(EXIT_FAILURE);
-            }
-
-            // Flag both polarisations of the antenna in question
-            flag = ant*2;
-            mi.weights_array[flag]   = 0.0;
-            mi.weights_array[flag+1] = 0.0;
-        }
-
-        // Close file
-        fclose( flagfile );
-    }
-
-    // Issue warnings if any antennas are being used which are flagged in the metafits file
-    for (i = 0; i < nstation*npol; i++)
-    {
-        if (mi.weights_array[i] != 0.0 &&
-            mi.flag_array[i]    != 0.0)
-        {
-            fprintf( stderr, "warning: antenna %3d, pol %d is included even "
-                             "though it is flagged in the metafits file\n",
-                             i / npol,
-                             i % npol );
-        }
-    }
-
-    double wgt_sum = 0;
-    for (i = 0; i < nstation*npol; i++)
-        wgt_sum += mi.weights_array[i];
-    double invw = 1.0/wgt_sum;
+    double invw = 1.0/nant;
 
     // GET CALIBRATION SOLUTION
     // ------------------------
     // 1. Allocate memory
-    cuDoubleComplex  **D  = (cuDoubleComplex ** ) calloc(nstation, sizeof(cuDoubleComplex * )); // Gain in direction of Calibration
-    cuDoubleComplex ***Jf = (cuDoubleComplex ***) calloc(nstation, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
+    cuDoubleComplex ***D = (cuDoubleComplex ***) calloc(nant, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
 
-    int *order = (int *)malloc( nstation*sizeof(int) ); // <-- just for OFFRINGA calibration solutions
+    int *order = (int *)malloc( nant*sizeof(int) ); // <-- just for OFFRINGA calibration solutions
 
-    for (ant = 0; ant < nstation; ant++) {
-        D[ant]  = (cuDoubleComplex * ) calloc(npol*npol,  sizeof(cuDoubleComplex));
-        Jf[ant] = (cuDoubleComplex **) calloc(cal.nchan, sizeof(cuDoubleComplex *));
-        for (ch = 0; ch < cal.nchan; ch++) { // Only need as many channels as used in calibration solution
-            Jf[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
+    for (ant = 0; ant < nant; ant++)
+    {
+        D[ant] = (cuDoubleComplex **) calloc(cal.nchan, sizeof(cuDoubleComplex *));
+        for (ch = 0; ch < cal.nchan; ch++) // Only need as many channels as used in calibration solution
+        {
+            D[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
         }
     }
 
     // 2. Read files
     if (cal.cal_type == CAL_RTS)
     {
-        get_rts_solution( D, cal_metadata, opts.caldir, opts.rec_channel );
+        get_rts_solution( D, cal_metadata, obs_metadata, opts.caldir, opts.rec_channel );
     }
-    else if (cal.cal_type == CAL_OFFRINGA) {
-
+    else if (cal.cal_type == CAL_OFFRINGA)
+    {
+        fprintf( stderr, "error: Offringa-style calibration solutions not currently supported\n" );
+        exit(EXIT_FAILURE);
+        /*
         // Find the ordering of antennas in Offringa solutions from metafits file
-        for (ant = 0; ant < nstation; ant++)
+        for (ant = 0; ant < nant; ant++)
         {
             Antenna A = obs_metadata->antennas[ant];
             order[A.ant*2] = ant;
         }
-        read_offringa_gains_file(D, nstation, cal.offr_chan_num, cal.filename, order);
+        read_offringa_gains_file(D, nant, cal.offr_chan_num, cal.filename, order);
         free(order);
-
+        */
     }
-
-    // 3. In order to mitigate errors introduced by the calibration scheme, the calibration
-    // solution Jones matrix for each antenna may be altered in the following ways:
-    //
-    //   1) The XX and YY terms are phase-rotated so that those of the supplied
-    //      reference antennas are aligned.
-
-    if (cal.ref_ant != -1) // -1 = don't do any phase rotation
-        remove_reference_phase( D, cal.ref_ant, nstation );
-
-    //   2) The XY and YX terms are set to zero.
-
-    if (cal.cross_terms == 0)
-        zero_XY_and_YX( D, nstation );
 
     // ------------------------
 
@@ -452,7 +382,7 @@ int main(int argc, char **argv)
 
     struct gpu_ipfb_arrays gi;
     int nchunk;
-    malloc_formbeam( &gf, sample_rate, nstation, nchan, npol, &nchunk, opts.gpu_mem,
+    malloc_formbeam( &gf, sample_rate, nant, nchan, npol, &nchunk, opts.gpu_mem,
                      outpol_coh, outpol_incoh, npointing, NOW-begintime );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
@@ -516,7 +446,7 @@ int main(int argc, char **argv)
 
         // Get the next second's worth of phases / jones matrices, if needed
         start = clock();
-        fprintf( stderr, "[%f] [%d/%d] Calculating delays\n", NOW-begintime,
+        fprintf( stderr, "[%f] [%d/%d] Calculating Jones matrices\n", NOW-begintime,
                                 timestep_idx+1, ntimesteps );
 
         sec_offset = (double)(timestep_idx + opts.begin - obs_metadata->obs_id);
@@ -527,19 +457,18 @@ int main(int argc, char **argv)
                 npointing,          // number of pointings
                 vcs_metadata,
                 obs_metadata,
-                cal_metadata,
                 coarse_chan_idx,
                 &cal,              // struct holding info about calibration
                 D,                      // Calibration Jones matrix information
                 sample_rate,            // Hz
                 beam,                   // Hyperbeam struct
-                delays,                 // } Analogue beamforming pointing direction information needed for Hyperbeam
-                amps,                   // }
+                delays,                 // Analogue beamforming pointing direction information needed for Hyperbeam
+                amps,
                 beam_geom_vals,         // Geometric information about pointings
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
-        delay_time[timestep_idx] = clock() - start;
 
+        delay_time[timestep_idx] = clock() - start;
 
         fprintf( stderr, "[%f] [%d/%d] Calculating beam\n", NOW-begintime,
                                 timestep_idx+1, ntimesteps);
@@ -570,7 +499,7 @@ int main(int argc, char **argv)
         else // beamform (the default mode)
         {
             cu_form_beam( data, sample_rate, complex_weights_array, invJi, timestep_idx,
-                    npointing, nstation, nchan, npol, outpol_coh, invw, &gf,
+                    npointing, nant, nchan, npol, outpol_coh, invw, &gf,
                     detected_beam, data_buffer_coh, data_buffer_incoh,
                     streams, opts.out_incoh, nchunk );
         }
@@ -661,8 +590,8 @@ int main(int argc, char **argv)
     fprintf( stderr, "[%f]  Starting clean-up\n", NOW-begintime);
 
     // Free up memory
-    destroy_complex_weights( complex_weights_array, npointing, nstation, nchan );
-    destroy_invJi( invJi, nstation, nchan, npol );
+    destroy_complex_weights( complex_weights_array, npointing, nant, nchan );
+    destroy_invJi( invJi, nant, nchan, npol );
     destroy_detected_beam( detected_beam, npointing, 2*sample_rate, nchan );
 
     free( twiddles );
@@ -682,7 +611,6 @@ int main(int argc, char **argv)
     free( opts.caldir       );
     free( opts.metafits     );
     free( cal.filename      );
-    free( opts.custom_flags );
     free( opts.synth_filter );
 
     if (opts.out_incoh)
@@ -726,14 +654,12 @@ int main(int argc, char **argv)
         mwalib_metafits_metadata_free( cal_metadata );
 
     // Clean up memory used for calibration solutions
-    for (ant = 0; ant < nstation; ant++) {
+    for (ant = 0; ant < nant; ant++)
+    {
         for (ch = 0; ch < cal.nchan; ch++)
-            free( Jf[ant][ch] );
-        free( Jf[ant] );
+            free( D[ant][ch] );
         free( D[ant] );
     }
-
-    free( Jf );
     free( D );
     free( order );
 
@@ -792,15 +718,6 @@ void usage() {
     fprintf(stderr, "[default: LSQ12]\n");
     fprintf(stderr, "\t                           ");
     fprintf(stderr, "filter can be MIRROR or LSQ12.\n");
-
-    fprintf(stderr, "\n");
-    fprintf(stderr, "MWA/VCS CONFIGURATION OPTIONS\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "\t-F, --custom-flags=file   ");
-    fprintf(stderr, "Flag the antennas listed in file instead of those flagged in the ");
-    fprintf(stderr, "[default: none]\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "metafits file given by the -m option.\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "CALIBRATION OPTIONS (RTS)\n");
@@ -880,7 +797,6 @@ void make_beam_parse_cmdline(
                 {"metafits",        required_argument, 0, 'm'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
-                {"custom-flags",    required_argument, 0, 'F'},
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"UV-phase",        required_argument, 0, 'U'},
@@ -893,7 +809,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:c:C:d:D:e:f:F:g:him:O:pP:R:sS:t:U:vVX",
+                             "A:b:c:C:d:D:e:f:g:him:O:pP:R:sS:t:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -925,9 +841,6 @@ void make_beam_parse_cmdline(
                     break;
                 case 'f':
                     opts->rec_channel = atoi(optarg);
-                    break;
-                case 'F':
-                    opts->custom_flags = strdup(optarg);
                     break;
                 case 'g':
                     opts->gpu_mem = atof(optarg);
@@ -1015,11 +928,11 @@ void make_beam_parse_cmdline(
 
     // If the reference antenna is outside the range of antennas, issue
     // a warning and turn off phase rotation.
-    /*if (cal->ref_ant < 0 || cal->ref_ant >= opts->nstation)
+    /*if (cal->ref_ant < 0 || cal->ref_ant >= opts->nant)
     {
         fprintf( stderr, "warning: tile %d outside of range 0-%d. "
                 "Calibration phase rotation turned off.\n",
-                cal->ref_ant, opts->nstation-1 );
+                cal->ref_ant, opts->nant-1 );
         cal->ref_ant = -1; // This defines the meaning of -1
                                 // = don't do phase rotation
     }*/
@@ -1086,7 +999,7 @@ void destroy_filenames( char **filenames, int nfiles )
 }
 
 
-cuDoubleComplex ****create_complex_weights( int npointing, int nstation, int nchan, int npol )
+cuDoubleComplex ****create_complex_weights( int npointing, int nant, int nchan, int npol )
 // Allocate memory for complex weights matrices
 {
     int p, ant, ch; // Loop variables
@@ -1096,9 +1009,9 @@ cuDoubleComplex ****create_complex_weights( int npointing, int nstation, int nch
 
     for (p = 0; p < npointing; p++)
     {
-        array[p] = (cuDoubleComplex ***)malloc( nstation * sizeof(cuDoubleComplex **) );
+        array[p] = (cuDoubleComplex ***)malloc( nant * sizeof(cuDoubleComplex **) );
 
-        for (ant = 0; ant < nstation; ant++)
+        for (ant = 0; ant < nant; ant++)
         {
             array[p][ant] = (cuDoubleComplex **)malloc( nchan * sizeof(cuDoubleComplex *) );
 
@@ -1110,12 +1023,12 @@ cuDoubleComplex ****create_complex_weights( int npointing, int nstation, int nch
 }
 
 
-void destroy_complex_weights( cuDoubleComplex ****array, int npointing, int nstation, int nchan )
+void destroy_complex_weights( cuDoubleComplex ****array, int npointing, int nant, int nchan )
 {
     int p, ant, ch;
     for (p = 0; p < npointing; p++)
     {
-        for (ant = 0; ant < nstation; ant++)
+        for (ant = 0; ant < nant; ant++)
         {
             for (ch = 0; ch < nchan; ch++)
                 free( array[p][ant][ch] );
@@ -1127,14 +1040,14 @@ void destroy_complex_weights( cuDoubleComplex ****array, int npointing, int nsta
     free( array );
 }
 
-cuDoubleComplex ****create_invJi( int nstation, int nchan, int npol )
+cuDoubleComplex ****create_invJi( int nant, int nchan, int npol )
 // Allocate memory for (inverse) Jones matrices
 {
     int ant, pol, ch; // Loop variables
     cuDoubleComplex ****invJi;
-    invJi = (cuDoubleComplex ****)malloc( nstation * sizeof(cuDoubleComplex ***) );
+    invJi = (cuDoubleComplex ****)malloc( nant * sizeof(cuDoubleComplex ***) );
 
-    for (ant = 0; ant < nstation; ant++)
+    for (ant = 0; ant < nant; ant++)
     {
         invJi[ant] =(cuDoubleComplex ***)malloc( nchan * sizeof(cuDoubleComplex **) );
 
@@ -1150,10 +1063,10 @@ cuDoubleComplex ****create_invJi( int nstation, int nchan, int npol )
 }
 
 
-void destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol )
+void destroy_invJi( cuDoubleComplex ****array, int nant, int nchan, int npol )
 {
     int ant, ch, pol;
-    for (ant = 0; ant < nstation; ant++)
+    for (ant = 0; ant < nant; ant++)
     {
         for (ch = 0; ch < nchan; ch++)
         {

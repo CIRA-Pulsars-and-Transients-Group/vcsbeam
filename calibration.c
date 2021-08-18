@@ -13,7 +13,7 @@
 #include <cuComplex.h>
 #include "beam_common.h"
 
-void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
+void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
         MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t rec_channel )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
@@ -52,41 +52,63 @@ void get_rts_solution( cuDoubleComplex **D, MetafitsMetadata *cal_metadata,
     // Allocate memory for the Jones arrays
     uintptr_t nant  = cal_metadata->num_ants;
     uintptr_t npol  = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
-    uintptr_t nchan = cal_metafits->num_corr_fine_chans_per_coarse;
+    uintptr_t nchan = cal_metadata->num_corr_fine_chans_per_coarse;
 
-    cuDoubleComplex  **Jd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
-    cuDoubleComplex ***Jf = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
+    cuDoubleComplex  **Dd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
+    cuDoubleComplex ***Db = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
 
     uintptr_t ant, ch;
     for (ant = 0; ant < nant; ant++)
     {
-        Jd[ant] = (cuDoubleComplex * )calloc( npol,  sizeof(cuDoubleComplex  ) );
-        Jf[ant] = (cuDoubleComplex **)calloc( nchan, sizeof(cuDoubleComplex *) );
+        Dd[ant] = (cuDoubleComplex * )calloc( npol,  sizeof(cuDoubleComplex  ) );
+        Db[ant] = (cuDoubleComplex **)calloc( nchan, sizeof(cuDoubleComplex *) );
 
         for (ch = 0; ch < nchan; ch++)
-            Jf[ant][ch] = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
+            Db[ant][ch] = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
     }
 
     // Read in the DI Jones file
-    read_dijones_file((double **)Jd, NULL, cal_metadata->num_ants, dijones_path);
+    read_dijones_file((double **)Dd, NULL, cal_metadata->num_ants, dijones_path);
 
     // Read in the Bandpass file
-    read_bandpass_file( NULL, Jf, cal_metafits, bandpass_path );
+    read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
 
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
     // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
     uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t interp_factor = vcs_nchan / nchan;
-    uintptr_t cal_ch;
+    uintptr_t cal_ch, cal_ant;
     for (ant = 0; ant < nant; ant++)
     {
+        // Match up antenna indices between the cal and obs metadata
+        cal_ant = get_idx_for_vcs_antenna_in_cal( cal_metadata, obs_metadata, ant );
+
         for (ch = 0; ch < vcs_nchan; ch++)
         {
+            // Dd x Db = D
             cal_ch = ch / interp_factor;
-            mult2x2d( Jd[ant], Jf[ant][cal_ch], D[ant][ch] ); // Jd x Jf = D
+            mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], D[ant][ch] );
+
+            // By default, divide through a reference antenna...
+            remove_reference_phase( D[ant][ch], D[0][ch] );
+
+            // ...and zero the off-diagonal terms
+            zero_XY_and_YX( D[ant][ch] );
         }
     }
+
+    // Free memory
+    for (ant = 0; ant < nant; ant++)
+    {
+        for (ch = 0; ch < nchan; ch++)
+            free( Db[ant][ch] );
+        free( Db[ant] );
+        free( Dd[ant] );
+    }
+
+    free( Db );
+    free( Dd );
 }
 
 
@@ -131,6 +153,7 @@ void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
 
     // Finally, read in the Jones ("J") matrices and multiply them each by the
     // inverted alignment matrix ("invA")
+    // Eq. (29) in Ord et al. (2019)
     uintptr_t ant;
     for (ant = 0; ant < nant; ant++)
     {
@@ -149,7 +172,7 @@ void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
 void read_bandpass_file(
         cuDoubleComplex ***Jm, // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
         cuDoubleComplex ***Jf, // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
-        MetafitsMetadata   *cal_metafits,
+        MetafitsMetadata  *cal_metadata,
         char *filename         // Input:  name of bandpass file
         )
 /* This function populates the Jm and Jf arrays with values read in from the
@@ -161,10 +184,9 @@ void read_bandpass_file(
 {
 
     // Some shortcut variables
-    int chan_width = cal_metafits->corr_fine_chan_width_hz;        // TODO: Check whether this should sometimes be volt_fine_chan_width_hz
-    int nchan      = cal_metafits->num_corr_fine_chans_per_coarse; //       and num_volt_fine_chans_per_coarse
-    int nant       = cal_metafits->num_ants;
-    int npol       = cal_metadata->num_visibility_pols;            // = 4 (XX, XY, YX, YY)
+    int chan_width = cal_metadata->corr_fine_chan_width_hz;        // TODO: Check whether this should sometimes be volt_fine_chan_width_hz
+    int nchan      = cal_metadata->num_corr_fine_chans_per_coarse; //       and num_volt_fine_chans_per_coarse
+    int nant       = cal_metadata->num_ants;
 
     // Open the file for reading
     FILE *f = NULL;
@@ -231,7 +253,7 @@ void read_bandpass_file(
 
         // Now we've caught up to the next non-absent antenna in the bandpass file, so
         // go through the next 8 rows, which should all pertain to this antenna
-        for (ant_row = 0; ant_row < BANDPASS_ROWS_PER_ANT; ant_row)
+        for (ant_row = 0; ant_row < BANDPASS_ROWS_PER_ANT; ant_row++)
         {
             // If we're on the first of 8 lines, then we've already consumed
             // the antenna number at the beginning of that row. Otherwise, we
@@ -456,3 +478,33 @@ uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, Metafit
     // Otherwise, all good!
     return cal_metadata->rf_inputs[cal_metadata->antennas[idx].rfinput_x].input/2;
 }
+
+
+void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
+{
+    cuDoubleComplex XX0norm, XY0norm, YX0norm, YY0norm;
+    double XXscale = 1.0/cuCabs( Jref[0] ); // = 1/|XX|
+    double XYscale = 1.0/cuCabs( Jref[1] ); // = 1/|XY|
+    double YXscale = 1.0/cuCabs( Jref[2] ); // = 1/|YX|
+    double YYscale = 1.0/cuCabs( Jref[3] ); // = 1/|YY|
+
+    XX0norm = make_cuDoubleComplex( XXscale*cuCreal(Jref[0]), XXscale*cuCimag(Jref[0]) ); // = XX/|XX|
+    XY0norm = make_cuDoubleComplex( XYscale*cuCreal(Jref[1]), XYscale*cuCimag(Jref[1]) ); // = XY/|XY|
+    YX0norm = make_cuDoubleComplex( YXscale*cuCreal(Jref[2]), YXscale*cuCimag(Jref[2]) ); // = YX/|YX|
+    YY0norm = make_cuDoubleComplex( YYscale*cuCreal(Jref[3]), YYscale*cuCimag(Jref[3]) ); // = YY/|YY|
+
+    J[0] = cuCdiv( J[0], XX0norm ); // Essentially phase rotations
+    J[1] = cuCdiv( J[1], XY0norm );
+    J[2] = cuCdiv( J[2], YX0norm );
+    J[3] = cuCdiv( J[3], YY0norm );
+}
+
+void zero_XY_and_YX( cuDoubleComplex *J )
+/* For D = [ XX, XY ], set XY and YX to 0 for all antennas
+ *         [ YX, YY ]
+ */
+{
+    J[1] = make_cuDoubleComplex( 0.0, 0.0 );
+    J[2] = make_cuDoubleComplex( 0.0, 0.0 );
+}
+
