@@ -86,7 +86,6 @@ int main(int argc, char **argv)
     // Variables for calibration settings
     cal.filename          = NULL;
     cal.bandpass_filename = NULL;
-    cal.nchan             = 0;
     cal.cal_type          = CAL_NONE;
     cal.offr_chan_num     = 0;
     cal.ref_ant           = 0;
@@ -127,22 +126,23 @@ int main(int argc, char **argv)
         get_mwalib_metadata( &opts, &obs_metadata, &vcs_metadata, &vcs_context, NULL );
 
     // Create some "shorthand" variables for code brevity
-    int nant             = obs_metadata->num_ants;
-    int nchan                = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nant             = obs_metadata->num_ants;
+    uintptr_t nchan                = obs_metadata->num_volt_fine_chans_per_coarse;
     int chan_width           = obs_metadata->volt_fine_chan_width_hz;
-    int npol                 = obs_metadata->num_ant_pols;   // (X,Y)
-    int ninput               = obs_metadata->num_rf_inputs;
-    int outpol_coh           = 4;  // (I,Q,U,V)
+    uintptr_t npol                 = obs_metadata->num_ant_pols;   // (X,Y)
+    uintptr_t ninput               = obs_metadata->num_rf_inputs;
+    uintptr_t outpol_coh           = 4;  // (I,Q,U,V)
     if ( opts.out_summed )
         outpol_coh           = 1;  // (I)
-    const int outpol_incoh   = 1;  // ("I")
+    const uintptr_t outpol_incoh   = 1;  // ("I")
     unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
 
-    int ant;
+    uintptr_t ant;
     int offset;
     unsigned int s;
-    int ch, pol;
+    uintptr_t ch;
+    uintptr_t pol;
 
 
     // =====
@@ -243,25 +243,22 @@ int main(int argc, char **argv)
 
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
-    cal.nchan = cal_metadata->num_metafits_fine_chan_freqs_hz;
-
+    uintptr_t cal_nchan = cal_metadata->num_corr_fine_chans_per_coarse;
     double invw = 1.0/nant;
 
     // GET CALIBRATION SOLUTION
     // ------------------------
     // 1. Allocate memory
     cuDoubleComplex ***D = (cuDoubleComplex ***) calloc(nant, sizeof(cuDoubleComplex **)); // Fitted bandpass solutions
-
-    int *order = (int *)malloc( nant*sizeof(int) ); // <-- just for OFFRINGA calibration solutions
-
     for (ant = 0; ant < nant; ant++)
     {
-        D[ant] = (cuDoubleComplex **) calloc(cal.nchan, sizeof(cuDoubleComplex *));
-        for (ch = 0; ch < cal.nchan; ch++) // Only need as many channels as used in calibration solution
+        D[ant] = (cuDoubleComplex **) calloc(cal_nchan, sizeof(cuDoubleComplex *));
+        for (ch = 0; ch < cal_nchan; ch++) // Only need as many channels as used in calibration solution
         {
             D[ant][ch] = (cuDoubleComplex *) calloc(npol*npol, sizeof(cuDoubleComplex));
         }
     }
+    int *order = (int *)malloc( nant*sizeof(int) ); // <-- just for OFFRINGA calibration solutions
 
     // 2. Read files
     if (cal.cal_type == CAL_RTS)
@@ -656,7 +653,7 @@ int main(int argc, char **argv)
     // Clean up memory used for calibration solutions
     for (ant = 0; ant < nant; ant++)
     {
-        for (ch = 0; ch < cal.nchan; ch++)
+        for (ch = 0; ch < cal_nchan; ch++)
             free( D[ant][ch] );
         free( D[ant] );
     }

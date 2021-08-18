@@ -88,7 +88,8 @@ void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
         {
             // Dd x Db = D
             cal_ch = ch / interp_factor;
-            mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], D[ant][ch] );
+            //mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], D[ant][ch] );
+            cp2x2( Dd[cal_ant], D[ant][ch] );
 
             // By default, divide through a reference antenna...
             remove_reference_phase( D[ant][ch], D[0][ch] );
