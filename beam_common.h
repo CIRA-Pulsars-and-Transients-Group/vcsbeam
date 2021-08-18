@@ -40,7 +40,7 @@ struct make_beam_opts {
     // Variables for required options
     unsigned long int  begin;         // GPS time -- when to start beamforming
     unsigned long int  end;           // GPS time -- when to stop beamforming
-    char              *pointings;     // pointing list"dd:mm:ss_hh:mm:ss, dd:mm:ss_hh:mm:ss"
+    char              *pointings_file; // Name of file containing pointings (e.g. "hh:mm:ss dd:mm:ss")
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // filename of the metafits file
     char              *cal_metafits;  // filename of the metafits file
@@ -84,7 +84,8 @@ void get_jones(
 );
 
 void calc_beam_geom(
-        char              pointing_array[][2][64],
+        double           *ras_hours,
+        double           *decs_degs,
         int               npointing,
         double            mjd,
         struct beam_geom  bg[] );
@@ -146,5 +147,7 @@ void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout);
 void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout);
 void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout);
 double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout);
+
+void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings );
 
 #endif

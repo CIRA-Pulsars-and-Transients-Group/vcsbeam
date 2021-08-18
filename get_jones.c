@@ -494,7 +494,8 @@ void parallactic_angle_correction_fee2016(
 }
 
 void calc_beam_geom(
-        char              pointing_array[][2][64],
+        double           *ras_hours,
+        double           *decs_degs,
         int               npointing,
         double            mjd,
         struct beam_geom  bg[] )
@@ -511,9 +512,6 @@ void calc_beam_geom(
     double unit_E;
     double unit_H;
 
-    double dec_degs;
-    double ra_hours;
-
     double pr = 0, pd = 0, px = 0, rv = 0, eq = 2000, ra_ap = 0, dec_ap = 0;
 
     /* get mjd */
@@ -525,13 +523,10 @@ void calc_beam_geom(
 
     for (int p = 0; p < npointing; p++)
     {
-        dec_degs = parse_dec( pointing_array[p][1] );
-        ra_hours = parse_ra( pointing_array[p][0] );
-
         /* for the look direction <not the tile> */
 
-        mean_ra = ra_hours * PAL__DH2R;
-        mean_dec = dec_degs * PAL__DD2R;
+        mean_ra = ras_hours[p] * PAL__DH2R;
+        mean_dec = decs_degs[p] * PAL__DD2R;
 
         palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
 

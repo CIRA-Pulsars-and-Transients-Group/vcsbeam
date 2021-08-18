@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     // Variables for required options
     opts.begin       = 0;    // GPS time -- when to start beamforming
     opts.end         = 0;    // GPS time -- when to stop beamforming
-    opts.pointings   = NULL; // list of pointings "dd:mm:ss_hh:mm:ss,dd:mm:ss_hh:mm:ss"
+    opts.pointings_file = NULL; // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
     opts.datadir     = NULL; // The path to where the recombined data live
     opts.caldir      = NULL; // The path to where the calibration solutions live
     opts.metafits    = NULL; // filename of the metafits file for the target observation
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     cal.phase_slope       = 0.0;
 
     // GPU options
-    opts.gpu_mem               = -1.0;
+    opts.gpu_mem          = -1.0;
 
     // Parse command line arguments
     make_beam_parse_cmdline( argc, argv, &opts, &cal );
@@ -109,7 +109,6 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    // <<<<<
     char error_message[ERROR_MESSAGE_LEN];
 
     // Create an mwalib metafits context and associated metadata
@@ -145,85 +144,16 @@ int main(int argc, char **argv)
     uintptr_t pol;
 
 
-    // =====
-
-    // Read in info from metafits file
-    fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
-
-    // >>>>>
-
     // Start counting time from here (i.e. after parsing the command line)
-    fprintf( stderr, "[%f]  Starting %s with GPU acceleration\n", NOW-begintime, argv[0] );
+    fprintf( stderr, "[%f]  Reading pointings file %s\n", NOW-begintime, opts.pointings_file );
 
     // Parse input pointings
-    int max_npointing = 120; // Could be more
-    char RAs[max_npointing][64];
-    char DECs[max_npointing][64];
-    int npointing = sscanf( opts.pointings,
-            "%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,],%[^_]_%[^,]," ,
-                            RAs[0],  DECs[0],  RAs[1],  DECs[1],  RAs[2],  DECs[2],
-                            RAs[3],  DECs[3],  RAs[4],  DECs[4],  RAs[5],  DECs[5],
-                            RAs[6],  DECs[6],  RAs[7],  DECs[7],  RAs[8],  DECs[8],
-                            RAs[9],  DECs[9],  RAs[10], DECs[10], RAs[11], DECs[11],
-                            RAs[12], DECs[12], RAs[13], DECs[13], RAs[14], DECs[14],
-                            RAs[15], DECs[15], RAs[16], DECs[16], RAs[17], DECs[17],
-                            RAs[18], DECs[18], RAs[19], DECs[19], RAs[20], DECs[20],
-                            RAs[21], DECs[21], RAs[22], DECs[22], RAs[23], DECs[23],
-                            RAs[24], DECs[24], RAs[25], DECs[25], RAs[26], DECs[26],
-                            RAs[27], DECs[27], RAs[28], DECs[28], RAs[29], DECs[29],
-                            RAs[30], DECs[30], RAs[31], DECs[31], RAs[32], DECs[32],
-                            RAs[33], DECs[33], RAs[34], DECs[34], RAs[35], DECs[35],
-                            RAs[36], DECs[36], RAs[37], DECs[37], RAs[38], DECs[38],
-                            RAs[39], DECs[39], RAs[40], DECs[40], RAs[41], DECs[41],
-                            RAs[42], DECs[42], RAs[43], DECs[43], RAs[44], DECs[44],
-                            RAs[45], DECs[45], RAs[46], DECs[46], RAs[47], DECs[47],
-                            RAs[48], DECs[48], RAs[49], DECs[49], RAs[50], DECs[50],
-                            RAs[51], DECs[51], RAs[52], DECs[52], RAs[53], DECs[53],
-                            RAs[54], DECs[54], RAs[55], DECs[55], RAs[56], DECs[56],
-                            RAs[57], DECs[57], RAs[58], DECs[58], RAs[59], DECs[59],
-                            RAs[60], DECs[60], RAs[61], DECs[61], RAs[62], DECs[62],
-                            RAs[63], DECs[63], RAs[64], DECs[64], RAs[65], DECs[65],
-                            RAs[66], DECs[66], RAs[67], DECs[67], RAs[68], DECs[68],
-                            RAs[69], DECs[69], RAs[70], DECs[70], RAs[71], DECs[71],
-                            RAs[72], DECs[72], RAs[73], DECs[73], RAs[74], DECs[74],
-                            RAs[75], DECs[75], RAs[76], DECs[76], RAs[77], DECs[77],
-                            RAs[78], DECs[78], RAs[79], DECs[79], RAs[80], DECs[80],
-                            RAs[81], DECs[81], RAs[82], DECs[82], RAs[83], DECs[83],
-                            RAs[84], DECs[84], RAs[85], DECs[85], RAs[86], DECs[86],
-                            RAs[87], DECs[87], RAs[88], DECs[88], RAs[89], DECs[89],
-                            RAs[90], DECs[90], RAs[91], DECs[91], RAs[92], DECs[92],
-                            RAs[93], DECs[93], RAs[94], DECs[94], RAs[95], DECs[95],
-                            RAs[96], DECs[96], RAs[97], DECs[97], RAs[98], DECs[98],
-                            RAs[99], DECs[99], RAs[100], DECs[100], RAs[101], DECs[101],
-                            RAs[102], DECs[102], RAs[103], DECs[103], RAs[104], DECs[104],
-                            RAs[105], DECs[105], RAs[106], DECs[106], RAs[107], DECs[107],
-                            RAs[108], DECs[108], RAs[109], DECs[109], RAs[110], DECs[110],
-                            RAs[111], DECs[111], RAs[112], DECs[112], RAs[113], DECs[113],
-                            RAs[114], DECs[114], RAs[115], DECs[115], RAs[116], DECs[116],
-                            RAs[117], DECs[117], RAs[118], DECs[118], RAs[119], DECs[119] );
+    double *ras_hours, *decs_degs;
+    unsigned int npointing;
+    unsigned int p;
+    parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &npointing );
 
-    if (npointing%2 == 1)
-    {
-        fprintf(stderr, "Number of RAs do not equal the number of Decs given. Exiting\n");
-        fprintf(stderr, "npointings : %d\n", npointing);
-        fprintf(stderr, "RAs[0] : %s\n", RAs[0]);
-        fprintf(stderr, "DECs[0] : %s\n", DECs[0]);
-        exit(0);
-    }
-    else
-        npointing /= 2; // converting from number of RAs and DECs to number of pointings
-
-    char pointing_array[npointing][2][64];
-    int p;
-    for ( p = 0; p < npointing; p++)
-    {
-       strcpy( pointing_array[p][0], RAs[p] );
-       strcpy( pointing_array[p][1], DECs[p] );
-       fprintf(stderr, "[%f]  Pointing Num: %i  RA: %s  Dec: %s\n", NOW-begintime,
-                             p, pointing_array[p][0], pointing_array[p][1]);
-    }
-
-    // Allocate memory
+    // Allocate memory for various data products
     cuDoubleComplex  ****complex_weights_array = create_complex_weights( npointing, nant, nchan, npol );
     cuDoubleComplex  ****invJi                 = create_invJi( nant, nchan, npol );
     cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*sample_rate, nchan, npol );
@@ -293,7 +223,7 @@ int main(int argc, char **argv)
 
     double mjd, sec_offset;
     mjd = obs_metadata->sched_start_mjd;
-    calc_beam_geom( pointing_array, npointing, mjd, beam_geom_vals );
+    calc_beam_geom( ras_hours, decs_degs, npointing, mjd, beam_geom_vals );
 
     // Create structures for holding header information
     struct psrfits  *pf;
@@ -402,7 +332,7 @@ int main(int argc, char **argv)
 
     // Set up parrel streams
     cudaStream_t streams[npointing];
-    for ( p = 0; p < npointing; p++ )
+    for (p = 0; p < npointing; p++)
         cudaStreamCreate(&(streams[p])) ;
 
     fprintf( stderr, "\n[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
@@ -442,7 +372,7 @@ int main(int argc, char **argv)
 
         sec_offset = (double)(timestep_idx + opts.begin - obs_metadata->obs_id);
         mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
-        calc_beam_geom( pointing_array, npointing, mjd, beam_geom_vals );
+        calc_beam_geom( ras_hours, decs_degs, npointing, mjd, beam_geom_vals );
 
         get_jones(
                 npointing,          // number of pointings
@@ -592,12 +522,12 @@ int main(int argc, char **argv)
     cudaFreeHost( data_buffer_vdif  );
     cudaFreeHost( data );
 
-    free( opts.pointings    );
-    free( opts.datadir      );
-    free( opts.caldir       );
-    free( opts.metafits     );
-    free( cal.filename      );
-    free( opts.synth_filter );
+    free( opts.pointings_file );
+    free( opts.datadir        );
+    free( opts.caldir         );
+    free( opts.metafits       );
+    free( cal.filename        );
+    free( opts.synth_filter   );
 
     if (opts.out_incoh)
     {
@@ -664,9 +594,10 @@ void usage() {
     fprintf(stderr, "Begin time of observation, in GPS seconds\n");
     fprintf(stderr, "\t-e, --end=GPSTIME         ");
     fprintf(stderr, "End time of observation, in GPS seconds\n");
-    fprintf(stderr, "\t-P, --pointings=hh:mm:ss.s_dd:mm:ss.s,hh:mm:ss.s_dd:mm:ss.s...\n");
+    fprintf(stderr, "\t-P, --pointings=FILE      ");
+    fprintf(stderr, "FILE containing RA and Decs of multiple pointings\n");
     fprintf(stderr, "\t                          ");
-    fprintf(stderr, "Right ascension and declinations of multiple pointings\n");
+    fprintf(stderr, "in the format hh:mm:ss.s dd:mm:ss.s ...\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "\t-d, --data-location=PATH  ");
     fprintf(stderr, "PATH is the directory containing the recombined data\n");
@@ -849,7 +780,7 @@ void make_beam_parse_cmdline(
                     opts->out_coh = 1;
                     break;
                 case 'P':
-                    opts->pointings = strdup(optarg);
+                    opts->pointings_file = strdup(optarg);
                     break;
                 case 'R':
                     cal->ref_ant = atoi(optarg);
@@ -899,7 +830,7 @@ void make_beam_parse_cmdline(
     // Check that all the required options were supplied
     assert( opts->begin        != 0    );
     assert( opts->end          != 0    );
-    assert( opts->pointings    != NULL );
+    assert( opts->pointings_file != NULL );
     assert( opts->datadir      != NULL );
     assert( opts->caldir       != NULL );
     assert( opts->metafits     != NULL );
@@ -1222,4 +1153,55 @@ void get_mwalib_metadata(
         fprintf( stderr, "error (mwalib): cannot create cal metafits metadata: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
+}
+
+void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings )
+/* Parse the given file in FILENAME and create arrays of RAs and DECs.
+ * This function allocates memory for ras_hours and decs_degs arrays.
+ * Caller can destroy with free().
+ */
+{
+    // Open the file for reading
+    FILE *f = fopen( filename, "r" );
+    if (f == NULL)
+    {
+        fprintf( stderr, "error: cannot open pointings file %s\n", filename );
+        exit(EXIT_FAILURE);
+    }
+
+    // Do one pass through the file to count "words"
+    // The RAs and Decs are expected to be whitespace-delimited
+    int nwords = 0;
+    char word[64];
+    while (fscanf( f, "%s", word ) != EOF)
+        nwords++;
+
+    // Check that we have an even number of words (they should be in RA/Dec pairs)
+    if (nwords % 2 != 0)
+    {
+        fprintf( stderr, "error: cannot parse pointings file %s\n", filename );
+        exit(EXIT_FAILURE);
+    }
+    *npointings = nwords/2;
+
+    // Allocate memory
+    *ras_hours = (double *)malloc( *npointings * sizeof(double) );
+    *decs_degs = (double *)malloc( *npointings * sizeof(double) );
+
+    // Rewind to beginning of file, read the words in again, and parse them
+    rewind( f );
+    char ra_str[64], dec_str[64];
+    unsigned int p;
+    for (p = 0; p < *npointings; p++)
+    {
+        // Read in the next Ra/Dec pair
+        fscanf( f, "%s %s", ra_str, dec_str );
+
+        // Parse them and make them decimal
+        (*ras_hours)[p] = parse_ra( ra_str );
+        (*decs_degs)[p] = parse_dec( dec_str );
+    }
+
+    // Close the file
+    fclose( f );
 }
