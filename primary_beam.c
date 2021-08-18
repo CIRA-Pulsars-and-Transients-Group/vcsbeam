@@ -8,7 +8,90 @@
 #include <stdio.h>
 #include <star/pal.h>
 #include <star/palmac.h>
+#include "beam_common.h"
 #include "primary_beam.h"
+
+
+cuDoubleComplex ***calc_primary_beam(
+        MetafitsMetadata  *obs_metadata,
+        VoltageMetadata   *vcs_metadata,
+        int                coarse_chan_idx,
+        struct beam_geom  *beam_geom_vals,
+        FEEBeam           *beam,
+        uint32_t         **delays,
+        double           **amps,
+        uintptr_t          npointings )
+/* Calculate the required Jones matrices for the given pointings. The
+ * calculated Jones matrices are stored in a newly allocated array, whose
+ * reference is returned. This should be freed with free_primary_beam().
+ *
+ * Only those configurations of live (i.e. non-dead) dipoles which exist in
+ * the array are calculated, in order to save calculation time.
+ */
+{
+    // Calculate some array sizes
+    uintptr_t npol = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+
+    // Set up the output array of beam matrices ("B"; see Eq. (30) in Ord et al. (2019))
+    // The "least significant" dimension (i.e. pointer to a Jones matrix) is only
+    // allocated when the corresponding dipole configuration is shown to exist.
+    uintptr_t p;
+    cuDoubleComplex ***B = (cuDoubleComplex ***)malloc( npointings*sizeof(cuDoubleComplex **) );
+    for (p = 0; p < npointings; p++)
+    {
+        B[p] = (cuDoubleComplex **)calloc( NCONFIGS, sizeof(cuDoubleComplex *) );
+    }
+
+    // Get the centre frequency of this coarse channel
+    int      coarse_chan = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
+    long int frequency   = obs_metadata->metafits_coarse_chans[coarse_chan].chan_centre_hz;
+
+    // Normalise to zenith
+    int zenith_norm = 1;
+
+    // Prepare a parallactic angle correction rotation matrix
+    double P[npol];
+
+    // We will be looping over the antennas/pols and checking each dipole
+    // configuration to see if it's been already calculated. However, we
+    // still need to know how many antennas/pols (= RF inputs) there are
+    uintptr_t nrf_input = obs_metadata->num_rf_inputs;
+    uintptr_t rf_input;
+
+    // Loop through the pointings and calculate the primary beam matrices
+    double az, za; // (az)imuth and (z)enith (a)ngle in radians
+
+    int config_idx;
+
+    for (p = 0; p < npointings; p++)
+    {
+        az = beam_geom_vals[p].az;
+        za = PAL__DPIBY2 - beam_geom_vals[p].el;
+
+        // Calculate the parallactic angle correction for this pointing
+        parallactic_angle_correction( P, MWA_LATITUDE_RADIANS, az, za );
+
+        for (rf_input = 0; rf_input < nrf_input; rf_input++)
+        {
+            // Check this RF input's dipole configuration
+            config_idx = hash_dipole_config( amps[rf_input] );
+            if (config_idx == -1 || config_idx == NCONFIGS - 1)
+                continue; // i.e. don't bother with this tile
+
+            if (B[p][config_idx] == NULL)
+            {
+                // Get the calculated FEE Beam (using Hyperbeam)
+                B[p][config_idx] = (cuDoubleComplex *)calc_jones(
+                        beam, az, za, frequency, delays[rf_input], amps[rf_input], zenith_norm );
+
+                // Apply the parallactic angle correction
+                mult2x2d_RxC( P, B[p][config_idx], B[p][config_idx] );
+            }
+        }
+    }
+
+    return B;
+}
 
 
 void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, uint32_t ***delays, double ***amps )

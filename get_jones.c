@@ -157,7 +157,7 @@ void get_jones(
     double geometry, delay_time, delay_samples, cycles_per_sample;
 
     int nconfigs = 139;
-    const int multiple_dead = nconfigs - 1; // This indexn is reserved for configurations
+    const int multiple_dead = nconfigs - 1; // This index is reserved for configurations
                                             // with three or more dead dipoles
     int config_idx;
     double *jones[nconfigs]; // (see hash_dipole_configs() for explanation of this array)
@@ -194,8 +194,8 @@ void get_jones(
             for (rf_input = 0; rf_input < (int)(ninput); rf_input++) {
 
                 // Get the antenna and polarisation number from the rf_input
-                ant         = obs_metadata->rf_inputs[rf_input].ant;
-                pol         = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
+                ant = obs_metadata->rf_inputs[rf_input].ant;
+                pol = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
 
                 // FEE2016 beam:
                 // Check to see whether or not this configuration has already been calculated.
