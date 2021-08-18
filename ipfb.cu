@@ -78,13 +78,9 @@ __global__ void filter_kernel( float *in_real, float *in_imag,
     // is:
     int m0 = (n - F)/M + 1;
 
-    // out[] must also include both polarisations, so its indices are simply
-    int o_real = 2*idx;
-    int o_imag = o_real + 1;
-
     // Initialise the output sample to zero
-    out[o_real] = 0.0;
-    out[o_imag] = 0.0;
+    float out_real = 0.0;
+    float out_imag = 0.0;
 
     // Perform the double sum
     int m, k, f, tw, ft, i;
@@ -110,15 +106,16 @@ __global__ void filter_kernel( float *in_real, float *in_imag,
             i = npol*K*(m+P) + npol*k + pol;
 
             // Complex multiplication
-            out[o_real] += in_real[i] * ft_real[ft] -
-                           in_imag[i] * ft_imag[ft];
-            out[o_imag] += in_real[i] * ft_imag[ft] +
-                           in_imag[i] * ft_real[ft];
+            out_real += in_real[i] * ft_real[ft] -
+                        in_imag[i] * ft_imag[ft];
+            out_imag += in_real[i] * ft_imag[ft] +
+                        in_imag[i] * ft_real[ft];
         }
     }
 
-    out[o_real] /= K;
-    out[o_imag] /= K;
+    // out[] includes both polarisations, at adjacent indices
+    out[2*idx]   = out_real / K;
+    out[2*idx+1] = out_imag / K;
 
     __syncthreads();
 }
