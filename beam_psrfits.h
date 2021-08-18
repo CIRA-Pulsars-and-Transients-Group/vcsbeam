@@ -13,10 +13,10 @@
 void printf_psrfits( struct psrfits *pf );  /* Prints values in psrfits struct to stdout */
 
 void populate_psrfits_header(
+        struct psrfits    pf[],
         MetafitsMetadata *obs_metadata,
         VoltageMetadata  *vcs_metadata,
         int               coarse_chan_idx,
-        struct psrfits    pf[],
         int               max_sec_per_file,
         int               outpol,
         struct beam_geom *beam_geom_vals,

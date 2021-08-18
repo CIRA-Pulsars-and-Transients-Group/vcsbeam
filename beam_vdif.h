@@ -7,6 +7,7 @@
 #ifndef BEAM_VDIF_H
 #define BEAM_VDIF_H
 
+#include <mwalib.h>
 #include <cuComplex.h>
 #include "beam_common.h"
 #include "vdifio.h"
@@ -63,13 +64,8 @@ void populate_vdif_header(
         struct vdifinfo  *vf,
         vdif_header      *vhdr,
         MetafitsMetadata *obs_metadata,
-        char             *metafits,
-        int               obsid,
-        int               sample_rate,
-        long int          frequency,
-        int               nchan, 
-        long int          chan_width,
-        int               rec_channel,
+        VoltageMetadata  *vcs_metadata,
+        int               coarse_chan_idx,
         struct beam_geom *beam_geom_vals,
         int               npointing );
 

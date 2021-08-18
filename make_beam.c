@@ -128,7 +128,7 @@ int main(int argc, char **argv)
     // Create some "shorthand" variables for code brevity
     uintptr_t nant           = obs_metadata->num_ants;
     uintptr_t nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
-    int chan_width           = obs_metadata->volt_fine_chan_width_hz;
+    //int chan_width           = obs_metadata->volt_fine_chan_width_hz;
     uintptr_t npol           = obs_metadata->num_ant_pols;   // (X,Y)
     uintptr_t ninput         = obs_metadata->num_rf_inputs;
     uintptr_t outpol_coh     = 4;  // (I,Q,U,V)
@@ -149,8 +149,6 @@ int main(int argc, char **argv)
 
     // Read in info from metafits file
     fprintf( stderr, "[%f]  Reading in metafits file information from %s\n", NOW-begintime, opts.metafits);
-    struct metafits_info mi;
-    get_metafits_info( opts.metafits, &mi, chan_width );
 
     // >>>>>
 
@@ -348,15 +346,14 @@ int main(int argc, char **argv)
         coeffs[i] *= approx_filter_scale;
 
     // Populate the relevant header structs
-    populate_psrfits_header( obs_metadata, vcs_metadata, coarse_chan_idx, pf, opts.max_sec_per_file,
+    populate_psrfits_header( pf, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
             outpol_coh, beam_geom_vals, npointing, true );
 
-    populate_psrfits_header( obs_metadata, vcs_metadata, coarse_chan_idx, pf_incoh, opts.max_sec_per_file,
+    populate_psrfits_header( pf_incoh, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
             outpol_incoh, beam_geom_vals, 1, false );
 
-    populate_vdif_header( vf, &vhdr, obs_metadata, opts.metafits, obs_metadata->obs_id,
-            sample_rate, obs_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            chan_width, opts.rec_channel, beam_geom_vals, npointing );
+    populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, coarse_chan_idx,
+            beam_geom_vals, npointing );
 
     // To run asynchronously we require two memory allocations for each data
     // set so multiple parts of the memory can be worked on at once.
@@ -590,10 +587,6 @@ int main(int argc, char **argv)
     free( twiddles );
     free( coeffs );
 
-    destroy_metafits_info( &mi );
-    //free( data_buffer_coh    );
-    //free( data_buffer_incoh  );
-    //free( data_buffer_vdif   );
     cudaFreeHost( data_buffer_coh   );
     cudaFreeHost( data_buffer_incoh );
     cudaFreeHost( data_buffer_vdif  );

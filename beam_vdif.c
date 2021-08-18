@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <mwalib.h>
 #include <cuComplex.h>
 #include "vdifio.h"
 #include "psrfits.h"
@@ -91,13 +92,8 @@ void populate_vdif_header(
         struct vdifinfo  *vf,
         vdif_header      *vhdr,
         MetafitsMetadata *obs_metadata,
-        char             *metafits,
-        int               obsid,
-        int               sample_rate,
-        long int          frequency,
-        int               nchan, 
-        long int          chan_width,
-        int               rec_channel,
+        VoltageMetadata *vcs_metadata,
+        int               coarse_chan_idx,
         struct beam_geom *beam_geom_vals,
         int               npointing )
 {
@@ -106,15 +102,21 @@ void populate_vdif_header(
     char   time_utc[24];
     strftime( time_utc, sizeof(time_utc), "%Y-%m-%dT%H:%M:%S", ts );
 
+    // Get the sample rate
+    unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
+
+    // Get the coarse channel
+    int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
+
     for ( int p=0; p<npointing; p++ )
     {
-        // First how big is a DataFrame
+        // Define DataFrame dimensions
         vf[p].bits              = 8;   // this is because it is all the downstream apps support (dspsr/diFX)
         vf[p].iscomplex         = 1;   // (it is complex data)
         vf[p].nchan             = 2;   // I am hardcoding this to 2 channels per thread - one per pol
-        vf[p].samples_per_frame = 128; // also hardcoding to 128 time-samples per frame
-        vf[p].sample_rate       = sample_rate*128;  // = 1280000 (also hardcoding this to the raw channel rate)
-        vf[p].BW                = 1.28;
+        vf[p].samples_per_frame = 128; // Hardcoding to 128 time-samples per frame
+        vf[p].sample_rate       = sample_rate * vcs_metadata->num_fine_chans_per_coarse; // For coarse channelised data
+        vf[p].BW                = obs_metadata->coarse_chan_width_hz / 1e6;  // (MHz)
 
         vf[p].frame_length  = (vf[p].nchan * (vf[p].iscomplex+1) * vf[p].samples_per_frame) +
                             VDIF_HEADER_SIZE;                                         // = 544
@@ -142,15 +144,8 @@ void populate_vdif_header(
         setVDIFMJDSec( vhdr, mjdsec );
         setVDIFFrameNumber( vhdr, 0 );
 
-        // Get the project ID directly from the metafits file
-        fitsfile *fptr = NULL;
-        int status     = 0;
-
-        fits_open_file(&fptr, metafits, READONLY, &status);
-        fits_read_key(fptr, TSTRING, "PROJECT", vf[p].exp_name, NULL, &status);
-        fits_close_file(fptr, &status);
-
-        snprintf( vf[p].scan_name, 17, "%d", obsid );
+        strcpy( vf[p].exp_name, obs_metadata->project_id );
+        snprintf( vf[p].scan_name, 17, "%d", obs_metadata->obs_id );
 
         vf[p].b_scales   = (float *)malloc( sizeof(float) * vf[p].nchan );
         vf[p].b_offsets  = (float *)malloc( sizeof(float) * vf[p].nchan );
@@ -169,13 +164,16 @@ void populate_vdif_header(
         strncpy( vf[p].date_obs, time_utc, sizeof(time_utc) );
 
         vf[p].MJD_epoch = beam_geom_vals->intmjd + beam_geom_vals->fracmjd;
-        vf[p].fctr      = (frequency + (nchan/2.0)*chan_width)/1.0e6; // (MHz)
+        vf[p].fctr      = obs_metadata->metafits_coarse_chans[coarse_chan].chan_centre_hz / 1e6; // (MHz)
         strncpy( vf[p].source, "unset", 24 );
 
         // The output file basename
-        int ch = rec_channel;
-        sprintf( vf[p].basefilename, "%s_%s_%s_%s_ch%03d",
-                 vf[p].exp_name, vf[p].scan_name, vf[p].ra_str, vf[p].dec_str, ch);
+        sprintf( vf[p].basefilename, "%s_%s_%s_%s_ch%03ld",
+                 vf[p].exp_name,
+                 vf[p].scan_name,
+                 vf[p].ra_str,
+                 vf[p].dec_str,
+                 obs_metadata->metafits_coarse_chans[coarse_chan].rec_chan_number );
     }
 }
 

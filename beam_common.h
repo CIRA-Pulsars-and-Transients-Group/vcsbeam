@@ -23,29 +23,6 @@
 #define MWA_LON 116.67081         /* Array longitude. degrees East */
 #define MWA_HGT 377               /* Array altitude. meters above sea level */
 
-// A structure to read in all the relevant info from the observation metafits
-// file.
-struct metafits_info {
-    double      tile_pointing_ra;
-    double      tile_pointing_dec;
-    double      tile_pointing_az;
-    double      tile_pointing_el;
-    float      *N_array;
-    float      *E_array;
-    float      *H_array;
-    float      *cable_array;
-    int        *flag_array;
-    double     *weights_array;
-    short int  *antenna_num;
-    char      **tilenames;
-    int         ninput;
-    int         chan_width;
-    int       **delays;
-    double    **amps;
-    char       *date_obs;
-    int         exposure;
-};
-
 struct beam_geom {
     double mean_ra;
     double mean_dec;
@@ -139,9 +116,6 @@ void parallactic_angle_correction_fee2016(
     double za);   // zenith angle (radians)
 
 int hash_dipole_config( double * );
-
-void get_metafits_info( char *metafits, struct metafits_info *mi, unsigned int chan_width );
-void destroy_metafits_info( struct metafits_info *mi );
 
 void int8_to_uint8(int n, int shift, char * to_convert);
 void float2int8_trunc(float *f, int n, float min, float max, int8_t *i);
