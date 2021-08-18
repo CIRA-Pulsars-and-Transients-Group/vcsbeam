@@ -87,9 +87,11 @@ void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
         for (ch = 0; ch < vcs_nchan; ch++)
         {
             // Dd x Db = D
+            // SM: Daniel Mitchell confirmed in an email dated 23 Mar 2017 that the
+            // Bandpass matrices (Db) should be multiplied on the _right_ of the
+            // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
-            //mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], D[ant][ch] );
-            cp2x2( Dd[cal_ant], D[ant][ch] );
+            mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], D[ant][ch] );
 
             // By default, divide through a reference antenna...
             remove_reference_phase( D[ant][ch], D[0][ch] );
@@ -111,8 +113,6 @@ void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
     free( Db );
     free( Dd );
 }
-
-
 
 void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
 /* Read in an RTS file and return the direction independent Jones matrix
@@ -276,7 +276,7 @@ void read_bandpass_file(
 
             // Decide if the row corresponds to the Jm values (even rows)
             // or Jf values (odd rows)
-            if ((ant_row - 1) % 2 == 0)
+            if (ant_row % 2 == 0)
                 J = Jm;
             else
                 J = Jf;
@@ -291,7 +291,7 @@ void read_bandpass_file(
             }
 
             // Get the polarisation index
-            pol = (ant_row - 1) / 2;
+            pol = ant_row/2;
 
             // Loop over the row and read in values
             for (ci = 0; ci < chan_count; ci++)
