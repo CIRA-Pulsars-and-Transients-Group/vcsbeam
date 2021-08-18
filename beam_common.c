@@ -75,31 +75,6 @@ void flatten_bandpass(int nstep, int nchan, int npol, void *data)
     free(band);
 }
 
-void read_data( char *filename, uint8_t *data, int nbytes ) {
-
-    // Open the file for reading
-    FILE *f = fopen( filename, "r" );
-    if (f == NULL) {
-        fprintf( stderr, "Error opening file '%s'\n", filename );
-        exit(EXIT_FAILURE);
-    }
-
-    // Read in nbytes bytes
-    int nread = fread( (void *)data, sizeof(uint8_t), nbytes, f );
-
-    // Check that I got all nbytes
-    // Any other number is disallowed
-    if (nread != nbytes) {
-        fprintf( stderr, "Error: file %s does not contain %d bytes\n",
-                filename, nbytes );
-        exit(EXIT_FAILURE);
-    }
-
-    fclose(f);
-
-}
-
-
 void int8_to_uint8(int n, int shift, char * to_convert) {
     int j;
     int scratch;

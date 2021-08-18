@@ -88,33 +88,7 @@ void calc_beam_geom(
         double            mjd,
         struct beam_geom  bg[] );
 
-void create_delays_amps_from_metafits( MetafitsMetadata *metafits_metadata, uint32_t ***delays, double ***amps );
-void free_delays_amps( MetafitsMetadata *metafits_metadata, uint32_t **delays, double **amps );
-
 void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
-
-int calcEjones_analytic(cuDoubleComplex response[MAX_POLS], // pointer to 4-element (2x2) voltage gain Jones matrix
-               const long freq, // observing freq (Hz)
-               const float lat, // observing latitude (radians)
-               const float az0, // azimuth & zenith angle of tile pointing
-               const float za0,
-               const float az, // azimuth & zenith angle to sample
-               const float za);
-
-
-void parallactic_angle_correction_analytic(
-    double *P,    // output rotation matrix
-    double lat,   // observing latitude (radians)
-    double az,    // azimuth angle (radians)
-    double za);   // zenith angle (radians)
-
-void parallactic_angle_correction_fee2016(
-    double *P,    // output rotation matrix
-    double lat,   // observing latitude (radians)
-    double az,    // azimuth angle (radians)
-    double za);   // zenith angle (radians)
-
-int hash_dipole_config( double * );
 
 void int8_to_uint8(int n, int shift, char * to_convert);
 void float2int8_trunc(float *f, int n, float min, float max, int8_t *i);
@@ -125,8 +99,6 @@ void flatten_bandpass(
         int nchan,
         int npol,
         void *data);
-
-void read_data( char *filename, uint8_t *data, int nbytes );
 
 void dec2hms( char *out, double in, int sflag );
 void utc2mjd( char *, double *, double * ); // "2000-01-01T00:00:00" --> MJD_int + MJD_fraction
