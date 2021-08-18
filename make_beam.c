@@ -84,10 +84,7 @@ int main(int argc, char **argv)
     opts.max_sec_per_file = 200; // Number of seconds per fits files
 
     // Variables for calibration settings
-    cal.filename          = NULL;
-    cal.bandpass_filename = NULL;
     cal.cal_type          = CAL_NONE;
-    cal.offr_chan_num     = 0;
     cal.ref_ant           = 0;
     cal.cross_terms       = 0;
     cal.phase_offset      = 0.0;
@@ -526,7 +523,6 @@ int main(int argc, char **argv)
     free( opts.datadir        );
     free( opts.caldir         );
     free( opts.metafits       );
-    free( cal.filename        );
     free( opts.synth_filter   );
 
     if (opts.out_incoh)
@@ -657,23 +653,14 @@ void usage() {
     fprintf(stderr, "Rotate the Y pol by M*f+C, where M is in rad/Hz and C is in rad  ");
     fprintf(stderr, "[default: 0.0,0.0]\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "CALIBRATION OPTIONS (OFFRINGA)\n");
+    fprintf(stderr, "CALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "\t-O, --offringa-file=PATH  ");
-    fprintf(stderr, "The calibration solution file that is output from the tools\n");
+    fprintf(stderr, "\t-O, --offringa            ");
+    fprintf(stderr, "The calibration solution is in the Offringa format instead of\n");
     fprintf(stderr, "\t                          ");
-    fprintf(stderr, "made by Andre Offringa. Using this option instructs the beam-\n");
+    fprintf(stderr, "the default RTS format. In this case, the argument to -D should\n" );
     fprintf(stderr, "\t                          ");
-    fprintf(stderr, "former to use the Offringa-style calibration solution. Either\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "-J or -O must be supplied. If both are supplied the one that\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "comes last will override the former.\n");
-    fprintf(stderr, "\t-C, --offringa-chan=N     ");
-    fprintf(stderr, "The zero-offset position of the coarse channel solution in the   ");
-    fprintf(stderr, "[default: 0]\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "calibration file given by the -O option.\n");
+    fprintf(stderr, "be the full path to the binary solution file.\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "OTHER OPTIONS\n");
@@ -717,8 +704,7 @@ void make_beam_parse_cmdline(
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"UV-phase",        required_argument, 0, 'U'},
-                {"offringa-file",   required_argument, 0, 'O'},
-                {"offringa-chan",   required_argument, 0, 'C'},
+                {"offringa",        no_argument      , 0, 'O'},
                 {"gpu-mem",         required_argument, 0, 'g'},
                 {"help",            required_argument, 0, 'h'},
                 {"version",         required_argument, 0, 'V'}
@@ -726,7 +712,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:c:C:d:D:e:f:g:him:O:pP:R:sS:t:U:vVX",
+                             "A:b:c:d:D:e:f:g:him:OpP:R:sS:t:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -743,9 +729,6 @@ void make_beam_parse_cmdline(
                 case 'c':
                     opts->cal_metafits = strdup(optarg);
                     cal->cal_type = CAL_RTS;
-                    break;
-                case 'C':
-                    cal->offr_chan_num = atoi(optarg);
                     break;
                 case 'd':
                     opts->datadir = strdup(optarg);
@@ -773,7 +756,6 @@ void make_beam_parse_cmdline(
                     opts->metafits = strdup(optarg);
                     break;
                 case 'O':
-                    cal->filename = strdup(optarg);
                     cal->cal_type = CAL_OFFRINGA;
                     break;
                 case 'p':
