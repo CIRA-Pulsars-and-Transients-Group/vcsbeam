@@ -273,7 +273,6 @@ void get_jones(
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
-        float                  samples_per_sec,
         FEEBeam               *beam,
         uint32_t             **delays,
         double               **amps,
@@ -290,6 +289,7 @@ void get_jones(
     int npol           = obs_metadata->num_ant_pols;   // (X,Y)
     int chan_width     = obs_metadata->corr_fine_chan_width_hz;
     int ninput         = obs_metadata->num_rf_inputs;
+    unsigned int samples_per_sec = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
     int rf_input;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number

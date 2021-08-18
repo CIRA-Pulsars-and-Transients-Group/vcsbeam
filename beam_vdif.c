@@ -90,9 +90,9 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
 void populate_vdif_header(
         struct vdifinfo  *vf,
         vdif_header      *vhdr,
+        MetafitsMetadata *obs_metadata,
         char             *metafits,
         int               obsid,
-        char             *time_utc,
         int               sample_rate,
         long int          frequency,
         int               nchan, 
@@ -101,6 +101,11 @@ void populate_vdif_header(
         struct beam_geom *beam_geom_vals,
         int               npointing )
 {
+    // Convert the UTC obs time into a string
+    struct tm *ts = gmtime( &(obs_metadata->sched_start_utc) );
+    char   time_utc[24];
+    strftime( time_utc, sizeof(time_utc), "%Y-%m-%dT%H:%M:%S", ts );
+
     for ( int p=0; p<npointing; p++ )
     {
         // First how big is a DataFrame
@@ -161,7 +166,7 @@ void populate_vdif_header(
         dec2hms(vf[p].ra_str,  ra2000/15.0, 0); // 0 = no '+' sign
         dec2hms(vf[p].dec_str, dec2000,     1); // 1 = with '+' sign
 
-        strncpy( vf[p].date_obs, time_utc, 24);
+        strncpy( vf[p].date_obs, time_utc, sizeof(time_utc) );
 
         vf[p].MJD_epoch = beam_geom_vals->intmjd + beam_geom_vals->fracmjd;
         vf[p].fctr      = (frequency + (nchan/2.0)*chan_width)/1.0e6; // (MHz)

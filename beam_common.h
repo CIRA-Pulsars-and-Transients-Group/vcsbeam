@@ -98,7 +98,6 @@ void get_jones(
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
-        float                  samples_per_sec,
         FEEBeam               *beam,
         uint32_t             **delays,
         double               **amps,

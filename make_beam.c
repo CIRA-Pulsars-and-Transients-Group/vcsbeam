@@ -126,12 +126,12 @@ int main(int argc, char **argv)
         get_mwalib_metadata( &opts, &obs_metadata, &vcs_metadata, &vcs_context, NULL );
 
     // Create some "shorthand" variables for code brevity
-    uintptr_t nant             = obs_metadata->num_ants;
-    uintptr_t nchan                = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nant           = obs_metadata->num_ants;
+    uintptr_t nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
     int chan_width           = obs_metadata->volt_fine_chan_width_hz;
-    uintptr_t npol                 = obs_metadata->num_ant_pols;   // (X,Y)
-    uintptr_t ninput               = obs_metadata->num_rf_inputs;
-    uintptr_t outpol_coh           = 4;  // (I,Q,U,V)
+    uintptr_t npol           = obs_metadata->num_ant_pols;   // (X,Y)
+    uintptr_t ninput         = obs_metadata->num_rf_inputs;
+    uintptr_t outpol_coh     = 4;  // (I,Q,U,V)
     if ( opts.out_summed )
         outpol_coh           = 1;  // (I)
     const uintptr_t outpol_incoh   = 1;  // ("I")
@@ -348,17 +348,14 @@ int main(int argc, char **argv)
         coeffs[i] *= approx_filter_scale;
 
     // Populate the relevant header structs
-    populate_psrfits_header( pf,       opts.metafits, obs_metadata->obs_id,
-            mi.date_obs, sample_rate, opts.max_sec_per_file, obs_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            chan_width,outpol_coh, opts.rec_channel, beam_geom_vals,
-            mi, npointing, 1 );
-    populate_psrfits_header( pf_incoh, opts.metafits, obs_metadata->obs_id,
-            mi.date_obs, sample_rate, opts.max_sec_per_file, obs_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
-            chan_width, outpol_incoh, opts.rec_channel, beam_geom_vals,
-            mi, 1, 0 );
+    populate_psrfits_header( obs_metadata, vcs_metadata, coarse_chan_idx, pf, opts.max_sec_per_file,
+            outpol_coh, beam_geom_vals, npointing, true );
 
-    populate_vdif_header( vf, &vhdr, opts.metafits, obs_metadata->obs_id,
-            mi.date_obs, sample_rate, obs_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
+    populate_psrfits_header( obs_metadata, vcs_metadata, coarse_chan_idx, pf_incoh, opts.max_sec_per_file,
+            outpol_incoh, beam_geom_vals, 1, false );
+
+    populate_vdif_header( vf, &vhdr, obs_metadata, opts.metafits, obs_metadata->obs_id,
+            sample_rate, obs_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz, nchan,
             chan_width, opts.rec_channel, beam_geom_vals, npointing );
 
     // To run asynchronously we require two memory allocations for each data
@@ -457,7 +454,6 @@ int main(int argc, char **argv)
                 coarse_chan_idx,
                 &cal,              // struct holding info about calibration
                 D,                      // Calibration Jones matrix information
-                sample_rate,            // Hz
                 beam,                   // Hyperbeam struct
                 delays,                 // Analogue beamforming pointing direction information needed for Hyperbeam
                 amps,

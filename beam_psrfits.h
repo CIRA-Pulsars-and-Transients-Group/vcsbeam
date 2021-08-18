@@ -7,26 +7,21 @@
 #ifndef BEAM_PSRFITS_H
 #define BEAM_PSRFITS_H
 
+#include <mwalib.h>
 #include "psrfits.h"
 
 void printf_psrfits( struct psrfits *pf );  /* Prints values in psrfits struct to stdout */
 
 void populate_psrfits_header(
-        struct psrfits  pf[],
-        char           *metafits,
-        int             obsid,
-        char           *time_utc,
-        unsigned int    sample_rate,
-        int             max_sec_per_file,
-        long int        frequency,
-        int             nchan,
-        long int        chan_width,
-        int             outpol,
-        int             rec_channel,
-        struct beam_geom  *beam_geom_vals,
-        struct metafits_info mi,
-        int             npointing,
-        int             is_coherent );
+        MetafitsMetadata *obs_metadata,
+        VoltageMetadata  *vcs_metadata,
+        int               coarse_chan_idx,
+        struct psrfits    pf[],
+        int               max_sec_per_file,
+        int               outpol,
+        struct beam_geom *beam_geom_vals,
+        int               npointing,
+        bool              is_coherent );
 
 void correct_psrfits_stt( struct psrfits *pf );
 
