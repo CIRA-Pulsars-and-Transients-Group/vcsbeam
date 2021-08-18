@@ -48,6 +48,7 @@ double now(){
 
 void get_mwalib_metadata(
         struct make_beam_opts *opts,
+        struct calibration *cal,
         MetafitsMetadata **obs_metadata,
         VoltageMetadata  **vcs_metadata,
         VoltageContext   **vcs_context,
@@ -68,9 +69,7 @@ int main(int argc, char **argv)
     opts.end         = 0;    // GPS time -- when to stop beamforming
     opts.pointings_file = NULL; // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
     opts.datadir     = NULL; // The path to where the recombined data live
-    opts.caldir      = NULL; // The path to where the calibration solutions live
     opts.metafits    = NULL; // filename of the metafits file for the target observation
-    opts.cal_metafits = NULL; // filename of the metafits file for the calibration observation
     opts.rec_channel = -1;   // 0 - 255 receiver 1.28MHz channel
 
     // Output options
@@ -84,6 +83,8 @@ int main(int argc, char **argv)
     opts.max_sec_per_file = 200; // Number of seconds per fits files
 
     // Variables for calibration settings
+    cal.metafits          = NULL; // filename of the metafits file for the calibration observation
+    cal.caldir            = NULL; // The path to where the calibration solutions live
     cal.cal_type          = CAL_NONE;
     cal.ref_ant           = 0;
     cal.cross_terms       = 0;
@@ -117,9 +118,9 @@ int main(int argc, char **argv)
     VoltageContext   *vcs_context  = NULL;
 
     if (opts.out_coh || opts.out_vdif)
-        get_mwalib_metadata( &opts, &obs_metadata, &vcs_metadata, &vcs_context, &cal_metadata );
+        get_mwalib_metadata( &opts, &cal, &obs_metadata, &vcs_metadata, &vcs_context, &cal_metadata );
     else
-        get_mwalib_metadata( &opts, &obs_metadata, &vcs_metadata, &vcs_context, NULL );
+        get_mwalib_metadata( &opts, &cal, &obs_metadata, &vcs_metadata, &vcs_context, NULL );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nant           = obs_metadata->num_ants;
@@ -188,7 +189,7 @@ int main(int argc, char **argv)
     // 2. Read files
     if (cal.cal_type == CAL_RTS)
     {
-        get_rts_solution( D, cal_metadata, obs_metadata, opts.caldir, opts.rec_channel );
+        get_rts_solution( D, cal_metadata, obs_metadata, cal.caldir, opts.rec_channel );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
@@ -196,13 +197,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
         /*
         // Find the ordering of antennas in Offringa solutions from metafits file
-        for (ant = 0; ant < nant; ant++)
-        {
-            Antenna A = obs_metadata->antennas[ant];
-            order[A.ant*2] = ant;
-        }
-        read_offringa_gains_file(D, nant, cal.offr_chan_num, cal.filename, order);
-        free(order);
+        read_offringa_gains_file( D, nant, cal.offr_chan_num, cal.filename );
         */
     }
 
@@ -521,7 +516,7 @@ int main(int argc, char **argv)
 
     free( opts.pointings_file );
     free( opts.datadir        );
-    free( opts.caldir         );
+    free( cal.caldir          );
     free( opts.metafits       );
     free( opts.synth_filter   );
 
@@ -637,7 +632,7 @@ void usage() {
     fprintf(stderr, "\n");
     fprintf(stderr, "\t-c, --cal-metafits=FILE  ");
     fprintf(stderr, "FILE is the metafits file pertaining to the calibration solution\n");
-    fprintf(stderr, "\t-D, --cal-location=PATH  ");
+    fprintf(stderr, "\t-C, --cal-location=PATH  ");
     fprintf(stderr, "PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n");
     fprintf(stderr, "\t-R, --ref-ant=ANT         ");
     fprintf(stderr, "Rotate the phases of the XX and YY elements of the calibration\n");
@@ -658,7 +653,7 @@ void usage() {
     fprintf(stderr, "\t-O, --offringa            ");
     fprintf(stderr, "The calibration solution is in the Offringa format instead of\n");
     fprintf(stderr, "\t                          ");
-    fprintf(stderr, "the default RTS format. In this case, the argument to -D should\n" );
+    fprintf(stderr, "the default RTS format. In this case, the argument to -C should\n" );
     fprintf(stderr, "\t                          ");
     fprintf(stderr, "be the full path to the binary solution file.\n");
 
@@ -697,7 +692,7 @@ void make_beam_parse_cmdline(
                 {"antpol",          required_argument, 0, 'A'},
                 {"pointings",       required_argument, 0, 'P'},
                 {"data-location",   required_argument, 0, 'd'},
-                {"cal-location",    required_argument, 0, 'D'},
+                {"cal-location",    required_argument, 0, 'C'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
@@ -712,7 +707,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:c:d:D:e:f:g:him:OpP:R:sS:t:U:vVX",
+                             "A:b:c:d:C:e:f:g:him:OpP:R:sS:t:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -727,14 +722,13 @@ void make_beam_parse_cmdline(
                     opts->begin = atol(optarg);
                     break;
                 case 'c':
-                    opts->cal_metafits = strdup(optarg);
-                    cal->cal_type = CAL_RTS;
+                    cal->metafits = strdup(optarg);
+                    break;
+                case 'C':
+                    cal->caldir = strdup(optarg);
                     break;
                 case 'd':
                     opts->datadir = strdup(optarg);
-                    break;
-                case 'D':
-                    opts->caldir = strdup(optarg);
                     break;
                 case 'e':
                     opts->end = atol(optarg);
@@ -814,10 +808,15 @@ void make_beam_parse_cmdline(
     assert( opts->end          != 0    );
     assert( opts->pointings_file != NULL );
     assert( opts->datadir      != NULL );
-    assert( opts->caldir       != NULL );
+    assert( cal->caldir       != NULL );
     assert( opts->metafits     != NULL );
     if (opts->out_coh || opts->out_vdif)
-        assert( opts->cal_metafits );
+        assert( cal->metafits );
+
+    // If a calibration metafits was supplied, then the default
+    // calibration format is RTS
+    if (cal->cal_type == CAL_NONE && cal->metafits != NULL)
+        cal->cal_type = CAL_RTS;
 
     // If neither -i, -p, nor -v were chosen, set -p by default
     if ( !opts->out_incoh && !opts->out_coh && !opts->out_vdif )
@@ -1037,6 +1036,7 @@ float *create_data_buffer_vdif( size_t size )
 
 void get_mwalib_metadata(
         struct make_beam_opts *opts,
+        struct calibration *cal,
         MetafitsMetadata **obs_metadata,
         VoltageMetadata  **vcs_metadata,
         VoltageContext   **vcs_context,
@@ -1123,7 +1123,7 @@ void get_mwalib_metadata(
         return;
 
     // Create CAL_CONTEXT
-    if (mwalib_metafits_context_new2( opts->cal_metafits, &cal_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    if (mwalib_metafits_context_new2( cal->metafits, &cal_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create cal metafits context: %s\n", error_message );
         exit(EXIT_FAILURE);

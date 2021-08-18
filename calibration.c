@@ -309,7 +309,7 @@ void read_bandpass_file(
 
 
 int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
-                              int coarse_chan, char *gains_file, int *order )
+                              int coarse_chan, char *gains_file )
 {
     // Assumes that memory for antenna has already been allocated
 
@@ -364,7 +364,7 @@ int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
     int bytes_to_next_jones = npols * (channelCount-1) * sizeof(cuDoubleComplex);
 
     int ant, pol;           // Iterate through antennas and polarisations
-    int pol_idx, ant_idx;   // Used for "re-ordering" the antennas and pols
+    int pol_idx, ant_idx;   // Used for "re-ordering" the antennas and pols (<-- TODO: FIX ME)
     int count = 0;          // Keep track of how many solutions have actually been read in
     double re, im;          // Temporary placeholders for the real and imaginary doubles read in
 
@@ -372,15 +372,7 @@ int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
     int first = 1;
     for (ant = 0; ant < nant; ant++) {
 
-        // Get correct antenna index
-        // To wit: The nth antenna in the Offringa binary file will get put into
-        // position number order[n]. Default is no re-ordering.
-        if (order) {
-            ant_idx = order[ant];
-        }
-        else {
-            ant_idx = ant;
-        }
+        ant_idx = ant;
 
         // Jump to next Jones matrix position for this channel
         if (first) {

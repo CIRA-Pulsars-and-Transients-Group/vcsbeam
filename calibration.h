@@ -16,6 +16,8 @@
 #define CAL_BUFSIZE    4096
 
 struct calibration {
+    char  *metafits;           // Filename of the metafits file
+    char  *caldir;             // Location of calibration data
     int    cal_type;           // Either RTS or OFFRINGA
     int    ref_ant;            // Reference antenna for calibration phases
     int    cross_terms;        // Include XY and YX of calibration Jones matrices
@@ -29,9 +31,9 @@ void get_rts_solution( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata,
 
 void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
-        MetafitsMetadata *cal_metafits, char *filename );
+        MetafitsMetadata *cal_metadata, char *filename );
 int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
-        int coarse_chan, char *gains_file, int *order );
+        int coarse_chan, char *gains_file );
 
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
 void zero_XY_and_YX( cuDoubleComplex *J );
