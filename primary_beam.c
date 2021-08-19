@@ -12,7 +12,8 @@
 #include "primary_beam.h"
 
 
-cuDoubleComplex ***calc_primary_beam(
+void calc_primary_beam(
+        cuDoubleComplex ***B,
         MetafitsMetadata  *obs_metadata,
         VoltageMetadata   *vcs_metadata,
         int                coarse_chan_idx,
@@ -22,25 +23,26 @@ cuDoubleComplex ***calc_primary_beam(
         double           **amps,
         uintptr_t          npointings )
 /* Calculate the required Jones matrices for the given pointings. The
- * calculated Jones matrices are stored in a newly allocated array, whose
- * reference is returned. This should be freed with free_primary_beam().
+ * calculated Jones matrices are stored in a "B", which is assumed to
+ * be already allocated (via malloc_primary_beam()).
  *
  * Only those configurations of live (i.e. non-dead) dipoles which exist in
  * the array are calculated, in order to save calculation time.
  */
 {
     // Calculate some array sizes
-    uintptr_t npol = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+    uintptr_t npol      = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+    uintptr_t nrf_input = obs_metadata->num_rf_inputs;
 
     // Set up the output array of beam matrices ("B"; see Eq. (30) in Ord et al. (2019))
-    // The "least significant" dimension (i.e. pointer to a Jones matrix) is only
-    // allocated when the corresponding dipole configuration is shown to exist.
-    uintptr_t p;
-    cuDoubleComplex ***B = (cuDoubleComplex ***)malloc( npointings*sizeof(cuDoubleComplex **) );
-    for (p = 0; p < npointings; p++)
-    {
-        B[p] = (cuDoubleComplex **)calloc( NCONFIGS, sizeof(cuDoubleComplex *) );
-    }
+    // Layout is B[pointing][antenna][pol] where 0 <= pol < npol=4
+    uintptr_t p, a;
+
+    // Make temporary array that will hold jones matrices for specific configurations
+    cuDoubleComplex *configs[NCONFIGS];
+    int config_idx;
+    for (config_idx = 0; config_idx < NCONFIGS; config_idx++)
+        configs[config_idx] = NULL;
 
     // Get the centre frequency of this coarse channel
     int      coarse_chan = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
@@ -55,14 +57,11 @@ cuDoubleComplex ***calc_primary_beam(
     // We will be looping over the antennas/pols and checking each dipole
     // configuration to see if it's been already calculated. However, we
     // still need to know how many antennas/pols (= RF inputs) there are
-    uintptr_t nrf_input = obs_metadata->num_rf_inputs;
     uintptr_t rf_input;
 
-    // Loop through the pointings and calculate the primary beam matrices
     double az, za; // (az)imuth and (z)enith (a)ngle in radians
 
-    int config_idx;
-
+    // Loop through the pointings and calculate the primary beam matrices
     for (p = 0; p < npointings; p++)
     {
         az = beam_geom_vals[p].az;
@@ -73,24 +72,78 @@ cuDoubleComplex ***calc_primary_beam(
 
         for (rf_input = 0; rf_input < nrf_input; rf_input++)
         {
+            // Get the antenna from the rf_input
+            a = obs_metadata->rf_inputs[rf_input].ant;
+
+            // Assume that the delay config for the 'Y' pol matches that of the corresponding 'X'
+            if (*(obs_metadata->rf_inputs[rf_input].pol) == 'Y')
+                continue;
+
             // Check this RF input's dipole configuration
             config_idx = hash_dipole_config( amps[rf_input] );
             if (config_idx == -1 || config_idx == NCONFIGS - 1)
-                continue; // i.e. don't bother with this tile
+                continue; // Too many dead dipoles -- skip this tile
 
-            if (B[p][config_idx] == NULL)
+            // Call Hyperbeam if this config hasn't been done yet
+            if (configs[config_idx] == NULL)
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
-                B[p][config_idx] = (cuDoubleComplex *)calc_jones(
+                configs[config_idx] = (cuDoubleComplex *)calc_jones(
                         beam, az, za, frequency, delays[rf_input], amps[rf_input], zenith_norm );
 
                 // Apply the parallactic angle correction
-                mult2x2d_RxC( P, B[p][config_idx], B[p][config_idx] );
+                mult2x2d_RxC( P, configs[config_idx], configs[config_idx] );
             }
+
+            // Copy the answer into the B matrix (for this antenna)
+            cp2x2( configs[config_idx], B[p][a] );
+        }
+    }
+}
+
+cuDoubleComplex ***malloc_primary_beam(
+        MetafitsMetadata  *obs_metadata,
+        uintptr_t          npointings )
+/* Allocates memory for the primary beam matrices ("B")
+ */
+{
+    // Calculate some array sizes
+    uintptr_t npol      = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+    uintptr_t nant      = obs_metadata->num_ants;
+
+    // Set up the output array of beam matrices ("B"; see Eq. (30) in Ord et al. (2019))
+    // Layout is B[pointing][antenna][pol] where 0 <= pol < npol=4
+    uintptr_t p, a;
+    cuDoubleComplex ***B = (cuDoubleComplex ***)malloc( npointings*sizeof(cuDoubleComplex **) );
+    for (p = 0; p < npointings; p++)
+    {
+        B[p] = (cuDoubleComplex **)malloc( nant*sizeof(cuDoubleComplex *) );
+        for (a = 0; a < nant; a++)
+        {
+            // (By default matrices are set to zeros)
+            B[p][a] = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
         }
     }
 
     return B;
+}
+
+void free_primary_beam(
+        cuDoubleComplex ***B,
+        MetafitsMetadata  *obs_metadata,
+        uintptr_t          npointings )
+/* Frees the memory allocated in malloc_primary_beam()
+ */
+{
+    uintptr_t nant = obs_metadata->num_ants;
+    uintptr_t a, p; // Counters for (p)ointing, (a)ntenna
+    for (p = 0; p < npointings; p++)
+    {
+        for (a = 0; a < nant; a++)
+            free( B[p][a] );
+        free( B[p] );
+    }
+    free( B );
 }
 
 

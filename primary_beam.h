@@ -28,7 +28,8 @@ void parallactic_angle_correction(
 
 int hash_dipole_config( double * );
 
-cuDoubleComplex ***calc_primary_beam(
+void calc_primary_beam(
+        cuDoubleComplex ***B,
         MetafitsMetadata  *obs_metadata,
         VoltageMetadata   *vcs_metadata,
         int                coarse_chan_idx,
@@ -38,5 +39,13 @@ cuDoubleComplex ***calc_primary_beam(
         double           **amps,
         uintptr_t          npointings );
 
+cuDoubleComplex ***malloc_primary_beam(
+        MetafitsMetadata  *obs_metadata,
+        uintptr_t          npointings );
+
+void free_primary_beam(
+        cuDoubleComplex ***B,
+        MetafitsMetadata  *obs_metadata,
+        uintptr_t          npointings );
 
 #endif

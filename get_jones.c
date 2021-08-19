@@ -108,9 +108,7 @@ void get_jones(
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
-        FEEBeam               *beam,
-        uint32_t             **delays,
-        double               **amps,
+        cuDoubleComplex     ***B,
         struct beam_geom       beam_geom_vals[],
         cuDoubleComplex    ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
         cuDoubleComplex    ****invJi )                 // output: invJi[ant][ch][pol][pol]
@@ -136,9 +134,7 @@ void get_jones(
 
     double phase;
 
-    cuDoubleComplex E[npol*npol];               // Model Jones in Desired Direction
     cuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
-    double        P[npol*npol];               // Parallactic angle correction rotation matrix
 
     // Choose a reference tile
     int refinp = 84; // Tile012 (?)
@@ -147,8 +143,6 @@ void get_jones(
     double E_ref = ref_ant.east_m;
     double H_ref = ref_ant.height_m;
 
-    int n;
-
     long int freq_ch;
 
     double cable;
@@ -156,31 +150,13 @@ void get_jones(
     double integer_phase;
     double geometry, delay_time, delay_samples, cycles_per_sample;
 
-    int nconfigs = 139;
-    const int multiple_dead = nconfigs - 1; // This index is reserved for configurations
-                                            // with three or more dead dipoles
-    int config_idx;
-    double *jones[nconfigs]; // (see hash_dipole_configs() for explanation of this array)
-
     double uv_angle;
     cuDoubleComplex uv_phase; // For the UV phase correction
 
     double Fnorm;
 
-    // Set settings for the FEE2016 beam model using Hyperbeam
-    int zenith_norm = 1; // Boolean value: unsure if/how this makes a difference
-
     for (int p = 0; p < npointing; p++)
     {
-        // Reset the Jones matrices (for the FEE beam)
-        for (n = 0; n < nconfigs; n++)
-            jones[n] = NULL; // i.e. no Jones matrices have been calculated for any configurations so far
-
-        parallactic_angle_correction(
-                P,                       // output = rotation matrix
-                MWA_LATITUDE_RADIANS,    // observing latitude (radians)
-                beam_geom_vals[p].az, (PAL__DPIBY2-beam_geom_vals[p].el));   // azimuth & zenith angle of pencil beam
-
         // Everything from this point on is frequency-dependent
         for (ch = 0; ch < nchan; ch++) {
 
@@ -197,37 +173,7 @@ void get_jones(
                 ant = obs_metadata->rf_inputs[rf_input].ant;
                 pol = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
 
-                // FEE2016 beam:
-                // Check to see whether or not this configuration has already been calculated.
-                // The point of this is to save recalculating the jones matrix, which is
-                // computationally expensive.
-                config_idx = hash_dipole_config( amps[rf_input] );
-                if (config_idx == -1)
-                    config_idx = multiple_dead;
-
-                if (ch == 0 && (jones[config_idx] == NULL || config_idx == multiple_dead))
-                {
-                    // The Jones matrix for this configuration has not yet been calculated, so do it now.
-                    // The FEE beam only needs to be calculated once per coarse channel, because it will
-                    // not produce unique answers for different fine channels within a coarse channel anyway
-                    // (it only calculates the jones matrix for the nearest coarse channel centre)
-                    // Strictly speaking, the condition (ch == 0) above is redundant, as the dipole configuration
-                    // array takes care of that implicitly, but I'll leave it here so that the above argument
-                    // is "explicit" in the code.
-                    jones[config_idx] = calc_jones( beam, beam_geom_vals[p].az, PAL__DPIBY2 - beam_geom_vals[p].el, frequency + chan_width/2,
-                            (unsigned int*)delays[rf_input], amps[rf_input], zenith_norm );
-                }
-
-                // "Convert" the real jones[8] output array into out complex E[4] matrix
-                for (n = 0; n < npol*npol; n++)
-                {
-                    E[n] = make_cuDoubleComplex(jones[config_idx][n*2], jones[config_idx][n*2+1]);
-                }
-
-                // Apply parallactic angle correction if Hyperbeam was used
-                mult2x2d_RxC( P, E, E );  // Ji = P x Ji (where 'x' is matrix multiplication)
-
-                mult2x2d(D[ant][ch], E, Ji); // the gain in the desired look direction
+                mult2x2d(D[ant][ch], B[p][ant], Ji); // the gain in the desired look direction
 
                 // Apply the UV phase correction (to the bottom row of the Jones matrix)
                 Ji[2] = cuCmul( Ji[2], uv_phase );
@@ -289,13 +235,6 @@ void get_jones(
 
             } // end loop through antenna/pol (rf_input)
         } // end loop through fine channels (ch)
-
-        // Free Jones matrices from hyperbeam -- in prep for reclaculating the next pointing
-        for (n = 0; n < nconfigs; n++)
-        {
-            if (jones[n] != NULL)
-                free( jones[n] );
-        }
     } // end loop through pointings (p)
 
 }

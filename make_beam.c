@@ -169,6 +169,7 @@ int main(int argc, char **argv)
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     double invw = 1.0/nant;
 
+    // ------------------------
     // GET CALIBRATION SOLUTION
     // ------------------------
     cuDoubleComplex ***D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
@@ -186,7 +187,12 @@ int main(int argc, char **argv)
         */
     }
 
-    // ------------------------
+    // ------------------
+    // SET UP BEAM ARRAYS
+    // ------------------
+    cuDoubleComplex ***B = malloc_primary_beam( obs_metadata, npointing );
+
+    // ------------------
 
     fprintf( stderr, "[%f]  Setting up output header information\n", NOW-begintime);
     struct beam_geom beam_geom_vals[npointing];
@@ -351,16 +357,18 @@ int main(int argc, char **argv)
         mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
         calc_beam_geom( ras_hours, decs_degs, npointing, mjd, beam_geom_vals );
 
+        // Calculate the primary beam
+        calc_primary_beam( B, obs_metadata, vcs_metadata, coarse_chan_idx,
+                beam_geom_vals, beam, delays, amps, npointing );
+
         get_jones(
                 npointing,          // number of pointings
                 vcs_metadata,
                 obs_metadata,
                 coarse_chan_idx,
                 &cal,              // struct holding info about calibration
-                D,                      // Calibration Jones matrix information
-                beam,                   // Hyperbeam struct
-                delays,                 // Analogue beamforming pointing direction information needed for Hyperbeam
-                amps,
+                D,                      // Calibration Jones matrices
+                B,                      // Primary beam jones matrices
                 beam_geom_vals,         // Geometric information about pointings
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
@@ -535,10 +543,12 @@ int main(int argc, char **argv)
         free_ipfb( &gi );
     }
 
-    // Clean up Hyperbeam
+    // Clean up Hyperbeam and associated arrays
     free_fee_beam( beam );
     free_delays_amps( obs_metadata, delays, amps );
+    free_primary_beam( B, obs_metadata, npointing );
 
+    // Clean up memory associated with mwalib
     mwalib_metafits_metadata_free( obs_metadata );
     mwalib_voltage_metadata_free( vcs_metadata );
     mwalib_voltage_context_free( vcs_context );

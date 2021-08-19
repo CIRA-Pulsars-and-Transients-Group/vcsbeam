@@ -73,9 +73,7 @@ void get_jones(
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
-        FEEBeam               *beam,
-        uint32_t             **delays,
-        double               **amps,
+        cuDoubleComplex     ***B,
         struct beam_geom       beam_geom_vals[],
         cuDoubleComplex      ****complex_weights_array,  // output
         cuDoubleComplex      ****invJi                   // output
