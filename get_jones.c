@@ -109,7 +109,7 @@ void get_jones(
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
         cuDoubleComplex     ***B,
-        struct beam_geom       beam_geom_vals[],
+        double              ***phi,
         cuDoubleComplex    ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
         cuDoubleComplex    ****invJi )                 // output: invJi[ant][ch][pol][pol]
 {
@@ -122,7 +122,6 @@ void get_jones(
     int npol           = obs_metadata->num_ant_pols;   // (X,Y)
     int chan_width     = obs_metadata->corr_fine_chan_width_hz;
     int ninput         = obs_metadata->num_rf_inputs;
-    unsigned int samples_per_sec = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
     int rf_input;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
@@ -132,23 +131,9 @@ void get_jones(
 
     /* easy -- now the positions from the database */
 
-    double phase;
-
     cuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
 
-    // Choose a reference tile
-    int refinp = 84; // Tile012 (?)
-    Antenna ref_ant = obs_metadata->antennas[refinp];
-    double N_ref = ref_ant.north_m;
-    double E_ref = ref_ant.east_m;
-    double H_ref = ref_ant.height_m;
-
     long int freq_ch;
-
-    double cable;
-
-    double integer_phase;
-    double geometry, delay_time, delay_samples, cycles_per_sample;
 
     double uv_angle;
     cuDoubleComplex uv_phase; // For the UV phase correction
@@ -182,34 +167,8 @@ void get_jones(
                 // Calculate the complex weights array
                 if (complex_weights_array != NULL)
                 {
-                    cable = obs_metadata->rf_inputs[rf_input].electrical_length_m - ref_ant.electrical_length_m;
-                    double El = obs_metadata->rf_inputs[rf_input].east_m;
-                    double N  = obs_metadata->rf_inputs[rf_input].north_m;
-                    double H  = obs_metadata->rf_inputs[rf_input].height_m;
-
-                    // shift the origin of ENH to Antenna 0 and hoping the Far Field Assumption still applies ...
-
-                    geometry = (El - E_ref)*beam_geom_vals[p].unit_E +
-                               (N  - N_ref)*beam_geom_vals[p].unit_N +
-                               (H  - H_ref)*beam_geom_vals[p].unit_H;
-
-                    delay_time = (geometry - cable)/(SPEED_OF_LIGHT_IN_VACUUM_M_PER_S);
-                    delay_samples = delay_time * samples_per_sec;
-
-                    // freq should be in cycles per sample and delay in samples
-                    // which essentially means that the samples_per_sec cancels
-
-                    // and we only need the fractional part of the turn
-                    cycles_per_sample = (double)freq_ch/samples_per_sec;
-
-                    phase = cycles_per_sample*delay_samples;
-                    phase = modf( phase, &integer_phase );
-
-                    phase *= -2.0*M_PI;
-
-                    // Store result for later use
                     complex_weights_array[p][ant][ch][pol] =
-                        make_cuDoubleComplex( cos( phase ), sin( phase ));
+                        make_cuDoubleComplex( cos( phi[p][ant][ch] ), sin( phi[p][ant][ch] ));
                 }
 
                 // Now, calculate the inverse Jones matrix

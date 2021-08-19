@@ -32,6 +32,7 @@
 #include "form_beam.h"
 #include "calibration.h"
 #include "primary_beam.h"
+#include "geometric_delay.h"
 
 #include <cuda_runtime.h>
 #include "ipfb.h"
@@ -188,9 +189,10 @@ int main(int argc, char **argv)
     }
 
     // ------------------
-    // SET UP BEAM ARRAYS
+    // Allocate memory for various calculations
     // ------------------
-    cuDoubleComplex ***B = malloc_primary_beam( obs_metadata, npointing );
+    cuDoubleComplex ***B   = malloc_primary_beam( obs_metadata, npointing );
+    double          ***phi = malloc_geometric_delays( obs_metadata, vcs_metadata, npointing );
 
     // ------------------
 
@@ -361,6 +363,10 @@ int main(int argc, char **argv)
         calc_primary_beam( B, obs_metadata, vcs_metadata, coarse_chan_idx,
                 beam_geom_vals, beam, delays, amps, npointing );
 
+        // Calculate the geometric delays
+        calc_geometric_delays( phi, obs_metadata, vcs_metadata, coarse_chan_idx,
+                beam_geom_vals, npointing );
+
         get_jones(
                 npointing,          // number of pointings
                 vcs_metadata,
@@ -369,7 +375,7 @@ int main(int argc, char **argv)
                 &cal,              // struct holding info about calibration
                 D,                      // Calibration Jones matrices
                 B,                      // Primary beam jones matrices
-                beam_geom_vals,         // Geometric information about pointings
+                phi,                    // Geometric delays
                 complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
 
@@ -546,7 +552,10 @@ int main(int argc, char **argv)
     // Clean up Hyperbeam and associated arrays
     free_fee_beam( beam );
     free_delays_amps( obs_metadata, delays, amps );
+
+    // Clean up memory associated with the Jones matrices
     free_primary_beam( B, obs_metadata, npointing );
+    free_geometric_delays( phi, obs_metadata, npointing );
 
     // Clean up memory associated with mwalib
     mwalib_metafits_metadata_free( obs_metadata );

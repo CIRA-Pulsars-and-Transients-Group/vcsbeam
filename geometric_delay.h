@@ -8,6 +8,7 @@
 #define __GEOMETRIC_DELAY_H__
 
 #include <mwalib.h>
+#include "beam_common.h"
 
 /* Calculate the geometric delay (in radians) for the given
  *   pointings, antennas, channels

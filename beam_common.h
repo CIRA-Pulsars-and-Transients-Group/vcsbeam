@@ -74,7 +74,7 @@ void get_jones(
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
         cuDoubleComplex     ***B,
-        struct beam_geom       beam_geom_vals[],
+        double              ***phi,
         cuDoubleComplex      ****complex_weights_array,  // output
         cuDoubleComplex      ****invJi                   // output
 );
