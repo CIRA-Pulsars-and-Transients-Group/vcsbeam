@@ -91,6 +91,7 @@ int main(int argc, char **argv)
     cal.cross_terms       = 0;
     cal.phase_offset      = 0.0;
     cal.phase_slope       = 0.0;
+    cal.apply_xy_correction = true;
 
     // GPU options
     opts.gpu_mem          = -1.0;
@@ -177,6 +178,22 @@ int main(int argc, char **argv)
     if (cal.cal_type == CAL_RTS)
     {
         D = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, opts.rec_channel );
+        if (cal.apply_xy_correction)
+        {
+            xy_phase_correction( obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
+
+            // Print a suitable message
+            if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
+                fprintf( stderr, "[%f]  No XY phase correction information for this obsid\n",
+                        NOW-begintime );
+            else
+                fprintf( stderr, "[%f]  Applying XY phase correction %.2e*freq%+.2e\n",
+                        NOW-begintime, cal.phase_slope, cal.phase_offset );
+        }
+        else
+        {
+            fprintf( stderr, "[%f]  Not applying XY phase correction\n", NOW-begintime );
+        }
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
@@ -641,9 +658,8 @@ void usage() {
     fprintf(stderr, "\t-X, --cross-terms         ");
     fprintf(stderr, "Retain the XY and YX terms of the calibration solution           ");
     fprintf(stderr, "[default: off]\n");
-    fprintf(stderr, "\t-U, --UV-phase=M,C        ");
-    fprintf(stderr, "Rotate the Y pol by M*f+C, where M is in rad/Hz and C is in rad  ");
-    fprintf(stderr, "[default: 0.0,0.0]\n");
+    fprintf(stderr, "\t-U, --no-XY-phase         ");
+    fprintf(stderr, "Do not apply the XY phase correction to the calibration solution");
     fprintf(stderr, "\n");
     fprintf(stderr, "CALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n");
     fprintf(stderr, "\n");
@@ -695,7 +711,7 @@ void make_beam_parse_cmdline(
                 {"coarse-chan",     required_argument, 0, 'f'},
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"cross-terms",     no_argument,       0, 'X'},
-                {"UV-phase",        required_argument, 0, 'U'},
+                {"no-XY-phase",     required_argument, 0, 'U'},
                 {"offringa",        no_argument      , 0, 'O'},
                 {"gpu-mem",         required_argument, 0, 'g'},
                 {"help",            required_argument, 0, 'h'},
@@ -704,7 +720,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:c:d:C:e:f:g:him:OpP:R:sS:t:U:vVX",
+                             "A:b:c:d:C:e:f:g:him:OpP:R:sS:t:UvVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -768,13 +784,7 @@ void make_beam_parse_cmdline(
                     opts->max_sec_per_file = atoi(optarg);
                     break;
                 case 'U':
-                    if (sscanf( optarg, "%lf,%lf", &(cal->phase_slope),
-                                &(cal->phase_offset) ) != 2)
-                    {
-                        fprintf( stderr, "error: badly formed argument to -Y "
-                                "('%s')\n", optarg );
-                        exit(EXIT_FAILURE);
-                    }
+                    cal->apply_xy_correction = false;
                     break;
                 case 'v':
                     opts->out_vdif = 1;

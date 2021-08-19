@@ -528,3 +528,55 @@ void zero_XY_and_YX( cuDoubleComplex *J )
     J[2] = make_cuDoubleComplex( 0.0, 0.0 );
 }
 
+void xy_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad )
+/* Retrieve the XY phase correction from xy_phase_correction.txt for the given
+ * gps time
+ */
+{
+    char buffer[CAL_BUFSIZE];
+    sprintf( buffer, "%s/xy_phase_correction.txt", RUNTIME_DIR );
+    FILE *f = fopen( buffer, "r" );
+    if (f == NULL)
+    {
+        fprintf( stderr, "error: xy_phase_correction: cannot open file '%s'\n",
+                buffer );
+        exit(EXIT_FAILURE);
+    }
+
+    // Temporary placeholders for the read-in values
+    uint32_t from, to;
+    double slope, offset;
+
+    // Read in the file line by line
+    while (fgets( buffer, CAL_BUFSIZE, f ) != NULL)
+    {
+        // Only parse if the first character is numeric
+        if (!(buffer[0] >= '0' && buffer[0] <= '9'))
+            continue;
+
+        // Parse the line
+        if (sscanf( buffer, "%u %u %lf %lf", &from, &to, &slope, &offset ) != 4)
+        {
+            fprintf( stderr, "error: xy_phase_correction: cannot parse XY phase correction file\n" );
+            exit(EXIT_FAILURE);
+        }
+
+        // If the given gpstime is in the right range, keep the values and
+        // stop looking
+        if (from <= gpstime && gpstime <= to)
+        {
+            *phase_slope_rad_per_hz = slope;
+            *phase_offset_rad       = offset;
+
+            break;
+        }
+    }
+
+    // Close the file
+    fclose( f );
+
+    // If we got this far, then nothing within the date range suited, so set
+    // the phase and offset to zero
+    *phase_slope_rad_per_hz = 0.0;
+    *phase_offset_rad       = 0.0;
+}

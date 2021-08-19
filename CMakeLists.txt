@@ -14,7 +14,13 @@ execute_process(
 
 message("VCSBeam ${VCSBEAM_VERSION}")
 
-add_definitions( -DVERSION_BEAMFORMER="${VCSBEAM_VERSION}" )
+if(NOT RUNTIME_DIR)
+    set(RUNTIME_DIR ${CMAKE_INSTALL_PREFIX}/bin)
+endif(NOT RUNTIME_DIR)
+
+message("Runtime files will be installed in ${RUNTIME_DIR}")
+
+add_definitions( -DVERSION_BEAMFORMER="${VCSBEAM_VERSION}" -DRUNTIME_DIR="${RUNTIME_DIR}" )
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -25,14 +31,13 @@ find_package(PSRFITS_UTILS)
 find_package(HYPERBEAM)
 find_package(MWALIB)
 
-
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 
 set(sources "beam_common.c;beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;get_jones.c;ipfb.cu;make_beam.c;ascii_header.c;vdifio.c;calibration.c;primary_beam.c;geometric_delay.c")
 
 add_executable(make_beam ${sources})
 
-set_target_properties(make_beam PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DHAVE_CUDA -DHYPERBEAM_HDF5=\\\"${HYPERBEAM_HDF5}\\\"")
+set_target_properties(make_beam PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DHYPERBEAM_HDF5=\\\"${HYPERBEAM_HDF5}\\\"")
 
 include_directories(${PSRFITS_UTILS_INCLUDE_DIR} ${CFITSIO_INCLUDE_DIR} ${PAL_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${HYPERBEAM_INCLUDE_DIR} ${MWALIB_INCLUDE_DIR})
 
@@ -40,3 +45,4 @@ target_link_libraries(make_beam ${PSRFITS_UTILS_LIBRARY} ${CFITSIO_LIBRARY} ${PA
 
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/make_beam DESTINATION bin)
 
+install(FILES xy_phase_correction.txt DESTINATION ${RUNTIME_DIR})

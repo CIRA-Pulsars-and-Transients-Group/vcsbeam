@@ -24,6 +24,7 @@ struct calibration {
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where
     double phase_slope;        //   m = phase_slope (rad/Hz)
                                //   c = phase_offset (rad)
+    bool   apply_xy_correction;
 };
 
 cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
@@ -41,5 +42,7 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
 void zero_XY_and_YX( cuDoubleComplex *J );
 
 uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, MetafitsMetadata *obs_metadata, uint32_t vcs_ant );
+
+void xy_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad );
 
 #endif
