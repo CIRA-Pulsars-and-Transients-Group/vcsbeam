@@ -538,9 +538,13 @@ void xy_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, doub
     FILE *f = fopen( buffer, "r" );
     if (f == NULL)
     {
-        fprintf( stderr, "error: xy_phase_correction: cannot open file '%s'\n",
+        fprintf( stderr, "warning: cannot find file '%s' -- will not apply any XY correction\n",
                 buffer );
-        exit(EXIT_FAILURE);
+
+        *phase_slope_rad_per_hz = 0.0;
+        *phase_offset_rad       = 0.0;
+
+        return;
     }
 
     // Temporary placeholders for the read-in values
