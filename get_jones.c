@@ -117,13 +117,11 @@ void get_jones(
     // Give "shorthand" variables for often-used values in metafits
     int coarse_chan    = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
     long int frequency = obs_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz;
-    //int nant           = obs_metadata->num_ants;
+    int nant           = obs_metadata->num_ants;
     int nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
     int npol           = obs_metadata->num_ant_pols;   // (X,Y)
     int chan_width     = obs_metadata->corr_fine_chan_width_hz;
-    int ninput         = obs_metadata->num_rf_inputs;
 
-    int rf_input;     // For counting through nstation*npol rows in the metafits file
     int ant;     // Antenna number
     int pol;     // Polarisation number
     int ch;      // Channel number
@@ -152,12 +150,8 @@ void get_jones(
             uv_angle = cal->phase_slope*freq_ch + cal->phase_offset;
             uv_phase = make_cuDoubleComplex( cos(uv_angle), sin(uv_angle) );
 
-            for (rf_input = 0; rf_input < (int)(ninput); rf_input++) {
-
-                // Get the antenna and polarisation number from the rf_input
-                ant = obs_metadata->rf_inputs[rf_input].ant;
-                pol = *(obs_metadata->rf_inputs[rf_input].pol) - 'X'; // 'X' --> 0; 'Y' --> 1
-
+            for (ant = 0; ant < nant; ant++)
+            {
                 mult2x2d(D[ant][ch], B[p][ant], Ji); // the gain in the desired look direction
 
                 // Apply the UV phase correction (to the bottom row of the Jones matrix)
@@ -165,31 +159,24 @@ void get_jones(
                 Ji[3] = cuCmul( Ji[3], uv_phase );
 
                 // Calculate the complex weights array
-                if (complex_weights_array != NULL)
-                {
+                for (pol = 0; pol < npol; pol++)
                     complex_weights_array[p][ant][ch][pol] =
                         make_cuDoubleComplex( cos( phi[p][ant][ch] ), sin( phi[p][ant][ch] ));
-                }
 
                 // Now, calculate the inverse Jones matrix
-                if (invJi != NULL)
-                {
-                    if (pol == 0) { // This is just to avoid doing the same calculation twice
 
-                        // Ord's original comment for the following line is:
-                        // "The RTS conjugates the sky so beware"
-                        conj2x2( Ji, Ji );
+                // Ord's original comment for the following line is:
+                // "The RTS conjugates the sky so beware"
+                conj2x2( Ji, Ji );
 
-                        Fnorm = norm2x2( Ji, Ji );
+                Fnorm = norm2x2( Ji, Ji );
 
-                        if (Fnorm != 0.0)
-                            inv2x2S( Ji, invJi[ant][ch] );
-                        else {
-                            for (p1 = 0; p1 < npol;  p1++)
-                            for (p2 = 0; p2 < npol;  p2++)
-                                invJi[ant][ch][p1][p2] = make_cuDoubleComplex( 0.0, 0.0 );
-                        }
-                    }
+                if (Fnorm != 0.0)
+                    inv2x2S( Ji, invJi[ant][ch] );
+                else {
+                    for (p1 = 0; p1 < npol;  p1++)
+                    for (p2 = 0; p2 < npol;  p2++)
+                        invJi[ant][ch][p1][p2] = make_cuDoubleComplex( 0.0, 0.0 );
                 }
 
             } // end loop through antenna/pol (rf_input)
