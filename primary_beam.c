@@ -105,11 +105,12 @@ cuDoubleComplex ***malloc_primary_beam(
         MetafitsMetadata  *obs_metadata,
         uintptr_t          npointings )
 /* Allocates memory for the primary beam matrices ("B")
+ * (see Eq. (30) in Ord et al. (2019))
  */
 {
     // Calculate some array sizes
-    uintptr_t npol      = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
-    uintptr_t nant      = obs_metadata->num_ants;
+    uintptr_t npol = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+    uintptr_t nant = obs_metadata->num_ants;
 
     // Set up the output array of beam matrices ("B"; see Eq. (30) in Ord et al. (2019))
     // Layout is B[pointing][antenna][pol] where 0 <= pol < npol=4
