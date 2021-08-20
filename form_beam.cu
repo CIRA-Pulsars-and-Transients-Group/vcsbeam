@@ -40,12 +40,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
 
-__global__ void incoh_beam( uint8_t *data, float *I, int npol )
+__global__ void incoh_beam( uint8_t *data, float *incoh )
 /* <<< (nchan,nsample), ninput >>>
  */
 {
-    __shared__ float sum_power;
-
     // Translate GPU block/thread numbers into meaning->l names
     int c    = blockIdx.x;  /* The (c)hannel number */
     int nc   = gridDim.x;   /* The (n)umber of (c)hannels */
@@ -54,20 +52,21 @@ __global__ void incoh_beam( uint8_t *data, float *I, int npol )
 
     int i  = threadIdx.x; /* The (ant)enna number */
 
-    if (i == 0)  sum_power = 0.0;
+    int idx = I_IDX(s, c, nc); /* Index into incoh */
+
+    if (i == 0)
+        incoh[idx] = 0.0;
     __syncthreads();
 
     // Convert input data to complex double
     cuDoubleComplex v; // Complex voltage
-    v = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,i,nc,ni)]);
+    uint8_t sample = data[D_IDX(s,c,i,nc,ni)];
+    v = UCMPLX4_TO_CMPLX_FLT(sample);
 
     // Detect the sample ("detect" = calculate power = magnitude squared)
     // and add it to the others from this thread
-    atomicAdd( &sum_power, DETECT(v) );
+    atomicAdd( &incoh[idx], DETECT(v) );
     __syncthreads();
-
-    if (i == 0)
-        I[I_IDX(s, c, nc)] = sum_power;
 }
 
 
@@ -351,6 +350,45 @@ __global__ void flatten_bandpass_C_kernel( float *C, int nstep )
 
 
 
+void cu_form_incoh_beam(
+        uint8_t *data, uint8_t *d_data, size_t data_size, // The input data
+        float *incoh, float *d_incoh, size_t incoh_size, // The output data
+        unsigned int nsample, int nchan, int ninput )
+/* Inputs:
+*   data    = host array of 4bit+4bit complex numbers. For data order, refer to the
+*             documentation.
+*   d_data  = device array of the above
+*   data_size    = size in bytes of data and d_data
+*   nsample = number of samples
+*   ninput  = number of RF inputs
+*   nchan   = number of channels
+*
+* Outputs:
+*   incoh  = result (Stokes I)   [nsamples][nchan]
+*/
+{
+    // Copy the data to the device
+
+    gpuErrchk(cudaMemcpyAsync( d_data, data, data_size, cudaMemcpyHostToDevice ));
+
+    // Call the kernels
+    dim3 chan_samples( nchan, nsample );
+
+    // Call the incoherent beam kernel
+    incoh_beam<<<chan_samples, ninput>>>( d_data, d_incoh );
+
+    gpuErrchk( cudaPeekAtLastError() );
+    //fprintf( stderr, "just before kernel call\n" );
+    gpuErrchk( cudaDeviceSynchronize() );
+    //fprintf( stderr, "just after  kernel call\n" );
+
+    flatten_bandpass_I_kernel<<<1, nchan>>>( d_incoh, nsample );
+    gpuErrchk( cudaPeekAtLastError() );
+
+    // Copy the results back into host memory
+    gpuErrchk(cudaMemcpyAsync( incoh, d_incoh, incoh_size, cudaMemcpyDeviceToHost ));
+}
+
 void cu_form_beam( uint8_t *data, unsigned int sample_rate,
                    cuDoubleComplex *d_phi,
                    cuDoubleComplex ****invJi, int file_no,
@@ -428,7 +466,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
                                                g->d_Ia, incoh_check, g->d_polX_idxs, g->d_polY_idxs,
                                                npol );
 
-        // Send off a parrellel cuda stream for each pointing
+        // Send off a parallel CUDA stream for each pointing
         for ( int p = 0; p < npointing; p++ )
         {
             // Call the beamformer kernel

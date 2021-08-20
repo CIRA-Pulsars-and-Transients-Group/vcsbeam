@@ -48,6 +48,16 @@ void create_geometric_delays(
         uintptr_t          npointings );
 
 
+
+void calc_beam_geom(
+        double           *ras_hours,
+        double           *decs_degs,
+        int               npointing,
+        double            mjd,
+        struct beam_geom  bg[] );
+
+
+
 /* Free memory allocated with create_geometric_delays()
  */
 void free_geometric_delays( geometric_delays *gdelays );

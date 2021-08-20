@@ -35,14 +35,17 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 
 set(sources "beam_common.c;beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;get_jones.c;ipfb.cu;make_mwa_tied_array_beam.c;ascii_header.c;vdifio.c;calibration.c;primary_beam.c;geometric_delay.c;metadata.c")
 
-add_executable(make_mwa_tied_array_beam ${sources})
+add_executable(make_mwa_tied_array_beam "beam_common.c;beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;get_jones.c;ipfb.cu;make_mwa_tied_array_beam.c;ascii_header.c;vdifio.c;calibration.c;primary_beam.c;geometric_delay.c;metadata.c")
+add_executable(make_mwa_incoh_beam "beam_common.c;beam_psrfits.c;form_beam.cu;make_mwa_incoh_beam.c;ascii_header.c;metadata.c;geometric_delay.c")
 
 set_target_properties(make_mwa_tied_array_beam PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DHYPERBEAM_HDF5=\\\"${HYPERBEAM_HDF5}\\\"")
+set_target_properties(make_mwa_incoh_beam PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS}")
 
 include_directories(${PSRFITS_UTILS_INCLUDE_DIR} ${CFITSIO_INCLUDE_DIR} ${PAL_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${HYPERBEAM_INCLUDE_DIR} ${MWALIB_INCLUDE_DIR})
 
 target_link_libraries(make_mwa_tied_array_beam ${PSRFITS_UTILS_LIBRARY} ${CFITSIO_LIBRARY} ${PAL_LIBRARY} ${M_LIBRARY} ${HYPERBEAM_LIB} ${MWALIB_LIB})
+target_link_libraries(make_mwa_incoh_beam ${PSRFITS_UTILS_LIBRARY} ${CFITSIO_LIBRARY} ${PAL_LIBRARY} ${M_LIBRARY} ${MWALIB_LIB})
 
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_tied_array_beam DESTINATION bin)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_tied_array_beam ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_incoh_beam DESTINATION bin)
 
 install(FILES xy_phase_correction.txt DESTINATION ${RUNTIME_DIR})

@@ -37,7 +37,8 @@
 #include <cuda_runtime.h>
 #include "ipfb.h"
 
-double now(){
+double now()
+{
   struct timespec t;
   clock_gettime(CLOCK_REALTIME,&t);
   return (double)t.tv_sec + (double)t.tv_nsec/1000000000L;
@@ -342,7 +343,7 @@ int main(int argc, char **argv)
         cu_load_filter( coeffs, twiddles, &gi, nchan );
     }
 
-    // Set up parrel streams
+    // Set up parallel streams
     cudaStream_t streams[npointing];
     for (p = 0; p < npointing; p++)
         cudaStreamCreate(&(streams[p])) ;

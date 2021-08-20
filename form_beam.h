@@ -82,6 +82,12 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
 
 
 
+void cu_form_incoh_beam(
+        uint8_t *data, uint8_t *d_data, size_t data_size,
+        float *incoh, float *d_incoh, size_t incoh_size,
+        unsigned int nsample, int nchan, int ninput );
+
+
 void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex *d_phi,
                    cuDoubleComplex ****J, int file_no, 
                    int npointing, int nstation, int nchan,

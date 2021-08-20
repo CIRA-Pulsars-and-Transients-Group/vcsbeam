@@ -9,6 +9,8 @@
 #include <cuComplex.h>
 #include <cuda_runtime.h>
 #include <mwalib.h>
+#include <star/pal.h>
+#include <star/palmac.h>
 #include "geometric_delay.h"
 #include "beam_common.h"
 
@@ -127,3 +129,70 @@ void push_geometric_delays_to_device( geometric_delays *gdelays )
     cudaMemcpyAsync( gdelays->d_phi, gdelays->phi, size, cudaMemcpyHostToDevice, 0 );
     cudaCheckErrors( "error: push_geometric_delays_to_device: cudaMemcpyAsync failed" );
 }
+
+
+void calc_beam_geom(
+        double           *ras_hours,
+        double           *decs_degs,
+        int               npointing,
+        double            mjd,
+        struct beam_geom  bg[] )
+{
+    // Calculate geometry of pointings
+
+    double intmjd;
+    double fracmjd;
+    double lmst;
+    double mean_ra, mean_dec, ha;
+    double az, el;
+
+    double unit_N;
+    double unit_E;
+    double unit_H;
+
+    double pr = 0, pd = 0, px = 0, rv = 0, eq = 2000, ra_ap = 0, dec_ap = 0;
+
+    /* get mjd */
+    intmjd = floor(mjd);
+    fracmjd = mjd - intmjd;
+
+    /* get requested Az/El from command line */
+    mjd2lst( mjd, &lmst );
+
+    for (int p = 0; p < npointing; p++)
+    {
+        /* for the look direction <not the tile> */
+
+        mean_ra = ras_hours[p] * PAL__DH2R;
+        mean_dec = decs_degs[p] * PAL__DD2R;
+
+        palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
+
+        // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
+
+        ha = palRanorm( lmst - ra_ap ); // in radians
+
+        /* now HA/Dec to Az/El */
+
+        palDe2h( ha, dec_ap, MWA_LATITUDE_RADIANS, &az, &el );
+
+        /* now we need the direction cosines */
+
+        unit_N = cos(el) * cos(az);
+        unit_E = cos(el) * sin(az);
+        unit_H = sin(el);
+
+        // Populate a structure with some of the calculated values
+        bg[p].mean_ra  = mean_ra;
+        bg[p].mean_dec = mean_dec;
+        bg[p].az       = az;
+        bg[p].el       = el;
+        bg[p].lmst     = lmst;
+        bg[p].fracmjd  = fracmjd;
+        bg[p].intmjd   = intmjd;
+        bg[p].unit_N   = unit_N;
+        bg[p].unit_E   = unit_E;
+        bg[p].unit_H   = unit_H;
+    }
+}
+

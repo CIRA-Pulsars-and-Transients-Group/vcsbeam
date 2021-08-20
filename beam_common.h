@@ -63,13 +63,6 @@ void get_jones(
         cuDoubleComplex    ****invJi                   // output
 );
 
-void calc_beam_geom(
-        double           *ras_hours,
-        double           *decs_degs,
-        int               npointing,
-        double            mjd,
-        struct beam_geom  bg[] );
-
 void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
 
 void int8_to_uint8(int n, int shift, char * to_convert);
