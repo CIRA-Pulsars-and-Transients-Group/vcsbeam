@@ -40,6 +40,37 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
 
+__global__ void incoh_beam( uint8_t *data, float *I, int npol )
+/* <<< (nchan,nsample), ninput >>>
+ */
+{
+    __shared__ float sum_power;
+
+    // Translate GPU block/thread numbers into meaning->l names
+    int c    = blockIdx.x;  /* The (c)hannel number */
+    int nc   = gridDim.x;   /* The (n)umber of (c)hannels */
+    int s    = blockIdx.y;  /* The (s)ample number */
+    int ni   = blockDim.x;  /* The (n)umber of RF (i)nputs */
+
+    int i  = threadIdx.x; /* The (ant)enna number */
+
+    if (i == 0)  sum_power = 0.0;
+    __syncthreads();
+
+    // Convert input data to complex double
+    cuDoubleComplex v; // Complex voltage
+    v = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,i,nc,ni)]);
+
+    // Detect the sample ("detect" = calculate power = magnitude squared)
+    // and add it to the others from this thread
+    atomicAdd( &sum_power, DETECT(v) );
+    __syncthreads();
+
+    if (i == 0)
+        I[I_IDX(s, c, nc)] = sum_power;
+}
+
+
 __global__ void invj_the_data( uint8_t       *data,
                                cuDoubleComplex *J,
                                cuDoubleComplex *phi,
