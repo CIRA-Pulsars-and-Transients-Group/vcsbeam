@@ -45,8 +45,38 @@ double now(){
 }
 
 #define NOW now()
+#define MAX_COMMAND_LENGTH 1024
 
-#define ERROR_MESSAGE_LEN  1024
+struct make_beam_opts {
+    // Variables for required options
+    unsigned long int  begin;         // GPS time -- when to start beamforming
+    unsigned long int  end;           // GPS time -- when to stop beamforming
+    char              *pointings_file; // Name of file containing pointings (e.g. "hh:mm:ss dd:mm:ss")
+    char              *datadir;       // The path to where the recombined data live
+    char              *metafits;      // filename of the metafits file
+    uintptr_t          rec_channel;   // 0 - 255 receiver 1.28MHz channel
+    long int           frequency;     // = rec_channel expressed in Hz
+
+    // Variables for MWA/VCS configuration
+    char              *custom_flags;  // Use custom list for flagging antennas
+
+    // Output options
+    int                out_incoh;     // Default = PSRFITS (incoherent) output turned OFF
+    int                out_coh;       // Default = PSRFITS (coherent)   output turned OFF
+    int                out_vdif;      // Default = VDIF                 output turned OFF
+    int                out_uvdif;     // Default = upsampled VDIF       output turned OFF
+    int                out_bf;        // Default = beamform over all (non-flagged) antennas
+    int                out_ant;       // The antenna number (0-127) to write out if out_bf = 0
+
+    // Other options
+    char              *synth_filter;  // Which synthesis filter to use
+    int                out_summed;    // Default = output only Stokes I output turned OFF
+    int                max_sec_per_file;    // Number of seconds per fits files
+    float              gpu_mem  ;     // Default = -1.0. If -1.0 use all GPU mem
+};
+
+void usage();
+void make_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal );
 
 int main(int argc, char **argv)
 {

@@ -8,6 +8,7 @@
 #define __METADATA_H__
 
 #define ERROR_MESSAGE_LEN  1024
+#define MAX_COMMAND_LENGTH 1024
 
 #include <mwalib.h>
 #include "make_beam.h"
