@@ -19,11 +19,9 @@ struct gpu_formbeam_arrays
     size_t incoh_size;
     size_t data_size;
     size_t Bd_size;
-    size_t W_size;
     size_t J_size;
     size_t JD_size;
     size_t pol_idxs_size;
-    cuDoubleComplex *W, *d_W;
     cuDoubleComplex *J, *d_J;
     cuDoubleComplex *Bd, *d_Bd;
     cuDoubleComplex *JDx, *d_JDx;
@@ -47,11 +45,6 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
 #define D_IDX(s,c,i,nc,ni)    ((s) * (ni)*(nc) + \
                                (c) * (ni)      + \
                                (i))
-
-#define W_IDX(p,a,c,pol,na,nc,npol)   ((p) * (npol)*(nc)*(na)  + \
-                                       (a) * (npol)*(nc)       + \
-                                       (c) * (npol)            + \
-                                       (pol))
 
 #define J_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol*npol*(nc))      + \
                                     (c)  * (npol*npol)           + \
@@ -89,7 +82,7 @@ void free_formbeam( struct gpu_formbeam_arrays *g );
 
 
 
-void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex ****W,
+void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex *d_phi,
                    cuDoubleComplex ****J, int file_no, 
                    int npointing, int nstation, int nchan,
                    int npol, int outpol_coh, double invw, struct gpu_formbeam_arrays *g,

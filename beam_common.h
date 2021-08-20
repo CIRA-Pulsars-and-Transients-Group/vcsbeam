@@ -23,6 +23,19 @@
 #define MWA_LON 116.67081         /* Array longitude. degrees East */
 #define MWA_HGT 377               /* Array altitude. meters above sea level */
 
+#define cudaCheckErrors(msg) \
+    do { \
+        cudaError_t __err = cudaGetLastError(); \
+        if (__err != cudaSuccess) { \
+            fprintf(stderr, "Fatal error: %s (%s at %s:%d)\n", \
+                msg, cudaGetErrorString(__err), \
+                __FILE__, __LINE__); \
+            fprintf(stderr, "*** FAILED - ABORTING\n"); \
+            exit(1); \
+        } \
+    } while (0)
+
+
 struct beam_geom {
     double mean_ra;
     double mean_dec;
@@ -74,9 +87,7 @@ void get_jones(
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
         cuDoubleComplex     ***B,
-        double              ***phi,
-        cuDoubleComplex      ****complex_weights_array,  // output
-        cuDoubleComplex      ****invJi                   // output
+        cuDoubleComplex    ****invJi                   // output
 );
 
 void calc_beam_geom(

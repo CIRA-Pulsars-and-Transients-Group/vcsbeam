@@ -109,8 +109,6 @@ void get_jones(
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
         cuDoubleComplex     ***B,
-        double              ***phi,
-        cuDoubleComplex    ****complex_weights_array,  // output: cmplx[npointing][ant][ch][pol]
         cuDoubleComplex    ****invJi )                 // output: invJi[ant][ch][pol][pol]
 {
 
@@ -123,7 +121,6 @@ void get_jones(
     int chan_width     = obs_metadata->corr_fine_chan_width_hz;
 
     int ant;     // Antenna number
-    int pol;     // Polarisation number
     int ch;      // Channel number
     int p1, p2;  // Counters for polarisation
 
@@ -157,11 +154,6 @@ void get_jones(
                 // Apply the UV phase correction (to the bottom row of the Jones matrix)
                 Ji[2] = cuCmul( Ji[2], uv_phase );
                 Ji[3] = cuCmul( Ji[3], uv_phase );
-
-                // Calculate the complex weights array
-                for (pol = 0; pol < npol; pol++)
-                    complex_weights_array[p][ant][ch][pol] =
-                        make_cuDoubleComplex( cos( phi[p][ant][ch] ), sin( phi[p][ant][ch] ));
 
                 // Now, calculate the inverse Jones matrix
 

@@ -8,27 +8,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include <cuComplex.h>
 #include <time.h>
+
+#include <cuComplex.h>
 #include <cuda_runtime.h>
 
-extern "C" {
 #include "beam_common.h"
+
+extern "C" {
 #include "form_beam.h"
+#include "geometric_delay.h"
 }
-
-
-#define cudaCheckErrors(msg) \
-    do { \
-        cudaError_t __err = cudaGetLastError(); \
-        if (__err != cudaSuccess) { \
-            fprintf(stderr, "Fatal error: %s (%s at %s:%d)\n", \
-                msg, cudaGetErrorString(__err), \
-                __FILE__, __LINE__); \
-            fprintf(stderr, "*** FAILED - ABORTING\n"); \
-            exit(1); \
-        } \
-    } while (0)
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -52,7 +42,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 
 __global__ void invj_the_data( uint8_t       *data,
                                cuDoubleComplex *J,
-                               cuDoubleComplex *W,
+                               cuDoubleComplex *phi,
                                cuDoubleComplex *JDx,
                                cuDoubleComplex *JDy,
                                float         *Ia,
@@ -90,16 +80,14 @@ __global__ void invj_the_data( uint8_t       *data,
     // If tile is flagged in the calibration, flag it in the incoherent beam
     if (incoh)
     {
-        if (cuCreal(W[W_IDX(0,ant,c,0,nant,nc,npol)]) == 0.0 &&
-            cuCimag(W[W_IDX(0,ant,c,0,nant,nc,npol)]) == 0.0 &&
-            cuCreal(W[W_IDX(0,ant,c,1,nant,nc,npol)]) == 0.0 &&
-            cuCimag(W[W_IDX(0,ant,c,1,nant,nc,npol)]) == 0.0)
+        if (cuCreal(phi[PHI_IDX(0,ant,c,nant,nc)]) == 0.0 &&
+            cuCimag(phi[PHI_IDX(0,ant,c,nant,nc)]) == 0.0)
             Ia[JD_IDX(s,c,ant,nc,nant)] = 0.0;
         else
             Ia[JD_IDX(s,c,ant,nc,nant)] = DETECT(Dx) + DETECT(Dy);
     }
 
-    // Calculate the first step (J*D) of the coherent beam (B = J*W*D)
+    // Calculate the first step (J*D) of the coherent beam (B = J*phi*D)
     // Nick: by my math the order should be:
     // JDx = Jxx*Dx + Jxy*Dy
     // JDy = Jyx*Dx + Jyy*Dy
@@ -116,7 +104,7 @@ __global__ void invj_the_data( uint8_t       *data,
 
 __global__ void beamform_kernel( cuDoubleComplex *JDx,
                                  cuDoubleComplex *JDy,
-                                 cuDoubleComplex *W,
+                                 cuDoubleComplex *phi,
                                  float *Iin,
                                  double invw,
                                  int p,
@@ -131,7 +119,7 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
 /* Layout for input arrays:
 *   JDx  [nsamples] [nchan] [nant]               -- calibrated voltages
 *   JDy  [nsamples] [nchan] [nant]
-*   W    [nant    ] [nchan] [npol]               -- weights array
+*   phi  [nant    ] [nchan]                      -- weights array
 *   Iin  [nsamples] [nchan] [nant]               -- detected incoh
 *   invw                                         -- inverse atrix
 * Layout of input options
@@ -187,9 +175,9 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
     if ((p == 0) && (incoh)) Ia[ant] = Iin[JD_IDX(s,c,ant,nc,nant)];
 
     // Calculate beamform products for each antenna, and then add them together
-    // Calculate the coherent beam (B = J*W*D)
-    Bx[ant] = cuCmul( W[W_IDX(p,ant,c,0,nant,nc,npol)], JDx[JD_IDX(s,c,ant,nc,nant)] );
-    By[ant] = cuCmul( W[W_IDX(p,ant,c,1,nant,nc,npol)], JDy[JD_IDX(s,c,ant,nc,nant)] );
+    // Calculate the coherent beam (B = J*phi*D)
+    Bx[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDx[JD_IDX(s,c,ant,nc,nant)] );
+    By[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDy[JD_IDX(s,c,ant,nc,nant)] );
 
     Nxx[ant] = cuCmul( Bx[ant], cuConj(Bx[ant]) );
     Nxy[ant] = cuCmul( Bx[ant], cuConj(By[ant]) );
@@ -333,7 +321,7 @@ __global__ void flatten_bandpass_C_kernel( float *C, int nstep )
 
 
 void cu_form_beam( uint8_t *data, unsigned int sample_rate,
-                   cuDoubleComplex ****complex_weights_array,
+                   cuDoubleComplex *d_phi,
                    cuDoubleComplex ****invJi, int file_no,
                    int npointing, int nstation, int nchan,
                    int npol, int outpol_coh, double invw,
@@ -344,7 +332,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 *   data    = array of 4bit+4bit complex numbers. For data order, refer to the
 *             documentation.
 *   sample_rate = The voltage sample rate, in Hz
-*   W       = complex weights array. [npointing][nstation][nchan][npol]
+*   d_phi   = geometric delays (device)  [pointing][nstation][nchan]
 *   J       = inverse Jones matrix.  [nstation][nchan][npol][npol]
 *   file_no = number of file we are processing, starting at 0.
 *   nstation     = number of antennas
@@ -366,20 +354,14 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 * Assumes "coh" and "incoh" contain only zeros.
 */
 {
-    // Setup input values (= populate W and J)
+    // Setup input values (= populate J)
     int p, ant, ch, pol, pol2;
-    int Wi, Ji;
+    int Ji;
     for (p   = 0; p   < npointing; p++  )
     for (ant = 0; ant < nstation ; ant++)
     for (ch  = 0; ch  < nchan    ; ch++ )
     for (pol = 0; pol < npol     ; pol++)
     {
-        Wi = p   * (npol*nchan*nstation) +
-             ant * (npol*nchan) +
-             ch  * (npol) +
-             pol;
-        g->W[Wi] = complex_weights_array[p][ant][ch][pol];
-
         if ( p == 0 )
         for (pol2 = 0; pol2 < npol; pol2++)
         {
@@ -391,7 +373,6 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
         }
     }
     // Copy the data to the device
-    gpuErrchk(cudaMemcpyAsync( g->d_W,    g->W, g->W_size,    cudaMemcpyHostToDevice ));
     gpuErrchk(cudaMemcpyAsync( g->d_J,    g->J, g->J_size,    cudaMemcpyHostToDevice ));
 
     // Divide the gpu calculation into multiple time chunks so there is enough room on the GPU
@@ -412,7 +393,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
         dim3 stat( nstation );
 
         // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, g->d_W, g->d_JDx, g->d_JDy,
+        invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, d_phi, g->d_JDx, g->d_JDy,
                                                g->d_Ia, incoh_check, g->d_polX_idxs, g->d_polY_idxs,
                                                npol );
 
@@ -422,7 +403,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
             // Call the beamformer kernel
             // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
             beamform_kernel<<<chan_samples, stat, 11*nstation*sizeof(double), streams[p]>>>( g->d_JDx, g->d_JDy,
-                            g->d_W, g->d_Ia, invw,
+                            d_phi, g->d_Ia, invw,
                             p, outpol_coh , incoh_check, ichunk*sample_rate/nchunk, nchunk,
                             g->d_Bd, g->d_coh, g->d_incoh, npol );
 
@@ -485,7 +466,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
     data_base_size = sample_rate * nstation * nchan * npol * sizeof(uint8_t);
     //g->data_size  = sample_rate * nstation * nchan * npol / nchunk * sizeof(uint8_t);
     g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
-    g->W_size      = npointing * nstation * nchan * npol * sizeof(cuDoubleComplex);
     g->J_size      = nstation * nchan * npol * npol * sizeof(cuDoubleComplex);
     JD_base_size   = sample_rate * nstation * nchan * sizeof(cuDoubleComplex);
     //g->JD_size    = sample_rate * nstation * nchan / nchunk * sizeof(cuDoubleComplex);
@@ -514,7 +494,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
         {
             *nchunk += 1;
         }
-        gpu_mem_used = (g->W_size + g->J_size + g->Bd_size + data_base_size / *nchunk +
+        gpu_mem_used = (g->J_size + g->Bd_size + data_base_size / *nchunk +
                         g->coh_size + g->incoh_size + 3*JD_base_size / *nchunk);
     }
     float gpu_mem_used_gb = (float)gpu_mem_used / (float)(1024*1024*1024);
@@ -527,11 +507,8 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
 
 
     // Allocate host memory
-    //g->W  = (cuDoubleComplex *)malloc( g->W_size );
     //g->J  = (cuDoubleComplex *)malloc( g->J_size );
     //g->Bd = (cuDoubleComplex *)malloc( g->Bd_size );
-    cudaMallocHost( &g->W, g->W_size );
-    cudaCheckErrors("cudaMallocHost W fail");
     cudaMallocHost( &g->J, g->J_size );
     cudaCheckErrors("cudaMallocHost J fail");
     cudaMallocHost( &g->Bd, g->Bd_size );
@@ -545,8 +522,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
                       time, (float)g->data_size / (float)(1024*1024) );
     fprintf( stderr, "[%f]  Bd_size    %9.3f MB GPU mem\n",
                       time, (float)g->Bd_size   / (float)(1024*1024) );
-    fprintf( stderr, "[%f]  W_size     %9.3f MB GPU mem\n",
-                      time, (float)g->W_size    / (float)(1024*1024) );
     fprintf( stderr, "[%f]  J_size     %9.3f MB GPU mem\n",
                       time, (float)g->J_size    / (float)(1024*1024) );
     fprintf( stderr, "[%f]  JD_size    %9.3f MB GPU mem\n",
@@ -554,7 +529,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
 
 
     // Allocate device memory
-    gpuErrchk(cudaMalloc( (void **)&g->d_W,     g->W_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_J,     g->J_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDx,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDy,   g->JD_size ));
@@ -581,12 +555,10 @@ void cu_upload_pol_idx_lists( struct gpu_formbeam_arrays *g )
 void free_formbeam( struct gpu_formbeam_arrays *g )
 {
     // Free memory on host and device
-    cudaFreeHost( g->W );
     cudaFreeHost( g->J );
     cudaFreeHost( g->Bd );
     cudaFreeHost( g->polX_idxs );
     cudaFreeHost( g->polY_idxs );
-    cudaFree( g->d_W );
     cudaFree( g->d_J );
     cudaFree( g->d_Bd );
     cudaFree( g->d_data );
@@ -616,33 +588,4 @@ float *create_pinned_data_buffer_vdif( size_t size )
     return ptr;
 }
 
-void populate_weights_jones( struct gpu_formbeam_arrays *g,
-                             cuDoubleComplex ****complex_weights_array,
-                             cuDoubleComplex *****invJi,
-                             int npointing, int nstation, int nchan, int npol )
-{
-    // Setup input values (= populate W and J)
-    int p, ant, ch, pol, pol2;
-    int Wi, Ji;
-    for (p   = 0; p   < npointing; p++  )
-    for (ant = 0; ant < nstation ; ant++)
-    for (ch  = 0; ch  < nchan    ; ch++ )
-    for (pol = 0; pol < npol     ; pol++)
-    {
-        Wi = p   * (npol*nchan*nstation) +
-             ant * (npol*nchan) +
-             ch  * (npol) +
-             pol;
-        g->W[Wi] = complex_weights_array[p][ant][ch][pol];
-
-        for (pol2 = 0; pol2 < npol; pol2++)
-        {
-            Ji = Wi*npol + pol2;
-            g->J[Ji] = invJi[p][ant][ch][pol][pol2];
-        }
-    }
-    // Copy the data to the device
-    gpuErrchk(cudaMemcpy( g->d_W, g->W, g->W_size, cudaMemcpyHostToDevice ));
-    gpuErrchk(cudaMemcpy( g->d_J, g->J, g->J_size, cudaMemcpyHostToDevice ));
-}
 

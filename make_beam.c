@@ -152,7 +152,6 @@ int main(int argc, char **argv)
     parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &npointing );
 
     // Allocate memory for various data products
-    cuDoubleComplex  ****complex_weights_array = create_complex_weights( npointing, nant, nchan, npol );
     cuDoubleComplex  ****invJi                 = create_invJi( nant, nchan, npol );
     cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*sample_rate, nchan, npol );
 
@@ -205,23 +204,23 @@ int main(int argc, char **argv)
         */
     }
 
+    int coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
+                                ever processes one coarse chan. However, in the future,
+                                this should be flexible, with mpi or threads managing
+                                different coarse channels. */
+    int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
+
     // ------------------
-    // Allocate memory for various calculations
+    // Allocate memory for various arrays
     // ------------------
     cuDoubleComplex ***B   = malloc_primary_beam( obs_metadata, npointing );
-    double          ***phi = malloc_geometric_delays( obs_metadata, vcs_metadata, npointing );
+    geometric_delays gdelays;
+    create_geometric_delays( &gdelays, obs_metadata, vcs_metadata, coarse_chan, npointing );
 
     // ------------------
 
     fprintf( stderr, "[%f]  Setting up output header information\n", NOW-begintime);
     struct beam_geom beam_geom_vals[npointing];
-
-    int coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
-                                ever processes one coarse chan. However, in the future,
-                                this should be flexible, with mpi or threads managing
-                                different coarse channels. */
-
-    int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
 
     double mjd, sec_offset;
     mjd = obs_metadata->sched_start_mjd;
@@ -381,8 +380,8 @@ int main(int argc, char **argv)
                 beam_geom_vals, beam, delays, amps, npointing );
 
         // Calculate the geometric delays
-        calc_geometric_delays( phi, obs_metadata, vcs_metadata, coarse_chan_idx,
-                beam_geom_vals, npointing );
+        calc_geometric_delays( &gdelays, beam_geom_vals );
+        push_geometric_delays_to_device( &gdelays );
 
         get_jones(
                 npointing,          // number of pointings
@@ -392,8 +391,6 @@ int main(int argc, char **argv)
                 &cal,              // struct holding info about calibration
                 D,                      // Calibration Jones matrices
                 B,                      // Primary beam jones matrices
-                phi,                    // Geometric delays
-                complex_weights_array,  // complex weights array (answer will be output here)
                 invJi );                // invJi array           (answer will be output here)
 
         delay_time[timestep_idx] = clock() - start;
@@ -426,7 +423,7 @@ int main(int argc, char **argv)
         }
         else // beamform (the default mode)
         {
-            cu_form_beam( data, sample_rate, complex_weights_array, invJi, timestep_idx,
+            cu_form_beam( data, sample_rate, gdelays.d_phi, invJi, timestep_idx,
                     npointing, nant, nchan, npol, outpol_coh, invw, &gf,
                     detected_beam, data_buffer_coh, data_buffer_incoh,
                     streams, opts.out_incoh, nchunk );
@@ -518,7 +515,6 @@ int main(int argc, char **argv)
     fprintf( stderr, "[%f]  Starting clean-up\n", NOW-begintime);
 
     // Free up memory
-    destroy_complex_weights( complex_weights_array, npointing, nant, nchan );
     destroy_invJi( invJi, nant, nchan, npol );
     destroy_detected_beam( detected_beam, npointing, 2*sample_rate, nchan );
 
@@ -572,7 +568,7 @@ int main(int argc, char **argv)
 
     // Clean up memory associated with the Jones matrices
     free_primary_beam( B, obs_metadata, npointing );
-    free_geometric_delays( phi, obs_metadata, npointing );
+    free_geometric_delays( &gdelays );
 
     // Clean up memory associated with mwalib
     mwalib_metafits_metadata_free( obs_metadata );
@@ -903,47 +899,6 @@ void destroy_filenames( char **filenames, int nfiles )
     free( filenames );
 }
 
-
-cuDoubleComplex ****create_complex_weights( int npointing, int nant, int nchan, int npol )
-// Allocate memory for complex weights matrices
-{
-    int p, ant, ch; // Loop variables
-    cuDoubleComplex ****array;
-
-    array = (cuDoubleComplex ****)malloc( npointing * sizeof(cuDoubleComplex ***) );
-
-    for (p = 0; p < npointing; p++)
-    {
-        array[p] = (cuDoubleComplex ***)malloc( nant * sizeof(cuDoubleComplex **) );
-
-        for (ant = 0; ant < nant; ant++)
-        {
-            array[p][ant] = (cuDoubleComplex **)malloc( nchan * sizeof(cuDoubleComplex *) );
-
-            for (ch = 0; ch < nchan; ch++)
-                array[p][ant][ch] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
-        }
-    }
-    return array;
-}
-
-
-void destroy_complex_weights( cuDoubleComplex ****array, int npointing, int nant, int nchan )
-{
-    int p, ant, ch;
-    for (p = 0; p < npointing; p++)
-    {
-        for (ant = 0; ant < nant; ant++)
-        {
-            for (ch = 0; ch < nchan; ch++)
-                free( array[p][ant][ch] );
-
-            free( array[p][ant] );
-        }
-        free( array[p] );
-    }
-    free( array );
-}
 
 cuDoubleComplex ****create_invJi( int nant, int nchan, int npol )
 // Allocate memory for (inverse) Jones matrices

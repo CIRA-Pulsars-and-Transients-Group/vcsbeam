@@ -6,30 +6,19 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <cuComplex.h>
+#include <cuda_runtime.h>
 #include <mwalib.h>
 #include "geometric_delay.h"
 #include "beam_common.h"
 
 void calc_geometric_delays(
-        double ***phi,
-        MetafitsMetadata  *obs_metadata,
-        VoltageMetadata   *vcs_metadata,
-        uintptr_t          coarse_chan_idx,
-        struct beam_geom  *beam_geom_vals,
-        uintptr_t          npointings )
-/* Calculate the geometric delay (in radians) for the given
- *   pointings, antennas, channels
+        geometric_delays  *gdelays,
+        struct beam_geom  *beam_geom_vals )
+/* Calculate the geometric delay (in radians) for the given pointings
  */
 {
-    uintptr_t nant = obs_metadata->num_ants;
-    uintptr_t nchan = vcs_metadata->num_fine_chans_per_coarse;
     uintptr_t p, a, c; // Counters for (p)ointing, (a)ntenna, (c)hannel
-
-    // Get a pointer to the array of fine channel frequencies
-    // This is a (contiguous) subset of an array already provided
-    // by mwalib, but we need to jump into it at the right coarse channel
-    uintptr_t coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
-    double *fine_chan_freqs_hz = &(obs_metadata->metafits_fine_chan_freqs[coarse_chan*nchan]);
 
     double E, N, H; // Location of the antenna: (E)ast, (N)orth, (H)eight
     double cable;   // The cable length for a given antenna
@@ -46,17 +35,17 @@ void calc_geometric_delays(
     double cable_ref = 0.0;
 
     // Other various intermediate products
-    double L, w, Delta_t;
+    double L, w, Delta_t, phase;
 
-    for (p = 0; p < npointings; p++)
+    for (p = 0; p < gdelays->npointings; p++)
     {
-        for (a = 0; a < nant; a++)
+        for (a = 0; a < gdelays->nant; a++)
         {
             // Get the location and cable length for this antenna
-            E     = obs_metadata->antennas[a].east_m;
-            N     = obs_metadata->antennas[a].north_m;
-            H     = obs_metadata->antennas[a].height_m;
-            cable = obs_metadata->antennas[a].electrical_length_m;
+            E     = gdelays->obs_metadata->antennas[a].east_m;
+            N     = gdelays->obs_metadata->antennas[a].north_m;
+            H     = gdelays->obs_metadata->antennas[a].height_m;
+            cable = gdelays->obs_metadata->antennas[a].electrical_length_m;
             L     = cable - cable_ref;
 
             // Eq. (1) in Ord et al. (2019)
@@ -75,59 +64,65 @@ void calc_geometric_delays(
             // correct answer.
             Delta_t = (w - L)/SPEED_OF_LIGHT_IN_VACUUM_M_PER_S;
 
-            for (c = 0; c < nchan; c++)
+            for (c = 0; c < gdelays->nchan; c++)
             {
                 // Eq. (3) in Ord et al. (2019)
                 // NB: Again, the sign flip (compared to the paper) is
                 // unexplained.
-                phi[p][a][c] = -2.0 * M_PI * Delta_t * fine_chan_freqs_hz[c];
+                phase = -2.0 * M_PI * Delta_t * gdelays->chan_freqs_hz[c];
+                gdelays->phi[PHI_IDX(p, a, c, gdelays->nant, gdelays->nchan)] =
+                    make_cuDoubleComplex( cos( phase ), sin( phase ));
             }
         }
     }
 }
 
-double ***malloc_geometric_delays(
+void create_geometric_delays(
+        geometric_delays  *gdelays,
         MetafitsMetadata  *obs_metadata,
         VoltageMetadata   *vcs_metadata,
+        uintptr_t          coarse_chan,
         uintptr_t          npointings )
-/* Allocates memory for the geometric delay arrays ("phi").
- * Free with free_geometric_delays().
+/* Allocates memory for the geometric delay arrays ("phi") on both host and device.
+ * Free with free_geometric_delays()
  */
 {
-    uintptr_t nant = obs_metadata->num_ants;
-    uintptr_t nchan = vcs_metadata->num_fine_chans_per_coarse;
-    uintptr_t p, a; // Counters for (p)ointing, (a)ntenna
+    gdelays->npointings   = npointings;
+    gdelays->nant         = obs_metadata->num_ants;
+    gdelays->nchan        = vcs_metadata->num_fine_chans_per_coarse;
+    gdelays->obs_metadata = obs_metadata;
 
-    double ***phi = (double ***)malloc( npointings * sizeof(double **) );
-    for (p = 0; p < npointings; p++)
-    {
-        phi[p] = (double **)malloc( nant * sizeof(double *) );
-        for (a = 0; a < nant; a++)
-        {
-            phi[p][a] = (double *)malloc( nchan * sizeof(double) );
-        }
-    }
+    // Get a pointer to the array of fine channel frequencies
+    // This is a (contiguous) subset of an array already provided
+    // by mwalib, but we need to jump into it at the right coarse channel
+    gdelays->chan_freqs_hz = &(obs_metadata->metafits_fine_chan_freqs[coarse_chan*gdelays->nchan]);
 
-    return phi;
+    // Allocate memory
+    size_t size = gdelays->npointings * gdelays->nant * gdelays->nchan * sizeof(cuDoubleComplex);
+
+    cudaMallocHost( (void **)&(gdelays->phi), size );
+    cudaCheckErrors( "error: create_geometric_delays: cudaMallocHost failed" );
+
+    cudaMalloc( (void **)&(gdelays->d_phi), size );
+    cudaCheckErrors( "error: create_geometric_delays: cudaMalloc failed" );
 }
 
-
-void free_geometric_delays(
-        double           ***phi,
-        MetafitsMetadata   *obs_metadata,
-        uintptr_t           npointings )
-/* Free memory created with malloc_geometric_delays()
+void free_geometric_delays( geometric_delays *gdelays )
+/* Free memory allocated with create_geometric_delays()
  */
 {
-    uintptr_t nant = obs_metadata->num_ants;
-    uintptr_t p, a; // Counters for (p)ointing, (a)ntenna
+    cudaFreeHost( gdelays->phi );
+    cudaCheckErrors( "error: free_geometric_delays: cudaFreeHost failed" );
 
-    for (p = 0; p < npointings; p++)
-    {
-        for (a = 0; a < nant; a++)
-            free( phi[p][a] );
-        free( phi[p] );
-    }
-    free( phi );
+    cudaFree( gdelays->d_phi );
+    cudaCheckErrors( "error: free_geometric_delays: cudaFreeHost failed" );
 }
 
+void push_geometric_delays_to_device( geometric_delays *gdelays )
+/* Copy host memory block to device
+ */
+{
+    size_t size = gdelays->npointings * gdelays->nant * gdelays->nchan * sizeof(cuDoubleComplex);
+    cudaMemcpyAsync( gdelays->d_phi, gdelays->phi, size, cudaMemcpyHostToDevice, 0 );
+    cudaCheckErrors( "error: push_geometric_delays_to_device: cudaMemcpyAsync failed" );
+}
