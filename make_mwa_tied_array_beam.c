@@ -25,7 +25,6 @@
 #include "beam_common.h"
 #include "beam_psrfits.h"
 #include "beam_vdif.h"
-#include "make_beam.h"
 #include "metadata.h"
 #include "vdifio.h"
 #include "filter.h"
@@ -306,9 +305,9 @@ int main(int argc, char **argv)
     // Create array for holding the raw data
     long int bytes_per_timestep = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
 
-    //cudaMallocHost( (void**)&data, bytes_per_timestep * sizeof(uint8_t) );
-    uint8_t *data = (uint8_t *)malloc( bytes_per_timestep * sizeof(uint8_t) );
-    assert(data);
+    uint8_t *data;
+    cudaMallocHost( (void **)&data, bytes_per_timestep * sizeof(uint8_t) );
+    cudaCheckErrors( "cudaMallocHost(data) failed" );
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
@@ -533,9 +532,13 @@ int main(int argc, char **argv)
     free( coeffs );
 
     cudaFreeHost( data_buffer_coh   );
+    cudaCheckErrors( "cudaFreeHost(data_buffer_coh) failed" );
     cudaFreeHost( data_buffer_incoh );
+    cudaCheckErrors( "cudaFreeHost(data_buffer_incoh) failed" );
     cudaFreeHost( data_buffer_vdif  );
+    cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
     cudaFreeHost( data );
+    cudaCheckErrors( "cudaFreeHost(data) failed" );
 
     free( opts.pointings_file );
     free( opts.datadir        );

@@ -105,6 +105,7 @@ void create_geometric_delays(
 
     cudaMalloc( (void **)&(gdelays->d_phi), size );
     cudaCheckErrors( "error: create_geometric_delays: cudaMalloc failed" );
+fprintf( stderr, "create: host: %p,  device %p\n", gdelays->phi, gdelays->d_phi );
 }
 
 void free_geometric_delays( geometric_delays *gdelays )
@@ -112,10 +113,10 @@ void free_geometric_delays( geometric_delays *gdelays )
  */
 {
     cudaFreeHost( gdelays->phi );
-    cudaCheckErrors( "error: free_geometric_delays: cudaFreeHost failed" );
+    cudaCheckErrors( "(free_geometric_delays) cudaFreeHost failed" );
 
     cudaFree( gdelays->d_phi );
-    cudaCheckErrors( "error: free_geometric_delays: cudaFreeHost failed" );
+    cudaCheckErrors( "(free_geometric_delays) cudaFree failed" );
 }
 
 void push_geometric_delays_to_device( geometric_delays *gdelays )

@@ -11,7 +11,6 @@
 #define MAX_COMMAND_LENGTH 1024
 
 #include <mwalib.h>
-#include "make_beam.h"
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,

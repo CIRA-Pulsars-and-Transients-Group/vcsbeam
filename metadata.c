@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <mwalib.h>
-#include "make_beam.h"
 #include "metadata.h"
 
 char **create_filenames(

@@ -497,6 +497,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
     data_base_size = sample_rate * nstation * nchan * npol * sizeof(uint8_t);
     //g->data_size  = sample_rate * nstation * nchan * npol / nchunk * sizeof(uint8_t);
     g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
+    size_t phi_size = npointing * nstation * nchan * sizeof(cuDoubleComplex);
     g->J_size      = nstation * nchan * npol * npol * sizeof(cuDoubleComplex);
     JD_base_size   = sample_rate * nstation * nchan * sizeof(cuDoubleComplex);
     //g->JD_size    = sample_rate * nstation * nchan / nchunk * sizeof(cuDoubleComplex);
@@ -525,7 +526,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
         {
             *nchunk += 1;
         }
-        gpu_mem_used = (g->J_size + g->Bd_size + data_base_size / *nchunk +
+        gpu_mem_used = (phi_size + g->J_size + g->Bd_size + data_base_size / *nchunk +
                         g->coh_size + g->incoh_size + 3*JD_base_size / *nchunk);
     }
     float gpu_mem_used_gb = (float)gpu_mem_used / (float)(1024*1024*1024);
@@ -553,6 +554,8 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
                       time, (float)g->data_size / (float)(1024*1024) );
     fprintf( stderr, "[%f]  Bd_size    %9.3f MB GPU mem\n",
                       time, (float)g->Bd_size   / (float)(1024*1024) );
+    fprintf( stderr, "[%f]  phi_size   %9.3f MB GPU mem\n",
+                      time, (float)phi_size     / (float)(1024*1024) );
     fprintf( stderr, "[%f]  J_size     %9.3f MB GPU mem\n",
                       time, (float)g->J_size    / (float)(1024*1024) );
     fprintf( stderr, "[%f]  JD_size    %9.3f MB GPU mem\n",
