@@ -330,3 +330,8 @@ void printf_psrfits( struct psrfits *pf )
 
 }
 
+float *create_data_buffer_psrfits( size_t size )
+{
+    float *ptr = (float *)malloc( size * sizeof(float) );
+    return ptr;
+}

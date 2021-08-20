@@ -277,4 +277,10 @@ void to_offset_binary(int8_t *i, int n)
     }
 }
 
+float *create_data_buffer_vdif( size_t size )
+{
+    float *ptr  = (float *)malloc( size * sizeof(float) );
+    return ptr;
+}
+
 

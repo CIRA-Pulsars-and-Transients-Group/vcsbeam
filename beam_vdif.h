@@ -81,4 +81,6 @@ void normalise_complex( cuFloatComplex *input, int nsamples, float scale );
 
 void to_offset_binary( int8_t *i, int n );
 
+float *create_data_buffer_vdif( size_t size );
+
 #endif

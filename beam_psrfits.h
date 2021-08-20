@@ -28,5 +28,6 @@ void correct_psrfits_stt( struct psrfits *pf );
 void psrfits_write_second( struct psrfits *pf, float *data_buffer, int nchan,
         int outpol, int p);
 
+float *create_data_buffer_psrfits( size_t size );
 
 #endif

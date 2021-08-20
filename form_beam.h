@@ -95,10 +95,12 @@ float *create_pinned_data_buffer_vdif( size_t size );
 
 void cu_upload_pol_idx_lists( struct gpu_formbeam_arrays *g );
 
-/*** THE BELOW FUNCTION DOES NOT APPEAR TO BE USED -- DEPRECATE ***/
-void populate_weights_jones( struct gpu_formbeam_arrays *g,
-                             cuDoubleComplex ****complex_weights_array,
-                             cuDoubleComplex *****invJi,
-                             int npointing, int nstation, int nchan, int npol );
+cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
+void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );
+
+cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol );
+void              destroy_detected_beam( cuDoubleComplex ****array, int npointing,
+                                         int nsamples, int nchan );
+
 
 #endif

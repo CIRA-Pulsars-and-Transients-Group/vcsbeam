@@ -18,25 +18,5 @@
 void usage();
 void make_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal );
 
-char **create_filenames(
-        const struct MetafitsContext *metafits_context,
-        const struct MetafitsMetadata *metafits_metadata,
-        struct make_beam_opts *opts );
-
-void  destroy_filenames( char **filenames, int nfiles );
-
-cuDoubleComplex ****create_complex_weights( int npointing, int nstation, int nchan, int npol );
-void              destroy_complex_weights( cuDoubleComplex ****array, int npointing,
-                                           int nstation, int nchan );
-
-cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
-void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );
-
-cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol );
-void              destroy_detected_beam( cuDoubleComplex ****array, int npointing,
-                                         int nsamples, int nchan );
-
-float *create_data_buffer_psrfits( size_t size );
-float *create_data_buffer_vdif( size_t size );
 
 #endif

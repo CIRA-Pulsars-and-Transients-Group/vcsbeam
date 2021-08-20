@@ -620,3 +620,45 @@ float *create_pinned_data_buffer_vdif( size_t size )
 }
 
 
+cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
+// Allocate memory for complex weights matrices
+{
+    int p, s, ch; // Loop variables
+    cuDoubleComplex ****array;
+
+    array = (cuDoubleComplex ****)malloc( npointing * sizeof(cuDoubleComplex ***) );
+    for (p = 0; p < npointing; p++)
+    {
+        array[p] = (cuDoubleComplex ***)malloc( nsamples * sizeof(cuDoubleComplex **) );
+
+        for (s = 0; s < nsamples; s++)
+        {
+            array[p][s] = (cuDoubleComplex **)malloc( nchan * sizeof(cuDoubleComplex *) );
+
+            for (ch = 0; ch < nchan; ch++)
+                array[p][s][ch] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
+        }
+    }
+    return array;
+}
+
+
+void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsamples, int nchan )
+{
+    int p, s, ch;
+    for (p = 0; p < npointing; p++)
+    {
+        for (s = 0; s < nsamples; s++)
+        {
+            for (ch = 0; ch < nchan; ch++)
+                free( array[p][s][ch] );
+
+            free( array[p][s] );
+        }
+
+        free( array[p] );
+    }
+
+    free( array );
+}
+

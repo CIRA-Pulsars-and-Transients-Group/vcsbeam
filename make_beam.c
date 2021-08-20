@@ -26,6 +26,7 @@
 #include "beam_psrfits.h"
 #include "beam_vdif.h"
 #include "make_beam.h"
+#include "metadata.h"
 #include "vdifio.h"
 #include "filter.h"
 #include "psrfits.h"
@@ -46,14 +47,6 @@ double now(){
 #define NOW now()
 
 #define ERROR_MESSAGE_LEN  1024
-
-void get_mwalib_metadata(
-        struct make_beam_opts *opts,
-        struct calibration *cal,
-        MetafitsMetadata **obs_metadata,
-        VoltageMetadata  **vcs_metadata,
-        VoltageContext   **vcs_context,
-        MetafitsMetadata **cal_metadata );
 
 int main(int argc, char **argv)
 {
@@ -119,10 +112,8 @@ int main(int argc, char **argv)
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
 
-    if (opts.out_coh || opts.out_vdif)
-        get_mwalib_metadata( &opts, &cal, &obs_metadata, &vcs_metadata, &vcs_context, &cal_metadata );
-    else
-        get_mwalib_metadata( &opts, &cal, &obs_metadata, &vcs_metadata, &vcs_context, NULL );
+    get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context, &cal_metadata,
+            opts.metafits, cal.metafits, opts.begin, opts.end, opts.datadir, opts.rec_channel );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nant           = obs_metadata->num_ants;
@@ -827,65 +818,6 @@ void make_beam_parse_cmdline(
 
 
 
-char **create_filenames( const struct MetafitsContext *metafits_context, const struct MetafitsMetadata *metafits_metadata, struct make_beam_opts *opts )
-// Create an array of filenames; free with destroy_filenames()
-{
-    // Buffer for mwalib error messages
-    char error_message[ERROR_MESSAGE_LEN];
-
-    // Calculate the number of files
-    unsigned int ntimesteps = opts->end - opts->begin + 1;
-    if (ntimesteps <= 0) {
-        fprintf( stderr, "Cannot beamform on %d files (between %ld and %ld)\n",
-                 ntimesteps, opts->begin, opts->end);
-        exit(EXIT_FAILURE);
-    }
-    // Allocate memory for the file name list
-    char filename[MAX_COMMAND_LENGTH]; // Just the mwalib-generated filename (without the path)
-    char **filenames = (char **)malloc( ntimesteps*sizeof(char *) ); // The full array of filenames, including the paths
-
-    // Get the coarse channel index
-    unsigned int coarse_chan_idx;
-    for (coarse_chan_idx = 0; coarse_chan_idx < metafits_metadata->num_metafits_coarse_chans; coarse_chan_idx++)
-        if (metafits_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number == (uintptr_t)opts->rec_channel)
-            break;
-
-    // Allocate memory and write filenames
-    unsigned int timestep, timestep_idx, filename_idx;
-    for (timestep = opts->begin; timestep <= opts->end; timestep++)
-    {
-        timestep_idx = timestep - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000); // <-- This assumes timesteps are always contiguous
-        filename_idx = timestep - opts->begin;
-
-        filenames[filename_idx] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
-        if (mwalib_metafits_get_expected_volt_filename(
-                    metafits_context,
-                    timestep_idx,
-                    coarse_chan_idx,
-                    filename,
-                    MAX_COMMAND_LENGTH,
-                    error_message,
-                    ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-        {
-            fprintf( stderr, "error (mwalib): cannot create filenames: %s\n", error_message );
-            exit(EXIT_FAILURE);
-        }
-        sprintf( filenames[filename_idx], "%s/%s",
-                 opts->datadir, filename );
-    }
-
-    return filenames;
-}
-
-void destroy_filenames( char **filenames, int nfiles )
-{
-    int i;
-    for (i = 0; i < nfiles; i++)
-        free( filenames[i] );
-    free( filenames );
-}
-
-
 cuDoubleComplex ****create_invJi( int nant, int nchan, int npol )
 // Allocate memory for (inverse) Jones matrices
 {
@@ -926,164 +858,6 @@ void destroy_invJi( cuDoubleComplex ****array, int nant, int nchan, int npol )
     free( array );
 }
 
-
-cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
-// Allocate memory for complex weights matrices
-{
-    int p, s, ch; // Loop variables
-    cuDoubleComplex ****array;
-
-    array = (cuDoubleComplex ****)malloc( npointing * sizeof(cuDoubleComplex ***) );
-    for (p = 0; p < npointing; p++)
-    {
-        array[p] = (cuDoubleComplex ***)malloc( nsamples * sizeof(cuDoubleComplex **) );
-
-        for (s = 0; s < nsamples; s++)
-        {
-            array[p][s] = (cuDoubleComplex **)malloc( nchan * sizeof(cuDoubleComplex *) );
-
-            for (ch = 0; ch < nchan; ch++)
-                array[p][s][ch] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
-        }
-    }
-    return array;
-}
-
-void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsamples, int nchan )
-{
-    int p, s, ch;
-    for (p = 0; p < npointing; p++)
-    {
-        for (s = 0; s < nsamples; s++)
-        {
-            for (ch = 0; ch < nchan; ch++)
-                free( array[p][s][ch] );
-
-            free( array[p][s] );
-        }
-
-        free( array[p] );
-    }
-
-    free( array );
-}
-
-float *create_data_buffer_psrfits( size_t size )
-{
-    float *ptr = (float *)malloc( size * sizeof(float) );
-    return ptr;
-}
-
-
-float *create_data_buffer_vdif( size_t size )
-{
-    float *ptr  = (float *)malloc( size * sizeof(float) );
-    return ptr;
-}
-
-
-void get_mwalib_metadata(
-        struct make_beam_opts *opts,
-        struct calibration *cal,
-        MetafitsMetadata **obs_metadata,
-        VoltageMetadata  **vcs_metadata,
-        VoltageContext   **vcs_context,
-        MetafitsMetadata **cal_metadata )
-/* Create the metadata structs using mwalib's API.
- *
- * obs_metadata applies to the metafits metadata for the target observation, and cannot be null
- * vcs_metadata applies to the voltage metadata for the target observation, and cannot be null
- * cal_metadata applies to the metafits metadata for the calibration observation, and may be NULL
- *     (if only an incoherent beam is requested)
- * vcs_context applies to the voltage context for the target observation, and cannot be null
- */
-{
-    char error_message[ERROR_MESSAGE_LEN];
-    error_message[0] = '\0'; // <-- Just to avoid a compiler warning about uninitialised variables
-
-    // Each metadata is constructed from mwalib "contexts"
-    // These are only temporarily needed to construct the other metadata/context structs,
-    // and will be freed at the end of this function
-    MetafitsContext *obs_context = NULL;
-    MetafitsContext *cal_context = NULL;
-
-    // First, get the metafits context for the given observation metafits file in order to create
-    // a list of filenames for creating the voltage context. This metafits context will be remade
-    // from the voltage context later, in order to get the antenna ordering correct (which depends
-    // on the voltage type)
-
-    // Create OBS_CONTEXT
-    if (mwalib_metafits_context_new2( opts->metafits, &obs_context, error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    // Create OBS_METADATA
-    if (mwalib_metafits_metadata_get( obs_context, NULL, NULL, obs_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    // Create list of filenames
-    char **filenames = create_filenames( obs_context, *obs_metadata, opts );
-
-    // Now that we have the filenames, we don't need this version of the obs context and metadata.
-    mwalib_metafits_metadata_free( *obs_metadata );
-    mwalib_metafits_context_free( obs_context );
-
-    // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
-    // (MWALIB is expecting a const array, so we will give it one!)
-    unsigned int ntimesteps = opts->end - opts->begin + 1;
-    const char **voltage_files = (const char **)malloc( sizeof(char *) * ntimesteps );
-    unsigned int i;
-    for (i = 0; i < ntimesteps; i++)
-        voltage_files[i] = filenames[i];
-
-    // Create VCS_CONTEXT
-    if (mwalib_voltage_context_new( opts->metafits, voltage_files, ntimesteps, vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create voltage context: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    // Create OBS_METADATA
-    if (mwalib_metafits_metadata_get( NULL, NULL, *vcs_context, obs_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create metafits metadata from voltage context: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    // Create VCS_METADATA
-    if (mwalib_voltage_metadata_get( *vcs_context, vcs_metadata, error_message, ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot get metadata: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    // Free memory
-    destroy_filenames( filenames, ntimesteps );
-    free( voltage_files );
-
-    // Can stop at this point if no calibration metadata is requested
-    if (cal_metadata == NULL)
-        return;
-
-    // Create CAL_CONTEXT
-    if (mwalib_metafits_context_new2( cal->metafits, &cal_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create cal metafits context: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    // Create CAL_METADATA
-    if (mwalib_metafits_metadata_get( cal_context, NULL, NULL, cal_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create cal metafits metadata: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-}
 
 void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings )
 /* Parse the given file in FILENAME and create arrays of RAs and DECs.
