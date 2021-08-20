@@ -155,17 +155,6 @@ int main(int argc, char **argv)
     cuDoubleComplex  ****invJi                 = create_invJi( nant, nchan, npol );
     cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*sample_rate, nchan, npol );
 
-    // Load the FEE2016 beam and set up the "delays" and "amps" arrays
-    fprintf( stderr, "[%f]  Reading in beam model from %s\n", NOW-begintime, HYPERBEAM_HDF5 );
-    FEEBeam *beam = NULL;
-    beam = new_fee_beam( HYPERBEAM_HDF5 );
-    // Also, to prep for the FEE beam function call, create an "amps" array
-    // based on the delays array from the metafits
-    //int ninputs = obs_metadata->num_rf_inputs;
-    uint32_t **delays;
-    double **amps;
-    create_delays_amps_from_metafits( obs_metadata, &delays, &amps );
-
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
     double invw = 1.0/nant;
@@ -213,7 +202,9 @@ int main(int argc, char **argv)
     // ------------------
     // Allocate memory for various arrays
     // ------------------
-    cuDoubleComplex ***B   = malloc_primary_beam( obs_metadata, npointing );
+    primary_beam pb;
+    create_primary_beam( &pb, obs_metadata, coarse_chan, npointing );
+
     geometric_delays gdelays;
     create_geometric_delays( &gdelays, obs_metadata, vcs_metadata, coarse_chan, npointing );
 
@@ -376,21 +367,20 @@ int main(int argc, char **argv)
         calc_beam_geom( ras_hours, decs_degs, npointing, mjd, beam_geom_vals );
 
         // Calculate the primary beam
-        calc_primary_beam( B, obs_metadata, vcs_metadata, coarse_chan_idx,
-                beam_geom_vals, beam, delays, amps, npointing );
+        calc_primary_beam( &pb, beam_geom_vals );
 
         // Calculate the geometric delays
         calc_geometric_delays( &gdelays, beam_geom_vals );
         push_geometric_delays_to_device( &gdelays );
 
         get_jones(
-                npointing,          // number of pointings
+                npointing,              // number of pointings
                 vcs_metadata,
                 obs_metadata,
                 coarse_chan_idx,
-                &cal,              // struct holding info about calibration
+                &cal,                   // struct holding info about calibration
                 D,                      // Calibration Jones matrices
-                B,                      // Primary beam jones matrices
+                pb.B,                   // Primary beam jones matrices
                 invJi );                // invJi array           (answer will be output here)
 
         delay_time[timestep_idx] = clock() - start;
@@ -562,12 +552,8 @@ int main(int argc, char **argv)
         free_ipfb( &gi );
     }
 
-    // Clean up Hyperbeam and associated arrays
-    free_fee_beam( beam );
-    free_delays_amps( obs_metadata, delays, amps );
-
     // Clean up memory associated with the Jones matrices
-    free_primary_beam( B, obs_metadata, npointing );
+    free_primary_beam( &pb );
     free_geometric_delays( &gdelays );
 
     // Clean up memory associated with mwalib

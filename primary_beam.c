@@ -13,26 +13,19 @@
 
 
 void calc_primary_beam(
-        cuDoubleComplex ***B,
-        MetafitsMetadata  *obs_metadata,
-        VoltageMetadata   *vcs_metadata,
-        int                coarse_chan_idx,
-        struct beam_geom  *beam_geom_vals,
-        FEEBeam           *beam,
-        uint32_t         **delays,
-        double           **amps,
-        uintptr_t          npointings )
+        primary_beam      *pb,
+        struct beam_geom  *beam_geom_vals )
 /* Calculate the required Jones matrices for the given pointings. The
- * calculated Jones matrices are stored in a "B", which is assumed to
- * be already allocated (via malloc_primary_beam()).
+ * calculated Jones matrices are stored in pb->B
  *
  * Only those configurations of live (i.e. non-dead) dipoles which exist in
  * the array are calculated, in order to save calculation time.
  */
 {
     // Calculate some array sizes
-    uintptr_t npol      = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
-    uintptr_t nrf_input = obs_metadata->num_rf_inputs;
+    uintptr_t nant      = pb->nant;
+    uintptr_t npol      = pb->npol; // = 4 (XX, XY, YX, YY)
+    uintptr_t nrf_input = pb->obs_metadata->num_rf_inputs;
 
     // Set up the output array of beam matrices ("B"; see Eq. (30) in Ord et al. (2019))
     // Layout is B[pointing][antenna][pol] where 0 <= pol < npol=4
@@ -43,10 +36,6 @@ void calc_primary_beam(
     int config_idx;
     for (config_idx = 0; config_idx < NCONFIGS; config_idx++)
         configs[config_idx] = NULL;
-
-    // Get the centre frequency of this coarse channel
-    int      coarse_chan = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
-    long int frequency   = obs_metadata->metafits_coarse_chans[coarse_chan].chan_centre_hz;
 
     // Normalise to zenith
     int zenith_norm = 1;
@@ -62,7 +51,7 @@ void calc_primary_beam(
     double az, za; // (az)imuth and (z)enith (a)ngle in radians
 
     // Loop through the pointings and calculate the primary beam matrices
-    for (p = 0; p < npointings; p++)
+    for (p = 0; p < pb->npointings; p++)
     {
         az = beam_geom_vals[p].az;
         za = PAL__DPIBY2 - beam_geom_vals[p].el;
@@ -73,14 +62,14 @@ void calc_primary_beam(
         for (rf_input = 0; rf_input < nrf_input; rf_input++)
         {
             // Get the antenna from the rf_input
-            a = obs_metadata->rf_inputs[rf_input].ant;
+            a = pb->obs_metadata->rf_inputs[rf_input].ant;
 
             // Assume that the delay config for the 'Y' pol matches that of the corresponding 'X'
-            if (*(obs_metadata->rf_inputs[rf_input].pol) == 'Y')
+            if (*(pb->obs_metadata->rf_inputs[rf_input].pol) == 'Y')
                 continue;
 
             // Check this RF input's dipole configuration
-            config_idx = hash_dipole_config( amps[rf_input] );
+            config_idx = hash_dipole_config( pb->amps[rf_input] );
             if (config_idx == -1 || config_idx == NCONFIGS - 1)
                 continue; // Too many dead dipoles -- skip this tile
 
@@ -89,62 +78,54 @@ void calc_primary_beam(
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
                 configs[config_idx] = (cuDoubleComplex *)calc_jones(
-                        beam, az, za, frequency, delays[rf_input], amps[rf_input], zenith_norm );
+                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
 
                 // Apply the parallactic angle correction
                 mult2x2d_RxC( P, configs[config_idx], configs[config_idx] );
             }
 
             // Copy the answer into the B matrix (for this antenna)
-            cp2x2( configs[config_idx], B[p][a] );
+            cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, a, 0, nant, npol)]) );
         }
     }
 }
 
-cuDoubleComplex ***malloc_primary_beam(
+void create_primary_beam(
+        primary_beam      *pb,
         MetafitsMetadata  *obs_metadata,
+        uintptr_t          coarse_chan,
         uintptr_t          npointings )
 /* Allocates memory for the primary beam matrices ("B")
  * (see Eq. (30) in Ord et al. (2019))
  */
 {
     // Calculate some array sizes
-    uintptr_t npol = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
-    uintptr_t nant = obs_metadata->num_ants;
+    pb->npointings = npointings;
+    pb->nant = obs_metadata->num_ants;
+    pb->npol = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
 
-    // Set up the output array of beam matrices ("B"; see Eq. (30) in Ord et al. (2019))
-    // Layout is B[pointing][antenna][pol] where 0 <= pol < npol=4
-    uintptr_t p, a;
-    cuDoubleComplex ***B = (cuDoubleComplex ***)malloc( npointings*sizeof(cuDoubleComplex **) );
-    for (p = 0; p < npointings; p++)
-    {
-        B[p] = (cuDoubleComplex **)malloc( nant*sizeof(cuDoubleComplex *) );
-        for (a = 0; a < nant; a++)
-        {
-            // (By default matrices are set to zeros)
-            B[p][a] = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
-        }
-    }
+    size_t size = pb->npointings * pb->nant * pb->npol * sizeof(cuDoubleComplex);
 
-    return B;
+    // Allocate memory
+    pb->B = (cuDoubleComplex *)malloc( size );
+
+    pb->beam = NULL;
+    pb->beam = new_fee_beam( HYPERBEAM_HDF5 );
+
+    create_delays_amps_from_metafits( obs_metadata, &(pb->delays), &(pb->amps) );
+
+    pb->freq_hz = obs_metadata->metafits_coarse_chans[coarse_chan].chan_centre_hz;
+
+    pb->obs_metadata = obs_metadata;
 }
 
-void free_primary_beam(
-        cuDoubleComplex ***B,
-        MetafitsMetadata  *obs_metadata,
-        uintptr_t          npointings )
+void free_primary_beam( primary_beam *pb )
 /* Frees the memory allocated in malloc_primary_beam()
  */
 {
-    uintptr_t nant = obs_metadata->num_ants;
-    uintptr_t a, p; // Counters for (p)ointing, (a)ntenna
-    for (p = 0; p < npointings; p++)
-    {
-        for (a = 0; a < nant; a++)
-            free( B[p][a] );
-        free( B[p] );
-    }
-    free( B );
+    free( pb->B );
+    free_delays_amps( pb->obs_metadata, pb->delays, pb->amps );
+    free_fee_beam( pb->beam );
 }
 
 

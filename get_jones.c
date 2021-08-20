@@ -108,7 +108,7 @@ void get_jones(
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
-        cuDoubleComplex     ***B,
+        cuDoubleComplex       *B,
         cuDoubleComplex    ****invJi )                 // output: invJi[ant][ch][pol][pol]
 {
 
@@ -149,7 +149,7 @@ void get_jones(
 
             for (ant = 0; ant < nant; ant++)
             {
-                mult2x2d(D[ant][ch], B[p][ant], Ji); // the gain in the desired look direction
+                mult2x2d(D[ant][ch], &(B[PB_IDX(p, ant, 0, nant, npol*npol)]), Ji); // the gain in the desired look direction
 
                 // Apply the UV phase correction (to the bottom row of the Jones matrix)
                 Ji[2] = cuCmul( Ji[2], uv_phase );

@@ -86,7 +86,7 @@ void get_jones(
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
-        cuDoubleComplex     ***B,
+        cuDoubleComplex       *B,
         cuDoubleComplex    ****invJi                   // output
 );
 
