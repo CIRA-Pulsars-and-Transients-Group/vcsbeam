@@ -51,12 +51,17 @@ struct cmd_line_opts {
     int                max_sec_per_file;    // Number of seconds per fits files
 };
 
-/***********************
- * Function prototypes *
- **********************/
+/*************************************
+ * Function prototypes and constants *
+ *************************************/
 
 void make_incoh_beam_parse_cmdline(
         int argc, char **argv, struct cmd_line_opts *opts );
+
+void allocate_input_output_arrays( void **data, void **d_data, size_t size );
+void free_input_output_arrays( void *data, void *d_data );
+
+const uintptr_t outpol_incoh = 1;  // ("I")
 
 /********
  * MAIN *
@@ -64,25 +69,21 @@ void make_incoh_beam_parse_cmdline(
 
 int main(int argc, char **argv)
 {
-    // A place to hold the beamformer settings
+    // Parse command line arguments
     struct cmd_line_opts opts;
+    make_incoh_beam_parse_cmdline( argc, argv, &opts );
 
-    // Start a logger
+    // Start a logger for output messages and time-keeping
     logger *log = create_logger( stdout );
     logger_add_stopwatch( log, "read" );
     logger_add_stopwatch( log, "calc" );
     logger_add_stopwatch( log, "write" );
-
-    const uintptr_t outpol_incoh = 1;  // ("I")
-
-    // Parse command line arguments
-    make_incoh_beam_parse_cmdline( argc, argv, &opts );
-
-    char error_message[ERROR_MESSAGE_LEN];
+    char log_message[MAX_COMMAND_LENGTH];
 
     // Create an mwalib metafits context and associated metadata
     logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
+    char error_message[ERROR_MESSAGE_LEN];
     MetafitsMetadata *obs_metadata = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
@@ -90,19 +91,24 @@ int main(int argc, char **argv)
     get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context, NULL,
             opts.metafits, NULL, opts.begin, opts.end, opts.datadir, opts.rec_channel );
 
-    uintptr_t ntimesteps = vcs_metadata->num_common_timesteps;
-
     // Create some "shorthand" variables for code brevity
-    uintptr_t nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
-    uintptr_t ninput         = obs_metadata->num_rf_inputs;
-    unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
-    int coarse_chan_idx      = 0; /* Value is fixed for now (i.e. each call of make_beam only
+    uintptr_t    ntimesteps      = vcs_metadata->num_common_timesteps;
+    uintptr_t    nchans          = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t    ninputs         = obs_metadata->num_rf_inputs;
+    unsigned int nsamples        = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
+    int          coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
                                      ever processes one coarse chan. However, in the future,
                                      this should be flexible, with mpi or threads managing
                                      different coarse channels. */
-    int coarse_chan          = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
+    int          coarse_chan     = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
+    uintptr_t    data_size       = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
+    uintptr_t    incoh_size      = nchans * nsamples * sizeof(float);
+    uintptr_t    timestep_idx;
+    uintptr_t    timestep;
+    uint64_t     gps_second;
 
-    logger_timed_message( log, "Setting up output header information" );
+    // Populate the PSRFITS header struct
+    logger_timed_message( log, "Preparing header for output PSRFITS" );
 
     int npointing = 1;
     struct beam_geom beam_geom_vals[npointing];
@@ -113,46 +119,31 @@ int main(int argc, char **argv)
     double mjd = obs_metadata->sched_start_mjd;
     calc_beam_geom( ras_hours, decs_degs, npointing, mjd, beam_geom_vals );
 
-    // Populate the PSRFITS header struct
-    struct psrfits  *pf_incoh;
-    pf_incoh = (struct psrfits *)malloc(1 * sizeof(struct psrfits));
+    struct psrfits  *pfs;
+    pfs = (struct psrfits *)malloc(1 * sizeof(struct psrfits));
 
-    populate_psrfits_header( pf_incoh, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
+    populate_psrfits_header( pfs, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
             outpol_incoh, beam_geom_vals, 1, false );
 
-    // Allocate memory for the raw data on both host and device
-    long int data_size = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
+    // Allocate memory
+    logger_timed_message( log, "Allocate host and device memory" );
 
+    // Raw data:
     uint8_t *data, *d_data;
-
-    cudaMallocHost( (void **)&data, data_size );
-    cudaCheckErrors( "cudaMallocHost(data) failed" );
-
-    cudaMalloc( (void **)&d_data, data_size );
-    cudaCheckErrors( "cudaMalloc(d_data) failed" );
-
-    // Create output buffer arrays
     float *incoh, *d_incoh;
-    size_t incoh_size = nchan * outpol_incoh * pf_incoh[0].hdr.nsblk * sizeof(float);
 
-    cudaMallocHost( (void **)&incoh, incoh_size );
-    cudaCheckErrors( "cudaMallocHost(incoh) failed" );
+    allocate_input_output_arrays( (void **)&data, (void **)&d_data, data_size );
+    allocate_input_output_arrays( (void **)&incoh, (void **)&d_incoh, incoh_size );
 
-    cudaMalloc( (void **)&d_incoh, incoh_size );
-    cudaCheckErrors( "cudaMalloc(d_incoh) failed" );
+    // Begin the main loop: go through data one second at a time
 
     logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
-
-    // Set up timing for each section
-    uintptr_t timestep_idx;
-    long timestep;
-    uint64_t gps_second;
-    char log_message[MAX_COMMAND_LENGTH];
 
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
         logger_message( log, "" ); // Print a blank line
 
+        // Get the next gps second 
         timestep = vcs_metadata->common_timestep_indices[timestep_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
@@ -186,7 +177,7 @@ int main(int argc, char **argv)
         cu_form_incoh_beam(
                 data, d_data, data_size,
                 incoh, d_incoh, incoh_size,
-                sample_rate, nchan, ninput );
+                nsamples, nchans, ninputs );
 
         logger_stop_stopwatch( log, "calc" );
 
@@ -197,8 +188,8 @@ int main(int argc, char **argv)
 
         logger_start_stopwatch( log, "write" );
 
-        psrfits_write_second( &pf_incoh[0], incoh,
-                nchan, outpol_incoh, 0 );
+        psrfits_write_second( &pfs[0], incoh,
+                nchans, outpol_incoh, 0 );
 
         logger_stop_stopwatch( log, "write" );
     }
@@ -210,20 +201,19 @@ int main(int argc, char **argv)
     logger_timed_message( log, "Starting memory clean-up" );
 
     // Free up memory
-    cudaFreeHost( incoh );
-    cudaFreeHost( data );
-
-    cudaFree( d_incoh );
-    cudaFree( d_data );
+    free_input_output_arrays( data, d_data );
+    free_input_output_arrays( incoh, d_incoh );
 
     free( opts.datadir        );
     free( opts.metafits       );
 
-    free( pf_incoh[0].sub.data        );
-    free( pf_incoh[0].sub.dat_freqs   );
-    free( pf_incoh[0].sub.dat_weights );
-    free( pf_incoh[0].sub.dat_offsets );
-    free( pf_incoh[0].sub.dat_scales  );
+    free( pfs[0].sub.data        );
+    free( pfs[0].sub.dat_freqs   );
+    free( pfs[0].sub.dat_weights );
+    free( pfs[0].sub.dat_offsets );
+    free( pfs[0].sub.dat_scales  );
+
+    free( pfs );
 
     // Clean up memory associated with mwalib
     mwalib_metafits_metadata_free( obs_metadata );
@@ -346,3 +336,17 @@ void make_incoh_beam_parse_cmdline(
 }
 
 
+void allocate_input_output_arrays( void **data, void **d_data, size_t size )
+{
+    cudaMallocHost( data, size );
+    cudaCheckErrors( "cudaMallocHost() failed" );
+
+    cudaMalloc( d_data, size );
+    cudaCheckErrors( "cudaMalloc() failed" );
+}
+
+void free_input_output_arrays( void *data, void *d_data )
+{
+    cudaFreeHost( data );
+    cudaFree( d_data );
+}
