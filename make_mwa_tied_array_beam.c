@@ -4,32 +4,21 @@
  *                                                      *
  ********************************************************/
 
-// TODO: Remove superfluous #includes
-#include <stdio.h>
+// Standard library
 #include <stdlib.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <math.h>
-#include <cuComplex.h>
-#include <cuda_runtime.h>
-#include <unistd.h>
+#include <stdio.h>
 #include <getopt.h>
 #include <string.h>
-#include <errno.h>
-#include <time.h>
-#include <mwalib.h>
-#include "ascii_header.h"
-#include "mwa_header.h"
-#include <glob.h>
-#include <fcntl.h>
 #include <assert.h>
+
+// Non-standard dependencies
+#include <mwalib.h>
+
+// Local includes
 #include "beam_common.h"
 #include "beam_psrfits.h"
 #include "beam_vdif.h"
 #include "metadata.h"
-#include "vdifio.h"
-#include "filter.h"
-#include "psrfits.h"
 #include "form_beam.h"
 #include "calibration.h"
 #include "primary_beam.h"
