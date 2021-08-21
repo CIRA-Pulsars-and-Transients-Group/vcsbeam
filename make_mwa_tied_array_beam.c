@@ -38,14 +38,6 @@
 
 #include "ipfb.h"
 
-double now()
-{
-  struct timespec t;
-  clock_gettime(CLOCK_REALTIME,&t);
-  return (double)t.tv_sec + (double)t.tv_nsec/1000000000L;
-}
-
-#define NOW now()
 #define MAX_COMMAND_LENGTH 1024
 
 struct make_beam_opts {
@@ -81,58 +73,23 @@ void make_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts
 
 int main(int argc, char **argv)
 {
-    // A place to hold the beamformer settings
+    // Parse command line arguments
     struct make_beam_opts opts;
     struct calibration cal;           // Variables for calibration settings
-
-    int i; // Generic counter
-
-    /* Set default beamformer settings */
-
-    // Variables for required options
-    opts.begin       = 0;    // GPS time -- when to start beamforming
-    opts.end         = 0;    // GPS time -- when to stop beamforming
-    opts.pointings_file = NULL; // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
-    opts.datadir     = NULL; // The path to where the recombined data live
-    opts.metafits    = NULL; // filename of the metafits file for the target observation
-    opts.rec_channel = -1;   // 0 - 255 receiver 1.28MHz channel
-
-    // Output options
-    opts.out_incoh     = 0;  // Default = PSRFITS (incoherent) output turned OFF
-    opts.out_coh       = 0;  // Default = PSRFITS (coherent)   output turned OFF
-    opts.out_vdif      = 0;  // Default = VDIF                 output turned OFF
-    opts.out_bf        = 1;  // Default = beamform all (non-flagged) antennas
-    opts.out_ant       = 0;  // The antenna number (0-127) to write out if out_bf = 0
-    opts.synth_filter  = NULL;
-    opts.out_summed    = 0;  // Default = output only Stokes I output turned OFF
-    opts.max_sec_per_file = 200; // Number of seconds per fits files
-
-    // Variables for calibration settings
-    cal.metafits          = NULL; // filename of the metafits file for the calibration observation
-    cal.caldir            = NULL; // The path to where the calibration solutions live
-    cal.cal_type          = CAL_NONE;
-    cal.ref_ant           = 0;
-    cal.cross_terms       = 0;
-    cal.phase_offset      = 0.0;
-    cal.phase_slope       = 0.0;
-    cal.apply_xy_correction = true;
-
-    // GPU options
-    opts.gpu_mem          = -1.0;
-
-    // Parse command line arguments
     make_beam_parse_cmdline( argc, argv, &opts, &cal );
 
-
-    double begintime = NOW;
-
-    char error_message[ERROR_MESSAGE_LEN];
-
-    FILE *log = stdout;
+    // Start a logger for output messages and time-keeping
+    logger *log = create_logger( stdout );
+    logger_add_stopwatch( log, "read" );
+    logger_add_stopwatch( log, "delay" );
+    logger_add_stopwatch( log, "calc" );
+    logger_add_stopwatch( log, "write" );
+    char log_message[MAX_COMMAND_LENGTH];
 
     // Create an mwalib metafits context and associated metadata
-    fprintf( log, "[%f]  Creating metafits and voltage contexts via MWALIB\n", NOW-begintime );
+    logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
+    char error_message[ERROR_MESSAGE_LEN];
     MetafitsMetadata *obs_metadata = NULL;
     MetafitsMetadata *cal_metadata = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
@@ -160,9 +117,13 @@ int main(int argc, char **argv)
     uintptr_t ch;
     uintptr_t pol;
 
+    uintptr_t timestep;
+    uintptr_t timestep_idx;
+    uint64_t  gps_second;
 
     // Start counting time from here (i.e. after parsing the command line)
-    fprintf( log, "[%f]  Reading pointings file %s\n", NOW-begintime, opts.pointings_file );
+    sprintf( log_message, "Reading pointings file %s", opts.pointings_file );
+    logger_timed_message( log, log_message );
 
     // Parse input pointings
     double *ras_hours, *decs_degs;
@@ -191,15 +152,17 @@ int main(int argc, char **argv)
 
             // Print a suitable message
             if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
-                fprintf( log, "[%f]  No XY phase correction information for this obsid\n",
-                        NOW-begintime );
+                logger_timed_message( log, "No XY phase correction information for this obsid" );
             else
-                fprintf( log, "[%f]  Applying XY phase correction %.2e*freq%+.2e\n",
-                        NOW-begintime, cal.phase_slope, cal.phase_offset );
+            {
+                sprintf( log_message, "Applying XY phase correction %.2e*freq%+.2e",
+                        cal.phase_slope, cal.phase_offset );
+                logger_timed_message( log, log_message );
+            }
         }
         else
         {
-            fprintf( log, "[%f]  Not applying XY phase correction\n", NOW-begintime );
+            logger_timed_message( log, "Not applying XY phase correction" );
         }
     }
     else if (cal.cal_type == CAL_OFFRINGA)
@@ -229,7 +192,7 @@ int main(int argc, char **argv)
 
     // ------------------
 
-    fprintf( log, "[%f]  Setting up output header information\n", NOW-begintime);
+    logger_timed_message( log, "Setting up output header information" );
     struct beam_geom beam_geom_vals[npointing];
 
     double mjd, sec_offset;
@@ -259,7 +222,7 @@ int main(int argc, char **argv)
         coeffs = (double *)malloc( fil_size * sizeof(double) );
         double tmp_coeffs[] = LSQ12_FILTER_COEFFS; // I'll have to change the way these coefficients are stored
                                                    // in order to avoid this cumbersome loading procedure
-        for (i = 0; i < fil_size; i++)
+        for (int i = 0; i < fil_size; i++)
             coeffs[i] = tmp_coeffs[i];
     }
     else if (strcmp( opts.synth_filter, "MIRROR" ) == 0)
@@ -268,7 +231,7 @@ int main(int argc, char **argv)
         fil_size = ntaps * nchan; // = 12 * 128 = 1536
         coeffs = (double *)malloc( fil_size * sizeof(double) );
         double tmp_coeffs[] = MIRROR_FILTER_COEFFS;
-        for (i = 0; i < fil_size; i++)
+        for (int i = 0; i < fil_size; i++)
             coeffs[i] = tmp_coeffs[i];
     }
     else
@@ -283,7 +246,7 @@ int main(int argc, char **argv)
     // along with any other scaling that I, Lord and Master of the inverse
     // PFB, feels is appropriate.
     double approx_filter_scale = 15.0/7.2; // 7.2 = 16384/117964.8
-    for (i = 0; i < fil_size; i++)
+    for (int i = 0; i < fil_size; i++)
         coeffs[i] *= approx_filter_scale;
 
     // Populate the relevant header structs
@@ -316,7 +279,7 @@ int main(int argc, char **argv)
     struct gpu_ipfb_arrays gi;
     int nchunk;
     malloc_formbeam( &gf, sample_rate, nant, nchan, npol, &nchunk, opts.gpu_mem,
-                     outpol_coh, outpol_incoh, npointing, NOW-begintime );
+                     outpol_coh, outpol_incoh, npointing, log );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
     create_antenna_lists( obs_metadata, gf.polX_idxs, gf.polY_idxs );
@@ -347,25 +310,24 @@ int main(int argc, char **argv)
     for (p = 0; p < npointing; p++)
         cudaStreamCreate(&(streams[p])) ;
 
-    fprintf( log, "\n[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
+    // Begin the main loop: go through data one second at a time
 
-    // Set up timing for each section
-    long read_time[ntimesteps], delay_time[ntimesteps], calc_time[ntimesteps], write_time[ntimesteps][npointing];
-    uintptr_t timestep_idx;
-    long timestep;
-    uint64_t gps_second;
+    logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
 
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
+        logger_message( log, "" ); // Print a blank line
+
         timestep = vcs_metadata->common_timestep_indices[timestep_idx];
         coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
         // Read in data from next file
-        clock_t start = clock();
-        fprintf( log, "\n[%f] [%lu/%lu] Reading in data for gps second %ld \n", NOW-begintime,
+        sprintf( log_message, "[%lu/%lu] Reading in data for gps second %ld",
                 timestep_idx+1, ntimesteps, gps_second );
+        logger_timed_message( log, log_message );
 
+        logger_start_stopwatch( log, "read" );
         if (mwalib_voltage_context_read_second(
                     vcs_context,
                     gps_second,
@@ -376,16 +338,17 @@ int main(int argc, char **argv)
                     error_message,
                     ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
         {
-            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s\n", error_message );
+            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", error_message );
             exit(EXIT_FAILURE);
         }
-        read_time[timestep_idx] = clock() - start;
+        logger_stop_stopwatch( log, "read" );
 
         // Get the next second's worth of phases / jones matrices, if needed
-        start = clock();
-        fprintf( log, "[%f] [%lu/%lu] Calculating Jones matrices\n", NOW-begintime,
+        sprintf( log_message, "[%lu/%lu] Calculating Jones matrices",
                                 timestep_idx+1, ntimesteps );
+        logger_timed_message( log, log_message );
 
+        logger_start_stopwatch( log, "delay" );
         sec_offset = (double)(timestep_idx + opts.begin - obs_metadata->obs_id);
         mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
         for (p = 0; p < npointing; p++)
@@ -408,12 +371,13 @@ int main(int argc, char **argv)
                 pb.B,                   // Primary beam jones matrices
                 invJi );                // invJi array           (answer will be output here)
 
-        delay_time[timestep_idx] = clock() - start;
+        logger_stop_stopwatch( log, "delay" );
 
-        fprintf( log, "[%f] [%lu/%lu] Calculating beam\n", NOW-begintime,
-                                timestep_idx+1, ntimesteps);
-        start = clock();
+        // Form the beams
+        sprintf( log_message, "[%lu/%lu] Calculating beam", timestep_idx+1, ntimesteps);
+        logger_timed_message( log, log_message );
 
+        logger_start_stopwatch( log, "calc" );
         if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
         {
             // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
@@ -428,6 +392,7 @@ int main(int argc, char **argv)
             for (ch  = 0; ch  < nchan;       ch++ )
             for (pol = 0; pol < npol;        pol++)
             {
+                int i;
                 if (pol == 0)
                     i = gf.polX_idxs[opts.out_ant];
                 else
@@ -447,21 +412,24 @@ int main(int argc, char **argv)
         // Invert the PFB, if requested
         if (opts.out_vdif)
         {
-            fprintf( log, "[%f] [%lu/%lu] Inverting the PFB (full)\n",
-                            NOW-begintime, timestep_idx+1, ntimesteps);
+            sprintf( log_message, "[%lu/%lu] Inverting the PFB (full)",
+                            timestep_idx+1, ntimesteps);
+            logger_timed_message( log, log_message );
             cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
                                sample_rate, nchan, npol, vf->sizeof_buffer,
                                &gi, data_buffer_vdif );
         }
-        calc_time[timestep_idx] = clock() - start;
+        logger_stop_stopwatch( log, "calc" );
 
 
         // Write out for each pointing
-        for ( p = 0; p < npointing; p++)
+        for (p = 0; p < npointing; p++)
         {
-            start = clock();
-            fprintf( log, "[%f] [%lu/%lu] [%d/%d] Writing data to file(s)\n",
-                    NOW-begintime, timestep_idx+1, ntimesteps, p+1, npointing );
+            sprintf( log_message, "[%lu/%lu] [%d/%d] Writing data to file(s)",
+                    timestep_idx+1, ntimesteps, p+1, npointing );
+            logger_timed_message( log, log_message );
+
+            logger_start_stopwatch( log, "write" );
 
             if (opts.out_coh)
                 psrfits_write_second( &pfs[p], data_buffer_coh, nchan,
@@ -472,62 +440,16 @@ int main(int argc, char **argv)
             if (opts.out_vdif)
                 vdif_write_second( &vf[p], &vhdr,
                                    data_buffer_vdif + p * vf->sizeof_buffer );
-            write_time[timestep_idx][p] = clock() - start;
+            logger_stop_stopwatch( log, "write" );
         }
     }
 
-    // Calculate total processing times
-    float read_sum = 0, delay_sum = 0, calc_sum = 0, write_sum = 0;
-    for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
-    {
-        read_sum  += (float) read_time[timestep_idx];
-        delay_sum += (float) delay_time[timestep_idx];
-        calc_sum  += (float) calc_time[timestep_idx];
-        for ( p = 0; p < npointing; p++)
-            write_sum += (float) write_time[timestep_idx][p];
-    }
-    float read_mean, delay_mean, calc_mean, write_mean;
-    read_mean  = read_sum  / ntimesteps;
-    delay_mean = delay_sum / ntimesteps / npointing;
-    calc_mean  = calc_sum  / ntimesteps / npointing;
-    write_mean = write_sum / ntimesteps / npointing;
+    logger_message( log, "\n*****END BEAMFORMING*****\n" );
 
-    // Calculate the standard deviations
-    float read_std = 0, delay_std = 0, calc_std = 0, write_std = 0;
-    for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
-    {
-        read_std  += pow((float)read_time[timestep_idx]  - read_mean,  2);
-        delay_std += pow((float)delay_time[timestep_idx] - delay_mean / npointing, 2);
-        calc_std  += pow((float)calc_time[timestep_idx]  - calc_mean / npointing,  2);
-        for ( p = 0; p < npointing; p++)
-            write_std += pow((float)write_time[timestep_idx][p] - write_mean / npointing, 2);
-    }
-    read_std  = sqrt( read_std  / ntimesteps );
-    delay_std = sqrt( delay_std / ntimesteps / npointing );
-    calc_std  = sqrt( calc_std  / ntimesteps / npointing );
-    write_std = sqrt( write_std / ntimesteps / npointing );
+    logger_report_all_stats( log );
+    logger_message( log, "" );
 
-    fprintf( log, "\n[%f]  *****FINISHED BEAMFORMING*****\n\n", NOW-begintime );
-
-    fprintf( log, "[%f]  Total read  processing time: %9.3f s\n",
-                     NOW-begintime, read_sum / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n",
-                     NOW-begintime, read_mean / CLOCKS_PER_SEC, read_std / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Total delay processing time: %9.3f s\n",
-                     NOW-begintime, delay_sum / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Mean  delay processing time: %9.3f +\\- %8.3f s\n",
-                     NOW-begintime, delay_mean / CLOCKS_PER_SEC, delay_std / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Total calc  processing time: %9.3f s\n",
-                     NOW-begintime, calc_sum / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Mean  calc  processing time: %9.3f +\\- %8.3f s\n",
-                     NOW-begintime, calc_mean / CLOCKS_PER_SEC, calc_std / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Total write processing time: %9.3f s\n",
-                     NOW-begintime, write_sum  * npointing / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Mean  write processing time: %9.3f +\\- %8.3f s\n",
-                     NOW-begintime, write_mean / CLOCKS_PER_SEC, write_std / CLOCKS_PER_SEC);
-
-
-    fprintf( log, "[%f]  Starting clean-up\n", NOW-begintime);
+    logger_timed_message( log, "Starting clean-up" );
 
     // Free up memory
     destroy_invJi( invJi, nant, nchan, npol );
@@ -640,6 +562,32 @@ void usage() {
 void make_beam_parse_cmdline(
         int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal )
 {
+    // Set defaults
+    opts->begin              = 0;    // GPS time -- when to start beamforming
+    opts->end                = 0;    // GPS time -- when to stop beamforming
+    opts->pointings_file     = NULL; // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
+    opts->datadir            = NULL; // The path to where the recombined data live
+    opts->metafits           = NULL; // filename of the metafits file for the target observation
+    opts->rec_channel        = -1;   // 0 - 255 receiver 1.28MHz channel
+    opts->out_incoh          = 0;    // Default = PSRFITS (incoherent) output turned OFF
+    opts->out_coh            = 0;    // Default = PSRFITS (coherent)   output turned OFF
+    opts->out_vdif           = 0;    // Default = VDIF                 output turned OFF
+    opts->out_bf             = 1;    // Default = beamform all (non-flagged) antennas
+    opts->out_ant            = 0;    // The antenna number (0-127) to write out if out_bf = 0
+    opts->synth_filter       = NULL;
+    opts->out_summed         = 0;    // Default = output only Stokes I output turned OFF
+    opts->max_sec_per_file   = 200;  // Number of seconds per fits files
+    opts->gpu_mem            = -1.0;
+
+    cal->metafits            = NULL; // filename of the metafits file for the calibration observation
+    cal->caldir              = NULL; // The path to where the calibration solutions live
+    cal->cal_type            = CAL_NONE;
+    cal->ref_ant             = 0;
+    cal->cross_terms         = 0;
+    cal->phase_offset        = 0.0;
+    cal->phase_slope         = 0.0;
+    cal->apply_xy_correction = true;
+
     if (argc > 1) {
 
         int c;

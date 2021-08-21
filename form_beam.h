@@ -11,6 +11,7 @@
 #define FORM_BEAM_H
 
 #include "beam_common.h"
+#include "performance.h"
 
 /* structure for managing data arrays to be allocated on both host and device */
 struct gpu_formbeam_arrays
@@ -37,7 +38,7 @@ struct gpu_formbeam_arrays
 
 void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
                       int nstation, int nchan, int npol, int *nchunk, float gpu_mem_gb, int outpol_coh,
-                      int outpol_incoh, int npointing, double time );
+                      int outpol_incoh, int npointing, logger *log );
 void free_formbeam( struct gpu_formbeam_arrays *g );
 
 /* Calculating array indices for GPU inputs and outputs */

@@ -181,6 +181,7 @@ int main(int argc, char **argv)
     }
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
+
     logger_report_all_stats( log );
     logger_message( log, "" );
 

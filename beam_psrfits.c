@@ -36,7 +36,6 @@ void populate_psrfits_header(
     struct tm *ts = gmtime( &(obs_metadata->sched_start_utc) );
     char   time_utc[64];
     strftime( time_utc, sizeof(time_utc), "%Y-%m-%dT%H:%M:%S", ts );
-    free( ts );
 
     // Get the sample rate
     unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;

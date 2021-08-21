@@ -18,6 +18,7 @@
 extern "C" {
 #include "form_beam.h"
 #include "geometric_delay.h"
+#include "performance.h"
 }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -522,7 +523,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
 void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
                       int nstation, int nchan, int npol, int *nchunk, float gpu_mem_gb, int outpol_coh,
-                      int outpol_incoh, int npointing, double time )
+                      int outpol_incoh, int npointing, logger *log )
 {
     size_t data_base_size;
     size_t JD_base_size;
@@ -566,9 +567,15 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
                         g->coh_size + g->incoh_size + 3*JD_base_size / *nchunk);
     }
     float gpu_mem_used_gb = (float)gpu_mem_used / (float)(1024*1024*1024);
-    fprintf( stderr, "[%f]  Splitting each second into %d chunks\n", time, *nchunk);
-    fprintf( stderr, "[%f]  %6.3f GB out of the total %6.3f GPU memory allocated\n",
-                     time, gpu_mem_used_gb, gpu_mem_gb );
+
+    char log_message[128];
+
+    sprintf( log_message, "Splitting each second into %d chunks", *nchunk );
+    logger_timed_message( log, log_message );
+
+    sprintf( log_message, "%6.3f GB out of the total %6.3f GPU memory allocated",
+                     gpu_mem_used_gb, gpu_mem_gb );
+    logger_timed_message( log, log_message );
 
     g->data_size = data_base_size / *nchunk;
     g->JD_size   = JD_base_size / *nchunk;
@@ -582,20 +589,26 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
     cudaMallocHost( &g->Bd, g->Bd_size );
     cudaCheckErrors("cudaMallocHost Bd fail");
 
-    fprintf( stderr, "[%f]  coh_size   %9.3f MB GPU mem\n",
-                      time, (float)g->coh_size  / (float)(1024*1024) );
-    fprintf( stderr, "[%f]  incoh_size %9.3f MB GPU mem\n",
-                      time, (float)g->incoh_size/ (float)(1024*1024) );
-    fprintf( stderr, "[%f]  data_size  %9.3f MB GPU mem\n",
-                      time, (float)g->data_size / (float)(1024*1024) );
-    fprintf( stderr, "[%f]  Bd_size    %9.3f MB GPU mem\n",
-                      time, (float)g->Bd_size   / (float)(1024*1024) );
-    fprintf( stderr, "[%f]  phi_size   %9.3f MB GPU mem\n",
-                      time, (float)phi_size     / (float)(1024*1024) );
-    fprintf( stderr, "[%f]  J_size     %9.3f MB GPU mem\n",
-                      time, (float)g->J_size    / (float)(1024*1024) );
-    fprintf( stderr, "[%f]  JD_size    %9.3f MB GPU mem\n",
-                      time, (float)g->JD_size*3 / (float)(1024*1024) );
+    sprintf( log_message, "coh_size   %9.3f MB GPU mem", (float)g->coh_size  / (float)(1024*1024) );
+    logger_timed_message( log, log_message );
+
+    sprintf( log_message, "incoh_size %9.3f MB GPU mem", (float)g->incoh_size/ (float)(1024*1024) );
+    logger_timed_message( log, log_message );
+
+    sprintf( log_message, "data_size  %9.3f MB GPU mem", (float)g->data_size / (float)(1024*1024) );
+    logger_timed_message( log, log_message );
+
+    sprintf( log_message, "Bd_size    %9.3f MB GPU mem", (float)g->Bd_size   / (float)(1024*1024) );
+    logger_timed_message( log, log_message );
+
+    sprintf( log_message, "phi_size   %9.3f MB GPU mem", (float)phi_size     / (float)(1024*1024) );
+    logger_timed_message( log, log_message );
+
+    sprintf( log_message, "J_size     %9.3f MB GPU mem", (float)g->J_size    / (float)(1024*1024) );
+    logger_timed_message( log, log_message );
+
+    sprintf( log_message, "JD_size    %9.3f MB GPU mem", (float)g->JD_size*3 / (float)(1024*1024) );
+    logger_timed_message( log, log_message );
 
 
     // Allocate device memory
