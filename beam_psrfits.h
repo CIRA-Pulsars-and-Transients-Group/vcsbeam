@@ -20,6 +20,7 @@ void populate_psrfits_header(
         int               max_sec_per_file,
         int               outpol,
         struct beam_geom *beam_geom_vals,
+        char             *incoh_basename,
         bool              is_coherent );
 
 void free_psrfits( struct psrfits *pf );

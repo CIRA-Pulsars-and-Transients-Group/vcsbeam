@@ -24,6 +24,7 @@ void populate_psrfits_header(
         int               max_sec_per_file,
         int               outpol,
         struct beam_geom *beam_geom_vals,
+        char             *incoh_basename,
         bool              is_coherent )
 {
     if ( !( outpol == 1 || outpol == 4 ) )
@@ -184,10 +185,13 @@ void populate_psrfits_header(
         }
         else
         {
-            sprintf(pf->basefilename, "%s_%s_incoh_ch%03ld",
-                    pf->hdr.project_id,
-                    pf->hdr.source,
-                    obs_metadata->metafits_coarse_chans[coarse_chan].rec_chan_number );
+            if (incoh_basename != NULL)
+                strcpy( pf->basefilename, incoh_basename );
+            else
+                sprintf( pf->basefilename, "%s_%s_incoh_ch%03ld",
+                        pf->hdr.project_id,
+                        pf->hdr.source,
+                        obs_metadata->metafits_coarse_chans[coarse_chan].rec_chan_number );
         }
     }
 }

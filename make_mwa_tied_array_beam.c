@@ -24,7 +24,6 @@
 #include "primary_beam.h"
 #include "geometric_delay.h"
 #include "performance.h"
-
 #include "ipfb.h"
 
 #define MAX_COMMAND_LENGTH 1024
@@ -241,10 +240,10 @@ int main(int argc, char **argv)
     // Populate the relevant header structs
     for (p = 0; p < npointing; p++)
         populate_psrfits_header( &pfs[p], obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-                outpol_coh, &beam_geom_vals[p], true );
+                outpol_coh, &beam_geom_vals[p], NULL, true );
 
     populate_psrfits_header( &pf_incoh, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-            outpol_incoh, &beam_geom_vals[0], false );
+            outpol_incoh, &beam_geom_vals[0], NULL, false );
 
     populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, coarse_chan_idx,
             beam_geom_vals, npointing );

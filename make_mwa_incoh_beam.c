@@ -34,10 +34,11 @@ struct cmd_line_opts {
     unsigned long int  begin;         // GPS time -- when to start beamforming
     unsigned long int  end;           // GPS time -- when to stop beamforming
     char              *datadir;       // The path to where the recombined data live
-    char              *metafits;      // filename of the metafits file
+    char              *metafits;      // Filename of the metafits file
     uintptr_t          rec_channel;   // 0 - 255 receiver 1.28MHz channel
 
     // Other options
+    char              *outfile;       // Base name of the output PSRFITS file
     int                max_sec_per_file;    // Number of seconds per fits files
 };
 
@@ -110,7 +111,7 @@ int main(int argc, char **argv)
     struct psrfits pf;
 
     populate_psrfits_header( &pf, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-            outpol_incoh, &beam_geom_vals, false );
+            outpol_incoh, &beam_geom_vals, opts.outfile, false );
 
     // Allocate memory
     logger_timed_message( log, "Allocate host and device memory" );
@@ -222,7 +223,9 @@ void usage()
            );
 
     printf( "\nOUTPUT OPTIONS\n\n"
-            "\t-t, --max_t               Maximum number of seconds per output FITS file [default: 200]\n"
+            "\t-o, --outfile             The base name for the output PSRFITS file\n"
+            "\t                          [default: \"<PROJECT>_<OBSID>_incoh_ch<CHAN>\"]\n"
+            "\t-t, --max_t=SECONDS       Maximum number of SECONDS per output FITS file [default: 200]\n"
            );
 
     printf( "\nOTHER OPTIONS\n\n"
@@ -240,7 +243,8 @@ void make_incoh_beam_parse_cmdline(
     opts->begin            = 0;    // GPS time -- when to start beamforming
     opts->end              = 0;    // GPS time -- when to stop beamforming
     opts->datadir          = NULL; // The path to where the recombined data live
-    opts->metafits         = NULL; // filename of the metafits file for the target observation
+    opts->metafits         = NULL; // Filename of the metafits file for the target observation
+    opts->outfile          = NULL; // Base name of the output PSRFITS file
     opts->rec_channel      = -1;   // 0 - 255 receiver 1.28MHz channel
     opts->max_sec_per_file = 200;  // Number of seconds per fits files
 
@@ -256,13 +260,14 @@ void make_incoh_beam_parse_cmdline(
                 {"coarse-chan",     required_argument, 0, 'f'},
                 {"help",            required_argument, 0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
+                {"outfile",         required_argument, 0, 'o'},
                 {"max_t",           required_argument, 0, 't'},
                 {"version",         required_argument, 0, 'V'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:d:e:f:hm:t:V",
+                             "b:d:e:f:hm:o:t:V",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -287,6 +292,9 @@ void make_incoh_beam_parse_cmdline(
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);
+                    break;
+                case 'o':
+                    opts->outfile = strdup(optarg);
                     break;
                 case 't':
                     opts->max_sec_per_file = atoi(optarg);
