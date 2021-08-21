@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <cuComplex.h>
+#include <cuda_runtime.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
@@ -33,8 +34,8 @@
 #include "calibration.h"
 #include "primary_beam.h"
 #include "geometric_delay.h"
+#include "performance.h"
 
-#include <cuda_runtime.h>
 #include "ipfb.h"
 
 double now()

@@ -4,33 +4,23 @@
  *                                                      *
  ********************************************************/
 
-// TODO: Remove superfluous #includes
+// Standard library
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <math.h>
-#include <cuComplex.h>
-#include <unistd.h>
 #include <getopt.h>
 #include <string.h>
-#include <errno.h>
-#include <time.h>
-#include <mwalib.h>
-#include "ascii_header.h"
-#include "mwa_header.h"
-#include <glob.h>
-#include <fcntl.h>
 #include <assert.h>
+
+// Non-standard dependencies
+#include <mwalib.h>
+#include <cuda_runtime.h>
+
+// Local includes
 #include "beam_common.h"
 #include "beam_psrfits.h"
 #include "metadata.h"
-#include "psrfits.h"
 #include "form_beam.h"
 #include "geometric_delay.h"
-
-#include <cuda_runtime.h>
-#include "ipfb.h"
 #include "performance.h"
 
 #define MAX_COMMAND_LENGTH 1024
@@ -125,7 +115,6 @@ int main(int argc, char **argv)
     // Allocate memory
     logger_timed_message( log, "Allocate host and device memory" );
 
-    // Raw data:
     uint8_t *data, *d_data;
     float *incoh, *d_incoh;
 
