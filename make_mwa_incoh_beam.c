@@ -169,24 +169,10 @@ int main(int argc, char **argv)
         fprintf( stderr, "\n[%f] [%d/%d] Reading in data for gps second %ld \n", NOW-begintime,
                 timestep_idx+1, ntimesteps, gps_second );
 
-        /*
         if (mwalib_voltage_context_read_second(
                     vcs_context,
                     gps_second,
                     1,
-                    coarse_chan,
-                    data,
-                    data_size,
-                    error_message,
-                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
-        {
-            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s\n", error_message );
-            exit(EXIT_FAILURE);
-        }
-        */
-        if (mwalib_voltage_context_read_file(
-                    vcs_context,
-                    timestep,
                     coarse_chan,
                     data,
                     data_size,

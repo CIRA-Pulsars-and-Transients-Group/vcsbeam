@@ -368,7 +368,6 @@ void cu_form_incoh_beam(
 */
 {
     // Copy the data to the device
-
     gpuErrchk(cudaMemcpyAsync( d_data, data, data_size, cudaMemcpyHostToDevice ));
 
     // Call the kernels
@@ -378,15 +377,14 @@ void cu_form_incoh_beam(
     incoh_beam<<<chan_samples, ninput>>>( d_data, d_incoh );
 
     gpuErrchk( cudaPeekAtLastError() );
-    //fprintf( stderr, "just before kernel call\n" );
     gpuErrchk( cudaDeviceSynchronize() );
-    //fprintf( stderr, "just after  kernel call\n" );
 
     flatten_bandpass_I_kernel<<<1, nchan>>>( d_incoh, nsample );
     gpuErrchk( cudaPeekAtLastError() );
 
     // Copy the results back into host memory
-    gpuErrchk(cudaMemcpyAsync( incoh, d_incoh, incoh_size, cudaMemcpyDeviceToHost ));
+    // (NB: Asynchronous copy here breaks the output)
+    gpuErrchk(cudaMemcpy( incoh, d_incoh, incoh_size, cudaMemcpyDeviceToHost ));
 }
 
 void cu_form_beam( uint8_t *data, unsigned int sample_rate,
