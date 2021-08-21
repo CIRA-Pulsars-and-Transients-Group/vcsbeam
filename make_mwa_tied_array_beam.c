@@ -101,16 +101,16 @@ int main(int argc, char **argv)
     uintptr_t ntimesteps = vcs_metadata->num_common_timesteps;
 
     // Create some "shorthand" variables for code brevity
-    uintptr_t nant           = obs_metadata->num_ants;
-    uintptr_t nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nants          = obs_metadata->num_ants;
+    uintptr_t nchans         = obs_metadata->num_volt_fine_chans_per_coarse;
     //int chan_width           = obs_metadata->volt_fine_chan_width_hz;
-    uintptr_t npol           = obs_metadata->num_ant_pols;   // (X,Y)
+    uintptr_t npols          = obs_metadata->num_ant_pols;   // (X,Y)
     uintptr_t ninput         = obs_metadata->num_rf_inputs;
     uintptr_t outpol_coh     = 4;  // (I,Q,U,V)
     if ( opts.out_summed )
         outpol_coh           = 1;  // (I)
-    const uintptr_t outpol_incoh   = 1;  // ("I")
-    unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
+    const uintptr_t outpol_incoh = 1;  // ("I")
+    unsigned int nsamples = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
     int offset;
     unsigned int s;
@@ -132,12 +132,12 @@ int main(int argc, char **argv)
     parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &npointing );
 
     // Allocate memory for various data products
-    cuDoubleComplex  ****invJi                 = create_invJi( nant, nchan, npol );
-    cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*sample_rate, nchan, npol );
+    cuDoubleComplex  ****invJi                 = create_invJi( nants, nchans, npols );
+    cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*nsamples, nchans, npols );
 
 
     // If using bandpass calibration solutions, calculate number of expected bandpass channels
-    double invw = 1.0/nant;
+    double invw = 1.0/nants;
 
     // ------------------------
     // GET CALIBRATION SOLUTION
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
         /*
         // Find the ordering of antennas in Offringa solutions from metafits file
-        read_offringa_gains_file( D, nant, cal.offr_chan_num, cal.filename );
+        read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
         */
     }
 
@@ -218,7 +218,7 @@ int main(int argc, char **argv)
     if (strcmp( opts.synth_filter, "LSQ12" ) == 0)
     {
         ntaps = 12;
-        fil_size = ntaps * nchan; // = 12 * 128 = 1536
+        fil_size = ntaps * nchans; // = 12 * 128 = 1536
         coeffs = (double *)malloc( fil_size * sizeof(double) );
         double tmp_coeffs[] = LSQ12_FILTER_COEFFS; // I'll have to change the way these coefficients are stored
                                                    // in order to avoid this cumbersome loading procedure
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
     else if (strcmp( opts.synth_filter, "MIRROR" ) == 0)
     {
         ntaps = 12;
-        fil_size = ntaps * nchan; // = 12 * 128 = 1536
+        fil_size = ntaps * nchans; // = 12 * 128 = 1536
         coeffs = (double *)malloc( fil_size * sizeof(double) );
         double tmp_coeffs[] = MIRROR_FILTER_COEFFS;
         for (int i = 0; i < fil_size; i++)
@@ -240,7 +240,7 @@ int main(int argc, char **argv)
                 opts.synth_filter );
         exit(EXIT_FAILURE);
     }
-    cuDoubleComplex *twiddles = roots_of_unity( nchan );
+    cuDoubleComplex *twiddles = roots_of_unity( nchans );
 
     // Adjust by the scaling that was introduced by the forward PFB,
     // along with any other scaling that I, Lord and Master of the inverse
@@ -278,7 +278,7 @@ int main(int argc, char **argv)
 
     struct gpu_ipfb_arrays gi;
     int nchunk;
-    malloc_formbeam( &gf, sample_rate, nant, nchan, npol, &nchunk, opts.gpu_mem,
+    malloc_formbeam( &gf, nsamples, nants, nchans, npols, &nchunk, opts.gpu_mem,
                      outpol_coh, outpol_incoh, npointing, log );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
@@ -292,17 +292,17 @@ int main(int argc, char **argv)
     float *data_buffer_incoh  = NULL;
     float *data_buffer_vdif   = NULL;
 
-    data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchan *
+    data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans *
                                                            outpol_coh * pfs[0].hdr.nsblk );
-    data_buffer_incoh = create_pinned_data_buffer_psrfits( nchan * outpol_incoh *
+    data_buffer_incoh = create_pinned_data_buffer_psrfits( nchans * outpol_incoh *
                                                            pf_incoh.hdr.nsblk );
     data_buffer_vdif  = create_pinned_data_buffer_vdif( vf->sizeof_buffer *
                                                         npointing );
 
     if (opts.out_vdif)
     {
-        malloc_ipfb( &gi, ntaps, sample_rate, nchan, npol, fil_size, npointing );
-        cu_load_filter( coeffs, twiddles, &gi, nchan );
+        malloc_ipfb( &gi, ntaps, nsamples, nchans, npols, fil_size, npointing );
+        cu_load_filter( coeffs, twiddles, &gi, nchans );
     }
 
     // Set up parallel streams
@@ -381,30 +381,30 @@ int main(int argc, char **argv)
         if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
         {
             // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
-            // detected_beam = [2*sample_rate][nchan][npol] = [20000][128][2] (cuDoubleComplex)
+            // detected_beam = [2*nsamples][nchans][npols] = [20000][128][2] (cuDoubleComplex)
             if (timestep_idx % 2 == 0)
                 offset = 0;
             else
-                offset = sample_rate;
+                offset = nsamples;
 
             for (p   = 0; p   < npointing;   p++  )
-            for (s   = 0; s   < sample_rate; s++  )
-            for (ch  = 0; ch  < nchan;       ch++ )
-            for (pol = 0; pol < npol;        pol++)
+            for (s   = 0; s   < nsamples; s++  )
+            for (ch  = 0; ch  < nchans;       ch++ )
+            for (pol = 0; pol < npols;        pol++)
             {
                 int i;
                 if (pol == 0)
                     i = gf.polX_idxs[opts.out_ant];
                 else
                     i = gf.polY_idxs[opts.out_ant];
-                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,i,nchan,ninput)]);
+                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,i,nchans,ninput)]);
                 detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
             }
         }
         else // beamform (the default mode)
         {
-            cu_form_beam( data, sample_rate, gdelays.d_phi, invJi, timestep_idx,
-                    npointing, nant, nchan, npol, outpol_coh, invw, &gf,
+            cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
+                    npointing, nants, nchans, npols, outpol_coh, invw, &gf,
                     detected_beam, data_buffer_coh, data_buffer_incoh,
                     streams, opts.out_incoh, nchunk );
         }
@@ -416,7 +416,7 @@ int main(int argc, char **argv)
                             timestep_idx+1, ntimesteps);
             logger_timed_message( log, log_message );
             cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
-                               sample_rate, nchan, npol, vf->sizeof_buffer,
+                               nsamples, nchans, npols, vf->sizeof_buffer,
                                &gi, data_buffer_vdif );
         }
         logger_stop_stopwatch( log, "calc" );
@@ -432,11 +432,11 @@ int main(int argc, char **argv)
             logger_start_stopwatch( log, "write" );
 
             if (opts.out_coh)
-                psrfits_write_second( &pfs[p], data_buffer_coh, nchan,
+                psrfits_write_second( &pfs[p], data_buffer_coh, nchans,
                                       outpol_coh, p );
             if (opts.out_incoh && p == 0)
                 psrfits_write_second( &pf_incoh, data_buffer_incoh,
-                                      nchan, outpol_incoh, p );
+                                      nchans, outpol_incoh, p );
             if (opts.out_vdif)
                 vdif_write_second( &vf[p], &vhdr,
                                    data_buffer_vdif + p * vf->sizeof_buffer );
@@ -452,8 +452,8 @@ int main(int argc, char **argv)
     logger_timed_message( log, "Starting clean-up" );
 
     // Free up memory
-    destroy_invJi( invJi, nant, nchan, npol );
-    destroy_detected_beam( detected_beam, npointing, 2*sample_rate, nchan );
+    destroy_invJi( invJi, nants, nchans, npols );
+    destroy_detected_beam( detected_beam, npointing, 2*nsamples, nchans );
 
     free( twiddles );
     free( coeffs );
@@ -733,11 +733,11 @@ void make_beam_parse_cmdline(
 
     // If the reference antenna is outside the range of antennas, issue
     // a warning and turn off phase rotation.
-    /*if (cal->ref_ant < 0 || cal->ref_ant >= opts->nant)
+    /*if (cal->ref_ant < 0 || cal->ref_ant >= opts->nants)
     {
         fprintf( stderr, "warning: tile %d outside of range 0-%d. "
                 "Calibration phase rotation turned off.\n",
-                cal->ref_ant, opts->nant-1 );
+                cal->ref_ant, opts->nants-1 );
         cal->ref_ant = -1; // This defines the meaning of -1
                                 // = don't do phase rotation
     }*/
@@ -745,37 +745,37 @@ void make_beam_parse_cmdline(
 
 
 
-cuDoubleComplex ****create_invJi( int nant, int nchan, int npol )
+cuDoubleComplex ****create_invJi( int nants, int nchans, int npols )
 // Allocate memory for (inverse) Jones matrices
 {
     int ant, pol, ch; // Loop variables
     cuDoubleComplex ****invJi;
-    invJi = (cuDoubleComplex ****)malloc( nant * sizeof(cuDoubleComplex ***) );
+    invJi = (cuDoubleComplex ****)malloc( nants * sizeof(cuDoubleComplex ***) );
 
-    for (ant = 0; ant < nant; ant++)
+    for (ant = 0; ant < nants; ant++)
     {
-        invJi[ant] =(cuDoubleComplex ***)malloc( nchan * sizeof(cuDoubleComplex **) );
+        invJi[ant] =(cuDoubleComplex ***)malloc( nchans * sizeof(cuDoubleComplex **) );
 
-        for (ch = 0; ch < nchan; ch++)
+        for (ch = 0; ch < nchans; ch++)
         {
-            invJi[ant][ch] = (cuDoubleComplex **)malloc( npol * sizeof(cuDoubleComplex *) );
+            invJi[ant][ch] = (cuDoubleComplex **)malloc( npols * sizeof(cuDoubleComplex *) );
 
-            for (pol = 0; pol < npol; pol++)
-                invJi[ant][ch][pol] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
+            for (pol = 0; pol < npols; pol++)
+                invJi[ant][ch][pol] = (cuDoubleComplex *)malloc( npols * sizeof(cuDoubleComplex) );
         }
     }
     return invJi;
 }
 
 
-void destroy_invJi( cuDoubleComplex ****array, int nant, int nchan, int npol )
+void destroy_invJi( cuDoubleComplex ****array, int nants, int nchans, int npols )
 {
     int ant, ch, pol;
-    for (ant = 0; ant < nant; ant++)
+    for (ant = 0; ant < nants; ant++)
     {
-        for (ch = 0; ch < nchan; ch++)
+        for (ch = 0; ch < nchans; ch++)
         {
-            for (pol = 0; pol < npol; pol++)
+            for (pol = 0; pol < npols; pol++)
                 free( array[ant][ch][pol] );
 
             free( array[ant][ch] );
