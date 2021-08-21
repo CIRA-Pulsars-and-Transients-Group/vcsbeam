@@ -41,6 +41,10 @@ double now(){
 #define NOW now()
 #define MAX_COMMAND_LENGTH 1024
 
+/***********************************************
+* Struct for handling the command line options *
+***********************************************/
+
 struct cmd_line_opts {
     // Variables for required options
     unsigned long int  begin;         // GPS time -- when to start beamforming
@@ -53,45 +57,34 @@ struct cmd_line_opts {
     int                max_sec_per_file;    // Number of seconds per fits files
 };
 
+/***********************
+ * Function prototypes *
+ **********************/
+
 void make_incoh_beam_parse_cmdline(
         int argc, char **argv, struct cmd_line_opts *opts );
 
+/********
+ * MAIN *
+ *******/
 
 int main(int argc, char **argv)
 {
     // A place to hold the beamformer settings
     struct cmd_line_opts opts;
 
-    /* Set default beamformer settings */
-
-    // Variables for required options
-    opts.begin       = 0;    // GPS time -- when to start beamforming
-    opts.end         = 0;    // GPS time -- when to stop beamforming
-    opts.datadir     = NULL; // The path to where the recombined data live
-    opts.metafits    = NULL; // filename of the metafits file for the target observation
-    opts.rec_channel = -1;   // 0 - 255 receiver 1.28MHz channel
-
-    // Output options
-    opts.max_sec_per_file = 200; // Number of seconds per fits files
-
     const uintptr_t outpol_incoh = 1;  // ("I")
+    FILE *log = stdout; // Where the output messages go
 
     // Parse command line arguments
     make_incoh_beam_parse_cmdline( argc, argv, &opts );
 
     double begintime = NOW;
 
-    // Calculate the number of files
-    int ntimesteps = opts.end - opts.begin + 1;
-    if (ntimesteps <= 0) {
-        fprintf(stderr, "Cannot beamform on %d files (between %lu and %lu)\n", ntimesteps, opts.begin, opts.end);
-        exit(EXIT_FAILURE);
-    }
-
     char error_message[ERROR_MESSAGE_LEN];
 
     // Create an mwalib metafits context and associated metadata
-    fprintf( stderr, "[%f]  Creating metafits and voltage contexts via MWALIB\n", NOW-begintime );
+    fprintf( log, "[%f]  Creating metafits and voltage contexts via MWALIB\n", NOW-begintime );
 
     MetafitsMetadata *obs_metadata = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
@@ -99,6 +92,8 @@ int main(int argc, char **argv)
 
     get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context, NULL,
             opts.metafits, NULL, opts.begin, opts.end, opts.datadir, opts.rec_channel );
+
+    uintptr_t ntimesteps = vcs_metadata->num_common_timesteps;
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
@@ -112,7 +107,7 @@ int main(int argc, char **argv)
                                 different coarse channels. */
     int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
 
-    fprintf( stderr, "[%f]  Setting up output header information\n", NOW-begintime);
+    fprintf( log, "[%f]  Setting up output header information\n", NOW-begintime);
 
     int npointing = 1;
     struct beam_geom beam_geom_vals[npointing];
@@ -151,22 +146,22 @@ int main(int argc, char **argv)
     cudaMalloc( (void **)&d_incoh, incoh_size );
     cudaCheckErrors( "cudaMalloc(d_incoh) failed" );
 
-    fprintf( stderr, "\n[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
+    fprintf( log, "\n[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
 
     // Set up timing for each section
     long read_time[ntimesteps], calc_time[ntimesteps], write_time[ntimesteps];
-    int timestep_idx;
+    uintptr_t timestep_idx;
     long timestep;
     uint64_t gps_second;
 
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
-        timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
+        timestep = vcs_metadata->common_timestep_indices[timestep_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
         // Read in data from next file
         clock_t start = clock();
-        fprintf( stderr, "\n[%f] [%d/%d] Reading in data for gps second %ld \n", NOW-begintime,
+        fprintf( log, "\n[%f] [%lu/%lu] Reading in data for gps second %ld \n", NOW-begintime,
                 timestep_idx+1, ntimesteps, gps_second );
 
         if (mwalib_voltage_context_read_second(
@@ -184,7 +179,7 @@ int main(int argc, char **argv)
         }
         read_time[timestep_idx] = clock() - start;
 
-        fprintf( stderr, "[%f] [%d/%d] Calculating beam\n", NOW-begintime,
+        fprintf( log, "[%f] [%lu/%lu] Calculating beam\n", NOW-begintime,
                                 timestep_idx+1, ntimesteps);
         start = clock();
 
@@ -198,7 +193,7 @@ int main(int argc, char **argv)
 
         // Write out to file
         start = clock();
-        fprintf( stderr, "[%f] [%d/%d] Writing data to file(s)\n",
+        fprintf( log, "[%f] [%lu/%lu] Writing data to file(s)\n",
                 NOW-begintime, timestep_idx+1, ntimesteps );
 
         psrfits_write_second( &pf_incoh[0], incoh,
@@ -232,27 +227,30 @@ int main(int argc, char **argv)
     calc_std  = sqrt( calc_std  / ntimesteps / npointing );
     write_std = sqrt( write_std / ntimesteps / npointing );
 
-    fprintf( stderr, "\n[%f]  *****FINISHED BEAMFORMING*****\n\n", NOW-begintime );
+    fprintf( log, "\n[%f]  *****FINISHED BEAMFORMING*****\n\n", NOW-begintime );
 
-    fprintf( stderr, "[%f]  Total read  processing time: %9.3f s\n",
+    fprintf( log, "[%f]  Total read  processing time: %9.3f s\n",
                      NOW-begintime, read_sum / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n",
+    fprintf( log, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, read_mean / CLOCKS_PER_SEC, read_std / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Total calc  processing time: %9.3f s\n",
+    fprintf( log, "[%f]  Total calc  processing time: %9.3f s\n",
                      NOW-begintime, calc_sum / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  calc  processing time: %9.3f +\\- %8.3f s\n",
+    fprintf( log, "[%f]  Mean  calc  processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, calc_mean / CLOCKS_PER_SEC, calc_std / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Total write processing time: %9.3f s\n",
+    fprintf( log, "[%f]  Total write processing time: %9.3f s\n",
                      NOW-begintime, write_sum  * npointing / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  write processing time: %9.3f +\\- %8.3f s\n",
+    fprintf( log, "[%f]  Mean  write processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, write_mean / CLOCKS_PER_SEC, write_std / CLOCKS_PER_SEC);
 
 
-    fprintf( stderr, "[%f]  Starting clean-up\n", NOW-begintime);
+    fprintf( log, "[%f]  Starting clean-up\n", NOW-begintime);
 
     // Free up memory
     cudaFreeHost( incoh );
     cudaFreeHost( data );
+
+    cudaFree( d_incoh );
+    cudaFree( d_data );
 
     free( opts.datadir        );
     free( opts.metafits       );
@@ -272,12 +270,11 @@ int main(int argc, char **argv)
 }
 
 
-void usage() {
-    fprintf( stderr, "\n");
-    fprintf( stderr, "usage: make_incoh_beam [OPTIONS]\n");
+void usage()
+{
+    printf( "\nusage: make_incoh_beam [OPTIONS]\n");
 
-    fprintf( stderr,
-            "\nREQUIRED OPTIONS\n\n"
+    printf( "\nREQUIRED OPTIONS\n\n"
             "\t-b, --begin=GPSTIME       Begin time of observation, in GPS seconds\n"
             "\t-e, --end=GPSTIME         End time of observation, in GPS seconds\n"
             "\t-d, --data-location=PATH  PATH is the directory containing the recombined data\n"
@@ -285,23 +282,29 @@ void usage() {
             "\t-f, --coarse-chan=N       Receiver coarse channel number (0-255)\n"
            );
 
-    fprintf( stderr,
-            "\nOUTPUT OPTIONS\n\n"
+    printf( "\nOUTPUT OPTIONS\n\n"
             "\t-t, --max_t               Maximum number of seconds per output FITS file [default: 200]\n"
            );
 
-    fprintf( stderr,
-            "\nOTHER OPTIONS\n\n"
+    printf( "\nOTHER OPTIONS\n\n"
             "\t-h, --help                Print this help and exit\n"
             "\t-V, --version             Print version number and exit\n\n"
            );
-    }
+}
 
 
 
 void make_incoh_beam_parse_cmdline(
         int argc, char **argv, struct cmd_line_opts *opts )
 {
+    // Set defaults for command line options
+    opts->begin            = 0;    // GPS time -- when to start beamforming
+    opts->end              = 0;    // GPS time -- when to stop beamforming
+    opts->datadir          = NULL; // The path to where the recombined data live
+    opts->metafits         = NULL; // filename of the metafits file for the target observation
+    opts->rec_channel      = -1;   // 0 - 255 receiver 1.28MHz channel
+    opts->max_sec_per_file = 200;  // Number of seconds per fits files
+
     if (argc > 1) {
 
         int c;
@@ -341,7 +344,7 @@ void make_incoh_beam_parse_cmdline(
                     break;
                 case 'h':
                     usage();
-                    exit(0);
+                    exit(EXIT_SUCCESS);
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);
@@ -350,12 +353,12 @@ void make_incoh_beam_parse_cmdline(
                     opts->max_sec_per_file = atoi(optarg);
                     break;
                 case 'V':
-                    fprintf( stderr, "MWA Beamformer %s\n", VERSION_BEAMFORMER);
-                    exit(0);
+                    printf( "MWA Beamformer %s\n", VERSION_BEAMFORMER );
+                    exit(EXIT_SUCCESS);
                     break;
                 default:
-                    fprintf(stderr, "error: make_incoh_beam_parse_cmdline: "
-                                    "unrecognised option '%s'\n", optarg);
+                    fprintf( stderr, "error: make_incoh_beam_parse_cmdline: "
+                                    "unrecognised option '%s'\n", optarg );
                     usage();
                     exit(EXIT_FAILURE);
             }

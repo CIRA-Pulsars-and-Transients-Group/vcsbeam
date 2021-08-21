@@ -125,17 +125,12 @@ int main(int argc, char **argv)
 
     double begintime = NOW;
 
-    // Calculate the number of files
-    int ntimesteps = opts.end - opts.begin + 1;
-    if (ntimesteps <= 0) {
-        fprintf(stderr, "Cannot beamform on %d files (between %lu and %lu)\n", ntimesteps, opts.begin, opts.end);
-        exit(EXIT_FAILURE);
-    }
-
     char error_message[ERROR_MESSAGE_LEN];
 
+    FILE *log = stdout;
+
     // Create an mwalib metafits context and associated metadata
-    fprintf( stderr, "[%f]  Creating metafits and voltage contexts via MWALIB\n", NOW-begintime );
+    fprintf( log, "[%f]  Creating metafits and voltage contexts via MWALIB\n", NOW-begintime );
 
     MetafitsMetadata *obs_metadata = NULL;
     MetafitsMetadata *cal_metadata = NULL;
@@ -144,6 +139,8 @@ int main(int argc, char **argv)
 
     get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context, &cal_metadata,
             opts.metafits, cal.metafits, opts.begin, opts.end, opts.datadir, opts.rec_channel );
+
+    uintptr_t ntimesteps = vcs_metadata->num_common_timesteps;
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nant           = obs_metadata->num_ants;
@@ -164,7 +161,7 @@ int main(int argc, char **argv)
 
 
     // Start counting time from here (i.e. after parsing the command line)
-    fprintf( stderr, "[%f]  Reading pointings file %s\n", NOW-begintime, opts.pointings_file );
+    fprintf( log, "[%f]  Reading pointings file %s\n", NOW-begintime, opts.pointings_file );
 
     // Parse input pointings
     double *ras_hours, *decs_degs;
@@ -193,15 +190,15 @@ int main(int argc, char **argv)
 
             // Print a suitable message
             if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
-                fprintf( stderr, "[%f]  No XY phase correction information for this obsid\n",
+                fprintf( log, "[%f]  No XY phase correction information for this obsid\n",
                         NOW-begintime );
             else
-                fprintf( stderr, "[%f]  Applying XY phase correction %.2e*freq%+.2e\n",
+                fprintf( log, "[%f]  Applying XY phase correction %.2e*freq%+.2e\n",
                         NOW-begintime, cal.phase_slope, cal.phase_offset );
         }
         else
         {
-            fprintf( stderr, "[%f]  Not applying XY phase correction\n", NOW-begintime );
+            fprintf( log, "[%f]  Not applying XY phase correction\n", NOW-begintime );
         }
     }
     else if (cal.cal_type == CAL_OFFRINGA)
@@ -231,7 +228,7 @@ int main(int argc, char **argv)
 
     // ------------------
 
-    fprintf( stderr, "[%f]  Setting up output header information\n", NOW-begintime);
+    fprintf( log, "[%f]  Setting up output header information\n", NOW-begintime);
     struct beam_geom beam_geom_vals[npointing];
 
     double mjd, sec_offset;
@@ -348,25 +345,29 @@ int main(int argc, char **argv)
     for (p = 0; p < npointing; p++)
         cudaStreamCreate(&(streams[p])) ;
 
-    fprintf( stderr, "\n[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
+    fprintf( log, "\n[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
 
     // Set up timing for each section
     long read_time[ntimesteps], delay_time[ntimesteps], calc_time[ntimesteps], write_time[ntimesteps][npointing];
-    int timestep_idx;
+    uintptr_t timestep_idx;
     long timestep;
+    uint64_t gps_second;
+
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
-        timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
+        timestep = vcs_metadata->common_timestep_indices[timestep_idx];
         coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
+        gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
         // Read in data from next file
         clock_t start = clock();
-        fprintf( stderr, "\n[%f] [%d/%d] Reading in data for gps second %ld \n", NOW-begintime,
-                timestep_idx+1, ntimesteps, vcs_metadata->timesteps[timestep].gps_time_ms / 1000 );
+        fprintf( log, "\n[%f] [%lu/%lu] Reading in data for gps second %ld \n", NOW-begintime,
+                timestep_idx+1, ntimesteps, gps_second );
 
-        if (mwalib_voltage_context_read_file(
+        if (mwalib_voltage_context_read_second(
                     vcs_context,
-                    timestep,
+                    gps_second,
+                    1,
                     coarse_chan,
                     data,
                     bytes_per_timestep,
@@ -380,7 +381,7 @@ int main(int argc, char **argv)
 
         // Get the next second's worth of phases / jones matrices, if needed
         start = clock();
-        fprintf( stderr, "[%f] [%d/%d] Calculating Jones matrices\n", NOW-begintime,
+        fprintf( log, "[%f] [%lu/%lu] Calculating Jones matrices\n", NOW-begintime,
                                 timestep_idx+1, ntimesteps );
 
         sec_offset = (double)(timestep_idx + opts.begin - obs_metadata->obs_id);
@@ -406,7 +407,7 @@ int main(int argc, char **argv)
 
         delay_time[timestep_idx] = clock() - start;
 
-        fprintf( stderr, "[%f] [%d/%d] Calculating beam\n", NOW-begintime,
+        fprintf( log, "[%f] [%lu/%lu] Calculating beam\n", NOW-begintime,
                                 timestep_idx+1, ntimesteps);
         start = clock();
 
@@ -443,7 +444,7 @@ int main(int argc, char **argv)
         // Invert the PFB, if requested
         if (opts.out_vdif)
         {
-            fprintf( stderr, "[%f] [%d/%d] Inverting the PFB (full)\n",
+            fprintf( log, "[%f] [%lu/%lu] Inverting the PFB (full)\n",
                             NOW-begintime, timestep_idx+1, ntimesteps);
             cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
                                sample_rate, nchan, npol, vf->sizeof_buffer,
@@ -456,7 +457,7 @@ int main(int argc, char **argv)
         for ( p = 0; p < npointing; p++)
         {
             start = clock();
-            fprintf( stderr, "[%f] [%d/%d] [%d/%d] Writing data to file(s)\n",
+            fprintf( log, "[%f] [%lu/%lu] [%d/%d] Writing data to file(s)\n",
                     NOW-begintime, timestep_idx+1, ntimesteps, p+1, npointing );
 
             if (opts.out_coh)
@@ -503,27 +504,27 @@ int main(int argc, char **argv)
     calc_std  = sqrt( calc_std  / ntimesteps / npointing );
     write_std = sqrt( write_std / ntimesteps / npointing );
 
-    fprintf( stderr, "\n[%f]  *****FINISHED BEAMFORMING*****\n\n", NOW-begintime );
+    fprintf( log, "\n[%f]  *****FINISHED BEAMFORMING*****\n\n", NOW-begintime );
 
-    fprintf( stderr, "[%f]  Total read  processing time: %9.3f s\n",
+    fprintf( log, "[%f]  Total read  processing time: %9.3f s\n",
                      NOW-begintime, read_sum / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n",
+    fprintf( log, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, read_mean / CLOCKS_PER_SEC, read_std / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Total delay processing time: %9.3f s\n",
+    fprintf( log, "[%f]  Total delay processing time: %9.3f s\n",
                      NOW-begintime, delay_sum / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  delay processing time: %9.3f +\\- %8.3f s\n",
+    fprintf( log, "[%f]  Mean  delay processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, delay_mean / CLOCKS_PER_SEC, delay_std / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Total calc  processing time: %9.3f s\n",
+    fprintf( log, "[%f]  Total calc  processing time: %9.3f s\n",
                      NOW-begintime, calc_sum / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  calc  processing time: %9.3f +\\- %8.3f s\n",
+    fprintf( log, "[%f]  Mean  calc  processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, calc_mean / CLOCKS_PER_SEC, calc_std / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Total write processing time: %9.3f s\n",
+    fprintf( log, "[%f]  Total write processing time: %9.3f s\n",
                      NOW-begintime, write_sum  * npointing / CLOCKS_PER_SEC);
-    fprintf( stderr, "[%f]  Mean  write processing time: %9.3f +\\- %8.3f s\n",
+    fprintf( log, "[%f]  Mean  write processing time: %9.3f +\\- %8.3f s\n",
                      NOW-begintime, write_mean / CLOCKS_PER_SEC, write_std / CLOCKS_PER_SEC);
 
 
-    fprintf( stderr, "[%f]  Starting clean-up\n", NOW-begintime);
+    fprintf( log, "[%f]  Starting clean-up\n", NOW-begintime);
 
     // Free up memory
     destroy_invJi( invJi, nant, nchan, npol );
@@ -596,98 +597,47 @@ int main(int argc, char **argv)
 
 
 void usage() {
-    fprintf(stderr, "\n");
-    fprintf(stderr, "usage: make_beam [OPTIONS]\n");
+    printf( "\nusage: make_mwa_tied_array_beam [OPTIONS]\n");
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "REQUIRED OPTIONS\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "\t-b, --begin=GPSTIME       ");
-    fprintf(stderr, "Begin time of observation, in GPS seconds\n");
-    fprintf(stderr, "\t-e, --end=GPSTIME         ");
-    fprintf(stderr, "End time of observation, in GPS seconds\n");
-    fprintf(stderr, "\t-P, --pointings=FILE      ");
-    fprintf(stderr, "FILE containing RA and Decs of multiple pointings\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "in the format hh:mm:ss.s dd:mm:ss.s ...\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "\t-d, --data-location=PATH  ");
-    fprintf(stderr, "PATH is the directory containing the recombined data\n");
-    fprintf(stderr, "\t-m, --metafits=FILE  ");
-    fprintf(stderr, "FILE is the metafits file for the target observation\n");
-    fprintf(stderr, "\t-f, --coarse-chan=N       ");
-    fprintf(stderr, "Absolute coarse channel number (0-255)\n");
+    printf( "\nREQUIRED OPTIONS\n\n"
+            "\t-b, --begin=GPSTIME       Begin time of observation, in GPS seconds\n"
+            "\t-e, --end=GPSTIME         End time of observation, in GPS seconds\n"
+            "\t-P, --pointings=FILE      FILE containing RA and Decs of multiple pointings\n"
+            "\t                          in the format hh:mm:ss.s dd:mm:ss.s ...\n"
+            "\t-d, --data-location=PATH  PATH is the directory containing the recombined data\n"
+            "\t-m, --metafits=FILE       FILE is the metafits file for the target observation\n"
+            "\t-f, --coarse-chan=N       Absolute coarse channel number (0-255)\n" );
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "OUTPUT OPTIONS\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "\t-i, --incoh                ");
-    fprintf(stderr, "Turn on incoherent PSRFITS beam output.                             ");
-    fprintf(stderr, "[default: OFF]\n");
-    fprintf(stderr, "\t-p, --psrfits              ");
-    fprintf(stderr, "Turn on coherent PSRFITS output (will be turned on if none of\n");
-    fprintf(stderr, "\t                           ");
-    fprintf(stderr, "-i, -p, -u, -v are chosen).                                         ");
-    fprintf(stderr, "[default: OFF]\n");
-    fprintf(stderr, "\t-v, --vdif                 ");
-    fprintf(stderr, "Turn on VDIF output with upsampling                                 ");
-    fprintf(stderr, "[default: OFF]\n");
-    fprintf(stderr, "\t-s, --summed               ");
-    fprintf(stderr, "Turn on summed polarisations of the coherent output (only Stokes I) ");
-    fprintf(stderr, "[default: OFF]\n");
-    fprintf(stderr, "\t-t, --max_t                ");
-    fprintf(stderr, "Maximum number of seconds per output fits file. ");
-    fprintf(stderr, "[default: 200]\n");
-    fprintf(stderr, "\t-A, --antpol=ant           ");
-    fprintf(stderr, "Do not beamform. Instead, only operate on the specified ant\n");
-    fprintf(stderr, "\t                           ");
-    fprintf(stderr, "stream (0-127)\n" );
-    fprintf(stderr, "\t-S, --synth_filter=filter  ");
-    fprintf(stderr, "Apply the named filter during high-time resolution synthesis.    ");
-    fprintf(stderr, "[default: LSQ12]\n");
-    fprintf(stderr, "\t                           ");
-    fprintf(stderr, "filter can be MIRROR or LSQ12.\n");
+    printf( "\nOUTPUT OPTIONS\n\n"
+            "\t-i, --incoh                Turn on incoherent PSRFITS beam output.                             [default: OFF]\n"
+            "\t-p, --psrfits              Turn on coherent PSRFITS output (will be turned on if none of\n"
+            "\t                           -i, -p, -u, -v are chosen).                                         [default: OFF]\n"
+            "\t-v, --vdif                 Turn on VDIF output with upsampling                                 [default: OFF]\n"
+            "\t-s, --summed               Turn on summed polarisations of the coherent output (only Stokes I) [default: OFF]\n"
+            "\t-t, --max_t                Maximum number of seconds per output fits file. [default: 200]\n"
+            "\t-A, --antpol=ant           Do not beamform. Instead, only operate on the specified ant\n"
+            "\t                           stream (0-127)\n" 
+            "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.    [default: LSQ12]\n"
+            "\t                           filter can be MIRROR or LSQ12.\n" );
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "CALIBRATION OPTIONS (RTS)\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "\t-c, --cal-metafits=FILE  ");
-    fprintf(stderr, "FILE is the metafits file pertaining to the calibration solution\n");
-    fprintf(stderr, "\t-C, --cal-location=PATH  ");
-    fprintf(stderr, "PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n");
-    fprintf(stderr, "\t-R, --ref-ant=ANT         ");
-    fprintf(stderr, "Rotate the phases of the XX and YY elements of the calibration\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "Jones matrices so that the phases of tile ANT align. If ANT is\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "outside the range 0-127, no phase rotation is done               ");
-    fprintf(stderr, "[default: 0]\n");
-    fprintf(stderr, "\t-X, --cross-terms         ");
-    fprintf(stderr, "Retain the XY and YX terms of the calibration solution           ");
-    fprintf(stderr, "[default: off]\n");
-    fprintf(stderr, "\t-U, --no-XY-phase         ");
-    fprintf(stderr, "Do not apply the XY phase correction to the calibration solution");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "CALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "\t-O, --offringa            ");
-    fprintf(stderr, "The calibration solution is in the Offringa format instead of\n");
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "the default RTS format. In this case, the argument to -C should\n" );
-    fprintf(stderr, "\t                          ");
-    fprintf(stderr, "be the full path to the binary solution file.\n");
+    printf( "\nCALIBRATION OPTIONS (RTS)\n\n"
+            "\t-c, --cal-metafits=FILE  FILE is the metafits file pertaining to the calibration solution\n"
+            "\t-C, --cal-location=PATH  PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
+            "\t-R, --ref-ant=ANT         Rotate the phases of the XX and YY elements of the calibration\n"
+            "\t                          Jones matrices so that the phases of tile ANT align. If ANT is\n"
+            "\t                          outside the range 0-127, no phase rotation is done               [default: 0]\n"
+            "\t-X, --cross-terms         Retain the XY and YX terms of the calibration solution           [default: off]\n"
+            "\t-U, --no-XY-phase         Do not apply the XY phase correction to the calibration solution\n" );
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "OTHER OPTIONS\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "\t-h, --help                ");
-    fprintf(stderr, "Print this help and exit\n");
-    fprintf(stderr, "\t-g, --gpu-mem=N     ");
-    fprintf(stderr, "The maximum amount of GPU memory you want make_beam to use in GB ");
-    fprintf(stderr, "[default: -1]\n");
-    fprintf(stderr, "\t-V, --version             ");
-    fprintf(stderr, "Print version number and exit\n");
-    fprintf(stderr, "\n");
+    printf( "\nCALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n\n"
+            "\t-O, --offringa            The calibration solution is in the Offringa format instead of\n"
+            "\t                          the default RTS format. In this case, the argument to -C should\n" 
+            "\t                          be the full path to the binary solution file.\n" );
+
+    printf( "\nOTHER OPTIONS\n\n"
+            "\t-h, --help                Print this help and exit\n"
+            "\t-g, --gpu-mem=N     The maximum amount of GPU memory you want make_beam to use in GB [default: -1]\n"
+            "\t-V, --version             Print version number and exit\n\n");
 }
 
 
@@ -797,15 +747,15 @@ void make_beam_parse_cmdline(
                     opts->out_vdif = 1;
                     break;
                 case 'V':
-                    fprintf( stderr, "MWA Beamformer %s\n", VERSION_BEAMFORMER);
+                    printf( "MWA Beamformer %s\n", VERSION_BEAMFORMER);
                     exit(0);
                     break;
                 case 'X':
                     cal->cross_terms = 1;
                     break;
                 default:
-                    fprintf(stderr, "error: make_beam_parse_cmdline: "
-                                    "unrecognised option '%s'\n", optarg);
+                    fprintf( stderr, "error: make_beam_parse_cmdline: "
+                                    "unrecognised option '%s'\n", optarg );
                     usage();
                     exit(EXIT_FAILURE);
             }
