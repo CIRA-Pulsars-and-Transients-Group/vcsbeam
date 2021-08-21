@@ -70,11 +70,17 @@ void calc_primary_beam(
 
             // Check this RF input's dipole configuration
             config_idx = hash_dipole_config( pb->amps[rf_input] );
-            if (config_idx == -1 || config_idx == NCONFIGS - 1)
-                continue; // Too many dead dipoles -- skip this tile
+            if (config_idx == NCONFIGS - 1)
+                continue; // All dipoles are dead -- skip this tile
 
-            // Call Hyperbeam if this config hasn't been done yet
-            if (configs[config_idx] == NULL)
+            if (config_idx == MANY_DEAD_DIPOLES) // If lots of dipoles are dead, call Hyperbeam
+            {
+                // Use the 'dead' configuration temporarily
+                config_idx = DEAD_CONFIG;
+                configs[config_idx] = (cuDoubleComplex *)calc_jones(
+                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
+            }
+            else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
                 configs[config_idx] = (cuDoubleComplex *)calc_jones(
@@ -192,7 +198,7 @@ int hash_dipole_config( double *amps )
  * Since dead dipoles are relatively rare, we only consider configurations
  * in which up to two dipoles are dead. Any more than that and the we can
  * recalculate the Jones matrix with minimal entropy. In this case, this
- * function returns -1. The other remaining cases are:
+ * function returns MANY_DEAD_DIPOLES. The other remaining cases are:
  *
  *   0  dead dipoles = 1   configuration
  *   1  dead dipole  = 16  configurations
@@ -275,7 +281,7 @@ int hash_dipole_config( double *amps )
             idx = 137;
             break;
         default: // any configuration with >2 dead dipoles
-            idx = -1;
+            idx = MANY_DEAD_DIPOLES;
             break;
     }
 

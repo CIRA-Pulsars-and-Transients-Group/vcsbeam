@@ -232,7 +232,7 @@ int main(int argc, char **argv)
 
     // Adjust by the scaling that was introduced by the forward PFB,
     // along with any other scaling that I, Lord and Master of the inverse
-    // PFB, feels is appropriate.
+    // PFB, feel is appropriate.
     double approx_filter_scale = 15.0/7.2; // 7.2 = 16384/117964.8
     for (int i = 0; i < fil_size; i++)
         coeffs[i] *= approx_filter_scale;

@@ -12,7 +12,9 @@
 #include <cuComplex.h>
 #include "beam_common.h"
 
-#define NCONFIGS 138
+#define NCONFIGS           138
+#define DEAD_CONFIG        (NCONFIGS - 1)
+#define MANY_DEAD_DIPOLES  -1
 
 #define PB_IDX(p,a,pol,na,npol) ((p)*(na)*(npol) + (a)*(npol) + (pol))
 
