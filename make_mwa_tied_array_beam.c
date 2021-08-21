@@ -233,13 +233,13 @@ int main(int argc, char **argv)
 
     double mjd, sec_offset;
     mjd = obs_metadata->sched_start_mjd;
-    calc_beam_geom( ras_hours, decs_degs, npointing, mjd, beam_geom_vals );
+    for (p = 0; p < npointing; p++)
+        calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
     // Create structures for holding header information
-    struct psrfits  *pf;
-    struct psrfits  *pf_incoh;
-    pf = (struct psrfits *)malloc(npointing * sizeof(struct psrfits));
-    pf_incoh = (struct psrfits *)malloc(1 * sizeof(struct psrfits));
+    struct psrfits  *pfs;
+    struct psrfits   pf_incoh;
+    pfs = (struct psrfits *)malloc(npointing * sizeof(struct psrfits));
     vdif_header     vhdr;
     struct vdifinfo *vf;
     vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
@@ -286,11 +286,12 @@ int main(int argc, char **argv)
         coeffs[i] *= approx_filter_scale;
 
     // Populate the relevant header structs
-    populate_psrfits_header( pf, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-            outpol_coh, beam_geom_vals, npointing, true );
+    for (p = 0; p < npointing; p++)
+        populate_psrfits_header( &pfs[p], obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
+                outpol_coh, &beam_geom_vals[p], true );
 
-    populate_psrfits_header( pf_incoh, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-            outpol_incoh, beam_geom_vals, 1, false );
+    populate_psrfits_header( &pf_incoh, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
+            outpol_incoh, &beam_geom_vals[0], false );
 
     populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, coarse_chan_idx,
             beam_geom_vals, npointing );
@@ -328,9 +329,9 @@ int main(int argc, char **argv)
     float *data_buffer_vdif   = NULL;
 
     data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchan *
-                                                           outpol_coh * pf[0].hdr.nsblk );
+                                                           outpol_coh * pfs[0].hdr.nsblk );
     data_buffer_incoh = create_pinned_data_buffer_psrfits( nchan * outpol_incoh *
-                                                           pf_incoh[0].hdr.nsblk );
+                                                           pf_incoh.hdr.nsblk );
     data_buffer_vdif  = create_pinned_data_buffer_vdif( vf->sizeof_buffer *
                                                         npointing );
 
@@ -386,7 +387,8 @@ int main(int argc, char **argv)
 
         sec_offset = (double)(timestep_idx + opts.begin - obs_metadata->obs_id);
         mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
-        calc_beam_geom( ras_hours, decs_degs, npointing, mjd, beam_geom_vals );
+        for (p = 0; p < npointing; p++)
+            calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
         // Calculate the primary beam
         calc_primary_beam( &pb, beam_geom_vals );
@@ -461,10 +463,10 @@ int main(int argc, char **argv)
                     NOW-begintime, timestep_idx+1, ntimesteps, p+1, npointing );
 
             if (opts.out_coh)
-                psrfits_write_second( &pf[p], data_buffer_coh, nchan,
+                psrfits_write_second( &pfs[p], data_buffer_coh, nchan,
                                       outpol_coh, p );
             if (opts.out_incoh && p == 0)
-                psrfits_write_second( &pf_incoh[p], data_buffer_incoh,
+                psrfits_write_second( &pf_incoh, data_buffer_incoh,
                                       nchan, outpol_incoh, p );
             if (opts.out_vdif)
                 vdif_write_second( &vf[p], &vhdr,
@@ -550,21 +552,13 @@ int main(int argc, char **argv)
 
     if (opts.out_incoh)
     {
-        free( pf_incoh[0].sub.data        );
-        free( pf_incoh[0].sub.dat_freqs   );
-        free( pf_incoh[0].sub.dat_weights );
-        free( pf_incoh[0].sub.dat_offsets );
-        free( pf_incoh[0].sub.dat_scales  );
+        free_psrfits( &pf_incoh );
     }
     for (p = 0; p < npointing; p++)
     {
         if (opts.out_coh)
         {
-            free( pf[p].sub.data        );
-            free( pf[p].sub.dat_freqs   );
-            free( pf[p].sub.dat_weights );
-            free( pf[p].sub.dat_offsets );
-            free( pf[p].sub.dat_scales  );
+            free_psrfits( &pfs[p] );
         }
         if (opts.out_vdif)
         {

@@ -50,11 +50,10 @@ void create_geometric_delays(
 
 
 void calc_beam_geom(
-        double           *ras_hours,
-        double           *decs_degs,
-        int               npointing,
+        double            ras_hours,
+        double            decs_degs,
         double            mjd,
-        struct beam_geom  bg[] );
+        struct beam_geom  *bg );
 
 
 

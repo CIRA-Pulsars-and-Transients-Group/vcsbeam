@@ -132,11 +132,10 @@ void push_geometric_delays_to_device( geometric_delays *gdelays )
 
 
 void calc_beam_geom(
-        double           *ras_hours,
-        double           *decs_degs,
-        int               npointing,
+        double            ras_hours,
+        double            decs_degs,
         double            mjd,
-        struct beam_geom  bg[] )
+        struct beam_geom  *bg )
 {
     // Calculate geometry of pointings
 
@@ -159,40 +158,37 @@ void calc_beam_geom(
     /* get requested Az/El from command line */
     mjd2lst( mjd, &lmst );
 
-    for (int p = 0; p < npointing; p++)
-    {
-        /* for the look direction <not the tile> */
+    /* for the look direction <not the tile> */
 
-        mean_ra = ras_hours[p] * PAL__DH2R;
-        mean_dec = decs_degs[p] * PAL__DD2R;
+    mean_ra = ras_hours * PAL__DH2R;
+    mean_dec = decs_degs * PAL__DD2R;
 
-        palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
+    palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
 
-        // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
+    // Lets go mean to apparent precess from J2000.0 to EPOCH of date.
 
-        ha = palRanorm( lmst - ra_ap ); // in radians
+    ha = palRanorm( lmst - ra_ap ); // in radians
 
-        /* now HA/Dec to Az/El */
+    /* now HA/Dec to Az/El */
 
-        palDe2h( ha, dec_ap, MWA_LATITUDE_RADIANS, &az, &el );
+    palDe2h( ha, dec_ap, MWA_LATITUDE_RADIANS, &az, &el );
 
-        /* now we need the direction cosines */
+    /* now we need the direction cosines */
 
-        unit_N = cos(el) * cos(az);
-        unit_E = cos(el) * sin(az);
-        unit_H = sin(el);
+    unit_N = cos(el) * cos(az);
+    unit_E = cos(el) * sin(az);
+    unit_H = sin(el);
 
-        // Populate a structure with some of the calculated values
-        bg[p].mean_ra  = mean_ra;
-        bg[p].mean_dec = mean_dec;
-        bg[p].az       = az;
-        bg[p].el       = el;
-        bg[p].lmst     = lmst;
-        bg[p].fracmjd  = fracmjd;
-        bg[p].intmjd   = intmjd;
-        bg[p].unit_N   = unit_N;
-        bg[p].unit_E   = unit_E;
-        bg[p].unit_H   = unit_H;
-    }
+    // Populate a structure with some of the calculated values
+    bg->mean_ra  = mean_ra;
+    bg->mean_dec = mean_dec;
+    bg->az       = az;
+    bg->el       = el;
+    bg->lmst     = lmst;
+    bg->fracmjd  = fracmjd;
+    bg->intmjd   = intmjd;
+    bg->unit_N   = unit_N;
+    bg->unit_E   = unit_E;
+    bg->unit_H   = unit_H;
 }
 

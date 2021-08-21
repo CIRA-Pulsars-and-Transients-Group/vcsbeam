@@ -106,24 +106,21 @@ int main(int argc, char **argv)
     uintptr_t    timestep_idx;
     uintptr_t    timestep;
     uint64_t     gps_second;
+    double       ra_hours        = obs_metadata->ra_tile_pointing_deg / 15.0;
+    double       dec_degs        = obs_metadata->dec_tile_pointing_deg;
 
     // Populate the PSRFITS header struct
     logger_timed_message( log, "Preparing header for output PSRFITS" );
 
-    int npointing = 1;
-    struct beam_geom beam_geom_vals[npointing];
-    double ras_hours[npointing], decs_degs[npointing];
-    ras_hours[0] = obs_metadata->ra_tile_pointing_deg / 15.0;
-    decs_degs[0] = obs_metadata->dec_tile_pointing_deg;
+    struct beam_geom beam_geom_vals;
 
     double mjd = obs_metadata->sched_start_mjd;
-    calc_beam_geom( ras_hours, decs_degs, npointing, mjd, beam_geom_vals );
+    calc_beam_geom( ra_hours, dec_degs, mjd, &beam_geom_vals );
 
-    struct psrfits  *pfs;
-    pfs = (struct psrfits *)malloc(1 * sizeof(struct psrfits));
+    struct psrfits pf;
 
-    populate_psrfits_header( pfs, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-            outpol_incoh, beam_geom_vals, 1, false );
+    populate_psrfits_header( &pf, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
+            outpol_incoh, &beam_geom_vals, false );
 
     // Allocate memory
     logger_timed_message( log, "Allocate host and device memory" );
@@ -188,7 +185,7 @@ int main(int argc, char **argv)
 
         logger_start_stopwatch( log, "write" );
 
-        psrfits_write_second( &pfs[0], incoh,
+        psrfits_write_second( &pf, incoh,
                 nchans, outpol_incoh, 0 );
 
         logger_stop_stopwatch( log, "write" );
@@ -207,13 +204,7 @@ int main(int argc, char **argv)
     free( opts.datadir        );
     free( opts.metafits       );
 
-    free( pfs[0].sub.data        );
-    free( pfs[0].sub.dat_freqs   );
-    free( pfs[0].sub.dat_weights );
-    free( pfs[0].sub.dat_offsets );
-    free( pfs[0].sub.dat_scales  );
-
-    free( pfs );
+    free_psrfits( &pf );
 
     // Clean up memory associated with mwalib
     mwalib_metafits_metadata_free( obs_metadata );
