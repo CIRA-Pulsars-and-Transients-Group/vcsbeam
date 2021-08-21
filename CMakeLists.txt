@@ -36,7 +36,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 set(sources "beam_common.c;beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;get_jones.c;ipfb.cu;make_mwa_tied_array_beam.c;ascii_header.c;vdifio.c;calibration.c;primary_beam.c;geometric_delay.c;metadata.c")
 
 add_executable(make_mwa_tied_array_beam "beam_common.c;beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;get_jones.c;ipfb.cu;make_mwa_tied_array_beam.c;ascii_header.c;vdifio.c;calibration.c;primary_beam.c;geometric_delay.c;metadata.c")
-add_executable(make_mwa_incoh_beam "beam_common.c;beam_psrfits.c;form_beam.cu;make_mwa_incoh_beam.c;ascii_header.c;metadata.c;geometric_delay.c")
+add_executable(make_mwa_incoh_beam "beam_common.c;beam_psrfits.c;form_beam.cu;make_mwa_incoh_beam.c;ascii_header.c;metadata.c;geometric_delay.c;performance.c")
 
 set_target_properties(make_mwa_tied_array_beam PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DHYPERBEAM_HDF5=\\\"${HYPERBEAM_HDF5}\\\"")
 set_target_properties(make_mwa_incoh_beam PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS}")

@@ -31,14 +31,8 @@
 
 #include <cuda_runtime.h>
 #include "ipfb.h"
+#include "performance.h"
 
-double now(){
-  struct timespec t;
-  clock_gettime(CLOCK_REALTIME,&t);
-  return (double)t.tv_sec + (double)t.tv_nsec/1000000000L;
-}
-
-#define NOW now()
 #define MAX_COMMAND_LENGTH 1024
 
 /***********************************************
@@ -73,18 +67,21 @@ int main(int argc, char **argv)
     // A place to hold the beamformer settings
     struct cmd_line_opts opts;
 
+    // Start a logger
+    logger *log = create_logger( stdout );
+    logger_add_stopwatch( log, "read" );
+    logger_add_stopwatch( log, "calc" );
+    logger_add_stopwatch( log, "write" );
+
     const uintptr_t outpol_incoh = 1;  // ("I")
-    FILE *log = stdout; // Where the output messages go
 
     // Parse command line arguments
     make_incoh_beam_parse_cmdline( argc, argv, &opts );
 
-    double begintime = NOW;
-
     char error_message[ERROR_MESSAGE_LEN];
 
     // Create an mwalib metafits context and associated metadata
-    fprintf( log, "[%f]  Creating metafits and voltage contexts via MWALIB\n", NOW-begintime );
+    logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
     MetafitsMetadata *obs_metadata = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
@@ -99,15 +96,13 @@ int main(int argc, char **argv)
     uintptr_t nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t ninput         = obs_metadata->num_rf_inputs;
     unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
+    int coarse_chan_idx      = 0; /* Value is fixed for now (i.e. each call of make_beam only
+                                     ever processes one coarse chan. However, in the future,
+                                     this should be flexible, with mpi or threads managing
+                                     different coarse channels. */
+    int coarse_chan          = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
 
-
-    int coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
-                                ever processes one coarse chan. However, in the future,
-                                this should be flexible, with mpi or threads managing
-                                different coarse channels. */
-    int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
-
-    fprintf( log, "[%f]  Setting up output header information\n", NOW-begintime);
+    logger_timed_message( log, "Setting up output header information" );
 
     int npointing = 1;
     struct beam_geom beam_geom_vals[npointing];
@@ -146,24 +141,27 @@ int main(int argc, char **argv)
     cudaMalloc( (void **)&d_incoh, incoh_size );
     cudaCheckErrors( "cudaMalloc(d_incoh) failed" );
 
-    fprintf( log, "\n[%f]  *****BEGINNING BEAMFORMING*****\n", NOW-begintime );
+    logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
 
     // Set up timing for each section
-    long read_time[ntimesteps], calc_time[ntimesteps], write_time[ntimesteps];
     uintptr_t timestep_idx;
     long timestep;
     uint64_t gps_second;
+    char log_message[MAX_COMMAND_LENGTH];
 
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
+        logger_message( log, "" ); // Print a blank line
+
         timestep = vcs_metadata->common_timestep_indices[timestep_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
         // Read in data from next file
-        clock_t start = clock();
-        fprintf( log, "\n[%f] [%lu/%lu] Reading in data for gps second %ld \n", NOW-begintime,
+        sprintf( log_message, "[%lu/%lu] Reading in data for gps second %ld",
                 timestep_idx+1, ntimesteps, gps_second );
+        logger_timed_message( log, log_message );
 
+        logger_start_stopwatch( log, "read" );
         if (mwalib_voltage_context_read_second(
                     vcs_context,
                     gps_second,
@@ -177,73 +175,39 @@ int main(int argc, char **argv)
             fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s\n", error_message );
             exit(EXIT_FAILURE);
         }
-        read_time[timestep_idx] = clock() - start;
+        logger_stop_stopwatch( log, "read" );
 
-        fprintf( log, "[%f] [%lu/%lu] Calculating beam\n", NOW-begintime,
-                                timestep_idx+1, ntimesteps);
-        start = clock();
+        // Form the incoherent beam
+        sprintf( log_message, "[%lu/%lu] Calculating beam", timestep_idx+1, ntimesteps );
+        logger_timed_message( log, log_message );
+
+        logger_start_stopwatch( log, "calc" );
 
         cu_form_incoh_beam(
                 data, d_data, data_size,
                 incoh, d_incoh, incoh_size,
                 sample_rate, nchan, ninput );
 
-        calc_time[timestep_idx] = clock() - start;
+        logger_stop_stopwatch( log, "calc" );
 
 
         // Write out to file
-        start = clock();
-        fprintf( log, "[%f] [%lu/%lu] Writing data to file(s)\n",
-                NOW-begintime, timestep_idx+1, ntimesteps );
+        sprintf( log_message, "[%lu/%lu] Writing data to file", timestep_idx+1, ntimesteps );
+        logger_timed_message( log, log_message );
+
+        logger_start_stopwatch( log, "write" );
 
         psrfits_write_second( &pf_incoh[0], incoh,
                 nchan, outpol_incoh, 0 );
 
-        write_time[timestep_idx] = clock() - start;
+        logger_stop_stopwatch( log, "write" );
     }
 
-    // Calculate total processing times
-    float read_sum = 0, calc_sum = 0, write_sum = 0;
-    for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
-    {
-        read_sum  += (float) read_time[timestep_idx];
-        calc_sum  += (float) calc_time[timestep_idx];
-        write_sum += (float) write_time[timestep_idx];
-    }
-    float read_mean, calc_mean, write_mean;
-    read_mean  = read_sum  / ntimesteps;
-    calc_mean  = calc_sum  / ntimesteps;
-    write_mean = write_sum / ntimesteps;
+    logger_message( log, "\n*****END BEAMFORMING*****\n" );
+    logger_report_all_stats( log );
+    logger_message( log, "" );
 
-    // Calculate the standard deviations
-    float read_std = 0, calc_std = 0, write_std = 0;
-    for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
-    {
-        read_std  += pow((float)read_time[timestep_idx]  - read_mean,  2);
-        calc_std  += pow((float)calc_time[timestep_idx]  - calc_mean / npointing,  2);
-        write_std += pow((float)write_time[timestep_idx] - write_mean / npointing, 2);
-    }
-    read_std  = sqrt( read_std  / ntimesteps );
-    calc_std  = sqrt( calc_std  / ntimesteps / npointing );
-    write_std = sqrt( write_std / ntimesteps / npointing );
-
-    fprintf( log, "\n[%f]  *****FINISHED BEAMFORMING*****\n\n", NOW-begintime );
-
-    fprintf( log, "[%f]  Total read  processing time: %9.3f s\n",
-                     NOW-begintime, read_sum / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Mean  read  processing time: %9.3f +\\- %8.3f s\n",
-                     NOW-begintime, read_mean / CLOCKS_PER_SEC, read_std / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Total calc  processing time: %9.3f s\n",
-                     NOW-begintime, calc_sum / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Mean  calc  processing time: %9.3f +\\- %8.3f s\n",
-                     NOW-begintime, calc_mean / CLOCKS_PER_SEC, calc_std / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Total write processing time: %9.3f s\n",
-                     NOW-begintime, write_sum  * npointing / CLOCKS_PER_SEC);
-    fprintf( log, "[%f]  Mean  write processing time: %9.3f +\\- %8.3f s\n",
-                     NOW-begintime, write_mean / CLOCKS_PER_SEC, write_std / CLOCKS_PER_SEC);
-
-
-    fprintf( log, "[%f]  Starting clean-up\n", NOW-begintime);
+    logger_timed_message( log, "Starting memory clean-up" );
 
     // Free up memory
     cudaFreeHost( incoh );
@@ -265,6 +229,10 @@ int main(int argc, char **argv)
     mwalib_metafits_metadata_free( obs_metadata );
     mwalib_voltage_metadata_free( vcs_metadata );
     mwalib_voltage_context_free( vcs_context );
+
+    // Free the logger
+    logger_timed_message( log, "Exiting successfully" );
+    destroy_logger( log );
 
     return EXIT_SUCCESS;
 }
