@@ -225,7 +225,7 @@ void usage()
     printf( "\nOUTPUT OPTIONS\n\n"
             "\t-o, --outfile             The base name for the output PSRFITS file\n"
             "\t                          [default: \"<PROJECT>_<OBSID>_incoh_ch<CHAN>\"]\n"
-            "\t-t, --max_t=SECONDS       Maximum number of SECONDS per output FITS file [default: 200]\n"
+            "\t-T, --max_t=SECONDS       Maximum number of SECONDS per output FITS file [default: 200]\n"
            );
 
     printf( "\nOTHER OPTIONS\n\n"
@@ -261,13 +261,13 @@ void make_incoh_beam_parse_cmdline(
                 {"help",            required_argument, 0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"outfile",         required_argument, 0, 'o'},
-                {"max_t",           required_argument, 0, 't'},
+                {"max_t",           required_argument, 0, 'T'},
                 {"version",         required_argument, 0, 'V'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:d:e:f:hm:o:t:V",
+                             "b:d:e:f:hm:o:T:V",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -296,7 +296,7 @@ void make_incoh_beam_parse_cmdline(
                 case 'o':
                     opts->outfile = strdup(optarg);
                     break;
-                case 't':
+                case 'T':
                     opts->max_sec_per_file = atoi(optarg);
                     break;
                 case 'V':
