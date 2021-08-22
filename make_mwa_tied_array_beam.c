@@ -505,15 +505,16 @@ void usage() {
     printf( "\nusage: make_mwa_tied_array_beam [OPTIONS]\n");
 
     printf( "\nREQUIRED OPTIONS\n\n"
-            "\t-b, --begin=GPSTIME       Begin time of observation, in GPS seconds\n"
-            "\t-e, --end=GPSTIME         End time of observation, in GPS seconds\n"
-            "\t-P, --pointings=FILE      FILE containing RA and Decs of multiple pointings\n"
-            "\t                          in the format hh:mm:ss.s dd:mm:ss.s ...\n"
-            "\t-d, --data-location=PATH  PATH is the directory containing the recombined data\n"
-            "\t-m, --metafits=FILE       FILE is the metafits file for the target observation\n"
-            "\t-f, --coarse-chan=N       Absolute coarse channel number (0-255)\n" );
+            "\t-b, --begin=GPSTIME        Begin time of observation, in GPS seconds\n"
+            "\t-e, --end=GPSTIME          End time of observation, in GPS seconds\n"
+            "\t-P, --pointings=FILE       FILE containing RA and Decs of multiple pointings\n"
+            "\t                           in the format hh:mm:ss.s dd:mm:ss.s ...\n"
+            "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
+            "\t-f, --coarse-chan=N        Absolute coarse channel number (0-255)\n" );
 
-    printf( "\nOUTPUT OPTIONS\n\n"
+    printf( "\nOPTIONAL OPTIONS\n\n"
+            "\t-d, --data-location=PATH   PATH is the directory containing the recombined data\n"
+            "\t                           [default: current directory]\n"
             "\t-i, --incoh                Turn on incoherent PSRFITS beam output.                             [default: OFF]\n"
             "\t-p, --psrfits              Turn on coherent PSRFITS output (will be turned on if none of\n"
             "\t                           -i, -p, -u, -v are chosen).                                         [default: OFF]\n"
@@ -522,27 +523,30 @@ void usage() {
             "\t-t, --max_t                Maximum number of seconds per output fits file. [default: 200]\n"
             "\t-A, --antpol=ant           Do not beamform. Instead, only operate on the specified ant\n"
             "\t                           stream (0-127)\n" 
-            "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.    [default: LSQ12]\n"
-            "\t                           filter can be MIRROR or LSQ12.\n" );
+            "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
+            "\t                           filter can be MIRROR or LSQ12.\n"
+            "\t                           [default: LSQ12]\n" );
 
     printf( "\nCALIBRATION OPTIONS (RTS)\n\n"
-            "\t-c, --cal-metafits=FILE  FILE is the metafits file pertaining to the calibration solution\n"
-            "\t-C, --cal-location=PATH  PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
-            "\t-R, --ref-ant=ANT         Rotate the phases of the XX and YY elements of the calibration\n"
-            "\t                          Jones matrices so that the phases of tile ANT align. If ANT is\n"
-            "\t                          outside the range 0-127, no phase rotation is done               [default: 0]\n"
-            "\t-X, --cross-terms         Retain the XY and YX terms of the calibration solution           [default: off]\n"
-            "\t-U, --no-XY-phase         Do not apply the XY phase correction to the calibration solution\n" );
+            "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
+            "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
+            "\t-R, --ref-ant=ANT          Rotate the phases of the XX and YY elements of the calibration\n"
+            "\t                           Jones matrices so that the phases of tile ANT align. If ANT is\n"
+            "\t                           outside the range 0-127, no phase rotation is done\n"
+            "\t                           [default: 0]\n"
+            "\t-X, --cross-terms          Retain the XY and YX terms of the calibration solution\n"
+            "\t                           [default: off]\n"
+            "\t-U, --no-XY-phase          Do not apply the XY phase correction to the calibration solution\n" );
 
     printf( "\nCALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n\n"
-            "\t-O, --offringa            The calibration solution is in the Offringa format instead of\n"
-            "\t                          the default RTS format. In this case, the argument to -C should\n" 
-            "\t                          be the full path to the binary solution file.\n" );
+            "\t-O, --offringa             The calibration solution is in the Offringa format instead of\n"
+            "\t                           the default RTS format. In this case, the argument to -C should\n" 
+            "\t                           be the full path to the binary solution file.\n" );
 
     printf( "\nOTHER OPTIONS\n\n"
-            "\t-h, --help                Print this help and exit\n"
-            "\t-g, --gpu-mem=N     The maximum amount of GPU memory you want make_beam to use in GB [default: -1]\n"
-            "\t-V, --version             Print version number and exit\n\n");
+            "\t-h, --help                 Print this help and exit\n"
+            "\t-g, --gpu-mem=N            The maximum amount of GPU memory you want make_beam to use in GB [default: -1]\n"
+            "\t-V, --version              Print version number and exit\n\n");
 }
 
 
@@ -699,12 +703,15 @@ void make_beam_parse_cmdline(
 
 
     // Check that all the required options were supplied
-    assert( opts->begin        != 0    );
-    assert( opts->end          != 0    );
+    assert( opts->begin          != 0    );
+    assert( opts->end            != 0    );
     assert( opts->pointings_file != NULL );
-    assert( opts->datadir      != NULL );
-    assert( cal->caldir       != NULL );
-    assert( opts->metafits     != NULL );
+    assert( cal->caldir          != NULL );
+    assert( opts->metafits       != NULL );
+
+    if (opts->datadir == NULL)
+        opts->datadir = strdup( "." );
+
     if (opts->out_coh || opts->out_vdif)
         assert( cal->metafits );
 

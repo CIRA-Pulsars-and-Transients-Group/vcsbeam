@@ -217,12 +217,13 @@ void usage()
     printf( "\nREQUIRED OPTIONS\n\n"
             "\t-b, --begin=GPSTIME       Begin time of observation, in GPS seconds\n"
             "\t-e, --end=GPSTIME         End time of observation, in GPS seconds\n"
-            "\t-d, --data-location=PATH  PATH is the directory containing the recombined data\n"
             "\t-m, --metafits=FILE       FILE is the metafits file for the target observation\n"
             "\t-f, --coarse-chan=N       Receiver coarse channel number (0-255)\n"
            );
 
     printf( "\nOUTPUT OPTIONS\n\n"
+            "\t-d, --data-location=PATH  PATH is the directory containing the recombined data\n"
+            "\t                          [default: current directory]\n"
             "\t-o, --outfile             The base name for the output PSRFITS file\n"
             "\t                          [default: \"<PROJECT>_<OBSID>_incoh_ch<CHAN>\"]\n"
             "\t-T, --max_t=SECONDS       Maximum number of SECONDS per output FITS file [default: 200]\n"
@@ -316,12 +317,13 @@ void make_incoh_beam_parse_cmdline(
         exit(EXIT_FAILURE);
     }
 
-
     // Check that all the required options were supplied
     assert( opts->begin        != 0    );
     assert( opts->end          != 0    );
-    assert( opts->datadir      != NULL );
     assert( opts->metafits     != NULL );
+
+    if (opts->datadir == NULL)
+        opts->datadir = strdup( "." );
 }
 
 
