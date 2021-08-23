@@ -514,10 +514,6 @@ void usage() {
     printf( "\nusage: make_mwa_tied_array_beam [OPTIONS]\n");
 
     printf( "\nREQUIRED OPTIONS\n\n"
-            "\t-b, --begin=GPSTIME        Begin time of observation, in GPS seconds\n"
-            "\t                           If GPSTIME starts with a '+' or a '-', then the time\n"
-            "\t                           is taken relative to the start or end of the observation\n"
-            "\t                           respectively.\n"
             "\t-P, --pointings=FILE       FILE containing RA and Decs of multiple pointings\n"
             "\t                           in the format hh:mm:ss.s dd:mm:ss.s ...\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
@@ -525,6 +521,10 @@ void usage() {
           );
 
     printf( "\nOPTIONAL OPTIONS\n\n"
+            "\t-b, --begin=GPSTIME        Begin time of observation, in GPS seconds\n"
+            "\t                           If GPSTIME starts with a '+' or a '-', then the time\n"
+            "\t                           is taken relative to the start or end of the observation\n"
+            "\t                           respectively. [default: \"+0\"]\n"
             "\t-d, --data-location=PATH   PATH is the directory containing the recombined data\n"
             "\t                           [default: current directory]\n"
             "\t-i, --incoh                Turn on incoherent PSRFITS beam output.                             [default: OFF]\n"
