@@ -32,7 +32,7 @@
 struct cmd_line_opts {
     // Variables for required options
     unsigned long int  begin;         // GPS time -- when to start beamforming
-    unsigned long int  end;           // GPS time -- when to stop beamforming
+    unsigned long int  nseconds;      // How many seconds to process
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // Filename of the metafits file
     uintptr_t          rec_channel;   // 0 - 255 receiver 1.28MHz channel
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     VoltageContext   *vcs_context  = NULL;
 
     get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context, NULL,
-            opts.metafits, NULL, opts.begin, opts.end, opts.datadir, opts.rec_channel );
+            opts.metafits, NULL, opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t    ntimesteps      = vcs_metadata->num_common_timesteps;
@@ -216,7 +216,6 @@ void usage()
 
     printf( "\nREQUIRED OPTIONS\n\n"
             "\t-b, --begin=GPSTIME       Begin time of observation, in GPS seconds\n"
-            "\t-e, --end=GPSTIME         End time of observation, in GPS seconds\n"
             "\t-m, --metafits=FILE       FILE is the metafits file for the target observation\n"
             "\t-f, --coarse-chan=N       Receiver coarse channel number (0-255)\n"
            );
@@ -226,7 +225,8 @@ void usage()
             "\t                          [default: current directory]\n"
             "\t-o, --outfile             The base name for the output PSRFITS file\n"
             "\t                          [default: \"<PROJECT>_<OBSID>_incoh_ch<CHAN>\"]\n"
-            "\t-T, --max_t=SECONDS       Maximum number of SECONDS per output FITS file [default: 200]\n"
+            "\t-S, --max_output_t=SECS   Maximum number of SECS per output FITS file [default: 200]\n"
+            "\t-T, --nseconds=VAL        Process VAL seconds of data [default: as many as possible]\n"
            );
 
     printf( "\nOTHER OPTIONS\n\n"
@@ -242,7 +242,7 @@ void make_incoh_beam_parse_cmdline(
 {
     // Set defaults for command line options
     opts->begin            = 0;    // GPS time -- when to start beamforming
-    opts->end              = 0;    // GPS time -- when to stop beamforming
+    opts->nseconds         = -1;   // How many seconds to process (-1 = as many as possible)
     opts->datadir          = NULL; // The path to where the recombined data live
     opts->metafits         = NULL; // Filename of the metafits file for the target observation
     opts->outfile          = NULL; // Base name of the output PSRFITS file
@@ -257,18 +257,18 @@ void make_incoh_beam_parse_cmdline(
             static struct option long_options[] = {
                 {"begin",           required_argument, 0, 'b'},
                 {"data-location",   required_argument, 0, 'd'},
-                {"end",             required_argument, 0, 'e'},
                 {"coarse-chan",     required_argument, 0, 'f'},
                 {"help",            required_argument, 0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"outfile",         required_argument, 0, 'o'},
-                {"max_t",           required_argument, 0, 'T'},
+                {"max_output_t",    required_argument, 0, 'S'},
+                {"nseconds",        required_argument, 0, 'T'},
                 {"version",         required_argument, 0, 'V'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:d:e:f:hm:o:T:V",
+                             "b:d:f:hm:o:S:T:V",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -280,9 +280,6 @@ void make_incoh_beam_parse_cmdline(
                     break;
                 case 'd':
                     opts->datadir = strdup(optarg);
-                    break;
-                case 'e':
-                    opts->end = atol(optarg);
                     break;
                 case 'f':
                     opts->rec_channel = atoi(optarg);
@@ -297,8 +294,17 @@ void make_incoh_beam_parse_cmdline(
                 case 'o':
                     opts->outfile = strdup(optarg);
                     break;
-                case 'T':
+                case 'S':
                     opts->max_sec_per_file = atoi(optarg);
+                    break;
+                case 'T':
+                    opts->nseconds = atol(optarg);
+                    if (opts->nseconds <= 0)
+                    {
+                        fprintf( stderr, "error: make_incoh_beam_parse_cmdline: "
+                                "-%c argument must be >= 1\n", c );
+                        exit(EXIT_FAILURE);
+                    }
                     break;
                 case 'V':
                     printf( "MWA Beamformer %s\n", VERSION_BEAMFORMER );
@@ -319,7 +325,6 @@ void make_incoh_beam_parse_cmdline(
 
     // Check that all the required options were supplied
     assert( opts->begin        != 0    );
-    assert( opts->end          != 0    );
     assert( opts->metafits     != NULL );
 
     if (opts->datadir == NULL)

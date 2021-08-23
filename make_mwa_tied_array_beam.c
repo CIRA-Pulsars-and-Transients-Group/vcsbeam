@@ -31,7 +31,7 @@
 struct make_beam_opts {
     // Variables for required options
     unsigned long int  begin;         // GPS time -- when to start beamforming
-    unsigned long int  end;           // GPS time -- when to stop beamforming
+    unsigned long int  nseconds;      // How many seconds to process
     char              *pointings_file; // Name of file containing pointings (e.g. "hh:mm:ss dd:mm:ss")
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // filename of the metafits file
@@ -57,14 +57,14 @@ struct make_beam_opts {
 };
 
 void usage();
-void make_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal );
+void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal );
 
 int main(int argc, char **argv)
 {
     // Parse command line arguments
     struct make_beam_opts opts;
     struct calibration cal;           // Variables for calibration settings
-    make_beam_parse_cmdline( argc, argv, &opts, &cal );
+    make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
 
     // Start a logger for output messages and time-keeping
     logger *log = create_logger( stdout );
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     VoltageContext   *vcs_context  = NULL;
 
     get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context, &cal_metadata,
-            opts.metafits, cal.metafits, opts.begin, opts.end, opts.datadir, opts.rec_channel );
+            opts.metafits, cal.metafits, opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
 
     uintptr_t ntimesteps = vcs_metadata->num_common_timesteps;
 
@@ -506,11 +506,11 @@ void usage() {
 
     printf( "\nREQUIRED OPTIONS\n\n"
             "\t-b, --begin=GPSTIME        Begin time of observation, in GPS seconds\n"
-            "\t-e, --end=GPSTIME          End time of observation, in GPS seconds\n"
             "\t-P, --pointings=FILE       FILE containing RA and Decs of multiple pointings\n"
             "\t                           in the format hh:mm:ss.s dd:mm:ss.s ...\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
-            "\t-f, --coarse-chan=N        Absolute coarse channel number (0-255)\n" );
+            "\t-f, --coarse-chan=N        Absolute coarse channel number (0-255)\n"
+          );
 
     printf( "\nOPTIONAL OPTIONS\n\n"
             "\t-d, --data-location=PATH   PATH is the directory containing the recombined data\n"
@@ -525,7 +525,9 @@ void usage() {
             "\t                           stream (0-127)\n" 
             "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
             "\t                           filter can be MIRROR or LSQ12.\n"
-            "\t                           [default: LSQ12]\n" );
+            "\t                           [default: LSQ12]\n"
+            "\t-T, --nseconds=VAL         Process VAL seconds of data [default: as many as possible]\n"
+          );
 
     printf( "\nCALIBRATION OPTIONS (RTS)\n\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
@@ -536,27 +538,30 @@ void usage() {
             "\t                           [default: 0]\n"
             "\t-X, --cross-terms          Retain the XY and YX terms of the calibration solution\n"
             "\t                           [default: off]\n"
-            "\t-U, --no-XY-phase          Do not apply the XY phase correction to the calibration solution\n" );
+            "\t-U, --no-XY-phase          Do not apply the XY phase correction to the calibration solution\n"
+          );
 
     printf( "\nCALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n\n"
             "\t-O, --offringa             The calibration solution is in the Offringa format instead of\n"
             "\t                           the default RTS format. In this case, the argument to -C should\n" 
-            "\t                           be the full path to the binary solution file.\n" );
+            "\t                           be the full path to the binary solution file.\n"
+          );
 
     printf( "\nOTHER OPTIONS\n\n"
             "\t-h, --help                 Print this help and exit\n"
             "\t-g, --gpu-mem=N            The maximum amount of GPU memory you want make_beam to use in GB [default: -1]\n"
-            "\t-V, --version              Print version number and exit\n\n");
+            "\t-V, --version              Print version number and exit\n\n"
+          );
 }
 
 
 
-void make_beam_parse_cmdline(
+void make_tied_array_beam_parse_cmdline(
         int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal )
 {
     // Set defaults
     opts->begin              = 0;    // GPS time -- when to start beamforming
-    opts->end                = 0;    // GPS time -- when to stop beamforming
+    opts->nseconds           = -1;   // How many seconds to process (-1 = as many as possible)
     opts->pointings_file     = NULL; // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
     opts->datadir            = NULL; // The path to where the recombined data live
     opts->metafits           = NULL; // filename of the metafits file for the target observation
@@ -587,13 +592,13 @@ void make_beam_parse_cmdline(
 
             static struct option long_options[] = {
                 {"begin",           required_argument, 0, 'b'},
-                {"end",             required_argument, 0, 'e'},
                 {"incoh",           no_argument,       0, 'i'},
                 {"psrfits",         no_argument,       0, 'p'},
                 {"vdif",            no_argument,       0, 'v'},
                 {"summed",          no_argument,       0, 's'},
                 {"max_t",           required_argument, 0, 't'},
                 {"synth_filter",    required_argument, 0, 'S'},
+                {"nseconds",        required_argument, 0, 'T'},
                 {"antpol",          required_argument, 0, 'A'},
                 {"pointings",       required_argument, 0, 'P'},
                 {"data-location",   required_argument, 0, 'd'},
@@ -612,7 +617,7 @@ void make_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:c:d:C:e:f:g:him:OpP:R:sS:t:UvVX",
+                             "A:b:c:d:C:f:g:him:OpP:R:sS:t:T:UvVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -634,9 +639,6 @@ void make_beam_parse_cmdline(
                     break;
                 case 'd':
                     opts->datadir = strdup(optarg);
-                    break;
-                case 'e':
-                    opts->end = atol(optarg);
                     break;
                 case 'f':
                     opts->rec_channel = atoi(optarg);
@@ -675,6 +677,15 @@ void make_beam_parse_cmdline(
                 case 't':
                     opts->max_sec_per_file = atoi(optarg);
                     break;
+                case 'T':
+                    opts->nseconds = atol(optarg);
+                    if (opts->nseconds <= 0)
+                    {
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "-%c argument must be >= 1\n", c );
+                        exit(EXIT_FAILURE);
+                    }
+                    break;
                 case 'U':
                     cal->apply_xy_correction = false;
                     break;
@@ -689,7 +700,7 @@ void make_beam_parse_cmdline(
                     cal->cross_terms = 1;
                     break;
                 default:
-                    fprintf( stderr, "error: make_beam_parse_cmdline: "
+                    fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
                                     "unrecognised option '%s'\n", optarg );
                     usage();
                     exit(EXIT_FAILURE);
@@ -704,7 +715,6 @@ void make_beam_parse_cmdline(
 
     // Check that all the required options were supplied
     assert( opts->begin          != 0    );
-    assert( opts->end            != 0    );
     assert( opts->pointings_file != NULL );
     assert( cal->caldir          != NULL );
     assert( opts->metafits       != NULL );

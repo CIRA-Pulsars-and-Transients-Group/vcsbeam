@@ -16,7 +16,7 @@ char **create_filenames(
         const struct MetafitsContext  *metafits_context,
         const struct MetafitsMetadata *metafits_metadata,
         unsigned long int              begin,
-        unsigned long int              end,
+        unsigned long int              nseconds,
         char                          *datadir,
         uintptr_t                      rec_channel
         );
@@ -31,7 +31,7 @@ void get_mwalib_metadata(
         char              *obs_metafits,
         char              *cal_metafits,
         unsigned long int  begin,
-        unsigned long int  end,
+        unsigned long int  nseconds,
         char               *datadir,
         uintptr_t          rec_channel
         );

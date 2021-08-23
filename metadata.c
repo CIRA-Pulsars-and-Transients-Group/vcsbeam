@@ -13,25 +13,26 @@ char **create_filenames(
         const struct MetafitsContext  *metafits_context,
         const struct MetafitsMetadata *metafits_metadata,
         unsigned long int              begin,
-        unsigned long int              end,
+        unsigned long int              nseconds,
         char                          *datadir,
         uintptr_t                      rec_channel
         )
-// Create an array of filenames; free with destroy_filenames()
+/* Create an array of filenames; free with destroy_filenames()
+ */
 {
     // Buffer for mwalib error messages
     char error_message[ERROR_MESSAGE_LEN];
 
     // Calculate the number of files
-    unsigned int ntimesteps = end - begin + 1;
-    if (ntimesteps <= 0) {
-        fprintf( stderr, "Cannot beamform on %d files (between %ld and %ld)\n",
-                 ntimesteps, begin, end);
+    if (nseconds <= 0)
+    {
+        fprintf( stderr, "error: create_filenames: nseconds (= %ld) must be >= 1\n",
+                 nseconds );
         exit(EXIT_FAILURE);
     }
     // Allocate memory for the file name list
     char filename[MAX_COMMAND_LENGTH]; // Just the mwalib-generated filename (without the path)
-    char **filenames = (char **)malloc( ntimesteps*sizeof(char *) ); // The full array of filenames, including the paths
+    char **filenames = (char **)malloc( nseconds*sizeof(char *) ); // The full array of filenames, including the paths
 
     // Get the coarse channel index
     unsigned int coarse_chan_idx;
@@ -40,13 +41,12 @@ char **create_filenames(
             break;
 
     // Allocate memory and write filenames
-    unsigned int timestep, timestep_idx, filename_idx;
-    for (timestep = begin; timestep <= end; timestep++)
+    unsigned int second, timestep_idx;
+    for (second = 0; second < nseconds; second++)
     {
-        timestep_idx = timestep - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000); // <-- This assumes timesteps are always contiguous
-        filename_idx = timestep - begin;
+        timestep_idx = begin - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000) + second;
 
-        filenames[filename_idx] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
+        filenames[second] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
         if (mwalib_metafits_get_expected_volt_filename(
                     metafits_context,
                     timestep_idx,
@@ -59,7 +59,7 @@ char **create_filenames(
             fprintf( stderr, "error (mwalib): cannot create filenames: %s\n", error_message );
             exit(EXIT_FAILURE);
         }
-        sprintf( filenames[filename_idx], "%s/%s",
+        sprintf( filenames[second], "%s/%s",
                  datadir, filename );
     }
 
@@ -83,7 +83,7 @@ void get_mwalib_metadata(
         char              *obs_metafits,
         char              *cal_metafits,
         unsigned long int  begin,
-        unsigned long int  end,
+        unsigned long int  nseconds,
         char               *datadir,
         uintptr_t          rec_channel
         )
@@ -124,8 +124,14 @@ void get_mwalib_metadata(
         exit(EXIT_FAILURE);
     }
 
+    // If nseconds is an invalid number (<= 0), make it equal to the max possible for this obs
+    if (nseconds <= 0)
+    {
+        nseconds = (*obs_metadata)->num_metafits_timesteps - (begin - (*obs_metadata)->metafits_timesteps[0].gps_time_ms/1000);
+    }
+
     // Create list of filenames
-    char **filenames = create_filenames( obs_context, *obs_metadata, begin, end, datadir, rec_channel );
+    char **filenames = create_filenames( obs_context, *obs_metadata, begin, nseconds, datadir, rec_channel );
 
     // Now that we have the filenames, we don't need this version of the obs context and metadata.
     mwalib_metafits_metadata_free( *obs_metadata );
@@ -133,14 +139,13 @@ void get_mwalib_metadata(
 
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
-    unsigned int ntimesteps = end - begin + 1;
-    const char **voltage_files = (const char **)malloc( sizeof(char *) * ntimesteps );
+    const char **voltage_files = (const char **)malloc( sizeof(char *) * nseconds );
     unsigned int i;
-    for (i = 0; i < ntimesteps; i++)
+    for (i = 0; i < nseconds; i++)
         voltage_files[i] = filenames[i];
 
     // Create VCS_CONTEXT
-    if (mwalib_voltage_context_new( obs_metafits, voltage_files, ntimesteps, vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    if (mwalib_voltage_context_new( obs_metafits, voltage_files, nseconds, vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create voltage context: %s\n", error_message );
         exit(EXIT_FAILURE);
@@ -161,7 +166,7 @@ void get_mwalib_metadata(
     }
 
     // Free memory
-    destroy_filenames( filenames, ntimesteps );
+    destroy_filenames( filenames, nseconds );
     free( voltage_files );
 
     // Can stop at this point if no calibration metadata is requested
