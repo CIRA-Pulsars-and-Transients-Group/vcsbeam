@@ -28,7 +28,7 @@
 
 #define MAX_COMMAND_LENGTH 1024
 
-struct make_beam_opts {
+struct make_tied_array_beam_opts {
     // Variables for required options
     unsigned long int  begin;         // GPS time -- when to start beamforming
     unsigned long int  nseconds;      // How many seconds to process
@@ -57,12 +57,12 @@ struct make_beam_opts {
 };
 
 void usage();
-void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal );
+void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal );
 
 int main(int argc, char **argv)
 {
     // Parse command line arguments
-    struct make_beam_opts opts;
+    struct make_tied_array_beam_opts opts;
     struct calibration cal;           // Variables for calibration settings
     make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
 
@@ -79,12 +79,15 @@ int main(int argc, char **argv)
 
     char error_message[ERROR_MESSAGE_LEN];
     MetafitsMetadata *obs_metadata = NULL;
-    MetafitsMetadata *cal_metadata = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
 
-    get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context, &cal_metadata,
-            opts.metafits, cal.metafits, opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
+    get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context,
+            opts.metafits, opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
+
+    MetafitsContext  *cal_context  = NULL;
+    MetafitsMetadata *cal_metadata = NULL;
+    get_mwalib_metafits_metadata( cal.metafits, &cal_metadata, &cal_context );
 
     uintptr_t ntimesteps = vcs_metadata->num_common_timesteps;
 
@@ -557,7 +560,7 @@ void usage() {
 
 
 void make_tied_array_beam_parse_cmdline(
-        int argc, char **argv, struct make_beam_opts *opts, struct calibration *cal )
+        int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal )
 {
     // Set defaults
     opts->begin              = 0;    // GPS time -- when to start beamforming
@@ -578,7 +581,7 @@ void make_tied_array_beam_parse_cmdline(
 
     cal->metafits            = NULL; // filename of the metafits file for the calibration observation
     cal->caldir              = NULL; // The path to where the calibration solutions live
-    cal->cal_type            = CAL_NONE;
+    cal->cal_type            = CAL_RTS;
     cal->ref_ant             = 0;
     cal->cross_terms         = 0;
     cal->phase_offset        = 0.0;
@@ -718,17 +721,10 @@ void make_tied_array_beam_parse_cmdline(
     assert( opts->pointings_file != NULL );
     assert( cal->caldir          != NULL );
     assert( opts->metafits       != NULL );
+    assert( cal->metafits        != NULL );
 
     if (opts->datadir == NULL)
         opts->datadir = strdup( "." );
-
-    if (opts->out_coh || opts->out_vdif)
-        assert( cal->metafits );
-
-    // If a calibration metafits was supplied, then the default
-    // calibration format is RTS
-    if (cal->cal_type == CAL_NONE && cal->metafits != NULL)
-        cal->cal_type = CAL_RTS;
 
     // If neither -i, -p, nor -v were chosen, set -p by default
     if ( !opts->out_incoh && !opts->out_coh && !opts->out_vdif )

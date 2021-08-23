@@ -79,8 +79,8 @@ int main(int argc, char **argv)
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
 
-    get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context, NULL,
-            opts.metafits, NULL, opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
+    get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context,
+            opts.metafits, opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t    ntimesteps      = vcs_metadata->num_common_timesteps;

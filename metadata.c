@@ -12,7 +12,7 @@
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
         const struct MetafitsMetadata *metafits_metadata,
-        unsigned long int              begin,
+        unsigned long int              begin_gps,
         unsigned long int              nseconds,
         char                          *datadir,
         uintptr_t                      rec_channel
@@ -44,7 +44,7 @@ char **create_filenames(
     unsigned int second, timestep_idx;
     for (second = 0; second < nseconds; second++)
     {
-        timestep_idx = begin - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000) + second;
+        timestep_idx = begin_gps - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000) + second;
 
         filenames[second] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
         if (mwalib_metafits_get_expected_volt_filename(
@@ -75,15 +75,37 @@ void destroy_filenames( char **filenames, int nfiles )
 }
 
 
+void get_mwalib_metafits_metadata(
+        char              *filename,
+        MetafitsMetadata **metadata,
+        MetafitsContext  **context
+        )
+{
+    char error_message[ERROR_MESSAGE_LEN];
+    error_message[0] = '\0'; // <-- Just to avoid a compiler warning about uninitialised variables
+
+    // Create OBS_CONTEXT
+    if (mwalib_metafits_context_new2( filename, context, error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", error_message );
+        exit(EXIT_FAILURE);
+    }
+
+    // Create OBS_METADATA
+    if (mwalib_metafits_metadata_get( *context, NULL, NULL, metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", error_message );
+        exit(EXIT_FAILURE);
+    }
+}
+
 void get_mwalib_metadata(
         MetafitsMetadata **obs_metadata,
         VoltageMetadata  **vcs_metadata,
         VoltageContext   **vcs_context,
-        MetafitsMetadata **cal_metadata,
         char              *obs_metafits,
-        char              *cal_metafits,
-        unsigned long int  begin,
-        unsigned long int  nseconds,
+        unsigned long int  begin_gps,
+        int                nseconds,
         char               *datadir,
         uintptr_t          rec_channel
         )
@@ -103,35 +125,22 @@ void get_mwalib_metadata(
     // These are only temporarily needed to construct the other metadata/context structs,
     // and will be freed at the end of this function
     MetafitsContext *obs_context = NULL;
-    MetafitsContext *cal_context = NULL;
 
     // First, get the metafits context for the given observation metafits file in order to create
     // a list of filenames for creating the voltage context. This metafits context will be remade
     // from the voltage context later, in order to get the antenna ordering correct (which depends
     // on the voltage type)
 
-    // Create OBS_CONTEXT
-    if (mwalib_metafits_context_new2( obs_metafits, &obs_context, error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    // Create OBS_METADATA
-    if (mwalib_metafits_metadata_get( obs_context, NULL, NULL, obs_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
+    get_mwalib_metafits_metadata( obs_metafits, obs_metadata, &obs_context );
 
     // If nseconds is an invalid number (<= 0), make it equal to the max possible for this obs
     if (nseconds <= 0)
     {
-        nseconds = (*obs_metadata)->num_metafits_timesteps - (begin - (*obs_metadata)->metafits_timesteps[0].gps_time_ms/1000);
+        nseconds = (*obs_metadata)->num_metafits_timesteps - (begin_gps - (*obs_metadata)->metafits_timesteps[0].gps_time_ms/1000);
     }
 
     // Create list of filenames
-    char **filenames = create_filenames( obs_context, *obs_metadata, begin, nseconds, datadir, rec_channel );
+    char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, rec_channel );
 
     // Now that we have the filenames, we don't need this version of the obs context and metadata.
     mwalib_metafits_metadata_free( *obs_metadata );
@@ -140,8 +149,7 @@ void get_mwalib_metadata(
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
     const char **voltage_files = (const char **)malloc( sizeof(char *) * nseconds );
-    unsigned int i;
-    for (i = 0; i < nseconds; i++)
+    for (int i = 0; i < nseconds; i++)
         voltage_files[i] = filenames[i];
 
     // Create VCS_CONTEXT
@@ -168,22 +176,41 @@ void get_mwalib_metadata(
     // Free memory
     destroy_filenames( filenames, nseconds );
     free( voltage_files );
+}
 
-    // Can stop at this point if no calibration metadata is requested
-    if (cal_metadata == NULL)
-        return;
 
-    // Create CAL_CONTEXT
-    if (mwalib_metafits_context_new2( cal_metafits, &cal_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int relative_begin )
+/* Get the gps second for an observation from a relative value, RELATIVE_BEGIN
+ * If RELATIVE_BEGIN >= 0, then return the gps second relative to the "good time"
+ * If RELATIVE_BEGIN < 0, then return the gps second relative to the end of the observation
+ */
+{
+    if (relative_begin >= 0)
+        return obs_metadata->good_time_gps_ms/1000 + relative_begin;
+
+    // Then relative begin must be negative, so count backwards from end
+    return obs_metadata->metafits_timesteps[obs_metadata->num_metafits_timesteps - 1].gps_time_ms/1000 + relative_begin + 1;
+}
+
+long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str )
+/* Another way to get the beginning gps second
+ * If the first character of BEGIN_STR is '+' or '-', then return a relative gps second
+ * according to get_relative_gps().
+ * Otherwise, parse it as a gps second in its own right.
+ */
+{
+    // If the first character is '+' or '-', treat it as a relative time
+    if (begin_str[0] == '+' || begin_str[0] == '-')
+        return get_relative_gps( obs_metadata, atol(begin_str) );
+
+    // Otherwise, if the first character is not a number from 0 to 9, generate an error
+    if (!(begin_str[0] >= '0' && begin_str[0] <= '9'))
     {
-        fprintf( stderr, "error (mwalib): cannot create cal metafits context: %s\n", error_message );
+        fprintf( stderr, "error: parse_begin_string: cannot parse '%s' as a valid gps time\n",
+                begin_str );
         exit(EXIT_FAILURE);
     }
 
-    // Create CAL_METADATA
-    if (mwalib_metafits_metadata_get( cal_context, NULL, NULL, cal_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create cal metafits metadata: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
+    // Otherwise, return the number itself
+    return atol(begin_str);
 }

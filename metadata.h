@@ -23,17 +23,24 @@ char **create_filenames(
 
 void destroy_filenames( char **filenames, int nfiles );
 
+void get_mwalib_metafits_metadata(
+        char              *filename,
+        MetafitsMetadata **metadata,
+        MetafitsContext  **context
+        );
+
 void get_mwalib_metadata(
         MetafitsMetadata **obs_metadata,
         VoltageMetadata  **vcs_metadata,
         VoltageContext   **vcs_context,
-        MetafitsMetadata **cal_metadata,
         char              *obs_metafits,
-        char              *cal_metafits,
-        unsigned long int  begin,
-        unsigned long int  nseconds,
+        unsigned long int  begin_gps,
+        int                nseconds,
         char               *datadir,
         uintptr_t          rec_channel
         );
+
+long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int relative_begin );
+long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str );
 
 #endif
