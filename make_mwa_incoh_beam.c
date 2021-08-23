@@ -31,7 +31,7 @@
 
 struct cmd_line_opts {
     // Variables for required options
-    unsigned long int  begin;         // GPS time -- when to start beamforming
+    char              *begin_str;     // Absolute or relative GPS time -- when to start beamforming
     unsigned long int  nseconds;      // How many seconds to process
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // Filename of the metafits file
@@ -80,10 +80,12 @@ int main(int argc, char **argv)
     MetafitsMetadata *obs_metadata = NULL;
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
 
+    unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
+
     VoltageContext   *vcs_context  = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
     get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
-            opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
+            begin_gps, opts.nseconds, opts.datadir, opts.rec_channel );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t    ntimesteps      = vcs_metadata->num_provided_timesteps;
@@ -195,8 +197,9 @@ int main(int argc, char **argv)
     free_input_output_arrays( data, d_data );
     free_input_output_arrays( incoh, d_incoh );
 
-    free( opts.datadir        );
-    free( opts.metafits       );
+    free( opts.begin_str );
+    free( opts.datadir   );
+    free( opts.metafits  );
 
     free_psrfits( &pf );
 
@@ -219,6 +222,9 @@ void usage()
 
     printf( "\nREQUIRED OPTIONS\n\n"
             "\t-b, --begin=GPSTIME       Begin time of observation, in GPS seconds\n"
+            "\t                          If GPSTIME starts with a '+' or a '-', then the time\n"
+            "\t                          is taken relative to the start or end of the observation\n"
+            "\t                          respectively.\n"
             "\t-m, --metafits=FILE       FILE is the metafits file for the target observation\n"
             "\t-f, --coarse-chan=N       Receiver coarse channel number (0-255)\n"
            );
@@ -244,7 +250,7 @@ void make_incoh_beam_parse_cmdline(
         int argc, char **argv, struct cmd_line_opts *opts )
 {
     // Set defaults for command line options
-    opts->begin            = 0;    // GPS time -- when to start beamforming
+    opts->begin_str        = NULL; // Absolute or relative GPS time -- when to start beamforming
     opts->nseconds         = -1;   // How many seconds to process (-1 = as many as possible)
     opts->datadir          = NULL; // The path to where the recombined data live
     opts->metafits         = NULL; // Filename of the metafits file for the target observation
@@ -279,7 +285,7 @@ void make_incoh_beam_parse_cmdline(
             switch(c) {
 
                 case 'b':
-                    opts->begin = atol(optarg);
+                    opts->begin_str = strdup(optarg);
                     break;
                 case 'd':
                     opts->datadir = strdup(optarg);
@@ -327,11 +333,13 @@ void make_incoh_beam_parse_cmdline(
     }
 
     // Check that all the required options were supplied
-    assert( opts->begin        != 0    );
     assert( opts->metafits     != NULL );
 
     if (opts->datadir == NULL)
         opts->datadir = strdup( "." );
+
+    if (opts->begin_str == NULL)
+        opts->begin_str = strdup( "+0" );
 }
 
 
