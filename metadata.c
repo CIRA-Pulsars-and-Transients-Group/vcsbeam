@@ -15,7 +15,8 @@ char **create_filenames(
         unsigned long int              begin_gps,
         unsigned long int              nseconds,
         char                          *datadir,
-        uintptr_t                      rec_channel
+        uintptr_t                      begin_coarse_chan_idx,
+        uintptr_t                      ncoarse_chans
         )
 /* Create an array of filenames; free with destroy_filenames()
  */
@@ -23,44 +24,52 @@ char **create_filenames(
     // Buffer for mwalib error messages
     char error_message[ERROR_MESSAGE_LEN];
 
-    // Calculate the number of files
+    // Check that the number of seconds is non-negative
     if (nseconds <= 0)
     {
         fprintf( stderr, "error: create_filenames: nseconds (= %ld) must be >= 1\n",
                  nseconds );
         exit(EXIT_FAILURE);
     }
+
+    // Check that the number of requested course channels does not exceed the number of available coarse channels
+    if (begin_coarse_chan_idx + ncoarse_chans > metafits_metadata->num_metafits_coarse_chans)
+    {
+        fprintf( stderr, "error: create_filenames: requested coarse channels higher than "
+                "what is available\n" );
+        exit(EXIT_FAILURE);
+    }
+
     // Allocate memory for the file name list
     char filename[MAX_COMMAND_LENGTH]; // Just the mwalib-generated filename (without the path)
-    char **filenames = (char **)malloc( nseconds*sizeof(char *) ); // The full array of filenames, including the paths
-
-    // Get the coarse channel index
-    unsigned int coarse_chan_idx;
-    for (coarse_chan_idx = 0; coarse_chan_idx < metafits_metadata->num_metafits_coarse_chans; coarse_chan_idx++)
-        if (metafits_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number == (uintptr_t)rec_channel)
-            break;
+    char **filenames = (char **)malloc( nseconds * ncoarse_chans *sizeof(char *) ); // The full array of filenames, including the paths
 
     // Allocate memory and write filenames
-    unsigned int second, timestep_idx;
-    for (second = 0; second < nseconds; second++)
+    unsigned int t_idx, f_idx;
+    for (unsigned int second = 0; second < nseconds; second++)
     {
-        timestep_idx = begin_gps - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000) + second;
+        t_idx = begin_gps - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000) + second;
 
-        filenames[second] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
-        if (mwalib_metafits_get_expected_volt_filename(
-                    metafits_context,
-                    timestep_idx,
-                    coarse_chan_idx,
-                    filename,
-                    MAX_COMMAND_LENGTH,
-                    error_message,
-                    ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+        for (uintptr_t c_idx = begin_coarse_chan_idx; c_idx < begin_coarse_chan_idx + ncoarse_chans; c_idx++)
         {
-            fprintf( stderr, "error (mwalib): cannot create filenames: %s\n", error_message );
-            exit(EXIT_FAILURE);
+            //f_idx = second*ncoarse_chans + c_idx - begin_coarse_chan_idx; // <-- this order seems to break mwalib (v0.9.4)
+            f_idx = (c_idx - begin_coarse_chan_idx)*nseconds + second;
+            filenames[f_idx] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
+            if (mwalib_metafits_get_expected_volt_filename(
+                        metafits_context,
+                        t_idx,
+                        c_idx,
+                        filename,
+                        MAX_COMMAND_LENGTH,
+                        error_message,
+                        ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+            {
+                fprintf( stderr, "error (mwalib): cannot create filenames: %s\n", error_message );
+                exit(EXIT_FAILURE);
+            }
+            sprintf( filenames[f_idx], "%s/%s",
+                    datadir, filename );
         }
-        sprintf( filenames[second], "%s/%s",
-                 datadir, filename );
     }
 
     return filenames;
@@ -107,7 +116,8 @@ void get_mwalib_voltage_metadata(
         unsigned long int  begin_gps,
         int                nseconds,
         char               *datadir,
-        uintptr_t          rec_channel
+        uintptr_t          coarse_chan_idx,
+        int               *ncoarse_chans
         )
 /* Create the voltage metadata structs using mwalib's API.
  */
@@ -121,8 +131,14 @@ void get_mwalib_voltage_metadata(
         nseconds = (*obs_metadata)->num_metafits_timesteps - (begin_gps - (*obs_metadata)->metafits_timesteps[0].gps_time_ms/1000);
     }
 
+    // Ditto for the ncoarse_chans
+    if (*ncoarse_chans == -1) // i.e. because nothing was given on the command line
+    {
+        *ncoarse_chans = (*obs_metadata)->num_metafits_coarse_chans - coarse_chan_idx;
+    }
+
     // Create list of filenames
-    char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, rec_channel );
+    char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, coarse_chan_idx, *ncoarse_chans );
 
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
@@ -168,7 +184,7 @@ long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int rel
         return obs_metadata->good_time_gps_ms/1000 + relative_begin;
 
     // Then relative begin must be negative, so count backwards from end
-    return obs_metadata->metafits_timesteps[obs_metadata->num_metafits_timesteps - 1].gps_time_ms/1000 + relative_begin + 1;
+    return obs_metadata->metafits_timesteps[obs_metadata->num_metafits_timesteps + relative_begin].gps_time_ms/1000;
 }
 
 long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str )
@@ -193,3 +209,46 @@ long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begi
     // Otherwise, return the number itself
     return atol(begin_str);
 }
+
+
+uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_coarse_chan_str )
+/* Another way to get the coarse channel index (0 to N-1)
+ * If the first character of BEGIN_STR is '+' or '-', then return a relative channel idx
+ * Otherwise, parse it as a receiver channel number.
+ */
+{
+    if (begin_coarse_chan_str == NULL)
+    {
+        fprintf( stderr, "error: parse_coarse_chan_string: begin_coarse_chan_str cannot be NULL\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    // If the first character is '+' or '-', treat it as a relative time
+    if (begin_coarse_chan_str[0] == '+')
+        return atoi( begin_coarse_chan_str );
+
+    if (begin_coarse_chan_str[0] == '-')
+        return obs_metadata->num_metafits_coarse_chans + atoi( begin_coarse_chan_str );
+
+    // Otherwise, if the first character is not a number from 0 to 9, generate an error
+    if (!(begin_coarse_chan_str[0] >= '0' && begin_coarse_chan_str[0] <= '9'))
+    {
+        fprintf( stderr, "error: parse_coarse_chan_string: cannot parse '%s' as a valid coarse channel\n",
+                begin_coarse_chan_str );
+        exit(EXIT_FAILURE);
+    }
+
+    // Otherwise, find the coarse channel with this receiver number
+    for (uintptr_t coarse_chan_idx = 0; coarse_chan_idx < obs_metadata->num_metafits_coarse_chans; coarse_chan_idx++)
+        if (obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number == (uintptr_t)atoi(begin_coarse_chan_str))
+            return coarse_chan_idx;
+
+    // If we got this far, this receiver number doesn't exist in this observation
+    fprintf( stderr, "error: parse_coarse_chan_string: receiver coarse chan %s not in this observation\n",
+            begin_coarse_chan_str );
+    exit(EXIT_FAILURE);
+
+    // Won't ever get here, but return something to avoid compile error/warning
+    return 0;
+}
+

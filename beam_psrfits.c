@@ -41,9 +41,6 @@ void populate_psrfits_header(
     // Get the sample rate
     unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
-    // Get the coarse channel
-    int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
-
     // Now set values for our hdrinfo structure
     strcpy( pf->hdr.project_id, obs_metadata->project_id );
     strcpy( pf->hdr.obs_mode,  "SEARCH"    );
@@ -64,7 +61,7 @@ void populate_psrfits_header(
     strcpy(pf->hdr.feed_mode,  "FA");
 
     pf->hdr.dt   = 1.0/sample_rate; // (sec)
-    pf->hdr.fctr = obs_metadata->metafits_coarse_chans[coarse_chan].chan_centre_hz / 1e6; // (MHz)
+    pf->hdr.fctr = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz / 1e6; // (MHz)
     pf->hdr.BW   = obs_metadata->coarse_chan_width_hz / 1e6;  // (MHz)
 
     // npols + nbits and whether pols are added
@@ -181,7 +178,7 @@ void populate_psrfits_header(
                     pf->hdr.project_id,
                     pf->hdr.source, 
                     pf->hdr.ra_str, pf->hdr.dec_str,
-                    obs_metadata->metafits_coarse_chans[coarse_chan].rec_chan_number );
+                    obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
         }
         else
         {
@@ -191,7 +188,7 @@ void populate_psrfits_header(
                 sprintf( pf->basefilename, "%s_%s_incoh_ch%03ld",
                         pf->hdr.project_id,
                         pf->hdr.source,
-                        obs_metadata->metafits_coarse_chans[coarse_chan].rec_chan_number );
+                        obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
         }
     }
 }

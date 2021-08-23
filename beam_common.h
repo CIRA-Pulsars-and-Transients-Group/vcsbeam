@@ -54,8 +54,7 @@ struct beam_geom {
 void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
-        VoltageMetadata*       volt_metadata,
-        MetafitsMetadata      *metafits_metadata,
+        MetafitsMetadata      *osb_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
         cuDoubleComplex     ***D,

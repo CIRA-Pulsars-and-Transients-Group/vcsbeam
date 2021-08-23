@@ -29,14 +29,13 @@
 #define MAX_COMMAND_LENGTH 1024
 
 struct make_tied_array_beam_opts {
-    // Variables for required options
     char              *begin_str;     // Absolute or relative GPS time -- when to start beamforming
     unsigned long int  nseconds;      // How many seconds to process
     char              *pointings_file; // Name of file containing pointings (e.g. "hh:mm:ss dd:mm:ss")
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // filename of the metafits file
-    uintptr_t          rec_channel;   // 0 - 255 receiver 1.28MHz channel
-    long int           frequency;     // = rec_channel expressed in Hz
+    char              *coarse_chan_str;   // Absolute or relative coarse channel number
+    int                ncoarse_chans; // How many coarse channels to process
 
     // Variables for MWA/VCS configuration
     char              *custom_flags;  // Use custom list for flagging antennas
@@ -84,11 +83,12 @@ int main(int argc, char **argv)
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
 
     unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
+    uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str );
 
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
     get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
-            begin_gps, opts.nseconds, opts.datadir, opts.rec_channel );
+            begin_gps, opts.nseconds, opts.datadir, begin_coarse_chan_idx, &opts.ncoarse_chans );
 
     MetafitsContext  *cal_context  = NULL;
     MetafitsMetadata *cal_metadata = NULL;
@@ -117,6 +117,9 @@ int main(int argc, char **argv)
     uintptr_t timestep_idx;
     uint64_t  gps_second;
 
+    primary_beam pb;
+    geometric_delays gdelays;
+
     // Start counting time from here (i.e. after parsing the command line)
     sprintf( log_message, "Reading pointings file %s", opts.pointings_file );
     logger_timed_message( log, log_message );
@@ -132,78 +135,15 @@ int main(int argc, char **argv)
     cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*nsamples, nchans, npols );
 
 
-    // If using bandpass calibration solutions, calculate number of expected bandpass channels
     double invw = 1.0/nants;
 
-    // ------------------------
-    // GET CALIBRATION SOLUTION
-    // ------------------------
-    cuDoubleComplex ***D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
-    if (cal.cal_type == CAL_RTS)
-    {
-        D = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, opts.rec_channel );
-        if (cal.apply_xy_correction)
-        {
-            xy_phase_correction( obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
-
-            // Print a suitable message
-            if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
-                logger_timed_message( log, "No XY phase correction information for this obsid" );
-            else
-            {
-                sprintf( log_message, "Applying XY phase correction %.2e*freq%+.2e",
-                        cal.phase_slope, cal.phase_offset );
-                logger_timed_message( log, log_message );
-            }
-        }
-        else
-        {
-            logger_timed_message( log, "Not applying XY phase correction" );
-        }
-    }
-    else if (cal.cal_type == CAL_OFFRINGA)
-    {
-        fprintf( stderr, "error: Offringa-style calibration solutions not currently supported\n" );
-        exit(EXIT_FAILURE);
-        /*
-        // Find the ordering of antennas in Offringa solutions from metafits file
-        read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
-        */
-    }
-
-    int coarse_chan_idx = 0; /* Value is fixed for now (i.e. each call of make_beam only
-                                ever processes one coarse chan. However, in the future,
-                                this should be flexible, with mpi or threads managing
-                                different coarse channels. */
-    int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
-
-    // ------------------
-    // Allocate memory for various arrays
-    // ------------------
-    primary_beam pb;
-    create_primary_beam( &pb, obs_metadata, coarse_chan, npointing );
-
-    geometric_delays gdelays;
-    create_geometric_delays( &gdelays, obs_metadata, vcs_metadata, coarse_chan, npointing );
-
-    // ------------------
-
-    logger_timed_message( log, "Setting up output header information" );
+    // Get pointing geometry information
     struct beam_geom beam_geom_vals[npointing];
 
     double mjd, sec_offset;
     mjd = obs_metadata->sched_start_mjd;
     for (p = 0; p < npointing; p++)
         calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
-
-    // Create structures for holding header information
-    struct psrfits  *pfs;
-    struct psrfits   pf_incoh;
-    pfs = (struct psrfits *)malloc(npointing * sizeof(struct psrfits));
-    vdif_header     vhdr;
-    struct vdifinfo *vf;
-    vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
-
 
     // Create structures for the PFB filter coefficients
     int ntaps, fil_size = 0;
@@ -245,15 +185,70 @@ int main(int argc, char **argv)
     for (int i = 0; i < fil_size; i++)
         coeffs[i] *= approx_filter_scale;
 
+    // ------------------------
+    // GET CALIBRATION SOLUTION
+    // ------------------------
+    cuDoubleComplex ***D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
+    if (cal.cal_type == CAL_RTS)
+    {
+        D = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, begin_coarse_chan_idx );
+        if (cal.apply_xy_correction)
+        {
+            xy_phase_correction( obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
+
+            // Print a suitable message
+            if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
+                logger_timed_message( log, "No XY phase correction information for this obsid" );
+            else
+            {
+                sprintf( log_message, "Applying XY phase correction %.2e*freq%+.2e",
+                        cal.phase_slope, cal.phase_offset );
+                logger_timed_message( log, log_message );
+            }
+        }
+        else
+        {
+            logger_timed_message( log, "Not applying XY phase correction" );
+        }
+    }
+    else if (cal.cal_type == CAL_OFFRINGA)
+    {
+        fprintf( stderr, "error: Offringa-style calibration solutions not currently supported\n" );
+        exit(EXIT_FAILURE);
+        /*
+        // Find the ordering of antennas in Offringa solutions from metafits file
+        read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
+        */
+    }
+
+    // ------------------
+    // Prepare primary beam and geometric delay arrays
+    // ------------------
+    create_primary_beam( &pb, obs_metadata, begin_coarse_chan_idx, npointing );
+    create_geometric_delays( &gdelays, obs_metadata, vcs_metadata, begin_coarse_chan_idx, npointing );
+
+    // ------------------
+
+    logger_timed_message( log, "Setting up output header information" );
+
+    // Create structures for holding header information
+    struct psrfits  *pfs;
+    struct psrfits   pf_incoh;
+    pfs = (struct psrfits *)malloc(npointing * sizeof(struct psrfits));
+    vdif_header     vhdr;
+    struct vdifinfo *vf;
+    vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
+
+
     // Populate the relevant header structs
     for (p = 0; p < npointing; p++)
-        populate_psrfits_header( &pfs[p], obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
+        populate_psrfits_header( &pfs[p], obs_metadata, vcs_metadata, begin_coarse_chan_idx, opts.max_sec_per_file,
                 outpol_coh, &beam_geom_vals[p], NULL, true );
 
-    populate_psrfits_header( &pf_incoh, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
+    populate_psrfits_header( &pf_incoh, obs_metadata, vcs_metadata, begin_coarse_chan_idx, opts.max_sec_per_file,
             outpol_incoh, &beam_geom_vals[0], NULL, false );
 
-    populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, coarse_chan_idx,
+    populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, begin_coarse_chan_idx,
             beam_geom_vals, npointing );
 
     // To run asynchronously we require two memory allocations for each data
@@ -315,7 +310,6 @@ int main(int argc, char **argv)
         logger_message( log, "" ); // Print a blank line
 
         timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
-        coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
         // Read in data from next file
@@ -328,7 +322,7 @@ int main(int argc, char **argv)
                     vcs_context,
                     gps_second,
                     1,
-                    coarse_chan,
+                    begin_coarse_chan_idx,
                     data,
                     bytes_per_timestep,
                     error_message,
@@ -359,9 +353,8 @@ int main(int argc, char **argv)
 
         get_jones(
                 npointing,              // number of pointings
-                vcs_metadata,
                 obs_metadata,
-                coarse_chan_idx,
+                begin_coarse_chan_idx,
                 &cal,                   // struct holding info about calibration
                 D,                      // Calibration Jones matrices
                 pb.B,                   // Primary beam jones matrices
@@ -463,12 +456,13 @@ int main(int argc, char **argv)
     cudaFreeHost( data );
     cudaCheckErrors( "cudaFreeHost(data) failed" );
 
-    free( opts.pointings_file );
-    free( opts.datadir        );
-    free( opts.begin_str      );
-    free( cal.caldir          );
-    free( opts.metafits       );
-    free( opts.synth_filter   );
+    free( opts.pointings_file  );
+    free( opts.datadir         );
+    free( opts.begin_str       );
+    free( opts.coarse_chan_str );
+    free( cal.caldir           );
+    free( opts.metafits        );
+    free( opts.synth_filter    );
 
     if (opts.out_incoh)
     {
@@ -517,7 +511,6 @@ void usage() {
             "\t-P, --pointings=FILE       FILE containing RA and Decs of multiple pointings\n"
             "\t                           in the format hh:mm:ss.s dd:mm:ss.s ...\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
-            "\t-f, --coarse-chan=N        Absolute coarse channel number (0-255)\n"
           );
 
     printf( "\nOPTIONAL OPTIONS\n\n"
@@ -527,6 +520,12 @@ void usage() {
             "\t                           respectively. [default: \"+0\"]\n"
             "\t-d, --data-location=PATH   PATH is the directory containing the recombined data\n"
             "\t                           [default: current directory]\n"
+            "\t-f, --coarse-chan=CHAN     Coarse channel number\n"
+            "\t                           If CHAN starts with a '+' or a '-', then the channel is taken\n"
+            "\t                           relative to the first or last channel in the observation\n"
+            "\t                           respectively. Otherwise, it is treated as a receiver channel number\n"
+            "\t                           (0-255) [default: \"+0\"]\n"
+            "\t-F, --nchans=VAL           Process VAL coarse channels\n"
             "\t-i, --incoh                Turn on incoherent PSRFITS beam output.                             [default: OFF]\n"
             "\t-p, --psrfits              Turn on coherent PSRFITS output (will be turned on if none of\n"
             "\t                           -i, -p, -u, -v are chosen).                                         [default: OFF]\n"
@@ -577,7 +576,8 @@ void make_tied_array_beam_parse_cmdline(
     opts->pointings_file     = NULL; // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
     opts->datadir            = NULL; // The path to where the recombined data live
     opts->metafits           = NULL; // filename of the metafits file for the target observation
-    opts->rec_channel        = -1;   // 0 - 255 receiver 1.28MHz channel
+    opts->coarse_chan_str    = NULL; // Absolute or relative coarse channel
+    opts->ncoarse_chans      = -1;   // How many coarse channels to process
     opts->out_incoh          = 0;    // Default = PSRFITS (incoherent) output turned OFF
     opts->out_coh            = 0;    // Default = PSRFITS (coherent)   output turned OFF
     opts->out_vdif           = 0;    // Default = VDIF                 output turned OFF
@@ -618,6 +618,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"metafits",        required_argument, 0, 'm'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
+                {"nchans",          required_argument, 0, 'F'},
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"no-XY-phase",     required_argument, 0, 'U'},
@@ -629,7 +630,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:c:d:C:f:g:him:OpP:R:sS:t:T:UvVX",
+                             "A:b:c:d:C:f:F:g:him:OpP:R:sS:t:T:UvVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -653,7 +654,10 @@ void make_tied_array_beam_parse_cmdline(
                     opts->datadir = strdup(optarg);
                     break;
                 case 'f':
-                    opts->rec_channel = atoi(optarg);
+                    opts->coarse_chan_str = strdup(optarg);
+                    break;
+                case 'F':
+                    opts->ncoarse_chans = atoi(optarg);
                     break;
                 case 'g':
                     opts->gpu_mem = atof(optarg);
@@ -737,22 +741,15 @@ void make_tied_array_beam_parse_cmdline(
     if (opts->begin_str == NULL)
         opts->begin_str = strdup( "+0" );
 
+    if (opts->coarse_chan_str == NULL)
+        opts->coarse_chan_str = strdup( "+0" );
+
     // If neither -i, -p, nor -v were chosen, set -p by default
     if ( !opts->out_incoh && !opts->out_coh && !opts->out_vdif )
     {
         opts->out_coh = 1;
     }
 
-    // If the reference antenna is outside the range of antennas, issue
-    // a warning and turn off phase rotation.
-    /*if (cal->ref_ant < 0 || cal->ref_ant >= opts->nants)
-    {
-        fprintf( stderr, "warning: tile %d outside of range 0-%d. "
-                "Calibration phase rotation turned off.\n",
-                cal->ref_ant, opts->nants-1 );
-        cal->ref_ant = -1; // This defines the meaning of -1
-                                // = don't do phase rotation
-    }*/
 }
 
 

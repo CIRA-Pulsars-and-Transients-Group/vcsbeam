@@ -43,7 +43,6 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, 
 void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
-        VoltageMetadata       *vcs_metadata,
         MetafitsMetadata      *obs_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
@@ -53,8 +52,7 @@ void get_jones(
 {
 
     // Give "shorthand" variables for often-used values in metafits
-    int coarse_chan    = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
-    long int frequency = obs_metadata->metafits_coarse_chans[coarse_chan].chan_start_hz;
+    long int frequency = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_start_hz;
     int nant           = obs_metadata->num_ants;
     int nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
     int npol           = obs_metadata->num_ant_pols;   // (X,Y)

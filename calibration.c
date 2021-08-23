@@ -14,7 +14,7 @@
 #include "beam_common.h"
 
 cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t rec_channel )
+        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel.
@@ -23,25 +23,7 @@ cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
  */
 {
     // Find the "GPUBox" number for this coarse channel
-    uintptr_t c;
-    uintptr_t gpubox_number;
-    for (c = 0; c < cal_metadata->num_metafits_coarse_chans; c++)
-    {
-        if (cal_metadata->metafits_coarse_chans[c].rec_chan_number == rec_channel)
-        {
-            gpubox_number = cal_metadata->metafits_coarse_chans[c].gpubox_number;
-            break;
-        }
-    }
-
-    // If this coarse channel was not found in the calibration obs, complain
-    // and exit
-    if (c == cal_metadata->num_metafits_coarse_chans)
-    {
-        fprintf( stderr, "error: coarse channel %lu not found in calibration "
-                "observation %u\n", rec_channel, cal_metadata->obs_id );
-        exit(EXIT_FAILURE);
-    }
+    uintptr_t gpubox_number = cal_metadata->metafits_coarse_chans[coarse_chan_idx].gpubox_number;
 
     // With the gpubox number in hand, construct the filenames for the
     // DI_Jones and Bandpass files

@@ -99,7 +99,7 @@ void calc_primary_beam(
 void create_primary_beam(
         primary_beam      *pb,
         MetafitsMetadata  *obs_metadata,
-        uintptr_t          coarse_chan,
+        uintptr_t          coarse_chan_idx,
         uintptr_t          npointings )
 /* Allocates memory for the primary beam matrices ("B")
  * (see Eq. (30) in Ord et al. (2019))
@@ -120,7 +120,7 @@ void create_primary_beam(
 
     create_delays_amps_from_metafits( obs_metadata, &(pb->delays), &(pb->amps) );
 
-    pb->freq_hz = obs_metadata->metafits_coarse_chans[coarse_chan].chan_centre_hz;
+    pb->freq_hz = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz;
 
     pb->obs_metadata = obs_metadata;
 }

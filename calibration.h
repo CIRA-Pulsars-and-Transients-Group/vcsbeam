@@ -28,7 +28,7 @@ struct calibration {
 };
 
 cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t rec_channel );
+        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx );
 
 void free_rts( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata );
 

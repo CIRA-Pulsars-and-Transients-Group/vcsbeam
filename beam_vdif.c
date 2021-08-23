@@ -105,9 +105,6 @@ void populate_vdif_header(
     // Get the sample rate
     unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
-    // Get the coarse channel
-    int coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
-
     for ( int p=0; p<npointing; p++ )
     {
         // Define DataFrame dimensions
@@ -164,7 +161,7 @@ void populate_vdif_header(
         strncpy( vf[p].date_obs, time_utc, sizeof(time_utc) );
 
         vf[p].MJD_epoch = beam_geom_vals->intmjd + beam_geom_vals->fracmjd;
-        vf[p].fctr      = obs_metadata->metafits_coarse_chans[coarse_chan].chan_centre_hz / 1e6; // (MHz)
+        vf[p].fctr      = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz / 1e6; // (MHz)
         strncpy( vf[p].source, "unset", 24 );
 
         // The output file basename
@@ -173,7 +170,7 @@ void populate_vdif_header(
                  vf[p].scan_name,
                  vf[p].ra_str,
                  vf[p].dec_str,
-                 obs_metadata->metafits_coarse_chans[coarse_chan].rec_chan_number );
+                 obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
     }
 }
 
