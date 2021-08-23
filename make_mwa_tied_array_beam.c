@@ -30,7 +30,7 @@
 
 struct make_tied_array_beam_opts {
     // Variables for required options
-    unsigned long int  begin;         // GPS time -- when to start beamforming
+    char              *begin_str;     // Absolute or relative GPS time -- when to start beamforming
     unsigned long int  nseconds;      // How many seconds to process
     char              *pointings_file; // Name of file containing pointings (e.g. "hh:mm:ss dd:mm:ss")
     char              *datadir;       // The path to where the recombined data live
@@ -83,10 +83,12 @@ int main(int argc, char **argv)
     MetafitsMetadata *obs_metadata = NULL;
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
 
+    unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
+
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
     get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
-            opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
+            begin_gps, opts.nseconds, opts.datadir, opts.rec_channel );
 
     MetafitsContext  *cal_context  = NULL;
     MetafitsMetadata *cal_metadata = NULL;
@@ -343,7 +345,7 @@ int main(int argc, char **argv)
         logger_timed_message( log, log_message );
 
         logger_start_stopwatch( log, "delay" );
-        sec_offset = (double)(timestep_idx + opts.begin - obs_metadata->obs_id);
+        sec_offset = (double)(timestep_idx + begin_gps - obs_metadata->obs_id);
         mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
         for (p = 0; p < npointing; p++)
             calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
@@ -463,6 +465,7 @@ int main(int argc, char **argv)
 
     free( opts.pointings_file );
     free( opts.datadir        );
+    free( opts.begin_str      );
     free( cal.caldir          );
     free( opts.metafits       );
     free( opts.synth_filter   );
@@ -512,6 +515,9 @@ void usage() {
 
     printf( "\nREQUIRED OPTIONS\n\n"
             "\t-b, --begin=GPSTIME        Begin time of observation, in GPS seconds\n"
+            "\t                           If GPSTIME starts with a '+' or a '-', then the time\n"
+            "\t                           is taken relative to the start or end of the observation\n"
+            "\t                           respectively.\n"
             "\t-P, --pointings=FILE       FILE containing RA and Decs of multiple pointings\n"
             "\t                           in the format hh:mm:ss.s dd:mm:ss.s ...\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
@@ -566,7 +572,7 @@ void make_tied_array_beam_parse_cmdline(
         int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal )
 {
     // Set defaults
-    opts->begin              = 0;    // GPS time -- when to start beamforming
+    opts->begin_str          = NULL; // Absolute or relative GPS time -- when to start beamforming
     opts->nseconds           = -1;   // How many seconds to process (-1 = as many as possible)
     opts->pointings_file     = NULL; // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
     opts->datadir            = NULL; // The path to where the recombined data live
@@ -635,7 +641,7 @@ void make_tied_array_beam_parse_cmdline(
                     opts->out_ant = atoi(optarg); // 0-127
                     break;
                 case 'b':
-                    opts->begin = atol(optarg);
+                    opts->begin_str = strdup(optarg);
                     break;
                 case 'c':
                     cal->metafits = strdup(optarg);
@@ -720,7 +726,6 @@ void make_tied_array_beam_parse_cmdline(
 
 
     // Check that all the required options were supplied
-    assert( opts->begin          != 0    );
     assert( opts->pointings_file != NULL );
     assert( cal->caldir          != NULL );
     assert( opts->metafits       != NULL );
@@ -728,6 +733,9 @@ void make_tied_array_beam_parse_cmdline(
 
     if (opts->datadir == NULL)
         opts->datadir = strdup( "." );
+
+    if (opts->begin_str == NULL)
+        opts->begin_str = strdup( "+0" );
 
     // If neither -i, -p, nor -v were chosen, set -p by default
     if ( !opts->out_incoh && !opts->out_coh && !opts->out_vdif )
