@@ -29,11 +29,11 @@ void get_mwalib_metafits_metadata(
         MetafitsContext  **context
         );
 
-void get_mwalib_metadata(
-        MetafitsMetadata **obs_metadata,
+void get_mwalib_voltage_metadata(
         VoltageMetadata  **vcs_metadata,
         VoltageContext   **vcs_context,
-        char              *obs_metafits,
+        MetafitsMetadata **obs_metadata,
+        MetafitsContext   *obs_context,
         unsigned long int  begin_gps,
         int                nseconds,
         char               *datadir,

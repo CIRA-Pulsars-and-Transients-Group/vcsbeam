@@ -78,18 +78,21 @@ int main(int argc, char **argv)
     logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
     char error_message[ERROR_MESSAGE_LEN];
+
+    MetafitsContext  *obs_context  = NULL;
     MetafitsMetadata *obs_metadata = NULL;
+    get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
+
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
-
-    get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context,
-            opts.metafits, opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
+    get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
+            opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
 
     MetafitsContext  *cal_context  = NULL;
     MetafitsMetadata *cal_metadata = NULL;
     get_mwalib_metafits_metadata( cal.metafits, &cal_metadata, &cal_context );
 
-    uintptr_t ntimesteps = vcs_metadata->num_common_timesteps;
+    uintptr_t ntimesteps = vcs_metadata->num_provided_timesteps;
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nants          = obs_metadata->num_ants;
@@ -309,7 +312,7 @@ int main(int argc, char **argv)
     {
         logger_message( log, "" ); // Print a blank line
 
-        timestep = vcs_metadata->common_timestep_indices[timestep_idx];
+        timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
         coarse_chan = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
@@ -494,8 +497,8 @@ int main(int argc, char **argv)
     mwalib_metafits_metadata_free( obs_metadata );
     mwalib_voltage_metadata_free( vcs_metadata );
     mwalib_voltage_context_free( vcs_context );
-    if (cal_metadata != NULL)
-        mwalib_metafits_metadata_free( cal_metadata );
+    mwalib_metafits_metadata_free( cal_metadata );
+    mwalib_metafits_context_free( cal_context );
 
     // Clean up memory used for calibration solutions
     free_rts( D, cal_metadata );

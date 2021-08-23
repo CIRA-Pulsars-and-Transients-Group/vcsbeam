@@ -99,39 +99,21 @@ void get_mwalib_metafits_metadata(
     }
 }
 
-void get_mwalib_metadata(
-        MetafitsMetadata **obs_metadata,
+void get_mwalib_voltage_metadata(
         VoltageMetadata  **vcs_metadata,
         VoltageContext   **vcs_context,
-        char              *obs_metafits,
+        MetafitsMetadata **obs_metadata,
+        MetafitsContext   *obs_context,
         unsigned long int  begin_gps,
         int                nseconds,
         char               *datadir,
         uintptr_t          rec_channel
         )
-/* Create the metadata structs using mwalib's API.
- *
- * obs_metadata applies to the metafits metadata for the target observation, and cannot be null
- * vcs_metadata applies to the voltage metadata for the target observation, and cannot be null
- * cal_metadata applies to the metafits metadata for the calibration observation, and may be NULL
- *     (if only an incoherent beam is requested)
- * vcs_context applies to the voltage context for the target observation, and cannot be null
+/* Create the voltage metadata structs using mwalib's API.
  */
 {
     char error_message[ERROR_MESSAGE_LEN];
     error_message[0] = '\0'; // <-- Just to avoid a compiler warning about uninitialised variables
-
-    // Each metadata is constructed from mwalib "contexts"
-    // These are only temporarily needed to construct the other metadata/context structs,
-    // and will be freed at the end of this function
-    MetafitsContext *obs_context = NULL;
-
-    // First, get the metafits context for the given observation metafits file in order to create
-    // a list of filenames for creating the voltage context. This metafits context will be remade
-    // from the voltage context later, in order to get the antenna ordering correct (which depends
-    // on the voltage type)
-
-    get_mwalib_metafits_metadata( obs_metafits, obs_metadata, &obs_context );
 
     // If nseconds is an invalid number (<= 0), make it equal to the max possible for this obs
     if (nseconds <= 0)
@@ -142,10 +124,6 @@ void get_mwalib_metadata(
     // Create list of filenames
     char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, rec_channel );
 
-    // Now that we have the filenames, we don't need this version of the obs context and metadata.
-    mwalib_metafits_metadata_free( *obs_metadata );
-    mwalib_metafits_context_free( obs_context );
-
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
     const char **voltage_files = (const char **)malloc( sizeof(char *) * nseconds );
@@ -153,16 +131,9 @@ void get_mwalib_metadata(
         voltage_files[i] = filenames[i];
 
     // Create VCS_CONTEXT
-    if (mwalib_voltage_context_new( obs_metafits, voltage_files, nseconds, vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    if (mwalib_voltage_context_new( (*obs_metadata)->metafits_filename, voltage_files, nseconds, vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create voltage context: %s\n", error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    // Create OBS_METADATA
-    if (mwalib_metafits_metadata_get( NULL, NULL, *vcs_context, obs_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error (mwalib): cannot create metafits metadata from voltage context: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
 
@@ -170,6 +141,14 @@ void get_mwalib_metadata(
     if (mwalib_voltage_metadata_get( *vcs_context, vcs_metadata, error_message, ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot get metadata: %s\n", error_message );
+        exit(EXIT_FAILURE);
+    }
+
+    // Replace the existing OBS_METADATA with a new one that knows this is a VCS observation
+    mwalib_metafits_metadata_free( *obs_metadata );
+    if (mwalib_metafits_metadata_get( NULL, NULL, *vcs_context, obs_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits metadata from voltage context: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
 

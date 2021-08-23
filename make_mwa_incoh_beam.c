@@ -75,15 +75,18 @@ int main(int argc, char **argv)
     logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
     char error_message[ERROR_MESSAGE_LEN];
-    MetafitsMetadata *obs_metadata = NULL;
-    VoltageMetadata  *vcs_metadata = NULL;
-    VoltageContext   *vcs_context  = NULL;
 
-    get_mwalib_metadata( &obs_metadata, &vcs_metadata, &vcs_context,
-            opts.metafits, opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
+    MetafitsContext  *obs_context  = NULL;
+    MetafitsMetadata *obs_metadata = NULL;
+    get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
+
+    VoltageContext   *vcs_context  = NULL;
+    VoltageMetadata  *vcs_metadata = NULL;
+    get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
+            opts.begin, opts.nseconds, opts.datadir, opts.rec_channel );
 
     // Create some "shorthand" variables for code brevity
-    uintptr_t    ntimesteps      = vcs_metadata->num_common_timesteps;
+    uintptr_t    ntimesteps      = vcs_metadata->num_provided_timesteps;
     uintptr_t    nchans          = obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t    ninputs         = obs_metadata->num_rf_inputs;
     unsigned int nsamples        = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
@@ -91,7 +94,7 @@ int main(int argc, char **argv)
                                      ever processes one coarse chan. However, in the future,
                                      this should be flexible, with mpi or threads managing
                                      different coarse channels. */
-    int          coarse_chan     = vcs_metadata->common_coarse_chan_indices[coarse_chan_idx];
+    int          coarse_chan     = vcs_metadata->provided_coarse_chan_indices[coarse_chan_idx];
     uintptr_t    data_size       = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
     uintptr_t    incoh_size      = nchans * nsamples * sizeof(float);
     uintptr_t    timestep_idx;
@@ -131,7 +134,7 @@ int main(int argc, char **argv)
         logger_message( log, "" ); // Print a blank line
 
         // Get the next gps second 
-        timestep = vcs_metadata->common_timestep_indices[timestep_idx];
+        timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
         // Read in data from next file
