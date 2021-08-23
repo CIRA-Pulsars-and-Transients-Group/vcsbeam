@@ -52,7 +52,7 @@ struct make_tied_array_beam_opts {
     char              *synth_filter;  // Which synthesis filter to use
     int                out_summed;    // Default = output only Stokes I output turned OFF
     int                max_sec_per_file;    // Number of seconds per fits files
-    float              gpu_mem  ;     // Default = -1.0. If -1.0 use all GPU mem
+    float              gpu_mem;       // Default = -1.0. If -1.0 use all GPU mem
 };
 
 void usage();
@@ -116,6 +116,8 @@ int main(int argc, char **argv)
     uintptr_t timestep;
     uintptr_t timestep_idx;
     uint64_t  gps_second;
+
+    uintptr_t data_size = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
 
     primary_beam pb;
     geometric_delays gdelays;
@@ -185,82 +187,12 @@ int main(int argc, char **argv)
     for (int i = 0; i < fil_size; i++)
         coeffs[i] *= approx_filter_scale;
 
-    // ------------------------
-    // GET CALIBRATION SOLUTION
-    // ------------------------
-    cuDoubleComplex ***D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
-    if (cal.cal_type == CAL_RTS)
-    {
-        D = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, begin_coarse_chan_idx );
-        if (cal.apply_xy_correction)
-        {
-            xy_phase_correction( obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
-
-            // Print a suitable message
-            if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
-                logger_timed_message( log, "No XY phase correction information for this obsid" );
-            else
-            {
-                sprintf( log_message, "Applying XY phase correction %.2e*freq%+.2e",
-                        cal.phase_slope, cal.phase_offset );
-                logger_timed_message( log, log_message );
-            }
-        }
-        else
-        {
-            logger_timed_message( log, "Not applying XY phase correction" );
-        }
-    }
-    else if (cal.cal_type == CAL_OFFRINGA)
-    {
-        fprintf( stderr, "error: Offringa-style calibration solutions not currently supported\n" );
-        exit(EXIT_FAILURE);
-        /*
-        // Find the ordering of antennas in Offringa solutions from metafits file
-        read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
-        */
-    }
-
-    // ------------------
-    // Prepare primary beam and geometric delay arrays
-    // ------------------
-    create_primary_beam( &pb, obs_metadata, begin_coarse_chan_idx, npointing );
-    create_geometric_delays( &gdelays, obs_metadata, vcs_metadata, begin_coarse_chan_idx, npointing );
-
-    // ------------------
-
-    logger_timed_message( log, "Setting up output header information" );
-
-    // Create structures for holding header information
-    struct psrfits  *pfs;
-    struct psrfits   pf_incoh;
-    pfs = (struct psrfits *)malloc(npointing * sizeof(struct psrfits));
-    vdif_header     vhdr;
-    struct vdifinfo *vf;
-    vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
-
-
-    // Populate the relevant header structs
-    for (p = 0; p < npointing; p++)
-        populate_psrfits_header( &pfs[p], obs_metadata, vcs_metadata, begin_coarse_chan_idx, opts.max_sec_per_file,
-                outpol_coh, &beam_geom_vals[p], NULL, true );
-
-    populate_psrfits_header( &pf_incoh, obs_metadata, vcs_metadata, begin_coarse_chan_idx, opts.max_sec_per_file,
-            outpol_incoh, &beam_geom_vals[0], NULL, false );
-
-    populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, begin_coarse_chan_idx,
-            beam_geom_vals, npointing );
-
-    // To run asynchronously we require two memory allocations for each data
-    // set so multiple parts of the memory can be worked on at once.
-    // We control this by changing the pointer to alternate between
-    // the two memory allocations
-
-    // Create array for holding the raw data
-    long int bytes_per_timestep = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
+    /*********************
+     * Memory Allocation *
+     *********************/
 
     uint8_t *data;
-    cudaMallocHost( (void **)&data, bytes_per_timestep * sizeof(uint8_t) );
+    cudaMallocHost( (void **)&data, data_size );
     cudaCheckErrors( "cudaMallocHost(data) failed" );
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
@@ -283,12 +215,9 @@ int main(int argc, char **argv)
     float *data_buffer_incoh  = NULL;
     float *data_buffer_vdif   = NULL;
 
-    data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans *
-                                                           outpol_coh * pfs[0].hdr.nsblk );
-    data_buffer_incoh = create_pinned_data_buffer_psrfits( nchans * outpol_incoh *
-                                                           pf_incoh.hdr.nsblk );
-    data_buffer_vdif  = create_pinned_data_buffer_vdif( vf->sizeof_buffer *
-                                                        npointing );
+    data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans * outpol_coh * nsamples );
+    data_buffer_incoh = create_pinned_data_buffer_psrfits( nchans * outpol_incoh * nsamples );
+    data_buffer_vdif  = create_pinned_data_buffer_vdif( nsamples * nchans * npols * npointing * 2 * sizeof(float) );
 
     if (opts.out_vdif)
     {
@@ -301,146 +230,239 @@ int main(int argc, char **argv)
     for (p = 0; p < npointing; p++)
         cudaStreamCreate(&(streams[p])) ;
 
-    // Begin the main loop: go through data one second at a time
+    // Create structures for holding header information
+    struct psrfits  *pfs;
+    struct psrfits   pf_incoh;
+    pfs = (struct psrfits *)malloc(npointing * sizeof(struct psrfits));
+    vdif_header     vhdr;
+    struct vdifinfo *vf;
+    vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
 
-    logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
+    cuDoubleComplex ***D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
 
-    for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
+    // COARSE CHANNEL DEPENDENT CODE BEGINS HERE
+    for (uintptr_t coarse_chan_idx = begin_coarse_chan_idx; coarse_chan_idx < begin_coarse_chan_idx + opts.ncoarse_chans; coarse_chan_idx++)
     {
-        logger_message( log, "" ); // Print a blank line
+        /****************************
+         * GET CALIBRATION SOLUTION *
+         ****************************/
 
-        timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
-        gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
-
-        // Read in data from next file
-        sprintf( log_message, "[%lu/%lu] Reading in data for gps second %ld",
-                timestep_idx+1, ntimesteps, gps_second );
-        logger_timed_message( log, log_message );
-
-        logger_start_stopwatch( log, "read" );
-        if (mwalib_voltage_context_read_second(
-                    vcs_context,
-                    gps_second,
-                    1,
-                    begin_coarse_chan_idx,
-                    data,
-                    bytes_per_timestep,
-                    error_message,
-                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+        if (cal.cal_type == CAL_RTS)
         {
-            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", error_message );
-            exit(EXIT_FAILURE);
-        }
-        logger_stop_stopwatch( log, "read" );
-
-        // Get the next second's worth of phases / jones matrices, if needed
-        sprintf( log_message, "[%lu/%lu] Calculating Jones matrices",
-                                timestep_idx+1, ntimesteps );
-        logger_timed_message( log, log_message );
-
-        logger_start_stopwatch( log, "delay" );
-        sec_offset = (double)(timestep_idx + begin_gps - obs_metadata->obs_id);
-        mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
-        for (p = 0; p < npointing; p++)
-            calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
-
-        // Calculate the primary beam
-        calc_primary_beam( &pb, beam_geom_vals );
-
-        // Calculate the geometric delays
-        calc_geometric_delays( &gdelays, beam_geom_vals );
-        push_geometric_delays_to_device( &gdelays );
-
-        get_jones(
-                npointing,              // number of pointings
-                obs_metadata,
-                begin_coarse_chan_idx,
-                &cal,                   // struct holding info about calibration
-                D,                      // Calibration Jones matrices
-                pb.B,                   // Primary beam jones matrices
-                invJi );                // invJi array           (answer will be output here)
-
-        logger_stop_stopwatch( log, "delay" );
-
-        // Form the beams
-        sprintf( log_message, "[%lu/%lu] Calculating beam", timestep_idx+1, ntimesteps);
-        logger_timed_message( log, log_message );
-
-        logger_start_stopwatch( log, "calc" );
-        if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
-        {
-            // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
-            // detected_beam = [2*nsamples][nchans][npols] = [20000][128][2] (cuDoubleComplex)
-            if (timestep_idx % 2 == 0)
-                offset = 0;
-            else
-                offset = nsamples;
-
-            for (p   = 0; p   < npointing;   p++  )
-            for (s   = 0; s   < nsamples; s++  )
-            for (ch  = 0; ch  < nchans;       ch++ )
-            for (pol = 0; pol < npols;        pol++)
+            D = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, coarse_chan_idx );
+            if (cal.apply_xy_correction)
             {
-                int i;
-                if (pol == 0)
-                    i = gf.polX_idxs[opts.out_ant];
+                xy_phase_correction( obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
+
+                // Print a suitable message
+                if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
+                    logger_timed_message( log, "No XY phase correction information for this obsid" );
                 else
-                    i = gf.polY_idxs[opts.out_ant];
-                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,i,nchans,ninput)]);
-                detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
+                {
+                    sprintf( log_message, "Applying XY phase correction %.2e*freq%+.2e",
+                            cal.phase_slope, cal.phase_offset );
+                    logger_timed_message( log, log_message );
+                }
+            }
+            else
+            {
+                logger_timed_message( log, "Not applying XY phase correction" );
             }
         }
-        else // beamform (the default mode)
+        else if (cal.cal_type == CAL_OFFRINGA)
         {
-            cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
-                    npointing, nants, nchans, npols, outpol_coh, invw, &gf,
-                    detected_beam, data_buffer_coh, data_buffer_incoh,
-                    streams, opts.out_incoh, nchunk );
+            fprintf( stderr, "error: Offringa-style calibration solutions not currently supported\n" );
+            exit(EXIT_FAILURE);
+            /*
+            // Find the ordering of antennas in Offringa solutions from metafits file
+            read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
+            */
         }
 
-        // Invert the PFB, if requested
-        if (opts.out_vdif)
+        // ------------------
+        // Prepare primary beam and geometric delay arrays
+        // ------------------
+        create_primary_beam( &pb, obs_metadata, coarse_chan_idx, npointing );
+        create_geometric_delays( &gdelays, obs_metadata, vcs_metadata, coarse_chan_idx, npointing );
+
+        // ------------------
+
+        sprintf( log_message, "Preparing headers for output (receiver channel %lu)",
+                obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
+        logger_message( log, log_message );
+
+        // Populate the relevant header structs
+        for (p = 0; p < npointing; p++)
+            populate_psrfits_header( &pfs[p], obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
+                    outpol_coh, &beam_geom_vals[p], NULL, true );
+
+        populate_psrfits_header( &pf_incoh, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
+                outpol_incoh, &beam_geom_vals[0], NULL, false );
+
+        populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, coarse_chan_idx,
+                beam_geom_vals, npointing );
+
+        // Begin the main loop: go through data one second at a time
+
+        logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
+
+        for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
         {
-            sprintf( log_message, "[%lu/%lu] Inverting the PFB (full)",
-                            timestep_idx+1, ntimesteps);
+            logger_message( log, "" ); // Print a blank line
+
+            timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
+            gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
+
+            // Read in data from next file
+            sprintf( log_message, "[%lu/%lu] Reading in data for gps second %ld",
+                    timestep_idx+1, ntimesteps, gps_second );
             logger_timed_message( log, log_message );
-            cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
-                               nsamples, nchans, npols, vf->sizeof_buffer,
-                               &gi, data_buffer_vdif );
+
+            logger_start_stopwatch( log, "read" );
+            if (mwalib_voltage_context_read_second(
+                        vcs_context,
+                        gps_second,
+                        1,
+                        coarse_chan_idx,
+                        data,
+                        data_size,
+                        error_message,
+                        ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+            {
+                fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", error_message );
+                exit(EXIT_FAILURE);
+            }
+            logger_stop_stopwatch( log, "read" );
+
+            // Get the next second's worth of phases / jones matrices, if needed
+            sprintf( log_message, "[%lu/%lu] Calculating Jones matrices",
+                    timestep_idx+1, ntimesteps );
+            logger_timed_message( log, log_message );
+
+            logger_start_stopwatch( log, "delay" );
+            sec_offset = (double)(timestep_idx + begin_gps - obs_metadata->obs_id);
+            mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
+            for (p = 0; p < npointing; p++)
+                calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
+
+            // Calculate the primary beam
+            calc_primary_beam( &pb, beam_geom_vals );
+
+            // Calculate the geometric delays
+            calc_geometric_delays( &gdelays, beam_geom_vals );
+            push_geometric_delays_to_device( &gdelays );
+
+            get_jones(
+                    npointing,              // number of pointings
+                    obs_metadata,
+                    coarse_chan_idx,
+                    &cal,                   // struct holding info about calibration
+                    D,                      // Calibration Jones matrices
+                    pb.B,                   // Primary beam jones matrices
+                    invJi );                // invJi array           (answer will be output here)
+
+            logger_stop_stopwatch( log, "delay" );
+
+            // Form the beams
+            sprintf( log_message, "[%lu/%lu] Calculating beam", timestep_idx+1, ntimesteps);
+            logger_timed_message( log, log_message );
+
+            logger_start_stopwatch( log, "calc" );
+            if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
+            {
+                // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
+                // detected_beam = [2*nsamples][nchans][npols] = [20000][128][2] (cuDoubleComplex)
+                if (timestep_idx % 2 == 0)
+                    offset = 0;
+                else
+                    offset = nsamples;
+
+                for (p   = 0; p   < npointing;   p++  )
+                    for (s   = 0; s   < nsamples; s++  )
+                        for (ch  = 0; ch  < nchans;       ch++ )
+                            for (pol = 0; pol < npols;        pol++)
+                            {
+                                int i;
+                                if (pol == 0)
+                                    i = gf.polX_idxs[opts.out_ant];
+                                else
+                                    i = gf.polY_idxs[opts.out_ant];
+                                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,i,nchans,ninput)]);
+                                detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
+                            }
+            }
+            else // beamform (the default mode)
+            {
+                cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
+                        npointing, nants, nchans, npols, outpol_coh, invw, &gf,
+                        detected_beam, data_buffer_coh, data_buffer_incoh,
+                        streams, opts.out_incoh, nchunk );
+            }
+
+            // Invert the PFB, if requested
+            if (opts.out_vdif)
+            {
+                sprintf( log_message, "[%lu/%lu] Inverting the PFB (full)",
+                        timestep_idx+1, ntimesteps);
+                logger_timed_message( log, log_message );
+                cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
+                        nsamples, nchans, npols, vf->sizeof_buffer,
+                        &gi, data_buffer_vdif );
+            }
+            logger_stop_stopwatch( log, "calc" );
+
+
+            // Write out for each pointing
+            for (p = 0; p < npointing; p++)
+            {
+                sprintf( log_message, "[%lu/%lu] [%d/%d] Writing data to file(s)",
+                        timestep_idx+1, ntimesteps, p+1, npointing );
+                logger_timed_message( log, log_message );
+
+                logger_start_stopwatch( log, "write" );
+
+                if (opts.out_coh)
+                    psrfits_write_second( &pfs[p], data_buffer_coh, nchans,
+                            outpol_coh, p );
+                if (opts.out_incoh && p == 0)
+                    psrfits_write_second( &pf_incoh, data_buffer_incoh,
+                            nchans, outpol_incoh, p );
+                if (opts.out_vdif)
+                    vdif_write_second( &vf[p], &vhdr,
+                            data_buffer_vdif + p * vf->sizeof_buffer );
+                logger_stop_stopwatch( log, "write" );
+            }
         }
-        logger_stop_stopwatch( log, "calc" );
 
+        logger_message( log, "\n*****END BEAMFORMING*****\n" );
 
-        // Write out for each pointing
+        // Clean up channel-dependent memory
+        if (opts.out_incoh)
+        {
+            free_psrfits( &pf_incoh );
+        }
         for (p = 0; p < npointing; p++)
         {
-            sprintf( log_message, "[%lu/%lu] [%d/%d] Writing data to file(s)",
-                    timestep_idx+1, ntimesteps, p+1, npointing );
-            logger_timed_message( log, log_message );
-
-            logger_start_stopwatch( log, "write" );
-
             if (opts.out_coh)
-                psrfits_write_second( &pfs[p], data_buffer_coh, nchans,
-                                      outpol_coh, p );
-            if (opts.out_incoh && p == 0)
-                psrfits_write_second( &pf_incoh, data_buffer_incoh,
-                                      nchans, outpol_incoh, p );
+            {
+                free_psrfits( &pfs[p] );
+            }
             if (opts.out_vdif)
-                vdif_write_second( &vf[p], &vhdr,
-                                   data_buffer_vdif + p * vf->sizeof_buffer );
-            logger_stop_stopwatch( log, "write" );
+            {
+                free( vf[p].b_scales  );
+                free( vf[p].b_offsets );
+            }
         }
-    }
 
-    logger_message( log, "\n*****END BEAMFORMING*****\n" );
+        free_rts( D, cal_metadata );
+    }
 
     logger_report_all_stats( log );
     logger_message( log, "" );
 
+    // Free up memory
     logger_timed_message( log, "Starting clean-up" );
 
-    // Free up memory
     destroy_invJi( invJi, nants, nchans, npols );
     destroy_detected_beam( detected_beam, npointing, 2*nsamples, nchans );
 
@@ -464,22 +486,6 @@ int main(int argc, char **argv)
     free( opts.metafits        );
     free( opts.synth_filter    );
 
-    if (opts.out_incoh)
-    {
-        free_psrfits( &pf_incoh );
-    }
-    for (p = 0; p < npointing; p++)
-    {
-        if (opts.out_coh)
-        {
-            free_psrfits( &pfs[p] );
-        }
-        if (opts.out_vdif)
-        {
-            free( vf[p].b_scales  );
-            free( vf[p].b_offsets );
-        }
-    }
     free_formbeam( &gf );
     if (opts.out_vdif)
     {
@@ -497,8 +503,6 @@ int main(int argc, char **argv)
     mwalib_metafits_metadata_free( cal_metadata );
     mwalib_metafits_context_free( cal_context );
 
-    // Clean up memory used for calibration solutions
-    free_rts( D, cal_metadata );
 
     return EXIT_SUCCESS;
 }

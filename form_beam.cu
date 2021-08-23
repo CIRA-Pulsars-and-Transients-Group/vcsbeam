@@ -714,3 +714,20 @@ void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsampl
     free( array );
 }
 
+void allocate_input_output_arrays( void **data, void **d_data, size_t size )
+{
+    cudaMallocHost( data, size );
+    cudaCheckErrors( "cudaMallocHost() failed" );
+
+    cudaMalloc( d_data, size );
+    cudaCheckErrors( "cudaMalloc() failed" );
+}
+
+void free_input_output_arrays( void *data, void *d_data )
+{
+    cudaFreeHost( data );
+    cudaCheckErrors( "cudaFreeHost() failed" );
+
+    cudaFree( d_data );
+    cudaCheckErrors( "cudaFree() failed" );
+}

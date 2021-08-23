@@ -47,9 +47,6 @@ struct cmd_line_opts {
 void make_incoh_beam_parse_cmdline(
         int argc, char **argv, struct cmd_line_opts *opts );
 
-void allocate_input_output_arrays( void **data, void **d_data, size_t size );
-void free_input_output_arrays( void *data, void *d_data );
-
 const uintptr_t outpol_incoh = 1;  // ("I")
 
 /********
@@ -358,17 +355,3 @@ void make_incoh_beam_parse_cmdline(
 }
 
 
-void allocate_input_output_arrays( void **data, void **d_data, size_t size )
-{
-    cudaMallocHost( data, size );
-    cudaCheckErrors( "cudaMallocHost() failed" );
-
-    cudaMalloc( d_data, size );
-    cudaCheckErrors( "cudaMalloc() failed" );
-}
-
-void free_input_output_arrays( void *data, void *d_data )
-{
-    cudaFreeHost( data );
-    cudaFree( d_data );
-}

@@ -109,5 +109,7 @@ cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan
 void              destroy_detected_beam( cuDoubleComplex ****array, int npointing,
                                          int nsamples, int nchan );
 
+void allocate_input_output_arrays( void **data, void **d_data, size_t size );
+void free_input_output_arrays( void *data, void *d_data );
 
 #endif
