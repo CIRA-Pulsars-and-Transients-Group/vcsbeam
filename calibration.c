@@ -38,8 +38,11 @@ cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
     uintptr_t npol  = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
     uintptr_t nchan = cal_metadata->num_corr_fine_chans_per_coarse;
 
+    // Temporary arrays for DI Jones matrices ('Dd') and Bandpass matrices ('Db')
     cuDoubleComplex  **Dd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
     cuDoubleComplex ***Db = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
+
+    // The array for the final output product (Dd x Db)
     cuDoubleComplex ***D  = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
 
     uintptr_t ant, ch;
@@ -91,7 +94,7 @@ cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
         }
     }
 
-    // Free memory
+    // Free memory for temporary arrays
     for (ant = 0; ant < nant; ant++)
     {
         for (ch = 0; ch < nchan; ch++)

@@ -61,7 +61,7 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 
     // Convert input data to complex double
     cuDoubleComplex v; // Complex voltage
-    uint8_t sample = data[D_IDX(s,c,i,nc,ni)];
+    uint8_t sample = data[v_IDX(s,c,i,nc,ni)];
     v = UCMPLX4_TO_CMPLX_FLT(sample);
 
     // Detect the sample ("detect" = calculate power = magnitude squared)
@@ -105,8 +105,8 @@ __global__ void invj_the_data( uint8_t       *data,
 
     cuDoubleComplex Dx, Dy;
     // Convert input data to complex float
-    Dx  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iX,nc,ni)]);
-    Dy  = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,c,iY,nc,ni)]);
+    Dx  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iX,nc,ni)]);
+    Dy  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iY,nc,ni)]);
 
     // If tile is flagged in the calibration, flag it in the incoherent beam
     if (incoh)
@@ -766,7 +766,7 @@ void flatten_bandpass(int nstep, int nchan, int npol, void *data)
 
 
     // accumulate abs(data) over all time samples and save into band
-    data_ptr = data;
+    data_ptr = (float *)data;
     for (i=0;i<nstep;i++) { // time steps
         for (p = 0;p<npol;p++) { // pols
             for (j=0;j<nchan;j++){ // channels
@@ -778,7 +778,7 @@ void flatten_bandpass(int nstep, int nchan, int npol, void *data)
     }
 
     // calculate and apply the normalisation to the data
-    data_ptr = data;
+    data_ptr = (float *)data;
     for (i=0;i<nstep;i++) {
         for (p = 0;p<npol;p++) {
             for (j=0;j<nchan;j++){

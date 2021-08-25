@@ -41,33 +41,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
                       int outpol_incoh, int npointing, logger *log );
 void free_formbeam( struct gpu_formbeam_arrays *g );
 
-/* Calculating array indices for GPU inputs and outputs */
-
-#define D_IDX(s,c,i,nc,ni)    ((s) * (ni)*(nc) + \
-                               (c) * (ni)      + \
-                               (i))
-
-#define J_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol*npol*(nc))      + \
-                                    (c)  * (npol*npol)           + \
-                                    (p1) * (npol)                + \
-                                    (p2))
-
-#define JD_IDX(s,c,a,nc,na)  ((s) * (na)*(nc) + \
-                              (c) * (na)      + \
-                              (a))
-
-#define B_IDX(p,s,c,pol,ns,nc,npol) ((p)  * (npol)*(nc)*(ns)   + \
-                                     (s)  * (npol)*(nc)        + \
-                                     (c)  * (npol)             + \
-                                     (pol))
- 
-#define C_IDX(p,s,st,c,ns,nst,nc)  ((p)  * ((nc)*(nst)*(ns)) + \
-                                    (s)  * ((nc)*(nst))      + \
-                                    (st) *  (nc)               + \
-                                    (c))
-
-#define I_IDX(s,c,nc)          ((s)*(nc) + (c))
-
 
 
 /* Converting from 4+4 complex to full-blown complex doubles */

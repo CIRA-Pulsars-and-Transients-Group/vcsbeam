@@ -387,7 +387,7 @@ int main(int argc, char **argv)
                                     i = gf.polX_idxs[opts.out_ant];
                                 else
                                     i = gf.polY_idxs[opts.out_ant];
-                                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[D_IDX(s,ch,i,nchans,ninput)]);
+                                detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,ch,i,nchans,ninput)]);
                                 detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
                             }
             }

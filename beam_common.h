@@ -13,16 +13,6 @@
 #include <cuComplex.h>
 #include <mwalib.h>
 
-#define MAX_POLS   4
-
-#define N_COPOL    2
-#define R2C_SIGN   -1.0
-#define NDELAYS    16
-
-#define MWA_LAT -26.703319        /* Array latitude. degrees North */
-#define MWA_LON 116.67081         /* Array longitude. degrees East */
-#define MWA_HGT 377               /* Array altitude. meters above sea level */
-
 #define cudaCheckErrors(msg) \
     do { \
         cudaError_t __err = cudaGetLastError(); \
@@ -34,6 +24,34 @@
             exit(1); \
         } \
     } while (0)
+
+/* Calculating array indices for various flavours of Jones matrix arrays */
+
+#define v_IDX(s,c,i,nc,ni)    ((s) * (ni)*(nc) + \
+                               (c) * (ni)      + \
+                               (i))
+
+#define J_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol*npol*(nc))      + \
+                                    (c)  * (npol*npol)           + \
+                                    (p1) * (npol)                + \
+                                    (p2))
+
+#define JD_IDX(s,c,a,nc,na)  ((s) * (na)*(nc) + \
+                              (c) * (na)      + \
+                              (a))
+
+#define B_IDX(p,s,c,pol,ns,nc,npol) ((p)  * (npol)*(nc)*(ns)   + \
+                                     (s)  * (npol)*(nc)        + \
+                                     (c)  * (npol)             + \
+                                     (pol))
+
+#define C_IDX(p,s,st,c,ns,nst,nc)  ((p)  * ((nc)*(nst)*(ns)) + \
+                                    (s)  * ((nc)*(nst))      + \
+                                    (st) *  (nc)               + \
+                                    (c))
+
+#define I_IDX(s,c,nc)          ((s)*(nc) + (c))
+
 
 
 struct beam_geom {
