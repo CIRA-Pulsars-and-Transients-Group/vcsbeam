@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <cuComplex.h>
 #include <cuda_runtime.h>
+
 #include <mwalib.h>
 #include <star/pal.h>
 #include <star/palmac.h>
@@ -128,7 +129,6 @@ void push_geometric_delays_to_device( geometric_delays *gdelays )
     cudaMemcpyAsync( gdelays->d_phi, gdelays->phi, size, cudaMemcpyHostToDevice, 0 );
     cudaCheckErrors( "error: push_geometric_delays_to_device: cudaMemcpyAsync failed" );
 }
-
 
 void calc_beam_geom(
         double            ras_hours,

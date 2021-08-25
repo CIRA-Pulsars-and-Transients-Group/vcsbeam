@@ -264,4 +264,27 @@ double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 }
 
 
+void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
+/* Calculate H = M^H, where "^H" is the hermitian operation
+ */
+{
+    // Put in temporary matrix, so that H may point to the same memory
+    // address as M
+    cuDoubleComplex tmp[4];
+    tmp[0] = cuConj( M[0] );
+    tmp[1] = cuConj( M[2] );
+    tmp[2] = cuConj( M[1] );
+    tmp[3] = cuConj( M[3] );
+
+    cp2x2( tmp, H );
+}
+
+void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *C )
+/* Compute C = M x M^H, where "^H" is the hermitian operation
+ */
+{
+    cuDoubleComplex MH[4];
+    calc_hermitian( M, MH );
+    mult2x2d( M, MH, C );
+}
 

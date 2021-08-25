@@ -61,12 +61,6 @@ void create_geometric_delays(
 
 
 
-void calc_beam_geom(
-        double            ras_hours,
-        double            decs_degs,
-        double            mjd,
-        struct beam_geom  *bg );
-
 
 
 /* Free memory allocated with create_geometric_delays()
@@ -76,6 +70,12 @@ void free_geometric_delays( geometric_delays *gdelays );
 /* Copy host memory block to device
  */
 void push_geometric_delays_to_device( geometric_delays *gdelays );
+
+void calc_beam_geom(
+        double            ras_hours,
+        double            decs_degs,
+        double            mjd,
+        struct beam_geom  *bg );
 
 void dec2hms( char *out, double in, int sflag );
 void utc2mjd( char *, double *, double * ); // "2000-01-01T00:00:00" --> MJD_int + MJD_fraction
