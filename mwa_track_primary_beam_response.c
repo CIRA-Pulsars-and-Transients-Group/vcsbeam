@@ -24,6 +24,14 @@
 #include "metadata.h"
 #include "geometry.h"
 
+#define NCOMPLEXELEMENTS 4
+
+const double Isky[] = { 0.5, 0. , 0. ,  0. , 0. , 0. ,  0.5, 0. };
+const double Qsky[] = { 0.5, 0. , 0. ,  0. , 0. , 0. , -0.5, 0. };
+const double Usky[] = { 0. , 0. , 0.5,  0. , 0.5, 0. ,  0. , 0. };
+const double Vsky[] = { 0. , 0. , 0. , -0.5, 0  , 0.5,  0. , 0. };
+const double *sky[] = { Isky, Qsky, Usky, Vsky };
+
 struct mwa_track_primary_beam_response_opts {
     char *metafits;      // filename of the metafits file
     char *ra_str;        // String representing the RA
@@ -34,6 +42,7 @@ struct mwa_track_primary_beam_response_opts {
 void usage();
 void mwa_track_primary_beam_response_parse_cmdline(
         int argc, char **argv, struct mwa_track_primary_beam_response_opts *opts );
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV );
 
 int main(int argc, char **argv)
 {
@@ -53,10 +62,10 @@ int main(int argc, char **argv)
     // Get a "beam geometry" struct (and other variables) ready
     struct beam_geom bg;
     double mjd;
-    int zenith_norm = 1; // Normalise to zenith
-    double za; // Shorthand for zenith angle
-    double I, Q, U, V;
+    double az, za; // Shorthand for azimuth and zenith angle
     uint32_t freq_hz;
+    double IQUV[4];
+    double IQUVzenith[4];
 
     primary_beam pb;
     uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
@@ -69,17 +78,17 @@ int main(int argc, char **argv)
     for (uintptr_t i = 0; i < obs_metadata->num_delays; i++)
         amps[i] = 1.0;
 
-    // Allocate memory for the jones matrix gotten from Hyperbeam
-    int ncomplexelements = obs_metadata->num_ant_pols * obs_metadata->num_ant_pols;
-    cuDoubleComplex *jones; // This must be unallocated because Hyperbeam's calc_jones() does the allocation
-    cuDoubleComplex coherency[ncomplexelements];
-    double P[ncomplexelements]; // (Real-valued) parallactic angle correction matrix
-
     // Loop over the coarse channels
     for (uintptr_t c = 0; c < obs_metadata->num_metafits_coarse_chans; c++)
     {
         // Get the frequency of this channel
         freq_hz = obs_metadata->metafits_coarse_chans[c].chan_centre_hz;
+
+        // Get the primary beam pointing centre
+        az = obs_metadata->az_deg * PAL__DD2R;
+        za = obs_metadata->za_deg * PAL__DD2R;
+
+        calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUVzenith );
 
         // Loop over the gps seconds
         for (uintptr_t t = 0; t < obs_metadata->num_metafits_timesteps; t++)
@@ -87,29 +96,22 @@ int main(int argc, char **argv)
             // Calculate the beam geometry for the requested pointing
             mjd = obs_metadata->sched_start_mjd + (double)t/86400.0;
             calc_beam_geom( ra_hours, dec_degs, mjd, &bg );
+            az = bg.az;
             za = PAL__DPIBY2 - bg.el;
 
-            // Calculate the parallactic angle correction
-            parallactic_angle_correction( P, MWA_LATITUDE_RADIANS, bg.az, za );
-
-            // Calculate the primary beam for this channel, in this direction
-            jones = (cuDoubleComplex *)calc_jones( pb.beam, bg.az, za, freq_hz, delays, amps, zenith_norm );
-            mult2x2d_RxC( P, jones, jones );
-
-            // Convert this jones matrix to Stokes parameters
-            calc_coherency_matrix( jones, coherency );
-            I = 0.5*cuCreal( cuCadd( coherency[0], coherency[3] ) );
-            Q = 0.5*cuCreal( cuCsub( coherency[0], coherency[3] ) );
-            U =  cuCreal( coherency[1] );
-            V = -cuCimag( coherency[1] );
+            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV );
 
             // Print out the results
             fprintf( opts.fout, "%f %f %f %f %f %f\n",
-                    mjd, freq_hz/1e6, I, Q, U, V );
-
-            // Free the jones matrix memory allocated with calc_jones
-            free( jones );
+                    mjd, freq_hz/1e6,
+                    IQUV[0] / IQUVzenith[0],
+                    IQUV[1] / IQUVzenith[1],
+                    IQUV[2] / IQUVzenith[2],
+                    IQUV[3] / IQUVzenith[3] );
         }
+
+        // Insert a blank line in the output, to delimit different frequencies
+        fprintf( opts.fout, "\n" );
     }
 
     // Close output file, if necessary
@@ -205,4 +207,40 @@ void mwa_track_primary_beam_response_parse_cmdline(
     assert( opts->metafits       != NULL );
     assert( opts->ra_str         != NULL );
     assert( opts->dec_str        != NULL );
+}
+
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV )
+{
+    cuDoubleComplex *J; // This must be unallocated because Hyperbeam's calc_jones() does the allocation
+    cuDoubleComplex JH[NCOMPLEXELEMENTS];
+    cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
+    cuDoubleComplex coherency[NCOMPLEXELEMENTS];
+    double P[NCOMPLEXELEMENTS]; // (Real-valued) parallactic angle correction matrix
+
+    // Calculate the parallactic angle correction
+    parallactic_angle_correction( P, MWA_LATITUDE_RADIANS, az, za );
+
+    // Calculate the primary beam for this channel, in this direction
+    int zenith_norm = 1;
+    J = (cuDoubleComplex *)calc_jones( beam, az, za, freq_hz, delays, amps, zenith_norm );
+    mult2x2d_RxC( P, J, J );
+
+    // Convert this jones matrix to Stokes parameters for I, Q, U, V skies
+    for (int stokes = 0; stokes < 4; stokes++)
+    {
+        calc_hermitian( J, JH );
+        mult2x2d( (cuDoubleComplex *)sky[stokes], JH, sky_x_JH );
+        mult2x2d( J, sky_x_JH, coherency );
+
+        if (stokes == 0) // Stokes I
+            IQUV[0] = 0.5*cuCreal( cuCadd( coherency[0], coherency[3] ) );
+        else if (stokes == 1) // Stokes Q
+            IQUV[1] = 0.5*cuCreal( cuCsub( coherency[0], coherency[3] ) );
+        else if (stokes == 2) // Stokes U
+            IQUV[2] =  cuCreal( coherency[1] );
+        else  // if (stokes == 3) // Stokes V
+            IQUV[3] = -cuCimag( coherency[1] );
+    }
+
+    free( J );
 }
