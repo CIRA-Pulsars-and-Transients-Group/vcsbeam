@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     double az, za; // Shorthand for azimuth and zenith angle
     uint32_t freq_hz;
     double IQUV[4];
-    double IQUVzenith[4];
+    double IQUVctr[4];
 
     primary_beam pb;
     uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
@@ -78,6 +78,22 @@ int main(int argc, char **argv)
     for (uintptr_t i = 0; i < obs_metadata->num_delays; i++)
         amps[i] = 1.0;
 
+    // Write out the output header
+    fprintf( opts.fout,
+            "# Zenith-normalised Stokes response for given primary beam and tied-array beam\n"
+            "# ----------------------------------------------------------------------------\n"
+            "# MJD:                  %f\n"
+            "# Tile pointing centre: Azimuth = %f°; Zenith angle = %f°\n"
+            "# (Initial) tile pos:   RA      = %f°; Dec = %f°\n"
+            "# Tied array position:  RA      = %f°; Dec = %f°\n"
+            "#\n"
+            "# Seconds  Frequency_(MHz)  Azimuth_(°)  ZenithAngle_(°)  I  Q  U  V\n",
+            obs_metadata->sched_start_mjd,
+            obs_metadata->az_deg, obs_metadata->za_deg,
+            obs_metadata->ra_tile_pointing_deg, obs_metadata->dec_tile_pointing_deg,
+            ra_hours * PAL__DH2R * PAL__DR2D, dec_degs
+           );
+
     // Loop over the coarse channels
     for (uintptr_t c = 0; c < obs_metadata->num_metafits_coarse_chans; c++)
     {
@@ -88,7 +104,7 @@ int main(int argc, char **argv)
         az = obs_metadata->az_deg * PAL__DD2R;
         za = obs_metadata->za_deg * PAL__DD2R;
 
-        calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUVzenith );
+        calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUVctr );
 
         // Loop over the gps seconds
         for (uintptr_t t = 0; t < obs_metadata->num_metafits_timesteps; t++)
@@ -102,12 +118,13 @@ int main(int argc, char **argv)
             calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV );
 
             // Print out the results
-            fprintf( opts.fout, "%f %f %f %f %f %f\n",
-                    mjd, freq_hz/1e6,
-                    IQUV[0] / IQUVzenith[0],
-                    IQUV[1] / IQUVzenith[1],
-                    IQUV[2] / IQUVzenith[2],
-                    IQUV[3] / IQUVzenith[3] );
+            fprintf( opts.fout, "%lu %f %f %f %f %f %f %f\n",
+                    t, freq_hz/1e6,
+                    az*PAL__DR2D, za*PAL__DR2D,
+                    IQUV[0],
+                    IQUV[1],
+                    IQUV[2],
+                    IQUV[3] );
         }
 
         // Insert a blank line in the output, to delimit different frequencies
