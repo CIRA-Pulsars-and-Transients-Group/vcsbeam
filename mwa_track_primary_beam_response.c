@@ -87,7 +87,8 @@ int main(int argc, char **argv)
             "# (Initial) tile pos:   RA      = %f°; Dec = %f°\n"
             "# Tied array position:  RA      = %f°; Dec = %f°\n"
             "#\n"
-            "# Seconds  Frequency_(MHz)  Azimuth_(°)  ZenithAngle_(°)  I  Q  U  V\n",
+            "# 1        2                3            4                5                             6  7  8  9\n"
+            "# Seconds  Frequency_(MHz)  Azimuth_(°)  ZenithAngle_(°)  Distance_from_tile_centre_(°) I  Q  U  V\n",
             obs_metadata->sched_start_mjd,
             obs_metadata->az_deg, obs_metadata->za_deg,
             obs_metadata->ra_tile_pointing_deg, obs_metadata->dec_tile_pointing_deg,
@@ -118,9 +119,11 @@ int main(int argc, char **argv)
             calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV );
 
             // Print out the results
-            fprintf( opts.fout, "%lu %f %f %f %f %f %f %f\n",
+            fprintf( opts.fout, "%lu %f %f %f %f %f %f %f %f\n",
                     t, freq_hz/1e6,
                     az*PAL__DR2D, za*PAL__DR2D,
+                    palDsep( az, bg.el,
+                        obs_metadata->az_deg*PAL__DD2R, obs_metadata->alt_deg*PAL__DD2R ) * PAL__DR2D,
                     IQUV[0],
                     IQUV[1],
                     IQUV[2],
