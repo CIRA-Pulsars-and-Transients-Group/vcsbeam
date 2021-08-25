@@ -45,9 +45,15 @@ typedef struct geometric_delays_t {
 
 /* Calculate the geometric delay (in radians) for the given pointings
  */
-void calc_geometric_delays(
+void calc_all_geometric_delays(
         geometric_delays  *gdelays,
         struct beam_geom  *beam_geom_vals );
+
+void calc_geometric_delays(
+        struct beam_geom  *beam_geom_vals,
+        uint32_t           freq_hz,
+        MetafitsMetadata  *obs_metadata,
+        cuDoubleComplex   *phi );
 
 /* Allocates memory for the geometric delay arrays ("phi") on both host and device.
  * Free with free_geometric_delays()

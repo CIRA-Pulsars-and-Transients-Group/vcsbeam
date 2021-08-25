@@ -358,7 +358,7 @@ int main(int argc, char **argv)
             calc_primary_beam( &pb, beam_geom_vals );
 
             // Calculate the geometric delays
-            calc_geometric_delays( &gdelays, beam_geom_vals );
+            calc_all_geometric_delays( &gdelays, beam_geom_vals );
             push_geometric_delays_to_device( &gdelays );
 
             get_jones(

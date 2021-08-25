@@ -16,13 +16,11 @@
 #include "jones.h"
 
 void calc_geometric_delays(
-        geometric_delays  *gdelays,
-        struct beam_geom  *beam_geom_vals )
-/* Calculate the geometric delay (in radians) for the given pointings
- */
+        struct beam_geom  *beam_geom_vals,
+        uint32_t           freq_hz,
+        MetafitsMetadata  *obs_metadata,
+        cuDoubleComplex   *phi )
 {
-    uintptr_t p, a, c; // Counters for (p)ointing, (a)ntenna, (c)hannel
-
     double E, N, H; // Location of the antenna: (E)ast, (N)orth, (H)eight
     double cable;   // The cable length for a given antenna
 
@@ -40,42 +38,59 @@ void calc_geometric_delays(
     // Other various intermediate products
     double L, w, Delta_t, phase;
 
-    for (p = 0; p < gdelays->npointings; p++)
+    for (uintptr_t a = 0; a < obs_metadata->num_ants; a++)
     {
-        for (a = 0; a < gdelays->nant; a++)
+        // Get the location and cable length for this antenna
+        E     = obs_metadata->antennas[a].east_m;
+        N     = obs_metadata->antennas[a].north_m;
+        H     = obs_metadata->antennas[a].height_m;
+        cable = obs_metadata->antennas[a].electrical_length_m;
+        L     = cable - cable_ref;
+
+        // Eq. (1) in Ord et al. (2019)
+        // Get the geometric delay associated with the given pointing.
+        // This equation is actually equivalent to Eq. (1) in Ord et al.
+        // (2019), even though it is expressed somewhat differently (i.e.
+        // as a dot product with the pre-calculated direction vector).
+        w = (E - Eref)*beam_geom_vals->unit_E +
+            (N - Nref)*beam_geom_vals->unit_N +
+            (H - Href)*beam_geom_vals->unit_H;
+
+        // Eq. (2) in Ord et al. (2019)
+        // NB: The sign is different compared to the paper. I haven't
+        // decided if it's just down to conventions, or whether it's a
+        // mistake in the paper. In any case, a minus here gives the
+        // correct answer.
+        Delta_t = (w - L)/SPEED_OF_LIGHT_IN_VACUUM_M_PER_S;
+
+        // Eq. (3) in Ord et al. (2019)
+        // NB: Again, the sign flip (compared to the paper) is
+        // unexplained.
+        phase = -2.0 * M_PI * Delta_t * freq_hz;
+        phi[a] = make_cuDoubleComplex( cos( phase ), sin( phase ));
+    }
+}
+
+void calc_all_geometric_delays(
+        geometric_delays  *gdelays,
+        struct beam_geom  *beam_geom_vals )
+/* Calculate the geometric delay (in radians) for the given pointings
+ */
+{
+    cuDoubleComplex phi[gdelays->nant]; // <-- Temporary location for result
+
+    for (uintptr_t p = 0; p < gdelays->npointings; p++)
+    {
+        for (uintptr_t c = 0; c < gdelays->nchan; c++)
         {
-            // Get the location and cable length for this antenna
-            E     = gdelays->obs_metadata->antennas[a].east_m;
-            N     = gdelays->obs_metadata->antennas[a].north_m;
-            H     = gdelays->obs_metadata->antennas[a].height_m;
-            cable = gdelays->obs_metadata->antennas[a].electrical_length_m;
-            L     = cable - cable_ref;
+            calc_geometric_delays(
+                    &beam_geom_vals[p],
+                    gdelays->chan_freqs_hz[c],
+                    gdelays->obs_metadata,
+                    phi );
 
-            // Eq. (1) in Ord et al. (2019)
-            // Get the geometric delay associated with the given pointing.
-            // This equation is actually equivalent to Eq. (1) in Ord et al.
-            // (2019), even though it is expressed somewhat differently (i.e.
-            // as a dot product with the pre-calculated direction vector).
-            w = (E - Eref)*beam_geom_vals[p].unit_E +
-                (N - Nref)*beam_geom_vals[p].unit_N +
-                (H - Href)*beam_geom_vals[p].unit_H;
-
-            // Eq. (2) in Ord et al. (2019)
-            // NB: The sign is different compared to the paper. I haven't
-            // decided if it's just down to conventions, or whether it's a
-            // mistake in the paper. In any case, a minus here gives the
-            // correct answer.
-            Delta_t = (w - L)/SPEED_OF_LIGHT_IN_VACUUM_M_PER_S;
-
-            for (c = 0; c < gdelays->nchan; c++)
-            {
-                // Eq. (3) in Ord et al. (2019)
-                // NB: Again, the sign flip (compared to the paper) is
-                // unexplained.
-                phase = -2.0 * M_PI * Delta_t * gdelays->chan_freqs_hz[c];
-                gdelays->phi[PHI_IDX(p, a, c, gdelays->nant, gdelays->nchan)] =
-                    make_cuDoubleComplex( cos( phase ), sin( phase ));
-            }
+            for (uintptr_t a = 0; a < gdelays->nant; a++)
+                gdelays->phi[PHI_IDX(p, a, c, gdelays->nant, gdelays->nchan)] = phi[a];
         }
     }
 }
@@ -252,6 +267,9 @@ double parse_ra( char* ra_hhmmss )
  * a double in units of hours
  */
 {
+    if (ra_hhmmss == NULL)
+        return 0.0;
+
     int ih=0, im=0, J=0;
     double fs=0., ra_rad=0.;
 
@@ -273,6 +291,9 @@ double parse_dec( char* dec_ddmmss )
  * a double in units of degrees
  */
 {
+    if (dec_ddmmss == NULL)
+        return 0.0;
+
     int id=0, im=0, J=0, sign=0;
     double fs=0., dec_rad=0.;
     char id_str[16];

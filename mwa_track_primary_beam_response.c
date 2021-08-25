@@ -33,10 +33,13 @@ const double Vsky[] = { 0. , 0. , 0. , -0.5, 0  , 0.5,  0. , 0. };
 const double *sky[] = { Isky, Qsky, Usky, Vsky };
 
 struct mwa_track_primary_beam_response_opts {
-    char *metafits;      // filename of the metafits file
-    char *ra_str;        // String representing the RA
-    char *dec_str;       // String representing the Dec
-    FILE *fout;          // Where to put the output (default STDOUT)
+    char *metafits;        // filename of the metafits file
+    char *ra_str;          // String representing the RA
+    char *dec_str;         // String representing the Dec
+    char *tied_ra_str;     // String representing the RA of a tied-array beam
+    char *tied_dec_str;    // String representing the Dec of a tied-array beam
+    FILE *fout;            // Where to put the output (default STDOUT)
+    bool  do_array_factor; // Whether to calculate the array factor or not
 };
 
 void usage();
@@ -54,18 +57,20 @@ int main(int argc, char **argv)
     double ra_hours = parse_ra( opts.ra_str );
     double dec_degs = parse_dec( opts.dec_str );
 
+    double tied_ra_hours = parse_ra( opts.tied_ra_str );
+    double tied_dec_degs = parse_dec( opts.tied_dec_str );
+
     // Get the metadata for the selected observation
     MetafitsContext  *obs_context  = NULL;
     MetafitsMetadata *obs_metadata = NULL;
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
 
     // Get a "beam geometry" struct (and other variables) ready
-    struct beam_geom bg;
+    struct beam_geom bg, tied_bg;
     double mjd;
-    double az, za; // Shorthand for azimuth and zenith angle
+    double az, za, tied_az, tied_za; // Shorthand for azimuth and zenith angle
     uint32_t freq_hz;
     double IQUV[4];
-    double IQUVctr[4];
 
     primary_beam pb;
     uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
@@ -87,8 +92,8 @@ int main(int argc, char **argv)
             "# (Initial) tile pos:   RA      = %f°; Dec = %f°\n"
             "# Tied array position:  RA      = %f°; Dec = %f°\n"
             "#\n"
-            "# 1        2                3            4                5                             6  7  8  9\n"
-            "# Seconds  Frequency_(MHz)  Azimuth_(°)  ZenithAngle_(°)  Distance_from_tile_centre_(°) I  Q  U  V\n",
+            "# 1        2                3            4                5                             6  7  8  9  10\n"
+            "# Seconds  Frequency_(MHz)  Azimuth_(°)  ZenithAngle_(°)  Distance_from_tile_centre_(°) I  Q  U  V  Array_factor\n",
             obs_metadata->sched_start_mjd,
             obs_metadata->az_deg, obs_metadata->za_deg,
             obs_metadata->ra_tile_pointing_deg, obs_metadata->dec_tile_pointing_deg,
@@ -101,12 +106,6 @@ int main(int argc, char **argv)
         // Get the frequency of this channel
         freq_hz = obs_metadata->metafits_coarse_chans[c].chan_centre_hz;
 
-        // Get the primary beam pointing centre
-        az = obs_metadata->az_deg * PAL__DD2R;
-        za = obs_metadata->za_deg * PAL__DD2R;
-
-        calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUVctr );
-
         // Loop over the gps seconds
         for (uintptr_t t = 0; t < obs_metadata->num_metafits_timesteps; t++)
         {
@@ -115,6 +114,13 @@ int main(int argc, char **argv)
             calc_beam_geom( ra_hours, dec_degs, mjd, &bg );
             az = bg.az;
             za = PAL__DPIBY2 - bg.el;
+
+            if (opts.do_array_factor)
+            {
+                calc_beam_geom( tied_ra_hours, tied_dec_degs, mjd, &tied_bg );
+                tied_az = tied_bg.az;
+                tied_za = PAL__DPIBY2 - tied_bg.el;
+            }
 
             calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV );
 
@@ -152,8 +158,10 @@ void usage()
 
     printf( "\nOPTIONS\n\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation (required)\n"
-            "\t-r, --RA=HH:MM:SS          Tied-array pointing direction, right ascension (required)\n"
-            "\t-d, --Dec=DD:MM:SS         Tied-array pointing direction, declination (required)\n"
+            "\t-r, --RA=HH:MM:SS          Pointing direction, right ascension (required)\n"
+            "\t-d, --Dec=DD:MM:SS         Pointing direction, declination (required)\n"
+            "\t-R, --RA-tied=HH:MM:SS     Tied-array pointing direction, right ascension\n"
+            "\t-D, --Dec-tied=DD:MM:SS    Tied-array pointing direction, declination\n"
             "\t-o, --outfile=FILENAME     Write the results to FILENAME [default is to write to STDOUT\n"
             "\t-h, --help                 Write this help message and exit\n\n"
           );
@@ -163,10 +171,13 @@ void mwa_track_primary_beam_response_parse_cmdline(
         int argc, char **argv, struct mwa_track_primary_beam_response_opts *opts )
 {
     // Set defaults
-    opts->metafits = NULL;
-    opts->ra_str   = NULL;
-    opts->dec_str  = NULL;
-    opts->fout     = stdout;
+    opts->metafits        = NULL;
+    opts->ra_str          = NULL;
+    opts->dec_str         = NULL;
+    opts->tied_ra_str     = NULL;
+    opts->tied_dec_str    = NULL;
+    opts->fout            = stdout;
+    opts->do_array_factor = false;
 
     if (argc > 1)
     {
@@ -177,12 +188,14 @@ void mwa_track_primary_beam_response_parse_cmdline(
                 {"metafits",        required_argument, 0, 'm'},
                 {"RA",              required_argument, 0, 'r'},
                 {"Dec",             required_argument, 0, 'd'},
+                {"RA-tied",         required_argument, 0, 'R'},
+                {"Dec-tied",        required_argument, 0, 'D'},
                 {"outfile",         required_argument, 0, 'o'},
                 {"help",            required_argument, 0, 'h'}
             };
 
             int option_index = 0;
-            c = getopt_long( argc, argv, "d:hm:o:r:", long_options, &option_index);
+            c = getopt_long( argc, argv, "d:D:hm:o:r:R:", long_options, &option_index);
 
             if (c == -1)
                 break;
@@ -191,6 +204,9 @@ void mwa_track_primary_beam_response_parse_cmdline(
             {
                 case 'd':
                     opts->dec_str = strdup( optarg );
+                    break;
+                case 'D':
+                    opts->tied_dec_str = strdup( optarg );
                     break;
                 case 'h':
                     usage();
@@ -210,6 +226,9 @@ void mwa_track_primary_beam_response_parse_cmdline(
                 case 'r':
                     opts->ra_str = strdup( optarg );
                     break;
+                case 'R':
+                    opts->tied_ra_str = strdup( optarg );
+                    break;
                 default:
                     fprintf( stderr, "error: unrecognised option '%s'\n", optarg );
                     usage();
@@ -227,6 +246,11 @@ void mwa_track_primary_beam_response_parse_cmdline(
     assert( opts->metafits       != NULL );
     assert( opts->ra_str         != NULL );
     assert( opts->dec_str        != NULL );
+
+    if (opts->tied_ra_str && opts->tied_dec_str)
+    {
+        opts->do_array_factor = true;
+    }
 }
 
 void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV )
