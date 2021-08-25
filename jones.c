@@ -112,6 +112,156 @@ void get_jones(
             } // end loop through antenna/pol (rf_input)
         } // end loop through fine channels (ch)
     } // end loop through pointings (p)
-
 }
+
+
+/*****************************
+ * Generic matrix operations *
+ *****************************/
+
+void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
+{
+    Mout[0] = Min[0];
+    Mout[1] = Min[1];
+    Mout[2] = Min[2];
+    Mout[3] = Min[3];
+}
+
+
+cuDoubleComplex reciprocal_complex( cuDoubleComplex z )
+{
+    double scale = 1.0/(z.x*z.x + z.y*z.y);
+    return make_cuDoubleComplex( scale*z.x, -scale*z.y );
+}
+
+cuDoubleComplex negate_complex( cuDoubleComplex z )
+{
+    return make_cuDoubleComplex( -z.x, -z.y );
+}
+
+void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
+{
+    cuDoubleComplex m00 = Min[0];
+    cuDoubleComplex m01 = Min[1];
+    cuDoubleComplex m10 = Min[2];
+    cuDoubleComplex m11 = Min[3];
+
+    cuDoubleComplex m1 = cuCmul( m00, m11 );
+    cuDoubleComplex m2 = cuCmul( m01, m10 );
+
+    cuDoubleComplex det = cuCsub( m1, m2 );
+    cuDoubleComplex inv_det = reciprocal_complex( det );
+
+    Mout[0] = cuCmul(       inv_det,  m11 );
+    Mout[1] = cuCmul( negate_complex(inv_det), m01 );
+    Mout[2] = cuCmul( negate_complex(inv_det), m10 );
+    Mout[3] = cuCmul(       inv_det,  m00 );
+}
+
+void inv2x2d(double *Min, double *Mout)
+{
+    double m00 = Min[0];
+    double m01 = Min[1];
+    double m10 = Min[2];
+    double m11 = Min[3];
+
+    double m1 = m00 * m11;
+    double m2 = m01 * m10;
+
+    double det = m1 - m2;
+    double inv_det = 1/det;
+
+    Mout[0] =  inv_det * m11;
+    Mout[1] = -inv_det * m01;
+    Mout[2] = -inv_det * m10;
+    Mout[3] =  inv_det * m00;
+}
+
+
+void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex **Mout)
+// Same as inv2x2(), but the output is a 2x2 2D array, instead of a 4-element
+// 1D array
+{
+    cuDoubleComplex m1 = cuCmul( Min[0], Min[3] );
+    cuDoubleComplex m2 = cuCmul( Min[1], Min[2] );
+    cuDoubleComplex det = cuCsub( m1, m2 );
+    cuDoubleComplex inv_det = reciprocal_complex( det );
+    Mout[0][0] = cuCmul(       inv_det,  Min[3] );
+    Mout[0][1] = cuCmul( negate_complex(inv_det), Min[1] );
+    Mout[1][0] = cuCmul( negate_complex(inv_det), Min[2] );
+    Mout[1][1] = cuCmul(       inv_det,  Min[0] );
+}
+
+
+void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
+{
+    cuDoubleComplex m00 = cuCmul( M1[0], M2[0] );
+    cuDoubleComplex m12 = cuCmul( M1[1], M2[2] );
+    cuDoubleComplex m01 = cuCmul( M1[0], M2[1] );
+    cuDoubleComplex m13 = cuCmul( M1[1], M2[3] );
+    cuDoubleComplex m20 = cuCmul( M1[2], M2[0] );
+    cuDoubleComplex m32 = cuCmul( M1[3], M2[2] );
+    cuDoubleComplex m21 = cuCmul( M1[2], M2[1] );
+    cuDoubleComplex m33 = cuCmul( M1[3], M2[3] );
+    Mout[0] = cuCadd( m00, m12 );
+    Mout[1] = cuCadd( m01, m13 );
+    Mout[2] = cuCadd( m20, m32 );
+    Mout[3] = cuCadd( m21, m33 );
+}
+
+void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
+/* Mout = M1 x M2
+ */
+{
+    cuDoubleComplex m00 = make_cuDoubleComplex( M1[0]*cuCreal(M2[0]), M1[0]*cuCimag(M2[0]) );
+    cuDoubleComplex m12 = make_cuDoubleComplex( M1[1]*cuCreal(M2[2]), M1[1]*cuCimag(M2[2]) );
+    cuDoubleComplex m01 = make_cuDoubleComplex( M1[0]*cuCreal(M2[1]), M1[0]*cuCimag(M2[1]) );
+    cuDoubleComplex m13 = make_cuDoubleComplex( M1[1]*cuCreal(M2[3]), M1[1]*cuCimag(M2[3]) );
+    cuDoubleComplex m20 = make_cuDoubleComplex( M1[2]*cuCreal(M2[0]), M1[2]*cuCimag(M2[0]) );
+    cuDoubleComplex m32 = make_cuDoubleComplex( M1[3]*cuCreal(M2[2]), M1[3]*cuCimag(M2[2]) );
+    cuDoubleComplex m21 = make_cuDoubleComplex( M1[2]*cuCreal(M2[1]), M1[2]*cuCimag(M2[1]) );
+    cuDoubleComplex m33 = make_cuDoubleComplex( M1[3]*cuCreal(M2[3]), M1[3]*cuCimag(M2[3]) );
+    Mout[0] = cuCadd( m00, m12 );
+    Mout[1] = cuCadd( m01, m13 );
+    Mout[2] = cuCadd( m20, m32 );
+    Mout[3] = cuCadd( m21, m33 );
+}
+
+void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
+/* Calculate the conjugate of a matrix
+ * It is safe for M and Mout to point to the same matrix
+ */
+{
+    int i;
+    for (i = 0; i < 4; i++)
+        Mout[i] = cuConj(M[i]);
+}
+
+
+double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
+/* Normalise a 2x2 matrix via the Frobenius norm
+ * It is safe for M and Mout to point to the same matrix.
+ */
+{
+    // Calculate the normalising factor
+    double Fnorm = 0.0;
+    int i;
+    for (i = 0; i < 4; i++)
+        Fnorm += cuCreal( cuCmul( M[i], cuConj(M[i]) ) );
+
+    Fnorm = sqrt(Fnorm);
+
+    // Divide each element through by the normalising factor.
+    // If norm is 0, then output zeros everywhere
+    for (i = 0; i < 4; i++) {
+        if (Fnorm == 0.0)
+            Mout[i] = make_cuDoubleComplex( 0.0, 0.0 );
+        else
+            Mout[i] = make_cuDoubleComplex( cuCreal(M[i])/Fnorm, cuCimag(M[i])/Fnorm );
+    }
+
+    return Fnorm;
+}
+
+
 

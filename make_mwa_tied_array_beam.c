@@ -22,7 +22,7 @@
 #include "form_beam.h"
 #include "calibration.h"
 #include "primary_beam.h"
-#include "geometric_delay.h"
+#include "geometry.h"
 #include "performance.h"
 #include "ipfb.h"
 

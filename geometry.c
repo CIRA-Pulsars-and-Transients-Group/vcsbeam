@@ -11,7 +11,7 @@
 #include <mwalib.h>
 #include <star/pal.h>
 #include <star/palmac.h>
-#include "geometric_delay.h"
+#include "geometry.h"
 #include "jones.h"
 
 void calc_geometric_delays(
