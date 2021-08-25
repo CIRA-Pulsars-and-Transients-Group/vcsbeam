@@ -13,7 +13,7 @@
 #include "star/pal.h"
 #include "star/palmac.h"
 #include "psrfits.h"
-#include "beam_common.h"
+#include "jones.h"
 #include "beam_psrfits.h"
 
 void populate_psrfits_header(

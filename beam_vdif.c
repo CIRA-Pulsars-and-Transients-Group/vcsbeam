@@ -14,7 +14,7 @@
 #include "psrfits.h"
 #include "star/pal.h"
 #include "star/palmac.h"
-#include "beam_common.h"
+#include "jones.h"
 #include "beam_vdif.h"
 #include "mwa_header.h"
 #include "vdifio.h"

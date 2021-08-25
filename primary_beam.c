@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <star/pal.h>
 #include <star/palmac.h>
-#include "beam_common.h"
+#include "jones.h"
 #include "primary_beam.h"
 
 

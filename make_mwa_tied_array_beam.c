@@ -15,7 +15,7 @@
 #include <mwalib.h>
 
 // Local includes
-#include "beam_common.h"
+#include "jones.h"
 #include "beam_psrfits.h"
 #include "beam_vdif.h"
 #include "metadata.h"

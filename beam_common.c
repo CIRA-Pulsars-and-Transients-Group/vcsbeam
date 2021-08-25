@@ -10,7 +10,7 @@
 #include <cuComplex.h>
 #include <star/pal.h>
 #include <star/palmac.h>
-#include "beam_common.h"
+#include "jones.h"
 #include "psrfits.h"
 #include "mwa_hyperbeam.h"
 

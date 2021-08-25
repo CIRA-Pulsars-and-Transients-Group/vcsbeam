@@ -10,7 +10,7 @@
 #ifndef FORM_BEAM_H
 #define FORM_BEAM_H
 
-#include "beam_common.h"
+#include "jones.h"
 #include "performance.h"
 
 /* structure for managing data arrays to be allocated on both host and device */

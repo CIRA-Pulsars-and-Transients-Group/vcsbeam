@@ -9,7 +9,7 @@
 
 #include <mwalib.h>
 #include <cuComplex.h>
-#include "beam_common.h"
+#include "jones.h"
 #include "vdifio.h"
 #include "filter.h"
 

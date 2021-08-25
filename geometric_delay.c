@@ -12,7 +12,7 @@
 #include <star/pal.h>
 #include <star/palmac.h>
 #include "geometric_delay.h"
-#include "beam_common.h"
+#include "jones.h"
 
 void calc_geometric_delays(
         geometric_delays  *gdelays,

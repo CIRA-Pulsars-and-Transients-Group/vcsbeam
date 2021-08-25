@@ -11,7 +11,7 @@
 #include <math.h>
 #include <mwalib.h>
 #include <cuComplex.h>
-#include "beam_common.h"
+#include "jones.h"
 
 cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
         MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx )

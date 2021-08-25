@@ -9,7 +9,7 @@
 
 #include <cuComplex.h>
 #include <mwalib.h>
-#include "beam_common.h"
+#include "jones.h"
 
 /* In order to communicate easily with the GPU, the "phi" array, which
  * contains the complex-valued geometric delay terms, is implemented

@@ -13,7 +13,7 @@
 #include <cuComplex.h>
 #include <cuda_runtime.h>
 
-#include "beam_common.h"
+#include "jones.h"
 
 extern "C" {
 #include "form_beam.h"

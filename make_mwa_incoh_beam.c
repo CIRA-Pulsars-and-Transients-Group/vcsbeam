@@ -16,7 +16,7 @@
 #include <cuda_runtime.h>
 
 // Local includes
-#include "beam_common.h"
+#include "jones.h"
 #include "beam_psrfits.h"
 #include "metadata.h"
 #include "form_beam.h"

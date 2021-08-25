@@ -16,7 +16,7 @@
 #include "fitsio.h"
 #include <string.h>
 #include <mwalib.h>
-#include "beam_common.h"
+#include "jones.h"
 #include <mwa_hyperbeam.h>
 #include "calibration.h"
 #include "primary_beam.h"
