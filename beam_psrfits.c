@@ -13,8 +13,34 @@
 #include "star/pal.h"
 #include "star/palmac.h"
 #include "psrfits.h"
-#include "jones.h"
 #include "beam_psrfits.h"
+#include "geometry.h"
+
+
+void float_to_unit8(float * in, int n, int8_t *out)
+{
+    int j;
+    float min = -128.0; // -126.0 and -128.0 give the same result on test data
+    float max = 127.0;
+    // use a temp var so we don't modify the input data
+    float scratch;
+    for (j = 0; j < n; j++) {
+        // TODO: count the number of samples that were clipped, store that and put it in the psrfits header
+        // the if branching and ternary updates seem to be equivalent execution time
+        if (in[j]> max) {
+            scratch = max;
+        } else if (in[j] < min) {
+            scratch = min;
+        } else {
+            scratch = in[j];
+        }
+//        scratch = (in[j] > max) ? (max) : in[j];
+//        scratch = (in[j] < min) ? (min) : scratch;
+        out[j] = (uint8_t)( (int8_t)rint(scratch) + 128);
+    }
+
+}
+
 
 void populate_psrfits_header(
         struct psrfits   *pf,

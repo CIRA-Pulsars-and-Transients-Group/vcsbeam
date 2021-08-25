@@ -4,8 +4,8 @@
  *                                                      *
  ********************************************************/
 
-#ifndef BEAM_COMMON_H
-#define BEAM_COMMON_H
+#ifndef __JONES_H__
+#define __JONES_H__
 
 #include <inttypes.h>
 #include "mwa_hyperbeam.h"
@@ -54,20 +54,6 @@
 
 
 
-struct beam_geom {
-    double mean_ra;
-    double mean_dec;
-    double az;
-    double el;
-    double lmst;
-    double fracmjd;
-    double intmjd;
-    double unit_N;
-    double unit_E;
-    double unit_H;
-};
-
-
 /* Running get_jones from within make_beam */
 void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
@@ -82,16 +68,7 @@ void get_jones(
 
 void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
 
-void int8_to_uint8(int n, int shift, char * to_convert);
-void float2int8_trunc(float *f, int n, float min, float max, int8_t *i);
 void float_to_unit8(float * in, int n, int8_t *out);
-
-void dec2hms( char *out, double in, int sflag );
-void utc2mjd( char *, double *, double * ); // "2000-01-01T00:00:00" --> MJD_int + MJD_fraction
-void mjd2lst( double, double * );
-
-double parse_dec( char* ); // "01:23:45.67" --> Dec in degrees
-double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
 
 /**** MATRIX OPERATIONS ****/
 

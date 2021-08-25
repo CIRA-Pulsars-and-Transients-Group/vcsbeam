@@ -8,6 +8,7 @@
 #define BEAM_PSRFITS_H
 
 #include <mwalib.h>
+#include "geometry.h"
 #include "psrfits.h"
 
 void printf_psrfits( struct psrfits *pf );  /* Prints values in psrfits struct to stdout */

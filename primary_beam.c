@@ -10,6 +10,7 @@
 #include <star/palmac.h>
 #include "jones.h"
 #include "primary_beam.h"
+#include "geometry.h"
 
 
 void calc_primary_beam(

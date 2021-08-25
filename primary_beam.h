@@ -10,7 +10,7 @@
 #include <mwa_hyperbeam.h>
 #include <mwalib.h>
 #include <cuComplex.h>
-#include "jones.h"
+#include "geometry.h"
 
 #define NCONFIGS           138
 #define DEAD_CONFIG        (NCONFIGS - 1)

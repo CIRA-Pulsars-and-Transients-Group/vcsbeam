@@ -9,7 +9,19 @@
 
 #include <cuComplex.h>
 #include <mwalib.h>
-#include "jones.h"
+
+struct beam_geom {
+    double mean_ra;
+    double mean_dec;
+    double az;
+    double el;
+    double lmst;
+    double fracmjd;
+    double intmjd;
+    double unit_N;
+    double unit_E;
+    double unit_H;
+};
 
 /* In order to communicate easily with the GPU, the "phi" array, which
  * contains the complex-valued geometric delay terms, is implemented
@@ -64,5 +76,13 @@ void free_geometric_delays( geometric_delays *gdelays );
 /* Copy host memory block to device
  */
 void push_geometric_delays_to_device( geometric_delays *gdelays );
+
+void dec2hms( char *out, double in, int sflag );
+void utc2mjd( char *, double *, double * ); // "2000-01-01T00:00:00" --> MJD_int + MJD_fraction
+void mjd2lst( double, double * );
+
+double parse_dec( char* ); // "01:23:45.67" --> Dec in degrees
+double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
+
 
 #endif

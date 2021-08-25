@@ -14,12 +14,25 @@
 #include "psrfits.h"
 #include "star/pal.h"
 #include "star/palmac.h"
-#include "jones.h"
 #include "beam_vdif.h"
 #include "mwa_header.h"
 #include "vdifio.h"
 #include "ascii_header.h"
 #include "filter.h"
+#include "geometry.h"
+
+
+void float2int8_trunc(float *f, int n, float min, float max, int8_t *i)
+{
+    int j;
+    for (j = 0; j < n; j++) {
+        f[j] = (f[j] > max) ? (max) : f[j];
+        f[j] = (f[j] < min) ? (min) : f[j];
+        i[j] = (int8_t) rint(f[j]);
+
+    }
+}
+
 
 void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
                         float *data_buffer_vdif )

@@ -191,3 +191,109 @@ void calc_beam_geom(
     bg->unit_H   = unit_H;
 }
 
+
+void dec2hms( char *out, double in, int sflag )
+{
+    int sign  = 1;
+    char *ptr = out;
+    int h, m;
+    double s;
+
+    if (in < 0.0)
+    {
+        sign = -1;
+        in = fabs(in);
+    }
+
+    h = (int)in; in -= (double)h; in *= 60.0;
+    m = (int)in; in -= (double)m; in *= 60.0;
+    if (m >= 60)
+    {
+        // if minutes is 60 convert that to 1 hour
+        h += 1;
+        m -= 60;
+    }
+    s = in;
+    if (s >= 59.995)
+    {
+        // if seconds is 60 convert that to 1 minute
+        m += 1;
+        s = 00.00;
+    }
+    if (sign==1 && sflag)
+    {
+        *ptr='+';
+        ptr++;
+    }
+    else if (sign==-1)
+    {
+        *ptr='-';
+        ptr++;
+    }
+    // Limiting the output's pointings' smallest significant figure to
+    // 0.01 arc seconds
+    sprintf( ptr, "%2.2d:%2.2d:%05.2f", h, m, s );
+}
+
+
+
+void mjd2lst(double mjd, double *lst)
+{
+    // Greenwich Mean Sidereal Time to LMST
+    // east longitude in hours at the epoch of the MJD
+    double lmst = palRanorm(palGmst(mjd) + MWA_LONGITUDE_RADIANS);
+
+    *lst = lmst;
+}
+
+
+double parse_ra( char* ra_hhmmss )
+/* Parse a string containing a right ascension in hh:mm:ss format into
+ * a double in units of hours
+ */
+{
+    int ih=0, im=0, J=0;
+    double fs=0., ra_rad=0.;
+
+    sscanf(ra_hhmmss, "%d:%d:%lf", &ih, &im, &fs);
+
+    palDtf2r(ih, im, fs, &ra_rad, &J);
+
+    if (J != 0) { // pal returned an error
+        fprintf(stderr,"Error parsing %s as hhmmss\npal error code: j=%d\n",ra_hhmmss,J);
+        fprintf(stderr,"ih = %d, im = %d, fs = %lf\n", ih, im, fs);
+        exit(EXIT_FAILURE);
+    }
+
+    return ra_rad*PAL__DR2H;
+}
+
+double parse_dec( char* dec_ddmmss )
+/* Parse a string containing a declination in dd:mm:ss format into
+ * a double in units of degrees
+ */
+{
+    int id=0, im=0, J=0, sign=0;
+    double fs=0., dec_rad=0.;
+    char id_str[16];
+
+    sscanf(dec_ddmmss, "%s:%d:%lf", id_str, &im, &fs);
+
+    if (id_str[0] == '-') {
+        sign = -1;
+    }
+    else {
+        sign = 1;
+    }
+    sscanf(dec_ddmmss, "%d:%d:%lf", &id, &im, &fs);
+    id = id*sign;
+    palDaf2r(id, im, fs, &dec_rad, &J);
+
+    if (J != 0) {
+        fprintf(stderr,"Error parsing %s as dd:mm:ss - got %d:%d:%f -- error code %d\n",dec_ddmmss,id,im,fs,J);
+        exit(EXIT_FAILURE);
+    }
+
+    return dec_rad*PAL__DR2D*sign;
+}
+
