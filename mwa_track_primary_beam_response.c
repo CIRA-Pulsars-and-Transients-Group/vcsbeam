@@ -68,7 +68,7 @@ int main(int argc, char **argv)
     // Get a "beam geometry" struct (and other variables) ready
     struct beam_geom bg, tied_bg;
     double mjd;
-    double az, za, tied_az, tied_za; // Shorthand for azimuth and zenith angle
+    double az, za; // Shorthand for azimuth and zenith angle
     uint32_t freq_hz;
     double IQUV[4];
     double array_factor;
@@ -88,6 +88,13 @@ int main(int argc, char **argv)
     fprintf( opts.fout,
             "# Zenith-normalised Stokes response for given primary beam and tied-array beam\n"
             "# ----------------------------------------------------------------------------\n"
+            "# vcsbeam %s\n"
+            "#    ",
+            VERSION_BEAMFORMER );
+    for (int i = 0; i < argc; i++)
+        fprintf( opts.fout, " %s", argv[i] );
+    fprintf( opts.fout,
+            "\n"
             "# MJD:                  %f\n"
             "# Tile pointing centre: Azimuth = %f°; Zenith angle = %f°\n"
             "# (Initial) tile pos:   RA      = %f°; Dec = %f°\n"
@@ -120,8 +127,6 @@ int main(int argc, char **argv)
             if (opts.do_array_factor)
             {
                 calc_beam_geom( tied_ra_hours, tied_dec_degs, mjd, &tied_bg );
-                tied_az = tied_bg.az;
-                tied_za = PAL__DPIBY2 - tied_bg.el;
                 array_factor = calc_array_factor( obs_metadata, freq_hz, &bg, &tied_bg );
             }
 

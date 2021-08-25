@@ -66,9 +66,6 @@ void create_geometric_delays(
         uintptr_t          npointings );
 
 
-
-
-
 /* Free memory allocated with create_geometric_delays()
  */
 void free_geometric_delays( geometric_delays *gdelays );
@@ -76,6 +73,12 @@ void free_geometric_delays( geometric_delays *gdelays );
 /* Copy host memory block to device
  */
 void push_geometric_delays_to_device( geometric_delays *gdelays );
+
+double calc_array_factor(
+        MetafitsMetadata *obs_metadata,
+        uint32_t          freq_hz,
+        struct beam_geom *bg1,
+        struct beam_geom *bg2 );
 
 void calc_beam_geom(
         double            ras_hours,

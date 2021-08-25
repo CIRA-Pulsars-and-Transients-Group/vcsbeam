@@ -341,8 +341,8 @@ double calc_array_factor(
         cumsum = cuCadd( cumsum, cuCmul( cuConj(w[a]), psi[a] ) );
     }
 
-    array_factor = cuCabs( cumsum );
-    array_factor *= array_factor / nant;
+    array_factor = cuCabs( cumsum ) / nant;
+    array_factor *= array_factor;
 
     return array_factor;
 }
