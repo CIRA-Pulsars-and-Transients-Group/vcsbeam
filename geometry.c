@@ -318,3 +318,31 @@ double parse_dec( char* dec_ddmmss )
     return dec_rad*PAL__DR2D*sign;
 }
 
+
+double calc_array_factor(
+        MetafitsMetadata *obs_metadata,
+        uint32_t          freq_hz,
+        struct beam_geom *bg1,
+        struct beam_geom *bg2 )
+/* An implementation of Eq. (A4) in Meyers et al. (2017)
+ */
+{
+    double array_factor;
+
+    uintptr_t nant = obs_metadata->num_ants;
+    cuDoubleComplex w[nant], psi[nant];
+
+    calc_geometric_delays( bg1, freq_hz, obs_metadata, w );
+    calc_geometric_delays( bg2, freq_hz, obs_metadata, psi );
+
+    cuDoubleComplex cumsum = make_cuDoubleComplex( 0.0, 0.0 );
+    for (uintptr_t a = 0; a < nant; a++)
+    {
+        cumsum = cuCadd( cumsum, cuCmul( cuConj(w[a]), psi[a] ) );
+    }
+
+    array_factor = cuCabs( cumsum );
+    array_factor *= array_factor / nant;
+
+    return array_factor;
+}

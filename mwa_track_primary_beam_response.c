@@ -71,6 +71,7 @@ int main(int argc, char **argv)
     double az, za, tied_az, tied_za; // Shorthand for azimuth and zenith angle
     uint32_t freq_hz;
     double IQUV[4];
+    double array_factor;
 
     primary_beam pb;
     uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
@@ -115,17 +116,19 @@ int main(int argc, char **argv)
             az = bg.az;
             za = PAL__DPIBY2 - bg.el;
 
+            array_factor = 1.0;
             if (opts.do_array_factor)
             {
                 calc_beam_geom( tied_ra_hours, tied_dec_degs, mjd, &tied_bg );
                 tied_az = tied_bg.az;
                 tied_za = PAL__DPIBY2 - tied_bg.el;
+                array_factor = calc_array_factor( obs_metadata, freq_hz, &bg, &tied_bg );
             }
 
             calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV );
 
             // Print out the results
-            fprintf( opts.fout, "%lu %f %f %f %f %f %f %f %f\n",
+            fprintf( opts.fout, "%lu %f %f %f %f %f %f %f %f %f\n",
                     t, freq_hz/1e6,
                     az*PAL__DR2D, za*PAL__DR2D,
                     palDsep( az, bg.el,
@@ -133,7 +136,8 @@ int main(int argc, char **argv)
                     IQUV[0],
                     IQUV[1],
                     IQUV[2],
-                    IQUV[3] );
+                    IQUV[3],
+                    array_factor );
         }
 
         // Insert a blank line in the output, to delimit different frequencies
