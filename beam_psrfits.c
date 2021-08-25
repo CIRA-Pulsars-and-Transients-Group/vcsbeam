@@ -239,9 +239,6 @@ void psrfits_write_second( struct psrfits *pf, float *data_buffer, int nchan,
     int sec_size = outpol * nchan * pf->hdr.nsblk;
     int8_t *out_buffer_8 = (int8_t *)malloc( sec_size * sizeof(int8_t) );
 
-//    if (outpol>1) { // only do this for the coherent beams
-//        flatten_bandpass(pf->hdr.nsblk, nchan, outpol, data_buffer);
-//    }
     // pointing_offset makes the buffer start at the memory assigned the pointing
     int pointing_offset = p * sec_size;
     float *pointing_buffer  = malloc( sec_size * sizeof(float) );

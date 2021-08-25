@@ -68,12 +68,6 @@ void int8_to_uint8(int n, int shift, char * to_convert);
 void float2int8_trunc(float *f, int n, float min, float max, int8_t *i);
 void float_to_unit8(float * in, int n, int8_t *out);
 
-void flatten_bandpass(
-        int nstep,
-        int nchan,
-        int npol,
-        void *data);
-
 void dec2hms( char *out, double in, int sflag );
 void utc2mjd( char *, double *, double * ); // "2000-01-01T00:00:00" --> MJD_int + MJD_fraction
 void mjd2lst( double, double * );

@@ -112,4 +112,7 @@ void              destroy_detected_beam( cuDoubleComplex ****array, int npointin
 void allocate_input_output_arrays( void **data, void **d_data, size_t size );
 void free_input_output_arrays( void *data, void *d_data );
 
+void flatten_bandpass( int nstep, int nchan, int npol, void *data);
+
+
 #endif

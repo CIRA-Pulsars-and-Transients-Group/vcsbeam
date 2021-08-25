@@ -731,3 +731,68 @@ void free_input_output_arrays( void *data, void *d_data )
     cudaFree( d_data );
     cudaCheckErrors( "cudaFree() failed" );
 }
+
+
+void flatten_bandpass(int nstep, int nchan, int npol, void *data)
+{
+
+    // nstep -> ? number of time steps (ie 10,000 per 1 second of data)
+    // nchan -> number of (fine) channels (128)
+    // npol -> number of polarisations (1 for icoh or 4 for coh)
+
+    // magical mystery normalisation constant
+    int new_var = 32;
+
+    // purpose is to generate a mean value for each channel/polaridation
+
+    int i=0, j=0;
+    int p=0;
+
+    float *data_ptr = (float *) data;
+    float **band;
+
+
+    band = (float **) calloc (npol, sizeof(float *));
+    for (i=0;i<npol;i++) {
+      band[i] = (float *) calloc(nchan, sizeof(float));
+    }
+
+    // initialise the band array
+    for (p = 0;p<npol;p++) {
+        for (j=0;j<nchan;j++){
+            band[p][j] = 0.0;
+        }
+    }
+
+
+    // accumulate abs(data) over all time samples and save into band
+    data_ptr = data;
+    for (i=0;i<nstep;i++) { // time steps
+        for (p = 0;p<npol;p++) { // pols
+            for (j=0;j<nchan;j++){ // channels
+                band[p][j] += fabsf(*data_ptr);
+                data_ptr++;
+            }
+        }
+
+    }
+
+    // calculate and apply the normalisation to the data
+    data_ptr = data;
+    for (i=0;i<nstep;i++) {
+        for (p = 0;p<npol;p++) {
+            for (j=0;j<nchan;j++){
+                *data_ptr = (*data_ptr)/( (band[p][j]/nstep)/new_var );
+                data_ptr++;
+            }
+        }
+
+    }
+
+    // free the memory
+    for (i=0;i<npol;i++) {
+        free(band[i]);
+    }
+    free(band);
+}
+
