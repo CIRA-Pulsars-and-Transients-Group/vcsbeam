@@ -54,7 +54,8 @@
 
 
 
-/* Running get_jones from within make_beam */
+void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
+
 void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
@@ -66,10 +67,6 @@ void get_jones(
         cuDoubleComplex    ****invJi                   // output
 );
 
-void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
-
-void float_to_unit8(float * in, int n, int8_t *out);
-
 /**** MATRIX OPERATIONS ****/
 
 void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout);
@@ -80,7 +77,5 @@ void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout);
 void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout);
 void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout);
 double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout);
-
-void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings );
 
 #endif

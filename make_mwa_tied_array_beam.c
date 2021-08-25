@@ -55,8 +55,17 @@ struct make_tied_array_beam_opts {
     float              gpu_mem;       // Default = -1.0. If -1.0 use all GPU mem
 };
 
+/***********************
+ * FUNCTION PROTOTYPES *
+ ***********************/
+
 void usage();
 void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal );
+void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings );
+
+/********
+ * MAIN *
+ ********/
 
 int main(int argc, char **argv)
 {
