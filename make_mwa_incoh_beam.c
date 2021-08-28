@@ -36,7 +36,7 @@ struct cmd_line_opts {
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // Filename of the metafits file
     char              *coarse_chan_str;   // Absolute or relative coarse channel number
-    int                ncoarse_chans; // How many coarse channels to process
+    int                ncoarse_chans; // How many coarse channels to process per MPI task
     char              *outfile;       // Base name of the output PSRFITS file
     int                max_sec_per_file;    // Number of seconds per fits file
 };
@@ -58,6 +58,9 @@ int main(int argc, char **argv)
 {
     // Initialise MPI
     MPI_Init( NULL, NULL );
+    int world_size, world_rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
     // Parse command line arguments
     struct cmd_line_opts opts;
@@ -80,7 +83,7 @@ int main(int argc, char **argv)
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
 
     unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
-    uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str );
+    uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + world_rank*opts.ncoarse_chans;
 
     VoltageContext   *vcs_context  = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
@@ -237,12 +240,12 @@ void usage()
             "\t                          respectively. [default: \"+0\"]\n"
             "\t-d, --data-location=PATH  PATH is the directory containing the recombined data\n"
             "\t                          [default: current directory]\n"
-            "\t-f, --coarse-chan=CHAN     Coarse channel number\n"
-            "\t                           If CHAN starts with a '+' or a '-', then the channel is taken\n"
-            "\t                           relative to the first or last channel in the observation\n"
-            "\t                           respectively. Otherwise, it is treated as a receiver channel number\n"
-            "\t                           (0-255) [default: \"+0\"]\n"
-            "\t-F, --nchans=VAL           Process VAL coarse channels\n"
+            "\t-f, --coarse-chan=CHAN    Coarse channel number\n"
+            "\t                          If CHAN starts with a '+' or a '-', then the channel is taken\n"
+            "\t                          relative to the first or last channel in the observation\n"
+            "\t                          respectively. Otherwise, it is treated as a receiver channel number\n"
+            "\t                          (0-255) [default: \"+0\"]\n"
+            "\t-F, --nchans-per-task=VAL Process VAL coarse channels per MPI task\n"
             "\t-o, --outfile             The base name for the output PSRFITS file\n"
             "\t                          [default: \"<PROJECT>_<OBSID>_incoh_ch<CHAN>\"]\n"
             "\t-S, --max_output_t=SECS   Maximum number of SECS per output FITS file [default: 200]\n"
@@ -279,7 +282,7 @@ void make_incoh_beam_parse_cmdline(
                 {"begin",           required_argument, 0, 'b'},
                 {"data-location",   required_argument, 0, 'd'},
                 {"coarse-chan",     required_argument, 0, 'f'},
-                {"nchans",          required_argument, 0, 'F'},
+                {"nchans-per-task", required_argument, 0, 'F'},
                 {"help",            required_argument, 0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"outfile",         required_argument, 0, 'o'},
