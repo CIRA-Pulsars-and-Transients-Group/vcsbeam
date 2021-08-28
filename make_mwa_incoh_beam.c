@@ -37,7 +37,7 @@ struct cmd_line_opts {
     char              *coarse_chan_str;   // Absolute or relative coarse channel number
     int                ncoarse_chans; // How many coarse channels to process
     char              *outfile;       // Base name of the output PSRFITS file
-    int                max_sec_per_file;    // Number of seconds per fits files
+    int                max_sec_per_file;    // Number of seconds per fits file
 };
 
 /*************************************

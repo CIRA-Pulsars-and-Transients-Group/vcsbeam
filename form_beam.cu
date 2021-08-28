@@ -45,7 +45,7 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 /* <<< (nchan,nsample), ninput >>>
  */
 {
-    // Translate GPU block/thread numbers into meaning->l names
+    // Translate GPU block/thread numbers into meaningful names
     int c    = blockIdx.x;  /* The (c)hannel number */
     int nc   = gridDim.x;   /* The (n)umber of (c)hannels */
     int s    = blockIdx.y;  /* The (s)ample number */
