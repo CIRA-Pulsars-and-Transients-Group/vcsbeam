@@ -14,6 +14,7 @@
 // Non-standard dependencies
 #include <mwalib.h>
 #include <cuda_runtime.h>
+#include <mpi.h>
 
 // Local includes
 #include "jones.h"
@@ -55,6 +56,9 @@ const uintptr_t outpol_incoh = 1;  // ("I")
 
 int main(int argc, char **argv)
 {
+    // Initialise MPI
+    MPI_Init( NULL, NULL );
+
     // Parse command line arguments
     struct cmd_line_opts opts;
     make_incoh_beam_parse_cmdline( argc, argv, &opts );
@@ -210,6 +214,9 @@ int main(int argc, char **argv)
     // Free the logger
     logger_timed_message( log, "Exiting successfully" );
     destroy_logger( log );
+
+    // Finalise MPI
+    MPI_Finalize();
 
     return EXIT_SUCCESS;
 }
