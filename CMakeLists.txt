@@ -2,8 +2,6 @@ cmake_minimum_required (VERSION 3.15)
 #cmake_policy(SET CMP0012 NEW)
 #cmake_policy(SET CMP0048 NEW)
 
-project (vcsbeam LANGUAGES C CUDA)
-
 # Set up version number
 execute_process(
   COMMAND bash -c "git describe --tags --long | sed 's/-/./' | sed 's/-g/_/'"
@@ -18,7 +16,7 @@ if(NOT RUNTIME_DIR)
     set(RUNTIME_DIR ${CMAKE_INSTALL_PREFIX}/bin)
 endif(NOT RUNTIME_DIR)
 
-message("Runtime files will be installed in ${RUNTIME_DIR}")
+project (vcsbeam LANGUAGES C CUDA)
 
 add_definitions( -DVERSION_BEAMFORMER="${VCSBEAM_VERSION}" -DRUNTIME_DIR="${RUNTIME_DIR}" )
 
@@ -51,3 +49,5 @@ target_link_libraries(mwa_track_primary_beam_response ${PAL_LIBRARY} ${M_LIBRARY
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_tied_array_beam ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_incoh_beam ${CMAKE_CURRENT_BINARY_DIR}/mwa_track_primary_beam_response DESTINATION bin)
 
 install(FILES xy_phase_correction.txt DESTINATION ${RUNTIME_DIR})
+
+message("Runtime files will be installed in ${RUNTIME_DIR}")
