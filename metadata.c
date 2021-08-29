@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include <mwalib.h>
 #include "metadata.h"
 

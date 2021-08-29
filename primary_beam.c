@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include <star/pal.h>
 #include <star/palmac.h>
 #include "jones.h"

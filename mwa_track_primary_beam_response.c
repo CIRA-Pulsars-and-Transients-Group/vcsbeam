@@ -10,6 +10,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 // Non-standard dependencies
 #include <cuComplex.h>
@@ -212,17 +213,20 @@ void mwa_track_primary_beam_response_parse_cmdline(
             switch( c )
             {
                 case 'd':
-                    opts->dec_str = strdup( optarg );
+                    opts->dec_str = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->dec_str, optarg );
                     break;
                 case 'D':
-                    opts->arrf_dec_str = strdup( optarg );
+                    opts->arrf_dec_str = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->arrf_dec_str, optarg );
                     break;
                 case 'h':
                     usage();
                     exit(EXIT_SUCCESS);
                     break;
                 case 'm':
-                    opts->metafits = strdup( optarg );
+                    opts->metafits = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->metafits, optarg );
                     break;
                 case 'o':
                     opts->fout = fopen( optarg, "w" );
@@ -233,10 +237,12 @@ void mwa_track_primary_beam_response_parse_cmdline(
                     }
                     break;
                 case 'r':
-                    opts->ra_str = strdup( optarg );
+                    opts->ra_str = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->ra_str, optarg );
                     break;
                 case 'R':
-                    opts->arrf_ra_str = strdup( optarg );
+                    opts->arrf_ra_str = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->arrf_ra_str, optarg );
                     break;
                 default:
                     fprintf( stderr, "error: unrecognised option '%s'\n", optarg );

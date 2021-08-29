@@ -10,6 +10,10 @@
 #include <cuComplex.h>
 #include <mwalib.h>
 
+#ifndef M_PI
+#define M_PI (3.14159265358979323846264338327950288)
+#endif
+
 struct beam_geom {
     double mean_ra;
     double mean_dec;

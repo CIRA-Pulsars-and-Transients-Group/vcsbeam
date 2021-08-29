@@ -44,7 +44,9 @@ include_directories(${PSRFITS_UTILS_INCLUDE_DIR} ${CFITSIO_INCLUDE_DIR} ${PAL_IN
 
 target_link_libraries(make_mwa_tied_array_beam ${PSRFITS_UTILS_LIBRARY} ${CFITSIO_LIBRARY} ${PAL_LIBRARY} ${M_LIBRARY} ${HYPERBEAM_LIB} ${MWALIB_LIB})
 target_link_libraries(make_mwa_incoh_beam ${PSRFITS_UTILS_LIBRARY} ${CFITSIO_LIBRARY} ${PAL_LIBRARY} ${M_LIBRARY} ${MWALIB_LIB} ${MPI_C_LIBRARIES})
-target_link_libraries(mwa_track_primary_beam_response ${PAL_LIBRARY} ${M_LIBRARY} ${MWALIB_LIB} ${HYPERBEAM_LIB})
+target_link_libraries(mwa_track_primary_beam_response ${PAL_LIBRARY} ${M_LIBRARY} ${MWALIB_LIB} ${HYPERBEAM_LIB} ${M_LIBRARY})
+
+message("${M_LIBRARY}, ${RT_LIBRARY}")
 
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_tied_array_beam ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_incoh_beam ${CMAKE_CURRENT_BINARY_DIR}/mwa_track_primary_beam_response DESTINATION bin)
 

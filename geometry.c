@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
+#include <math.h>
 #include <cuComplex.h>
 #include <cuda_runtime.h>
 

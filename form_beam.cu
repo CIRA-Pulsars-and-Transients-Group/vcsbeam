@@ -16,8 +16,8 @@
 #include "jones.h"
 
 extern "C" {
-#include "form_beam.h"
 #include "geometry.h"
+#include "form_beam.h"
 #include "performance.h"
 }
 

@@ -161,7 +161,11 @@ int main(int argc, char **argv)
     double *coeffs = NULL;
 
     // If no synthesis filter was explicitly chosen, choose the LSQ12 filter
-    if (!opts.synth_filter)  opts.synth_filter = strdup("LSQ12");
+    if (!opts.synth_filter)
+    {
+        opts.synth_filter = (char *)malloc( 6 );
+        strcpy( opts.synth_filter, "LSQ12" );
+    }
     if (strcmp( opts.synth_filter, "LSQ12" ) == 0)
     {
         ntaps = 12;
@@ -655,19 +659,24 @@ void make_tied_array_beam_parse_cmdline(
                     opts->out_ant = atoi(optarg); // 0-127
                     break;
                 case 'b':
-                    opts->begin_str = strdup(optarg);
+                    opts->begin_str = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->begin_str, optarg );
                     break;
                 case 'c':
-                    cal->metafits = strdup(optarg);
+                    cal->metafits = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( cal->metafits, optarg );
                     break;
                 case 'C':
-                    cal->caldir = strdup(optarg);
+                    cal->caldir = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( cal->caldir, optarg );
                     break;
                 case 'd':
-                    opts->datadir = strdup(optarg);
+                    opts->datadir = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->datadir, optarg );
                     break;
                 case 'f':
-                    opts->coarse_chan_str = strdup(optarg);
+                    opts->coarse_chan_str = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->coarse_chan_str, optarg );
                     break;
                 case 'F':
                     opts->ncoarse_chans = atoi(optarg);
@@ -692,13 +701,15 @@ void make_tied_array_beam_parse_cmdline(
                     opts->out_coh = 1;
                     break;
                 case 'P':
-                    opts->pointings_file = strdup(optarg);
+                    opts->pointings_file = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->pointings_file, optarg );
                     break;
                 case 'R':
                     cal->ref_ant = atoi(optarg);
                     break;
                 case 'S':
-                    opts->synth_filter = strdup(optarg);
+                    opts->synth_filter = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->synth_filter, optarg );
                     break;
                 case 's':
                     opts->out_summed = 1;
@@ -749,13 +760,22 @@ void make_tied_array_beam_parse_cmdline(
     assert( cal->metafits        != NULL );
 
     if (opts->datadir == NULL)
-        opts->datadir = strdup( "." );
+    {
+        opts->datadir = (char *)malloc( 2 );
+        strcpy( opts->datadir, "." );
+    }
 
     if (opts->begin_str == NULL)
-        opts->begin_str = strdup( "+0" );
+    {
+        opts->begin_str = (char *)malloc( 3 );
+        strcpy( opts->begin_str, "+0" );
+    }
 
     if (opts->coarse_chan_str == NULL)
-        opts->coarse_chan_str = strdup( "+0" );
+    {
+        opts->coarse_chan_str = (char *)malloc( 3 );
+        strcpy( opts->coarse_chan_str, "+0" );
+    }
 
     // If neither -i, -p, nor -v were chosen, set -p by default
     if ( !opts->out_incoh && !opts->out_coh && !opts->out_vdif )
