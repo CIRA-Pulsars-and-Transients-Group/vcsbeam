@@ -58,6 +58,7 @@ void get_jones(
     int npol           = obs_metadata->num_ant_pols;   // (X,Y)
     int chan_width     = obs_metadata->corr_fine_chan_width_hz;
 
+    int p;       // Pointing number
     int ant;     // Antenna number
     int ch;      // Channel number
     int p1, p2;  // Counters for polarisation
@@ -73,7 +74,7 @@ void get_jones(
 
     double Fnorm;
 
-    for (int p = 0; p < npointing; p++)
+    for (p = 0; p < npointing; p++)
     {
         // Everything from this point on is frequency-dependent
         for (ch = 0; ch < nchan; ch++) {

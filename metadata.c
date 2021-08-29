@@ -46,12 +46,13 @@ char **create_filenames(
     char **filenames = (char **)malloc( nseconds * ncoarse_chans *sizeof(char *) ); // The full array of filenames, including the paths
 
     // Allocate memory and write filenames
-    unsigned int t_idx, f_idx;
-    for (unsigned int second = 0; second < nseconds; second++)
+    unsigned int t_idx, f_idx, second;
+    uintptr_t c_idx;
+    for (second = 0; second < nseconds; second++)
     {
         t_idx = begin_gps - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000) + second;
 
-        for (uintptr_t c_idx = begin_coarse_chan_idx; c_idx < begin_coarse_chan_idx + ncoarse_chans; c_idx++)
+        for (c_idx = begin_coarse_chan_idx; c_idx < begin_coarse_chan_idx + ncoarse_chans; c_idx++)
         {
             //f_idx = second*ncoarse_chans + c_idx - begin_coarse_chan_idx; // <-- this order seems to break mwalib (v0.9.4)
             f_idx = (c_idx - begin_coarse_chan_idx)*nseconds + second;
@@ -144,7 +145,8 @@ void get_mwalib_voltage_metadata(
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
     const char **voltage_files = (const char **)malloc( sizeof(char *) * nseconds );
-    for (int i = 0; i < nseconds; i++)
+    int i;
+    for (i = 0; i < nseconds; i++)
         voltage_files[i] = filenames[i];
 
     // Create VCS_CONTEXT
@@ -240,7 +242,8 @@ uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_
     }
 
     // Otherwise, find the coarse channel with this receiver number
-    for (uintptr_t coarse_chan_idx = 0; coarse_chan_idx < obs_metadata->num_metafits_coarse_chans; coarse_chan_idx++)
+    uintptr_t coarse_chan_idx;
+    for (coarse_chan_idx = 0; coarse_chan_idx < obs_metadata->num_metafits_coarse_chans; coarse_chan_idx++)
         if (obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number == (uintptr_t)atoi(begin_coarse_chan_str))
             return coarse_chan_idx;
 

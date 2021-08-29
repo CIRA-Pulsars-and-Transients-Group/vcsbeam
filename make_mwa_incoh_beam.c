@@ -121,7 +121,8 @@ int main(int argc, char **argv)
     struct psrfits pf;
 
     // COARSE CHANNEL DEPENDENT CODE BEGINS HERE
-    for (uintptr_t coarse_chan_idx = begin_coarse_chan_idx; coarse_chan_idx < begin_coarse_chan_idx + opts.ncoarse_chans; coarse_chan_idx++)
+    uintptr_t coarse_chan_idx;
+    for (coarse_chan_idx = begin_coarse_chan_idx; coarse_chan_idx < begin_coarse_chan_idx + opts.ncoarse_chans; coarse_chan_idx++)
     {
         // Populate the PSRFITS header struct
         sprintf( log_message, "Preparing header for output PSRFITS (receiver channel %lu)",

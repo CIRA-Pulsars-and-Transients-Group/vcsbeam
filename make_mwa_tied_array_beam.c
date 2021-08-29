@@ -74,6 +74,8 @@ int main(int argc, char **argv)
     struct calibration cal;           // Variables for calibration settings
     make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
 
+    int i; // Generic counter
+
     // Start a logger for output messages and time-keeping
     logger *log = create_logger( stdout );
     logger_add_stopwatch( log, "read" );
@@ -173,7 +175,7 @@ int main(int argc, char **argv)
         coeffs = (double *)malloc( fil_size * sizeof(double) );
         double tmp_coeffs[] = LSQ12_FILTER_COEFFS; // I'll have to change the way these coefficients are stored
                                                    // in order to avoid this cumbersome loading procedure
-        for (int i = 0; i < fil_size; i++)
+        for (i = 0; i < fil_size; i++)
             coeffs[i] = tmp_coeffs[i];
     }
     else if (strcmp( opts.synth_filter, "MIRROR" ) == 0)
@@ -182,7 +184,7 @@ int main(int argc, char **argv)
         fil_size = ntaps * nchans; // = 12 * 128 = 1536
         coeffs = (double *)malloc( fil_size * sizeof(double) );
         double tmp_coeffs[] = MIRROR_FILTER_COEFFS;
-        for (int i = 0; i < fil_size; i++)
+        for (i = 0; i < fil_size; i++)
             coeffs[i] = tmp_coeffs[i];
     }
     else
@@ -197,7 +199,7 @@ int main(int argc, char **argv)
     // along with any other scaling that I, Lord and Master of the inverse
     // PFB, feel is appropriate.
     double approx_filter_scale = 15.0/7.2; // 7.2 = 16384/117964.8
-    for (int i = 0; i < fil_size; i++)
+    for (i = 0; i < fil_size; i++)
         coeffs[i] *= approx_filter_scale;
 
     /*********************
@@ -254,7 +256,8 @@ int main(int argc, char **argv)
     cuDoubleComplex ***D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
 
     // COARSE CHANNEL DEPENDENT CODE BEGINS HERE
-    for (uintptr_t coarse_chan_idx = begin_coarse_chan_idx; coarse_chan_idx < begin_coarse_chan_idx + opts.ncoarse_chans; coarse_chan_idx++)
+    uintptr_t coarse_chan_idx;
+    for (coarse_chan_idx = begin_coarse_chan_idx; coarse_chan_idx < begin_coarse_chan_idx + opts.ncoarse_chans; coarse_chan_idx++)
     {
         /****************************
          * GET CALIBRATION SOLUTION *

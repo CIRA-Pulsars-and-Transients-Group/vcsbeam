@@ -82,7 +82,8 @@ int main(int argc, char **argv)
     // This program assumes no dead dipoles
     uint32_t *delays = obs_metadata->delays;
     double amps[obs_metadata->num_delays];
-    for (uintptr_t i = 0; i < obs_metadata->num_delays; i++)
+    uintptr_t i;
+    for (i = 0; i < obs_metadata->num_delays; i++)
         amps[i] = 1.0;
 
     // Write out the output header
@@ -92,7 +93,7 @@ int main(int argc, char **argv)
             "# vcsbeam %s\n"
             "#    ",
             VERSION_BEAMFORMER );
-    for (int i = 0; i < argc; i++)
+    for (i = 0; i < (uintptr_t)argc; i++)
         fprintf( opts.fout, " %s", argv[i] );
     fprintf( opts.fout,
             "\n"
@@ -110,13 +111,14 @@ int main(int argc, char **argv)
            );
 
     // Loop over the coarse channels
-    for (uintptr_t c = 0; c < obs_metadata->num_metafits_coarse_chans; c++)
+    uintptr_t c, t;
+    for (c = 0; c < obs_metadata->num_metafits_coarse_chans; c++)
     {
         // Get the frequency of this channel
         freq_hz = obs_metadata->metafits_coarse_chans[c].chan_centre_hz;
 
         // Loop over the gps seconds
-        for (uintptr_t t = 0; t < obs_metadata->num_metafits_timesteps; t++)
+        for (t = 0; t < obs_metadata->num_metafits_timesteps; t++)
         {
             // Calculate the beam geometry for the requested pointing
             mjd = obs_metadata->sched_start_mjd + (double)t/86400.0;
@@ -285,7 +287,8 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
     mult2x2d_RxC( P, J, J );
 
     // Convert this jones matrix to Stokes parameters for I, Q, U, V skies
-    for (int stokes = 0; stokes < 4; stokes++)
+    int stokes;
+    for (stokes = 0; stokes < 4; stokes++)
     {
         calc_hermitian( J, JH );
         mult2x2d( (cuDoubleComplex *)sky[stokes], JH, sky_x_JH );

@@ -78,7 +78,8 @@ logger *create_logger( FILE *fout )
     log->fout         = fout;
     log->nstopwatches = 0;
 
-    for (int i = 0; i < PERFORMANCE_MAX_NUM_STOPWATCHES; i++)
+    int i;
+    for (i = 0; i < PERFORMANCE_MAX_NUM_STOPWATCHES; i++)
     {
         log->stopwatches[i].name         = NULL;
         log->stopwatches[i].nstart_stops = 0;
@@ -94,7 +95,8 @@ logger *create_logger( FILE *fout )
 
 void destroy_logger( logger *log )
 {
-    for (int i = 0; i < log->nstopwatches; i++)
+    int i;
+    for (i = 0; i < log->nstopwatches; i++)
     {
         free( log->stopwatches[i].name );
     }
@@ -238,7 +240,8 @@ void logger_stopwatch_report_stats( logger *log, const char *stopwatch_name )
 
 void logger_report_all_stats( logger *log )
 {
-    for (int i = 0; i < log->nstopwatches; i++)
+    int i;
+    for (i = 0; i < log->nstopwatches; i++)
     {
         write_stopwatch_stats_str( log, &(log->stopwatches[i]) );
     }

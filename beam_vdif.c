@@ -118,7 +118,8 @@ void populate_vdif_header(
     // Get the sample rate
     unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
-    for ( int p=0; p<npointing; p++ )
+    int p;
+    for (p = 0; p < npointing; p++)
     {
         // Define DataFrame dimensions
         vf[p].bits              = 8;   // this is because it is all the downstream apps support (dspsr/diFX)
@@ -195,13 +196,13 @@ cuFloatComplex get_std_dev_complex(cuFloatComplex *input, int nsamples)
     float itotal = 0;
     float isigma = 0;
     float rsigma = 0;
-    int i;
 
-    for (i=0;i<nsamples;i++){
+    int i;
+    for (i = 0; i < nsamples; i++)
+    {
          rtotal = rtotal+(cuCrealf(input[i])*cuCrealf(input[i]));
          itotal = itotal+(cuCimagf(input[i])*cuCimagf(input[i]));
-
-     }
+    }
     rsigma = sqrtf((1.0/(nsamples-1))*rtotal);
     isigma = sqrtf((1.0/(nsamples-1))*itotal);
 
@@ -271,9 +272,9 @@ void get_mean_complex( cuFloatComplex *input, int nsamples, float *rmean,
 
 void normalise_complex(cuFloatComplex *input, int nsamples, float scale)
 {
-    int i=0;
-
-    for (i=0;i<nsamples;i++){
+    int i;
+    for (i = 0; i < nsamples; i++)
+    {
         input[i] = make_cuFloatComplex( cuCrealf(input[i])*scale, cuCimagf(input[i])*scale );
     }
 }

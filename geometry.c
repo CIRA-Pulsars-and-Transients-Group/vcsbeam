@@ -40,7 +40,8 @@ void calc_geometric_delays(
     // Other various intermediate products
     double L, w, Delta_t, phase;
 
-    for (uintptr_t a = 0; a < obs_metadata->num_ants; a++)
+    uintptr_t a;
+    for (a = 0; a < obs_metadata->num_ants; a++)
     {
         // Get the location and cable length for this antenna
         E     = obs_metadata->antennas[a].east_m;
@@ -81,9 +82,10 @@ void calc_all_geometric_delays(
 {
     cuDoubleComplex phi[gdelays->nant]; // <-- Temporary location for result
 
-    for (uintptr_t p = 0; p < gdelays->npointings; p++)
+    uintptr_t p, c, a;
+    for (p = 0; p < gdelays->npointings; p++)
     {
-        for (uintptr_t c = 0; c < gdelays->nchan; c++)
+        for (c = 0; c < gdelays->nchan; c++)
         {
             calc_geometric_delays(
                     &beam_geom_vals[p],
@@ -91,7 +93,7 @@ void calc_all_geometric_delays(
                     gdelays->obs_metadata,
                     phi );
 
-            for (uintptr_t a = 0; a < gdelays->nant; a++)
+            for (a = 0; a < gdelays->nant; a++)
                 gdelays->phi[PHI_IDX(p, a, c, gdelays->nant, gdelays->nchan)] = phi[a];
         }
     }
@@ -338,7 +340,8 @@ double calc_array_factor(
     calc_geometric_delays( bg2, freq_hz, obs_metadata, psi );
 
     cuDoubleComplex cumsum = make_cuDoubleComplex( 0.0, 0.0 );
-    for (uintptr_t a = 0; a < nant; a++)
+    uintptr_t a;
+    for (a = 0; a < nant; a++)
     {
         cumsum = cuCadd( cumsum, cuCmul( cuConj(w[a]), psi[a] ) );
     }
