@@ -67,7 +67,7 @@ int main(int argc, char **argv)
     make_incoh_beam_parse_cmdline( argc, argv, &opts );
 
     // Start a logger for output messages and time-keeping
-    logger *log = create_logger( stdout );
+    logger *log = create_logger( stdout, world_rank );
     logger_add_stopwatch( log, "read" );
     logger_add_stopwatch( log, "calc" );
     logger_add_stopwatch( log, "write" );
@@ -84,6 +84,9 @@ int main(int argc, char **argv)
 
     unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
     uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + world_rank*opts.ncoarse_chans;
+
+    sprintf( log_message, "rank = %d, begin_coarse_chan_idx = %lu\n", world_rank, begin_coarse_chan_idx );
+    logger_timed_message( log, log_message );
 
     VoltageContext   *vcs_context  = NULL;
     VoltageMetadata  *vcs_metadata = NULL;

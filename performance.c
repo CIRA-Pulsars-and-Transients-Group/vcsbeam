@@ -68,7 +68,7 @@ void write_stopwatch_stats_str( logger *log, logger_stopwatch *sw )
  * Functions for memory management and initialisation *
  ******************************************************/
 
-logger *create_logger( FILE *fout )
+logger *create_logger( FILE *fout, int world_rank )
 {
     // Allocate memory
     logger *log = (logger *)malloc( sizeof(logger) );
@@ -77,6 +77,7 @@ logger *create_logger( FILE *fout )
     log->begintime    = now();
     log->fout         = fout;
     log->nstopwatches = 0;
+    log->world_rank   = world_rank;
 
     int i;
     for (i = 0; i < PERFORMANCE_MAX_NUM_STOPWATCHES; i++)
@@ -213,7 +214,10 @@ void logger_stop_stopwatch( logger *log, const char *stopwatch_name )
 void logger_timed_message( logger *log, const char *message )
 {
     double current_time = now() - log->begintime;
-    fprintf( log->fout, "[%f]  %s\n", current_time, message );
+    if (log->world_rank < 0)
+        fprintf( log->fout, "[%f]  %s\n", current_time, message );
+    else
+        fprintf( log->fout, "[%f] [MPI:%2d]  %s\n", current_time, log->world_rank, message );
 }
 
 void logger_message( logger *log, const char *message )

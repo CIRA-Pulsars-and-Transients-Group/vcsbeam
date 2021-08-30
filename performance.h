@@ -30,13 +30,14 @@ typedef struct logger_t
     FILE             *fout;
     logger_stopwatch  stopwatches[PERFORMANCE_MAX_NUM_STOPWATCHES];
     int               nstopwatches;
+    int               world_rank;
 } logger;
 
 /******************************************************
  * Functions for memory management and initialisation *
  ******************************************************/
 
-logger *create_logger( FILE * fout );
+logger *create_logger( FILE * fout, int world_rank );
 void destroy_logger( logger *log );
 
 /**************************************************

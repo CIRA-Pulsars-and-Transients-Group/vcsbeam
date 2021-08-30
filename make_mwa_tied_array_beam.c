@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     int i; // Generic counter
 
     // Start a logger for output messages and time-keeping
-    logger *log = create_logger( stdout );
+    logger *log = create_logger( stdout, -1 ); // <-- a deliberate invalid "world_rank"
     logger_add_stopwatch( log, "read" );
     logger_add_stopwatch( log, "delay" );
     logger_add_stopwatch( log, "calc" );
