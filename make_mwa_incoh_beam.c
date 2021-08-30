@@ -274,7 +274,7 @@ void make_incoh_beam_parse_cmdline(
     opts->metafits         = NULL; // Filename of the metafits file for the target observation
     opts->outfile          = NULL; // Base name of the output PSRFITS file
     opts->coarse_chan_str  = NULL; // Absolute or relative coarse channel
-    opts->ncoarse_chans    = -1;   // How many coarse channels to process
+    opts->ncoarse_chans    = -1;   // How many coarse channels to process per MPI task
     opts->max_sec_per_file = 200;  // Number of seconds per fits files
 
     if (argc > 1)
