@@ -13,6 +13,7 @@
 
 // Non-standard dependencies
 #include <mwalib.h>
+#include <mpi.h>
 
 // Local includes
 #include "jones.h"
@@ -35,7 +36,7 @@ struct make_tied_array_beam_opts {
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // filename of the metafits file
     char              *coarse_chan_str;   // Absolute or relative coarse channel number
-    int                ncoarse_chans; // How many coarse channels to process
+    int                ncoarse_chans; // How many coarse channels to process per MPI task
 
     // Variables for MWA/VCS configuration
     char              *custom_flags;  // Use custom list for flagging antennas
@@ -69,6 +70,12 @@ void parse_pointing_file( const char *filename, double **ras_hours, double **dec
 
 int main(int argc, char **argv)
 {
+    // Initialise MPI
+    MPI_Init( NULL, NULL );
+    int world_size, world_rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
     // Parse command line arguments
     struct make_tied_array_beam_opts opts;
     struct calibration cal;           // Variables for calibration settings
@@ -77,7 +84,7 @@ int main(int argc, char **argv)
     int i; // Generic counter
 
     // Start a logger for output messages and time-keeping
-    logger *log = create_logger( stdout, -1 ); // <-- a deliberate invalid "world_rank"
+    logger *log = create_logger( stdout, world_rank );
     logger_add_stopwatch( log, "read" );
     logger_add_stopwatch( log, "delay" );
     logger_add_stopwatch( log, "calc" );
@@ -94,7 +101,7 @@ int main(int argc, char **argv)
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
 
     unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
-    uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str );
+    uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + world_rank*opts.ncoarse_chans;
 
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
@@ -519,6 +526,8 @@ int main(int argc, char **argv)
     mwalib_metafits_metadata_free( cal_metadata );
     mwalib_metafits_context_free( cal_context );
 
+    // Finalise MPI
+    MPI_Finalize();
 
     return EXIT_SUCCESS;
 }
@@ -545,7 +554,7 @@ void usage() {
             "\t                           relative to the first or last channel in the observation\n"
             "\t                           respectively. Otherwise, it is treated as a receiver channel number\n"
             "\t                           (0-255) [default: \"+0\"]\n"
-            "\t-F, --nchans=VAL           Process VAL coarse channels\n"
+            "\t-F, --nchans-per-task=VAL  Process VAL coarse channels per MPI task\n"
             "\t-i, --incoh                Turn on incoherent PSRFITS beam output.                             [default: OFF]\n"
             "\t-p, --psrfits              Turn on coherent PSRFITS output (will be turned on if none of\n"
             "\t                           -i, -p, -u, -v are chosen).                                         [default: OFF]\n"
@@ -597,7 +606,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->datadir            = NULL; // The path to where the recombined data live
     opts->metafits           = NULL; // filename of the metafits file for the target observation
     opts->coarse_chan_str    = NULL; // Absolute or relative coarse channel
-    opts->ncoarse_chans      = -1;   // How many coarse channels to process
+    opts->ncoarse_chans      = -1;   // How many coarse channels to process per MPI task
     opts->out_incoh          = 0;    // Default = PSRFITS (incoherent) output turned OFF
     opts->out_coh            = 0;    // Default = PSRFITS (coherent)   output turned OFF
     opts->out_vdif           = 0;    // Default = VDIF                 output turned OFF
@@ -638,7 +647,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"metafits",        required_argument, 0, 'm'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
-                {"nchans",          required_argument, 0, 'F'},
+                {"nchans-per-task", required_argument, 0, 'F'},
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"no-XY-phase",     required_argument, 0, 'U'},
