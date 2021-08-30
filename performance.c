@@ -129,7 +129,7 @@ void logger_add_stopwatch( logger *log, const char *stopwatch_name )
     }
 
     // Add the stopwatch!
-    log->stopwatches[log->nstopwatches++].name = (char *)malloc( strlen(stopwatch_name) + 1 );
+    log->stopwatches[log->nstopwatches].name = (char *)malloc( strlen(stopwatch_name) + 1 );
     strcpy( log->stopwatches[log->nstopwatches++].name, stopwatch_name );
 }
 
