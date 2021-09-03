@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     VoltageMetadata  *vcs_metadata = NULL;
     VoltageContext   *vcs_context  = NULL;
     get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
-            begin_gps, opts.nseconds, opts.datadir, begin_coarse_chan_idx, &opts.ncoarse_chans );
+            begin_gps, opts.nseconds, opts.datadir, begin_coarse_chan_idx, opts.ncoarse_chans );
 
     MetafitsContext  *cal_context  = NULL;
     MetafitsMetadata *cal_metadata = NULL;

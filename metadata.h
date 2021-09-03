@@ -57,7 +57,7 @@ void get_mwalib_voltage_metadata(
         int                nseconds,
         char               *datadir,
         uintptr_t          coarse_chan_idx,
-        int               *ncoarse_chans
+        int                ncoarse_chans
         );
 
 long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int relative_begin );

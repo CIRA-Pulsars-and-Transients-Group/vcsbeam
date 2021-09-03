@@ -119,7 +119,7 @@ void get_mwalib_voltage_metadata(
         int                nseconds,
         char              *datadir,
         uintptr_t          coarse_chan_idx,
-        int               *ncoarse_chans
+        int                ncoarse_chans
         )
 /* Create the voltage metadata structs using mwalib's API.
  */
@@ -134,16 +134,16 @@ void get_mwalib_voltage_metadata(
     }
 
     // Ditto for the ncoarse_chans
-    if (*ncoarse_chans < 1)
+    if (ncoarse_chans < 1)
     {
         fprintf( stderr, "error: get_mwalib_voltage_metadata: number of coarse chans must be >1\n" );
         exit(EXIT_FAILURE);
     }
 
-    int nfiles = nseconds * (*ncoarse_chans);
+    int nfiles = nseconds * ncoarse_chans;
 
     // Create list of filenames
-    char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, coarse_chan_idx, *ncoarse_chans );
+    char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, coarse_chan_idx, ncoarse_chans );
 
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
