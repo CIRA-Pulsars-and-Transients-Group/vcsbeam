@@ -143,6 +143,21 @@ int main(int argc, char **argv)
 
     struct psrfits pf;
 
+    struct psrfits *spliced_pf = NULL;
+    if (world_rank == 0)
+    {
+        logger_timed_message( log, "Preparing header for spliced PSRFITS" );
+        spliced_pf = (struct psrfits *)malloc( sizeof(struct psrfits) );
+        int coarse_chan_idxs[opts.ncoarse_chans];
+
+        int i;
+        for (i = 0; i < opts.ncoarse_chans; i++)
+            coarse_chan_idxs[i] = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + i;
+
+        populate_spliced_psrfits_header( spliced_pf, obs_metadata, vcs_metadata, coarse_chan_idxs, opts.ncoarse_chans, opts.max_sec_per_file,
+                outpol_incoh, &beam_geom_vals, opts.outfile, false );
+    }
+
     // COARSE CHANNEL DEPENDENT CODE BEGINS HERE
     uintptr_t coarse_chan_idx;
     for (coarse_chan_idx = begin_coarse_chan_idx; coarse_chan_idx < begin_coarse_chan_idx + nchans_per_task; coarse_chan_idx++)
@@ -150,7 +165,7 @@ int main(int argc, char **argv)
         // Populate the PSRFITS header struct
         sprintf( log_message, "Preparing header for output PSRFITS (receiver channel %lu)",
                 obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
-        logger_message( log, log_message );
+        logger_timed_message( log, log_message );
 
         populate_psrfits_header( &pf, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
                 outpol_incoh, &beam_geom_vals, opts.outfile, false );
@@ -236,6 +251,11 @@ int main(int argc, char **argv)
     logger_timed_message( log, "Starting memory clean-up" );
 
     // Free up memory
+    if (world_rank == 0)
+    {
+        free( spliced_pf );
+    }
+
     free( opts.begin_str );
     free( opts.coarse_chan_str );
     free( opts.datadir   );

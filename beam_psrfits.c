@@ -148,10 +148,14 @@ void populate_spliced_psrfits_header(
     pf->sub.dat_freqs   = (float *)malloc(sizeof(float) * pf->hdr.nchan);
     pf->sub.dat_weights = (float *)malloc(sizeof(float) * pf->hdr.nchan);
 
-    double dtmp = pf->hdr.fctr - 0.5 * pf->hdr.BW + 0.5 * pf->hdr.df;
-    int i;
-    for (i = 0 ; i < pf->hdr.nchan ; i++) {
-        pf->sub.dat_freqs[i] = dtmp + i * pf->hdr.df;
+    int i; // idx into dat_freqs
+    int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
+    for (i = 0 ; i < pf->hdr.nchan; i++)
+    {
+        iC = i / obs_metadata->num_volt_fine_chans_per_coarse;
+        iF = coarse_chan_idxs[iC]*obs_metadata->num_volt_fine_chans_per_coarse +
+            i % obs_metadata->num_volt_fine_chans_per_coarse;
+        pf->sub.dat_freqs[i] = obs_metadata->metafits_fine_chan_freqs_hz[iF] / 1e6;
         pf->sub.dat_weights[i] = 1.0;
     }
 

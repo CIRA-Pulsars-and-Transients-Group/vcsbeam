@@ -24,6 +24,18 @@ void populate_psrfits_header(
         char             *incoh_basename,
         bool              is_coherent );
 
+void populate_spliced_psrfits_header(
+        struct psrfits   *pf,
+        MetafitsMetadata *obs_metadata,
+        VoltageMetadata  *vcs_metadata,
+        int              *coarse_chan_idxs,
+        int               ncoarse_chans,
+        int               max_sec_per_file,
+        int               outpol,
+        struct beam_geom *beam_geom_vals,
+        char             *incoh_basename,
+        bool              is_coherent );
+
 void free_psrfits( struct psrfits *pf );
 
 void correct_psrfits_stt( struct psrfits *pf );
