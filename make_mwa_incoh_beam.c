@@ -87,6 +87,11 @@ int main(int argc, char **argv)
     // Work out how to distribute channels among tasks
     int nchans_per_task = (opts.ncoarse_chans - 1)/world_size + 1;
     uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + world_rank*nchans_per_task;
+    // Adjust the number of chans for the final MPI task, if necessary
+    if (world_rank == world_size - 1)
+    {
+        nchans_per_task = opts.ncoarse_chans % world_size;
+    }
 
     sprintf( log_message, "rank = %d, begin_coarse_chan_idx = %lu\n", world_rank, begin_coarse_chan_idx );
     logger_timed_message( log, log_message );
@@ -128,7 +133,7 @@ int main(int argc, char **argv)
 
     // COARSE CHANNEL DEPENDENT CODE BEGINS HERE
     uintptr_t coarse_chan_idx;
-    for (coarse_chan_idx = begin_coarse_chan_idx; coarse_chan_idx < begin_coarse_chan_idx + opts.ncoarse_chans; coarse_chan_idx++)
+    for (coarse_chan_idx = begin_coarse_chan_idx; coarse_chan_idx < begin_coarse_chan_idx + nchans_per_task; coarse_chan_idx++)
     {
         // Populate the PSRFITS header struct
         sprintf( log_message, "Preparing header for output PSRFITS (receiver channel %lu)",

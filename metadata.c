@@ -134,9 +134,10 @@ void get_mwalib_voltage_metadata(
     }
 
     // Ditto for the ncoarse_chans
-    if (*ncoarse_chans == -1) // e.g. because nothing was given on the command line
+    if (*ncoarse_chans < 1)
     {
-        *ncoarse_chans = (*obs_metadata)->num_metafits_coarse_chans - coarse_chan_idx;
+        fprintf( stderr, "error: get_mwalib_voltage_metadata: number of coarse chans must be >1\n" );
+        exit(EXIT_FAILURE);
     }
 
     int nfiles = nseconds * (*ncoarse_chans);
