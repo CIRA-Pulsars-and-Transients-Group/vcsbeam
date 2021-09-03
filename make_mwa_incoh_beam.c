@@ -194,7 +194,6 @@ int main(int argc, char **argv)
 
             logger_start_stopwatch( log, "calc" );
 
-fprintf( stderr, "bytes_per_subint = %d, incoh_size = %ld\n", pf.sub.bytes_per_subint, incoh_size );
             cu_form_incoh_beam(
                     data, d_data, data_size,
                     d_incoh,
