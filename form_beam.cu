@@ -264,8 +264,7 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
     }
 }
 
-__global__ void flatten_bandpass_I_kernel( float *I,
-                                           int nstep )
+__global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, float *scales, uint8_t *Iscaled )
 {
     // For just doing stokes I
     // One block
@@ -278,30 +277,40 @@ __global__ void flatten_bandpass_I_kernel( float *I,
     // Translate GPU block/thread numbers into meaningful names
     int chan = threadIdx.x; /* The (c)hannel number */
     int nchan = blockDim.x; /* The total number of channels */
-    float band;
+    float val, scale, offset;
 
-    int new_var = 32; /* magic number */
+    // Initialise min and max values to the first sample
+    float min = I[I_IDX(0,chan,nchan)];
+    float max = I[I_IDX(0,chan,nchan)];
+
+    // Get the data statistics
     int i;
-
-    float *data_ptr;
-
-    // initialise the band 'array'
-    band = 0.0;
-
-    // accumulate abs(data) over all time samples and save into band
     for (i = 0; i < nstep; i++)
     {
-        data_ptr = I + I_IDX(i,chan,nchan);
-        band += fabsf(*data_ptr);
+        val = I[I_IDX(i,chan,nchan)];
+        min = (val < min ? val : min);
+        max = (val > max ? val : max);
     }
 
-    // now normalise the incoherent beam
+    scale  = 127.0 / (max - min); // 127 = 2^7 - 1 (for signed 8-bit values)
+    offset = 0.5*(max + min);
+
+    // Rescale the incoherent beam
     for (i = 0; i < nstep; i++)
     {
-        data_ptr = I + I_IDX(i,chan,nchan);
-        *data_ptr = (*data_ptr)/( (band/nstep)/new_var );
+        val = (I[I_IDX(i,chan,nchan)] - offset) * scale;
+        I[I_IDX(i,chan,nchan)] = val;
+
+        if (Iscaled != NULL)
+            Iscaled[I_IDX(i,chan,nchan)] = (uint8_t)(val + 128.5);
     }
 
+    // Set the scales and offsets, accounting for the 128-offset
+    if (scales != NULL)
+        scales[chan] = scale;
+
+    if (offsets != NULL)
+        offsets[chan] = offset - 128.0/scale;
 }
 
 
@@ -353,8 +362,12 @@ __global__ void flatten_bandpass_C_kernel( float *C, int nstep )
 
 void cu_form_incoh_beam(
         uint8_t *data, uint8_t *d_data, size_t data_size, // The input data
-        float *incoh, float *d_incoh, size_t incoh_size, // The output data
-        unsigned int nsample, int nchan, int ninput )
+        float *d_incoh, // The data, summed
+        unsigned int nsample, int nchan, int ninput, // The data dimensions
+        float *offsets, float *d_offsets, // data statistics: offsets
+        float *scales, float *d_scales,   // data statistics: scales
+        uint8_t *Iscaled, uint8_t *d_Iscaled, size_t Iscaled_size // The scaled answer
+        )
 /* Inputs:
 *   data    = host array of 4bit+4bit complex numbers. For data order, refer to the
 *             documentation.
@@ -380,12 +393,14 @@ void cu_form_incoh_beam(
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
 
-    flatten_bandpass_I_kernel<<<1, nchan>>>( d_incoh, nsample );
+    flatten_bandpass_I_kernel<<<1, nchan>>>( d_incoh, nsample, d_offsets, d_scales, d_Iscaled );
     gpuErrchk( cudaPeekAtLastError() );
 
     // Copy the results back into host memory
     // (NB: Asynchronous copy here breaks the output)
-    gpuErrchk(cudaMemcpy( incoh, d_incoh, incoh_size, cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( offsets, d_offsets, nchan*sizeof(float), cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( scales,  d_scales,  nchan*sizeof(float), cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( Iscaled, d_Iscaled, Iscaled_size,        cudaMemcpyDeviceToHost ));
 }
 
 void cu_form_beam( uint8_t *data, unsigned int sample_rate,
@@ -484,8 +499,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
     // Flatten the bandpass
     if ( incoh_check )
     {
-        flatten_bandpass_I_kernel<<<1, nchan, 0, streams[0]>>>( g->d_incoh,
-                                                                sample_rate );
+        flatten_bandpass_I_kernel<<<1, nchan, 0, streams[0]>>>( g->d_incoh, sample_rate, NULL, NULL, NULL );
         gpuErrchk( cudaPeekAtLastError() );
     }
     // Now do the same for the coherent beam

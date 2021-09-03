@@ -108,6 +108,7 @@ int main(int argc, char **argv)
     unsigned int nsamples        = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
     uintptr_t    data_size       = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
     uintptr_t    incoh_size      = nchans * nsamples * sizeof(float);
+    uintptr_t    Iscaled_size    = nchans * nsamples * sizeof(uint8_t);
     uintptr_t    timestep_idx;
     uintptr_t    timestep;
     uint64_t     gps_second;
@@ -118,10 +119,21 @@ int main(int argc, char **argv)
     logger_timed_message( log, "Allocate host and device memory" );
 
     uint8_t *data, *d_data;
-    float *incoh, *d_incoh;
+    float *d_incoh;
+    float *d_offsets;
+    float *d_scales;
+    uint8_t *d_Iscaled;
 
     allocate_input_output_arrays( (void **)&data, (void **)&d_data, data_size );
-    allocate_input_output_arrays( (void **)&incoh, (void **)&d_incoh, incoh_size );
+
+    cudaMalloc( (void **)&d_incoh, incoh_size );
+    cudaCheckErrors( "cudaMalloc(d_incoh) failed" );
+    cudaMalloc( (void **)&d_offsets, nchans*sizeof(float) );
+    cudaCheckErrors( "cudaMalloc(d_offsets) failed" );
+    cudaMalloc( (void **)&d_scales,  nchans*sizeof(float) );
+    cudaCheckErrors( "cudaMalloc(d_scales) failed" );
+    cudaMalloc( (void **)&d_Iscaled, Iscaled_size );
+    cudaCheckErrors( "cudaMalloc(Iscaled) failed" );
 
     // Get pointing geometry information
     struct beam_geom beam_geom_vals;
@@ -182,10 +194,15 @@ int main(int argc, char **argv)
 
             logger_start_stopwatch( log, "calc" );
 
+fprintf( stderr, "bytes_per_subint = %d, incoh_size = %ld\n", pf.sub.bytes_per_subint, incoh_size );
             cu_form_incoh_beam(
                     data, d_data, data_size,
-                    incoh, d_incoh, incoh_size,
-                    nsamples, nchans, ninputs );
+                    d_incoh,
+                    nsamples, nchans, ninputs,
+                    pf.sub.dat_offsets, d_offsets,
+                    pf.sub.dat_scales, d_scales,
+                    pf.sub.data, d_Iscaled, Iscaled_size
+                    );
 
             logger_stop_stopwatch( log, "calc" );
 
@@ -196,7 +213,14 @@ int main(int argc, char **argv)
 
             logger_start_stopwatch( log, "write" );
 
-            psrfits_write_second( &pf, incoh, nchans, outpol_incoh, 0 );
+            //psrfits_write_second( &pf, incoh, nchans, outpol_incoh, 0 );
+            if (psrfits_write_subint( &pf ) != 0)
+            {
+                fprintf(stderr, "error: Write subint failed. File exists?\n");
+                exit(EXIT_FAILURE);
+            }
+            pf.sub.offs = roundf(pf.tot_rows * pf.sub.tsubint) + 0.5*pf.sub.tsubint;
+            pf.sub.lst += pf.sub.tsubint;
 
             logger_stop_stopwatch( log, "write" );
         }
@@ -219,7 +243,15 @@ int main(int argc, char **argv)
     free( opts.metafits  );
 
     free_input_output_arrays( data, d_data );
-    free_input_output_arrays( incoh, d_incoh );
+
+    cudaFree( d_incoh );
+    cudaCheckErrors( "cudaFree(d_incoh) failed" );
+    cudaFree( d_offsets );
+    cudaCheckErrors( "cudaFree(d_offsets) failed" );
+    cudaFree( d_scales );
+    cudaCheckErrors( "cudaFree(d_scales) failed" );
+    cudaFree( d_Iscaled );
+    cudaCheckErrors( "cudaFree(d_Iscaled) failed" );
 
     // Clean up memory associated with mwalib
     mwalib_metafits_metadata_free( obs_metadata );
