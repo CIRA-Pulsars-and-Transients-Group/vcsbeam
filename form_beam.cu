@@ -289,17 +289,17 @@ __global__ void flatten_bandpass_I_kernel( float *I,
     band = 0.0;
 
     // accumulate abs(data) over all time samples and save into band
-    data_ptr = I + I_IDX(0, chan, nchan);
-    for (i=0;i<nstep;i++) { // time steps
-        band += fabsf(*data_ptr);
+    for (i = 0; i < nstep; i++)
+    {
         data_ptr = I + I_IDX(i,chan,nchan);
+        band += fabsf(*data_ptr);
     }
 
     // now normalise the incoherent beam
-    data_ptr = I + I_IDX(0, chan, nchan);
-    for (i=0;i<nstep;i++) { // time steps
-        *data_ptr = (*data_ptr)/( (band/nstep)/new_var );
+    for (i = 0; i < nstep; i++)
+    {
         data_ptr = I + I_IDX(i,chan,nchan);
+        *data_ptr = (*data_ptr)/( (band/nstep)/new_var );
     }
 
 }
