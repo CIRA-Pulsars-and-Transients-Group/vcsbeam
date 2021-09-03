@@ -71,6 +71,7 @@ int main(int argc, char **argv)
     logger *log = create_logger( stdout, world_rank );
     logger_add_stopwatch( log, "read" );
     logger_add_stopwatch( log, "calc" );
+    logger_add_stopwatch( log, "splice" );
     logger_add_stopwatch( log, "write" );
     char log_message[MAX_COMMAND_LENGTH];
 
@@ -136,6 +137,7 @@ int main(int argc, char **argv)
     calc_beam_geom( ra_hours, dec_degs, mjd, &beam_geom_vals );
 
     struct psrfits pf;
+    uint8_t *spliced_buffer = NULL;
 
     struct psrfits *spliced_pf = NULL;
     if (world_rank == 0)
@@ -148,8 +150,10 @@ int main(int argc, char **argv)
         for (i = 0; i < ncoarse_chans; i++)
             coarse_chan_idxs[i] = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + i;
 
-        populate_spliced_psrfits_header( spliced_pf, obs_metadata, vcs_metadata, coarse_chan_idxs, ncoarse_chans, opts.max_sec_per_file,
-                outpol_incoh, &beam_geom_vals, opts.outfile, false );
+        populate_spliced_psrfits_header( spliced_pf, obs_metadata, vcs_metadata, coarse_chan_idxs, ncoarse_chans,
+                opts.max_sec_per_file, outpol_incoh, &beam_geom_vals, opts.outfile, false );
+
+        spliced_buffer = (uint8_t *)malloc( spliced_pf->sub.bytes_per_subint );
     }
 
     // Populate the PSRFITS header struct
@@ -227,6 +231,44 @@ int main(int argc, char **argv)
         pf.sub.lst += pf.sub.tsubint;
 
         logger_stop_stopwatch( log, "write" );
+
+        logger_start_stopwatch( log, "splice" );
+
+        MPI_Gather( pf.sub.data,
+                pf.sub.bytes_per_subint,
+                MPI_BYTE,
+                spliced_buffer,
+                pf.sub.bytes_per_subint,
+                MPI_BYTE,
+                0,
+                MPI_COMM_WORLD );
+
+        if (world_rank == 0)
+        {
+            // Re-arrange the buffer -- I'm sure there must be a standard MPI way to do this,
+            // perhaps with subarrays, but I'm a noob, so for now...
+            int s, c, C; // (s)ample, fine (c)han, coarse (C)han
+            int i, j;    // idxs into spliced_pf (i) and spliced_buffer (j)
+            for (s = 0; s < pf.hdr.nsblk; s++)
+            for (c = 0; c < pf.hdr.nchan; c++)
+            for (C = 0; C < world_size; C++)
+            {
+                i = s*spliced_pf->hdr.nchan + C*pf.hdr.nchan + c;
+                j = (C*pf.hdr.nsblk + s)*pf.hdr.nchan + c;
+                spliced_pf->sub.data[i] = spliced_buffer[j];
+            }
+
+            // Write it to file
+            if (psrfits_write_subint( spliced_pf ) != 0)
+            {
+                fprintf(stderr, "error: Write spliced subint failed. File exists?\n");
+                exit(EXIT_FAILURE);
+            }
+            spliced_pf->sub.offs = roundf(spliced_pf->tot_rows * spliced_pf->sub.tsubint) + 0.5*spliced_pf->sub.tsubint;
+            spliced_pf->sub.lst += spliced_pf->sub.tsubint;
+        }
+
+        logger_stop_stopwatch( log, "splice" );
     }
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
@@ -243,6 +285,7 @@ int main(int argc, char **argv)
     if (world_rank == 0)
     {
         free( spliced_pf );
+        free( spliced_buffer );
     }
 
     free( opts.begin_str );
