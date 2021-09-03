@@ -117,7 +117,7 @@ void create_geometric_delays(
     // Get a pointer to the array of fine channel frequencies
     // This is a (contiguous) subset of an array already provided
     // by mwalib, but we need to jump into it at the right coarse channel
-    gdelays->chan_freqs_hz = &(obs_metadata->metafits_fine_chan_freqs[coarse_chan_idx*gdelays->nchan]);
+    gdelays->chan_freqs_hz = &(obs_metadata->metafits_fine_chan_freqs_hz[coarse_chan_idx*gdelays->nchan]);
 
     // Allocate memory
     size_t size = gdelays->npointings * gdelays->nant * gdelays->nchan * sizeof(cuDoubleComplex);

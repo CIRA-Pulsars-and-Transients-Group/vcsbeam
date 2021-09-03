@@ -12,6 +12,24 @@
 
 #include <mwalib.h>
 
+/* The following is a patch to provide constants which are not available in mwalib */
+#ifndef SPEED_OF_LIGHT_IN_VACUUM_M_PER_S
+#define SPEED_OF_LIGHT_IN_VACUUM_M_PER_S 299792458.0
+#endif
+
+#ifndef MWA_LATITUDE_RADIANS
+#define MWA_LATITUDE_RADIANS -0.4660608448386394
+#endif
+
+#ifndef MWA_LONGITUDE_RADIANS
+#define MWA_LONGITUDE_RADIANS 2.0362898668561042
+#endif
+
+#ifndef MWA_ALTITUDE_METRES
+#define MWA_ALTITUDE_METRES 377.827
+#endif
+/* End replacement constants */
+
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
         const struct MetafitsMetadata *metafits_metadata,
