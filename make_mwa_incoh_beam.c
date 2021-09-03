@@ -88,7 +88,7 @@ int main(int argc, char **argv)
     int nchans_per_task = (opts.ncoarse_chans - 1)/world_size + 1;
     uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + world_rank*nchans_per_task;
     // Adjust the number of chans for the final MPI task, if necessary
-    if (world_rank == world_size - 1)
+    if (world_rank == world_size - 1 && opts.ncoarse_chans % world_size != 0)
     {
         nchans_per_task = opts.ncoarse_chans % world_size;
     }
