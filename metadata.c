@@ -117,7 +117,7 @@ void get_mwalib_voltage_metadata(
         MetafitsContext   *obs_context,
         unsigned long int  begin_gps,
         int                nseconds,
-        char               *datadir,
+        char              *datadir,
         uintptr_t          coarse_chan_idx,
         int               *ncoarse_chans
         )
@@ -134,7 +134,7 @@ void get_mwalib_voltage_metadata(
     }
 
     // Ditto for the ncoarse_chans
-    if (*ncoarse_chans == -1) // i.e. because nothing was given on the command line
+    if (*ncoarse_chans == -1) // e.g. because nothing was given on the command line
     {
         *ncoarse_chans = (*obs_metadata)->num_metafits_coarse_chans - coarse_chan_idx;
     }
@@ -149,7 +149,9 @@ void get_mwalib_voltage_metadata(
     const char **voltage_files = (const char **)malloc( sizeof(char *) * nfiles );
     int i;
     for (i = 0; i < nfiles; i++)
+    {
         voltage_files[i] = filenames[i];
+    }
 
     // Create VCS_CONTEXT
     if (mwalib_voltage_context_new( (*obs_metadata)->metafits_filename, voltage_files, nfiles, vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)

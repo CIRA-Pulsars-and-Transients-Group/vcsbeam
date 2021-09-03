@@ -36,7 +36,7 @@ struct cmd_line_opts {
     char              *datadir;       // The path to where the recombined data live
     char              *metafits;      // Filename of the metafits file
     char              *coarse_chan_str;   // Absolute or relative coarse channel number
-    int                ncoarse_chans; // How many coarse channels to process per MPI task
+    int                ncoarse_chans; // How many coarse channels to process
     char              *outfile;       // Base name of the output PSRFITS file
     int                max_sec_per_file;    // Number of seconds per fits file
 };
@@ -83,7 +83,10 @@ int main(int argc, char **argv)
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
 
     unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
-    uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + world_rank*opts.ncoarse_chans;
+
+    // Work out how to distribute channels among tasks
+    int nchans_per_task = (opts.ncoarse_chans - 1)/world_size + 1;
+    uintptr_t begin_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + world_rank*nchans_per_task;
 
     sprintf( log_message, "rank = %d, begin_coarse_chan_idx = %lu\n", world_rank, begin_coarse_chan_idx );
     logger_timed_message( log, log_message );
@@ -91,7 +94,7 @@ int main(int argc, char **argv)
     VoltageContext   *vcs_context  = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
     get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
-            begin_gps, opts.nseconds, opts.datadir, begin_coarse_chan_idx, &opts.ncoarse_chans );
+            begin_gps, opts.nseconds, opts.datadir, begin_coarse_chan_idx, &nchans_per_task );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t    ntimesteps      = vcs_metadata->num_provided_timesteps;
@@ -249,7 +252,7 @@ void usage()
             "\t                          relative to the first or last channel in the observation\n"
             "\t                          respectively. Otherwise, it is treated as a receiver channel number\n"
             "\t                          (0-255) [default: \"+0\"]\n"
-            "\t-F, --nchans-per-task=VAL Process VAL coarse channels per MPI task\n"
+            "\t-F, --nchans=NCHAN        Process NCHAN coarse channels\n"
             "\t-o, --outfile             The base name for the output PSRFITS file\n"
             "\t                          [default: \"<PROJECT>_<OBSID>_incoh_ch<CHAN>\"]\n"
             "\t-S, --max_output_t=SECS   Maximum number of SECS per output FITS file [default: 200]\n"
@@ -274,7 +277,7 @@ void make_incoh_beam_parse_cmdline(
     opts->metafits         = NULL; // Filename of the metafits file for the target observation
     opts->outfile          = NULL; // Base name of the output PSRFITS file
     opts->coarse_chan_str  = NULL; // Absolute or relative coarse channel
-    opts->ncoarse_chans    = -1;   // How many coarse channels to process per MPI task
+    opts->ncoarse_chans    = -1;   // How many coarse channels to process
     opts->max_sec_per_file = 200;  // Number of seconds per fits files
 
     if (argc > 1)
@@ -286,13 +289,13 @@ void make_incoh_beam_parse_cmdline(
                 {"begin",           required_argument, 0, 'b'},
                 {"data-location",   required_argument, 0, 'd'},
                 {"coarse-chan",     required_argument, 0, 'f'},
-                {"nchans-per-task", required_argument, 0, 'F'},
-                {"help",            required_argument, 0, 'h'},
+                {"nchans",          required_argument, 0, 'F'},
+                {"help",            no_argument,       0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"outfile",         required_argument, 0, 'o'},
                 {"max_output_t",    required_argument, 0, 'S'},
                 {"nseconds",        required_argument, 0, 'T'},
-                {"version",         required_argument, 0, 'V'}
+                {"version",         no_argument,       0, 'V'}
             };
 
             int option_index = 0;
