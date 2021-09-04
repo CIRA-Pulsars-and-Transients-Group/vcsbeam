@@ -139,21 +139,20 @@ int main(int argc, char **argv)
     struct psrfits pf;
     uint8_t *spliced_buffer = NULL;
 
-    struct psrfits *spliced_pf = NULL;
+    struct psrfits spliced_pf;
     if (world_rank == 0)
     {
         logger_timed_message( log, "Preparing header for spliced PSRFITS" );
-        spliced_pf = (struct psrfits *)malloc( sizeof(struct psrfits) );
         int coarse_chan_idxs[ncoarse_chans];
 
         int i;
         for (i = 0; i < ncoarse_chans; i++)
             coarse_chan_idxs[i] = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + i;
 
-        populate_spliced_psrfits_header( spliced_pf, obs_metadata, vcs_metadata, coarse_chan_idxs, ncoarse_chans,
+        populate_spliced_psrfits_header( &spliced_pf, obs_metadata, vcs_metadata, coarse_chan_idxs, ncoarse_chans,
                 opts.max_sec_per_file, outpol_incoh, &beam_geom_vals, opts.outfile, false );
 
-        spliced_buffer = (uint8_t *)malloc( spliced_pf->sub.bytes_per_subint );
+        spliced_buffer = (uint8_t *)malloc( spliced_pf.sub.bytes_per_subint );
     }
 
     // Populate the PSRFITS header struct
@@ -234,17 +233,30 @@ int main(int argc, char **argv)
 
         logger_start_stopwatch( log, "splice" );
 
+        MPI_Datatype coarse_chan_spectrum;
+        MPI_Type_contiguous( pf.hdr.nchan, MPI_BYTE, &coarse_chan_spectrum );
+        MPI_Type_commit( &coarse_chan_spectrum );
+
+        MPI_Datatype total_spectrum_type;
+        MPI_Type_vector( pf.hdr.nsblk, world_size, world_size, coarse_chan_spectrum, &total_spectrum_type );
+        MPI_Type_commit( &total_spectrum_type );
+
+        MPI_Datatype spliced_type;
+        MPI_Type_create_resized( total_spectrum_type, 0, pf.hdr.nchan, &spliced_type );
+        MPI_Type_commit( &spliced_type );
+
         MPI_Gather( pf.sub.data,
-                pf.sub.bytes_per_subint,
-                MPI_BYTE,
-                spliced_buffer,
-                pf.sub.bytes_per_subint,
-                MPI_BYTE,
+                pf.hdr.nsblk,
+                coarse_chan_spectrum,
+                spliced_pf.sub.data,
+                pf.hdr.nsblk,
+                spliced_type,
                 0,
                 MPI_COMM_WORLD );
 
         if (world_rank == 0)
         {
+            /*
             // Re-arrange the buffer -- I'm sure there must be a standard MPI way to do this,
             // perhaps with subarrays, but I'm a noob, so for now...
             int s, c, C; // (s)ample, fine (c)han, coarse (C)han
@@ -253,20 +265,25 @@ int main(int argc, char **argv)
             for (c = 0; c < pf.hdr.nchan; c++)
             for (C = 0; C < world_size; C++)
             {
-                i = s*spliced_pf->hdr.nchan + C*pf.hdr.nchan + c;
+                i = s*spliced_pf.hdr.nchan + C*pf.hdr.nchan + c;
                 j = (C*pf.hdr.nsblk + s)*pf.hdr.nchan + c;
-                spliced_pf->sub.data[i] = spliced_buffer[j];
+                spliced_pf.sub.data[i] = spliced_buffer[j];
             }
+            */
 
             // Write it to file
-            if (psrfits_write_subint( spliced_pf ) != 0)
+            if (psrfits_write_subint( &spliced_pf ) != 0)
             {
                 fprintf(stderr, "error: Write spliced subint failed. File exists?\n");
                 exit(EXIT_FAILURE);
             }
-            spliced_pf->sub.offs = roundf(spliced_pf->tot_rows * spliced_pf->sub.tsubint) + 0.5*spliced_pf->sub.tsubint;
-            spliced_pf->sub.lst += spliced_pf->sub.tsubint;
+            spliced_pf.sub.offs = roundf(spliced_pf.tot_rows * spliced_pf.sub.tsubint) + 0.5*spliced_pf.sub.tsubint;
+            spliced_pf.sub.lst += spliced_pf.sub.tsubint;
         }
+
+        MPI_Type_free( &total_spectrum_type );
+        MPI_Type_free( &coarse_chan_spectrum );
+        MPI_Type_free( &spliced_type );
 
         logger_stop_stopwatch( log, "splice" );
     }
@@ -284,7 +301,6 @@ int main(int argc, char **argv)
     // Free up memory
     if (world_rank == 0)
     {
-        free( spliced_pf );
         free( spliced_buffer );
     }
 
