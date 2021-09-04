@@ -100,6 +100,8 @@ void destroy_logger( logger *log )
     for (i = 0; i < log->nstopwatches; i++)
     {
         free( log->stopwatches[i].name );
+        if (log->stopwatches[i].description != NULL)
+            free( log->stopwatches[i].description );
     }
 
     free( log );
@@ -110,8 +112,16 @@ void destroy_logger( logger *log )
  * Functions for manipulating user-defined stopwatches *
  *******************************************************/
 
-void logger_add_stopwatch( logger *log, const char *stopwatch_name )
+void logger_add_stopwatch( logger *log, const char *stopwatch_name, const char *description )
 {
+    // Stopwatch name cannot be NULL
+    if (stopwatch_name == NULL)
+    {
+        fprintf( stderr, "warning: logger_add_stopwatch: "
+                "stopwatch_name cannot be NULL\n" );
+        return;
+    }
+
     // Make sure the maximum allowed number of stopwatches has not been reached
     if (log->nstopwatches == PERFORMANCE_MAX_NUM_STOPWATCHES)
     {
@@ -129,13 +139,25 @@ void logger_add_stopwatch( logger *log, const char *stopwatch_name )
         return;
     }
 
-    // Add the stopwatch!
+    // Set the stopwatch name...
     log->stopwatches[log->nstopwatches].name = (char *)malloc( strlen(stopwatch_name) + 1 );
-    strcpy( log->stopwatches[log->nstopwatches++].name, stopwatch_name );
+    strcpy( log->stopwatches[log->nstopwatches].name, stopwatch_name );
+
+    // ...and description
+    if (description != NULL)
+    {
+        log->stopwatches[log->nstopwatches].description = (char *)malloc( strlen(description) + 1 );
+        strcpy( log->stopwatches[log->nstopwatches].description, description );
+    }
+    else
+        log->stopwatches[log->nstopwatches].description = NULL;
+
+    // Increment the count of stopwatches
+    log->nstopwatches++;
 }
 
 
-void logger_start_stopwatch( logger *log, const char *stopwatch_name )
+void logger_start_stopwatch( logger *log, const char *stopwatch_name, bool print_description )
 {
     int idx = get_stopwatch_idx( log, stopwatch_name );
 
@@ -164,6 +186,10 @@ void logger_start_stopwatch( logger *log, const char *stopwatch_name )
                 "\"%s\" has reached max allowed number of runs\n", stopwatch_name );
         return;
     }
+
+    // Print stopwatch description, if requested
+    if (print_description)
+        logger_timed_message( log, log->stopwatches[idx].description );
 
     // Put the current time in the next "value"
     int n = sw->nstart_stops;

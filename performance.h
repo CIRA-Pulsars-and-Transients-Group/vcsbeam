@@ -18,6 +18,7 @@
 typedef struct logger_stopwatch_t
 {
     char    *name;
+    char    *description;
     double   values[PERFORMANCE_MAX_START_STOP];
     int      nstart_stops;
     bool     running;
@@ -44,8 +45,8 @@ void destroy_logger( logger *log );
  * Functions for manipulating user-defined stopwatchs *
  **************************************************/
 
-void logger_add_stopwatch( logger *log, const char *stopwatch_name );
-void logger_start_stopwatch( logger *log, const char *stopwatch_name );
+void logger_add_stopwatch( logger *log, const char *stopwatch_name, const char *description );
+void logger_start_stopwatch( logger *log, const char *stopwatch_name, bool print_description );
 void logger_stop_stopwatch( logger *log, const char *stopwatch_name );
 
 /********************************************************************

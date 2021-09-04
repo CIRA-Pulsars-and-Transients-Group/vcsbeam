@@ -85,10 +85,10 @@ int main(int argc, char **argv)
 
     // Start a logger for output messages and time-keeping
     logger *log = create_logger( stdout, world_rank );
-    logger_add_stopwatch( log, "read" );
-    logger_add_stopwatch( log, "delay" );
-    logger_add_stopwatch( log, "calc" );
-    logger_add_stopwatch( log, "write" );
+    logger_add_stopwatch( log, "read", "Reading in data" );
+    logger_add_stopwatch( log, "delay", "Calculating geometric and cable delays" );
+    logger_add_stopwatch( log, "calc", "Calculating tied-array beam" );
+    logger_add_stopwatch( log, "write", "Writing out data to file" );
     char log_message[MAX_COMMAND_LENGTH];
 
     // Create an mwalib metafits context and associated metadata
@@ -341,7 +341,7 @@ int main(int argc, char **argv)
                     timestep_idx+1, ntimesteps, gps_second );
             logger_timed_message( log, log_message );
 
-            logger_start_stopwatch( log, "read" );
+            logger_start_stopwatch( log, "read", false );
             if (mwalib_voltage_context_read_second(
                         vcs_context,
                         gps_second,
@@ -362,7 +362,7 @@ int main(int argc, char **argv)
                     timestep_idx+1, ntimesteps );
             logger_timed_message( log, log_message );
 
-            logger_start_stopwatch( log, "delay" );
+            logger_start_stopwatch( log, "delay", false );
             sec_offset = (double)(timestep_idx + begin_gps - obs_metadata->obs_id);
             mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
             for (p = 0; p < npointing; p++)
@@ -390,7 +390,7 @@ int main(int argc, char **argv)
             sprintf( log_message, "[%lu/%lu] Calculating beam", timestep_idx+1, ntimesteps);
             logger_timed_message( log, log_message );
 
-            logger_start_stopwatch( log, "calc" );
+            logger_start_stopwatch( log, "calc", false );
             if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
             {
                 // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
@@ -442,7 +442,7 @@ int main(int argc, char **argv)
                         timestep_idx+1, ntimesteps, p+1, npointing );
                 logger_timed_message( log, log_message );
 
-                logger_start_stopwatch( log, "write" );
+                logger_start_stopwatch( log, "write", false );
 
                 if (opts.out_coh)
                     psrfits_write_second( &pfs[p], data_buffer_coh, nchans,

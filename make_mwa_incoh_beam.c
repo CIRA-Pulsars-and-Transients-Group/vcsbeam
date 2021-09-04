@@ -47,6 +47,10 @@ struct cmd_line_opts {
 void make_incoh_beam_parse_cmdline(
         int argc, char **argv, struct cmd_line_opts *opts );
 
+void read_step( VoltageContext *vcs_context, uint64_t gps_second, uintptr_t
+        coarse_chan_idx, uint8_t *data, uintptr_t data_size, logger *log );
+void write_step( mpi_psrfits *mpf, logger *log );
+
 const uintptr_t outpol_incoh = 1;  // ("I")
 
 /********
@@ -62,7 +66,6 @@ int main(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_proc_id);
 
     const int writer = 0; // Designate process 0 to write out the files
-    int ncoarse_chans = world_size; // Each process handles one coarse channel
 
     // Parse command line arguments
     struct cmd_line_opts opts;
@@ -70,17 +73,15 @@ int main(int argc, char **argv)
 
     // Start a logger for output messages and time-keeping
     logger *log = create_logger( stdout, mpi_proc_id );
-    logger_add_stopwatch( log, "read" );
-    logger_add_stopwatch( log, "calc" );
-    logger_add_stopwatch( log, "splice" );
+    logger_add_stopwatch( log, "read", "Reading in data" );
+    logger_add_stopwatch( log, "calc", "Calculating the incoherent beam" );
+    logger_add_stopwatch( log, "splice", "Splicing coarse channels together" );
     if( mpi_proc_id == writer )
-        logger_add_stopwatch( log, "write" );
+        logger_add_stopwatch( log, "write", "Writing data to file" );
     char log_message[MAX_COMMAND_LENGTH];
 
     // Create an mwalib metafits context and associated metadata
     logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
-
-    char error_message[ERROR_MESSAGE_LEN];
 
     MetafitsContext  *obs_context  = NULL;
     MetafitsMetadata *obs_metadata = NULL;
@@ -88,7 +89,8 @@ int main(int argc, char **argv)
 
     unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
 
-    uintptr_t coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + mpi_proc_id;
+    uintptr_t first_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str );
+    uintptr_t coarse_chan_idx = first_coarse_chan_idx + mpi_proc_id;
 
     sprintf( log_message, "rank = %d, coarse_chan_idx = %lu\n", mpi_proc_id, coarse_chan_idx );
     logger_timed_message( log, log_message );
@@ -138,151 +140,83 @@ int main(int argc, char **argv)
     double mjd = obs_metadata->sched_start_mjd;
     calc_beam_geom( ra_hours, dec_degs, mjd, &beam_geom_vals );
 
-    struct psrfits pf;
-    uint8_t *spliced_buffer = NULL;
-
-    struct psrfits spliced_pf;
-    if (mpi_proc_id == writer)
-    {
-        logger_timed_message( log, "Preparing header for spliced PSRFITS" );
-        int coarse_chan_idxs[ncoarse_chans];
-
-        int i;
-        for (i = 0; i < ncoarse_chans; i++)
-            coarse_chan_idxs[i] = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + i;
-
-        populate_spliced_psrfits_header( &spliced_pf, obs_metadata, vcs_metadata, coarse_chan_idxs, ncoarse_chans,
-                opts.max_sec_per_file, outpol_incoh, &beam_geom_vals, opts.outfile, false );
-
-        spliced_buffer = (uint8_t *)malloc( spliced_pf.sub.bytes_per_subint );
-    }
-
-    // Populate the PSRFITS header struct
-    sprintf( log_message, "Preparing header for output PSRFITS (receiver channel %lu)",
-            obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
-    logger_timed_message( log, log_message );
-
-    populate_psrfits_header( &pf, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-            outpol_incoh, &beam_geom_vals, opts.outfile, false );
+    mpi_psrfits mpf;
+    init_mpi_psrfits(
+        &mpf,
+        obs_metadata,
+        vcs_metadata,
+        world_size,
+        mpi_proc_id,
+        opts.max_sec_per_file,
+        outpol_incoh,
+        &beam_geom_vals,
+        opts.outfile,
+        (mpi_proc_id == writer),
+        false );
 
     // Begin the main loop: go through data one second at a time
-
-    // Create MPI vector types designed to splice the coarse channels together
-    // correctly during MPI_Gather
-
-    MPI_Datatype coarse_chan_spectrum;
-    MPI_Type_contiguous( pf.hdr.nchan, MPI_BYTE, &coarse_chan_spectrum );
-    MPI_Type_commit( &coarse_chan_spectrum );
-
-    MPI_Datatype total_spectrum_type;
-    MPI_Type_vector( pf.hdr.nsblk, 1, ncoarse_chans, coarse_chan_spectrum, &total_spectrum_type );
-    MPI_Type_commit( &total_spectrum_type );
-
-    MPI_Datatype spliced_type;
-    MPI_Type_create_resized( total_spectrum_type, 0, pf.hdr.nchan, &spliced_type );
-    MPI_Type_commit( &spliced_type );
 
     logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
 
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
-        logger_message( log, "" ); // Print a blank line
-
         // Get the next gps second 
         timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
-        // Read in data from next file
-        sprintf( log_message, "[%lu/%lu] Reading in data for gps second %ld",
-                timestep_idx+1, ntimesteps, gps_second );
-        logger_timed_message( log, log_message );
+        sprintf( log_message, "---Processing GPS second %ld [%lu/%lu]---",
+                gps_second, timestep_idx+1, ntimesteps );
+        logger_message( log, log_message );
 
-        logger_start_stopwatch( log, "read" );
-        if (mwalib_voltage_context_read_second(
-                    vcs_context,
-                    gps_second,
-                    1,
-                    coarse_chan_idx,
-                    data,
-                    data_size,
-                    error_message,
-                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+        // Read in data from next file
+        read_step( vcs_context, gps_second, coarse_chan_idx, data, data_size, log );
+
+        // The writing (of the previous second) is put here in order to
+        // allow the possibility that it can overlap with the reading step.
+        // Because of this, another "write" has to happen after this loop
+        // has terminated
+        if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s\n", error_message );
-            exit(EXIT_FAILURE);
+            wait_splice_psrfits( &mpf );
+
+            if (mpi_proc_id == writer)
+            {
+                write_step( &mpf, log );
+            }
         }
-        logger_stop_stopwatch( log, "read" );
 
         // Form the incoherent beam
-        sprintf( log_message, "[%lu/%lu] Calculating beam", timestep_idx+1, ntimesteps );
-        logger_timed_message( log, log_message );
-
-        logger_start_stopwatch( log, "calc" );
+        logger_start_stopwatch( log, "calc", true );
 
         cu_form_incoh_beam(
                 data, d_data, data_size,
                 d_incoh,
                 nsamples, nchans, ninputs,
-                pf.sub.dat_offsets, d_offsets,
-                pf.sub.dat_scales, d_scales,
-                pf.sub.data, d_Iscaled, Iscaled_size
+                mpf.coarse_chan_pf.sub.dat_offsets, d_offsets,
+                mpf.coarse_chan_pf.sub.dat_scales, d_scales,
+                mpf.coarse_chan_pf.sub.data, d_Iscaled, Iscaled_size
                 );
 
         logger_stop_stopwatch( log, "calc" );
 
 
         // Splice the channels together
+        logger_start_stopwatch( log, "splice", true );
 
-        sprintf( log_message, "[%lu/%lu] Splicing channels together", timestep_idx+1, ntimesteps );
-        logger_timed_message( log, log_message );
-
-        logger_start_stopwatch( log, "splice" );
-
-        MPI_Gather(
-                pf.sub.data, pf.hdr.nsblk, coarse_chan_spectrum,
-                spliced_pf.sub.data, 1, spliced_type,
-                0, MPI_COMM_WORLD );
-
-        MPI_Gather(
-                pf.sub.dat_offsets, pf.hdr.nchan, MPI_BYTE,
-                spliced_pf.sub.dat_offsets, pf.hdr.nchan, MPI_BYTE,
-                0, MPI_COMM_WORLD );
-
-        MPI_Gather(
-                pf.sub.dat_scales, pf.hdr.nchan, MPI_BYTE,
-                spliced_pf.sub.dat_scales, pf.hdr.nchan, MPI_BYTE,
-                0, MPI_COMM_WORLD );
+        gather_splice_psrfits( &mpf );
 
         logger_stop_stopwatch( log, "splice" );
+    }
 
-        if (mpi_proc_id == writer)
-        {
-            // Write it to file
-            sprintf( log_message, "[%lu/%lu] Writing data to file", timestep_idx+1, ntimesteps );
-            logger_timed_message( log, log_message );
+    // Write out the last second's worth of data
+    wait_splice_psrfits( &mpf );
 
-            logger_start_stopwatch( log, "write" );
-
-            if (psrfits_write_subint( &spliced_pf ) != 0)
-            {
-                fprintf(stderr, "error: Write spliced subint failed. File exists?\n");
-                exit(EXIT_FAILURE);
-            }
-            spliced_pf.sub.offs = roundf(spliced_pf.tot_rows * spliced_pf.sub.tsubint) + 0.5*spliced_pf.sub.tsubint;
-            spliced_pf.sub.lst += spliced_pf.sub.tsubint;
-
-            logger_stop_stopwatch( log, "write" );
-        }
+    if (mpi_proc_id == writer)
+    {
+        write_step( &mpf, log );
     }
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
-
-    MPI_Type_free( &spliced_type );
-    MPI_Type_free( &total_spectrum_type );
-    MPI_Type_free( &coarse_chan_spectrum );
-
-    // Clean up psrfits struct, ready for next round
-    free_psrfits( &pf );
 
     logger_report_all_stats( log );
     logger_message( log, "" );
@@ -290,10 +224,7 @@ int main(int argc, char **argv)
     logger_timed_message( log, "Starting memory clean-up" );
 
     // Free up memory
-    if (mpi_proc_id == writer)
-    {
-        free( spliced_buffer );
-    }
+    free_mpi_psrfits( &mpf );
 
     free( opts.begin_str );
     free( opts.coarse_chan_str );
@@ -460,4 +391,43 @@ void make_incoh_beam_parse_cmdline(
         opts->coarse_chan_str = strdup( "+0" );
 }
 
+void read_step( VoltageContext *vcs_context, uint64_t gps_second, uintptr_t
+        coarse_chan_idx, uint8_t *data, uintptr_t data_size, logger *log )
+{
+    // Read second's worth of data from file
+    logger_start_stopwatch( log, "read", true );
 
+    char error_message[ERROR_MESSAGE_LEN];
+    if (mwalib_voltage_context_read_second(
+                vcs_context,
+                gps_second,
+                1,
+                coarse_chan_idx,
+                data,
+                data_size,
+                error_message,
+                ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s\n", error_message );
+        exit(EXIT_FAILURE);
+    }
+
+    logger_stop_stopwatch( log, "read" );
+}
+
+
+void write_step( mpi_psrfits *mpf, logger *log )
+{
+    // Write second's worth of data to file
+    logger_start_stopwatch( log, "write", true );
+
+    if (psrfits_write_subint( &(mpf->spliced_pf) ) != 0)
+    {
+        fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");
+        exit(EXIT_FAILURE);
+    }
+    mpf->spliced_pf.sub.offs = roundf(mpf->spliced_pf.tot_rows * mpf->spliced_pf.sub.tsubint) + 0.5*mpf->spliced_pf.sub.tsubint;
+    mpf->spliced_pf.sub.lst += mpf->spliced_pf.sub.tsubint;
+
+    logger_stop_stopwatch( log, "write" );
+}

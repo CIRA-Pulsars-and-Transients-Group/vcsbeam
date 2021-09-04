@@ -10,12 +10,13 @@
 #include <time.h>
 #include <math.h>
 #include <mwalib.h>
+#include <mpi.h>
 #include "star/pal.h"
 #include "star/palmac.h"
 #include "psrfits.h"
 #include "beam_psrfits.h"
 #include "geometry.h"
-
+#include "metadata.h"
 
 void float_to_unit8(float * in, int n, int8_t *out)
 {
@@ -46,7 +47,7 @@ void populate_spliced_psrfits_header(
         struct psrfits   *pf,
         MetafitsMetadata *obs_metadata,
         VoltageMetadata  *vcs_metadata,
-        int              *coarse_chan_idxs,
+        int               first_coarse_chan_idx,
         int               ncoarse_chans,
         int               max_sec_per_file,
         int               outpol,
@@ -76,7 +77,7 @@ void populate_spliced_psrfits_header(
     strcpy( pf->hdr.frontend,  "MWA-RECVR" );
 
     snprintf( pf->hdr.source, 24, "%u", obs_metadata->obs_id );
-    snprintf( pf->hdr.backend, 24, "vcsbeam %s", VERSION_BEAMFORMER );
+    snprintf( pf->hdr.backend, 24, "%s", VERSION_BEAMFORMER );
 
     pf->hdr.scanlen = 1.0; // in sec
 
@@ -88,12 +89,13 @@ void populate_spliced_psrfits_header(
     strcpy(pf->hdr.feed_mode,  "FA");
 
     pf->hdr.dt   = 1.0/sample_rate; // (sec)
+    uintptr_t last_coarse_chan_idx = first_coarse_chan_idx + ncoarse_chans - 1;
     pf->hdr.fctr = 0.5*(
-            obs_metadata->metafits_coarse_chans[coarse_chan_idxs[0]].chan_centre_hz +
-            obs_metadata->metafits_coarse_chans[coarse_chan_idxs[ncoarse_chans-1]].chan_centre_hz) / 1e6; // (MHz)
+            obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_centre_hz +
+            obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_centre_hz) / 1e6; // (MHz)
     pf->hdr.BW = (
-            obs_metadata->metafits_coarse_chans[coarse_chan_idxs[ncoarse_chans-1]].chan_end_hz -
-            obs_metadata->metafits_coarse_chans[coarse_chan_idxs[0]].chan_start_hz
+            obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_end_hz -
+            obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz
             ) / 1e6; // MHz
 
     // npols + nbits and whether pols are added
@@ -152,8 +154,8 @@ void populate_spliced_psrfits_header(
     int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
     for (i = 0 ; i < pf->hdr.nchan; i++)
     {
-        iC = i / obs_metadata->num_volt_fine_chans_per_coarse;
-        iF = coarse_chan_idxs[iC]*obs_metadata->num_volt_fine_chans_per_coarse +
+        iC = i / obs_metadata->num_volt_fine_chans_per_coarse + first_coarse_chan_idx;
+        iF = iC*obs_metadata->num_volt_fine_chans_per_coarse +
             i % obs_metadata->num_volt_fine_chans_per_coarse;
         pf->sub.dat_freqs[i] = obs_metadata->metafits_fine_chan_freqs_hz[iF] / 1e6;
         pf->sub.dat_weights[i] = 1.0;
@@ -162,10 +164,6 @@ void populate_spliced_psrfits_header(
     // the following is definitely needed for 8 bit numbers
     pf->sub.dat_offsets = (float *)malloc(sizeof(float) * pf->hdr.nchan * pf->hdr.npol);
     pf->sub.dat_scales  = (float *)malloc(sizeof(float) * pf->hdr.nchan * pf->hdr.npol);
-    for (i = 0 ; i < pf->hdr.nchan * pf->hdr.npol ; i++) {
-        pf->sub.dat_offsets[i] = 0.0;
-        pf->sub.dat_scales[i]  = 1.0;
-    }
 
     pf->sub.data    = (unsigned char *)malloc(pf->sub.bytes_per_subint);
     pf->sub.rawdata = pf->sub.data;
@@ -260,7 +258,7 @@ void populate_psrfits_header(
     strcpy( pf->hdr.frontend,  "MWA-RECVR" );
 
     snprintf( pf->hdr.source, 24, "%u", obs_metadata->obs_id );
-    snprintf( pf->hdr.backend, 24, "vcsbeam %s", VERSION_BEAMFORMER );
+    snprintf( pf->hdr.backend, 24, "%s", VERSION_BEAMFORMER );
 
     pf->hdr.scanlen = 1.0; // in sec
 
@@ -549,4 +547,83 @@ float *create_data_buffer_psrfits( size_t size )
 {
     float *ptr = (float *)malloc( size * sizeof(float) );
     return ptr;
+}
+
+void init_mpi_psrfits(
+        mpi_psrfits *mpf,
+        MetafitsMetadata *obs_metadata,
+        VoltageMetadata *vcs_metadata,
+        int world_size,
+        int world_rank,
+        int max_sec_per_file,
+        int outpols,
+        struct beam_geom *bg,
+        char *outfile,
+        bool is_writer,
+        bool is_coherent )
+{
+    mpf->ncoarse_chans = world_size;
+    int coarse_chan_idx = vcs_metadata->provided_coarse_chan_indices[0];
+    int first_coarse_chan_idx = coarse_chan_idx - world_rank;
+
+    // Populate the PSRFITS header struct for the combined (spliced) output file
+    if (is_writer)
+        populate_spliced_psrfits_header( &(mpf->spliced_pf), obs_metadata, vcs_metadata,
+                first_coarse_chan_idx, mpf->ncoarse_chans, max_sec_per_file, outpols,
+                bg, outfile, is_coherent );
+
+    // Populate the PSRFITS header struct for a single channel
+    populate_psrfits_header( &(mpf->coarse_chan_pf), obs_metadata, vcs_metadata, coarse_chan_idx, max_sec_per_file,
+            outpols, bg, outfile, is_coherent );
+
+    // Create MPI vector types designed to splice the coarse channels together
+    // correctly during MPI_Gather
+    MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE, &(mpf->coarse_chan_spectrum) );
+    MPI_Type_commit( &(mpf->coarse_chan_spectrum) );
+
+    MPI_Type_vector( mpf->coarse_chan_pf.hdr.nsblk, 1, mpf->ncoarse_chans,
+            mpf->coarse_chan_spectrum, &(mpf->total_spectrum_type) );
+    MPI_Type_commit( &(mpf->total_spectrum_type) );
+
+    MPI_Type_create_resized( mpf->total_spectrum_type, 0, mpf->coarse_chan_pf.hdr.nchan, &(mpf->spliced_type) );
+    MPI_Type_commit( &(mpf->spliced_type) );
+}
+
+void free_mpi_psrfits( mpi_psrfits *mpf )
+{
+    MPI_Type_free( &(mpf->spliced_type) );
+    MPI_Type_free( &(mpf->total_spectrum_type) );
+    MPI_Type_free( &(mpf->coarse_chan_spectrum) );
+
+    free_psrfits( &(mpf->coarse_chan_pf) );
+
+    //if (mpf->is_writer)
+    //{
+    //    free_psrfits( &(mpf->spliced_pf) );
+    //}
+}
+
+void gather_splice_psrfits( mpi_psrfits *mpf )
+{
+    MPI_Igather(
+            mpf->coarse_chan_pf.sub.data, mpf->coarse_chan_pf.hdr.nsblk, mpf->coarse_chan_spectrum,
+            mpf->spliced_pf.sub.data, 1, mpf->spliced_type,
+            0, MPI_COMM_WORLD, &(mpf->request_data) );
+
+    MPI_Igather(
+            mpf->coarse_chan_pf.sub.dat_offsets, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
+            mpf->spliced_pf.sub.dat_offsets, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
+            0, MPI_COMM_WORLD, &(mpf->request_offsets) );
+
+    MPI_Igather(
+            mpf->coarse_chan_pf.sub.dat_scales, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
+            mpf->spliced_pf.sub.dat_scales, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
+            0, MPI_COMM_WORLD, &(mpf->request_scales) );
+}
+
+void wait_splice_psrfits( mpi_psrfits *mpf )
+{
+    MPI_Wait( &(mpf->request_data),    MPI_STATUS_IGNORE );
+    MPI_Wait( &(mpf->request_offsets), MPI_STATUS_IGNORE );
+    MPI_Wait( &(mpf->request_scales),  MPI_STATUS_IGNORE );
 }
