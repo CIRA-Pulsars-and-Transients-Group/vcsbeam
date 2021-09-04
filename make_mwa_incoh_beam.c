@@ -57,22 +57,24 @@ int main(int argc, char **argv)
 {
     // Initialise MPI
     MPI_Init( NULL, NULL );
-    int world_size, world_rank;
+    int world_size, mpi_proc_id;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_proc_id);
 
-    int ncoarse_chans = world_size;
+    const int writer = 0; // Designate process 0 to write out the files
+    int ncoarse_chans = world_size; // Each process handles one coarse channel
 
     // Parse command line arguments
     struct cmd_line_opts opts;
     make_incoh_beam_parse_cmdline( argc, argv, &opts );
 
     // Start a logger for output messages and time-keeping
-    logger *log = create_logger( stdout, world_rank );
+    logger *log = create_logger( stdout, mpi_proc_id );
     logger_add_stopwatch( log, "read" );
     logger_add_stopwatch( log, "calc" );
     logger_add_stopwatch( log, "splice" );
-    logger_add_stopwatch( log, "write" );
+    if( mpi_proc_id == writer )
+        logger_add_stopwatch( log, "write" );
     char log_message[MAX_COMMAND_LENGTH];
 
     // Create an mwalib metafits context and associated metadata
@@ -86,9 +88,9 @@ int main(int argc, char **argv)
 
     unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
 
-    uintptr_t coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + world_rank;
+    uintptr_t coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str ) + mpi_proc_id;
 
-    sprintf( log_message, "rank = %d, coarse_chan_idx = %lu\n", world_rank, coarse_chan_idx );
+    sprintf( log_message, "rank = %d, coarse_chan_idx = %lu\n", mpi_proc_id, coarse_chan_idx );
     logger_timed_message( log, log_message );
 
     VoltageContext   *vcs_context  = NULL;
@@ -140,7 +142,7 @@ int main(int argc, char **argv)
     uint8_t *spliced_buffer = NULL;
 
     struct psrfits spliced_pf;
-    if (world_rank == 0)
+    if (mpi_proc_id == writer)
     {
         logger_timed_message( log, "Preparing header for spliced PSRFITS" );
         int coarse_chan_idxs[ncoarse_chans];
@@ -164,6 +166,21 @@ int main(int argc, char **argv)
             outpol_incoh, &beam_geom_vals, opts.outfile, false );
 
     // Begin the main loop: go through data one second at a time
+
+    // Create MPI vector types designed to splice the coarse channels together
+    // correctly during MPI_Gather
+
+    MPI_Datatype coarse_chan_spectrum;
+    MPI_Type_contiguous( pf.hdr.nchan, MPI_BYTE, &coarse_chan_spectrum );
+    MPI_Type_commit( &coarse_chan_spectrum );
+
+    MPI_Datatype total_spectrum_type;
+    MPI_Type_vector( pf.hdr.nsblk, 1, ncoarse_chans, coarse_chan_spectrum, &total_spectrum_type );
+    MPI_Type_commit( &total_spectrum_type );
+
+    MPI_Datatype spliced_type;
+    MPI_Type_create_resized( total_spectrum_type, 0, pf.hdr.nchan, &spliced_type );
+    MPI_Type_commit( &spliced_type );
 
     logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
 
@@ -215,63 +232,26 @@ int main(int argc, char **argv)
 
 
         // Write out to file
+
         sprintf( log_message, "[%lu/%lu] Writing data to file", timestep_idx+1, ntimesteps );
         logger_timed_message( log, log_message );
 
-        logger_start_stopwatch( log, "write" );
-
-        //psrfits_write_second( &pf, incoh, nchans, outpol_incoh, 0 );
-        if (psrfits_write_subint( &pf ) != 0)
-        {
-            fprintf(stderr, "error: Write subint failed. File exists?\n");
-            exit(EXIT_FAILURE);
-        }
-        pf.sub.offs = roundf(pf.tot_rows * pf.sub.tsubint) + 0.5*pf.sub.tsubint;
-        pf.sub.lst += pf.sub.tsubint;
-
-        logger_stop_stopwatch( log, "write" );
-
         logger_start_stopwatch( log, "splice" );
-
-        MPI_Datatype coarse_chan_spectrum;
-        MPI_Type_contiguous( pf.hdr.nchan, MPI_BYTE, &coarse_chan_spectrum );
-        MPI_Type_commit( &coarse_chan_spectrum );
-
-        MPI_Datatype total_spectrum_type;
-        MPI_Type_vector( pf.hdr.nsblk, world_size, world_size, coarse_chan_spectrum, &total_spectrum_type );
-        MPI_Type_commit( &total_spectrum_type );
-
-        MPI_Datatype spliced_type;
-        MPI_Type_create_resized( total_spectrum_type, 0, pf.hdr.nchan, &spliced_type );
-        MPI_Type_commit( &spliced_type );
 
         MPI_Gather( pf.sub.data,
                 pf.hdr.nsblk,
                 coarse_chan_spectrum,
                 spliced_pf.sub.data,
-                pf.hdr.nsblk,
+                1,
                 spliced_type,
                 0,
                 MPI_COMM_WORLD );
 
-        if (world_rank == 0)
+        if (mpi_proc_id == writer)
         {
-            /*
-            // Re-arrange the buffer -- I'm sure there must be a standard MPI way to do this,
-            // perhaps with subarrays, but I'm a noob, so for now...
-            int s, c, C; // (s)ample, fine (c)han, coarse (C)han
-            int i, j;    // idxs into spliced_pf (i) and spliced_buffer (j)
-            for (s = 0; s < pf.hdr.nsblk; s++)
-            for (c = 0; c < pf.hdr.nchan; c++)
-            for (C = 0; C < world_size; C++)
-            {
-                i = s*spliced_pf.hdr.nchan + C*pf.hdr.nchan + c;
-                j = (C*pf.hdr.nsblk + s)*pf.hdr.nchan + c;
-                spliced_pf.sub.data[i] = spliced_buffer[j];
-            }
-            */
-
             // Write it to file
+            logger_start_stopwatch( log, "write" );
+
             if (psrfits_write_subint( &spliced_pf ) != 0)
             {
                 fprintf(stderr, "error: Write spliced subint failed. File exists?\n");
@@ -279,16 +259,19 @@ int main(int argc, char **argv)
             }
             spliced_pf.sub.offs = roundf(spliced_pf.tot_rows * spliced_pf.sub.tsubint) + 0.5*spliced_pf.sub.tsubint;
             spliced_pf.sub.lst += spliced_pf.sub.tsubint;
+
+            logger_stop_stopwatch( log, "write" );
         }
 
-        MPI_Type_free( &total_spectrum_type );
-        MPI_Type_free( &coarse_chan_spectrum );
-        MPI_Type_free( &spliced_type );
-
         logger_stop_stopwatch( log, "splice" );
+
     }
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
+
+    MPI_Type_free( &spliced_type );
+    MPI_Type_free( &total_spectrum_type );
+    MPI_Type_free( &coarse_chan_spectrum );
 
     // Clean up psrfits struct, ready for next round
     free_psrfits( &pf );
@@ -299,7 +282,7 @@ int main(int argc, char **argv)
     logger_timed_message( log, "Starting memory clean-up" );
 
     // Free up memory
-    if (world_rank == 0)
+    if (mpi_proc_id == writer)
     {
         free( spliced_buffer );
     }
