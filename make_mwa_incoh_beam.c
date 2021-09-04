@@ -231,25 +231,36 @@ int main(int argc, char **argv)
         logger_stop_stopwatch( log, "calc" );
 
 
-        // Write out to file
+        // Splice the channels together
 
-        sprintf( log_message, "[%lu/%lu] Writing data to file", timestep_idx+1, ntimesteps );
+        sprintf( log_message, "[%lu/%lu] Splicing channels together", timestep_idx+1, ntimesteps );
         logger_timed_message( log, log_message );
 
         logger_start_stopwatch( log, "splice" );
 
-        MPI_Gather( pf.sub.data,
-                pf.hdr.nsblk,
-                coarse_chan_spectrum,
-                spliced_pf.sub.data,
-                1,
-                spliced_type,
-                0,
-                MPI_COMM_WORLD );
+        MPI_Gather(
+                pf.sub.data, pf.hdr.nsblk, coarse_chan_spectrum,
+                spliced_pf.sub.data, 1, spliced_type,
+                0, MPI_COMM_WORLD );
+
+        MPI_Gather(
+                pf.sub.dat_offsets, pf.hdr.nchan, MPI_BYTE,
+                spliced_pf.sub.dat_offsets, pf.hdr.nchan, MPI_BYTE,
+                0, MPI_COMM_WORLD );
+
+        MPI_Gather(
+                pf.sub.dat_scales, pf.hdr.nchan, MPI_BYTE,
+                spliced_pf.sub.dat_scales, pf.hdr.nchan, MPI_BYTE,
+                0, MPI_COMM_WORLD );
+
+        logger_stop_stopwatch( log, "splice" );
 
         if (mpi_proc_id == writer)
         {
             // Write it to file
+            sprintf( log_message, "[%lu/%lu] Writing data to file", timestep_idx+1, ntimesteps );
+            logger_timed_message( log, log_message );
+
             logger_start_stopwatch( log, "write" );
 
             if (psrfits_write_subint( &spliced_pf ) != 0)
@@ -262,9 +273,6 @@ int main(int argc, char **argv)
 
             logger_stop_stopwatch( log, "write" );
         }
-
-        logger_stop_stopwatch( log, "splice" );
-
     }
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
