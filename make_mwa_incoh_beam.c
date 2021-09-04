@@ -177,12 +177,7 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            wait_splice_psrfits( &mpf );
-
-            if (mpi_proc_id == writer)
-            {
-                write_step( &mpf, log );
-            }
+            write_step( &mpf, log );
         }
 
         // Form the incoherent beam
@@ -209,12 +204,7 @@ int main(int argc, char **argv)
     }
 
     // Write out the last second's worth of data
-    wait_splice_psrfits( &mpf );
-
-    if (mpi_proc_id == writer)
-    {
-        write_step( &mpf, log );
-    }
+    write_step( &mpf, log );
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
 
@@ -418,16 +408,21 @@ void read_step( VoltageContext *vcs_context, uint64_t gps_second, uintptr_t
 
 void write_step( mpi_psrfits *mpf, logger *log )
 {
-    // Write second's worth of data to file
-    logger_start_stopwatch( log, "write", true );
+    wait_splice_psrfits( mpf );
 
-    if (psrfits_write_subint( &(mpf->spliced_pf) ) != 0)
+    if (mpf->is_writer)
     {
-        fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");
-        exit(EXIT_FAILURE);
-    }
-    mpf->spliced_pf.sub.offs = roundf(mpf->spliced_pf.tot_rows * mpf->spliced_pf.sub.tsubint) + 0.5*mpf->spliced_pf.sub.tsubint;
-    mpf->spliced_pf.sub.lst += mpf->spliced_pf.sub.tsubint;
+        // Write second's worth of data to file
+        logger_start_stopwatch( log, "write", true );
 
-    logger_stop_stopwatch( log, "write" );
+        if (psrfits_write_subint( &(mpf->spliced_pf) ) != 0)
+        {
+            fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");
+            exit(EXIT_FAILURE);
+        }
+        mpf->spliced_pf.sub.offs = roundf(mpf->spliced_pf.tot_rows * mpf->spliced_pf.sub.tsubint) + 0.5*mpf->spliced_pf.sub.tsubint;
+        mpf->spliced_pf.sub.lst += mpf->spliced_pf.sub.tsubint;
+
+        logger_stop_stopwatch( log, "write" );
+    }
 }

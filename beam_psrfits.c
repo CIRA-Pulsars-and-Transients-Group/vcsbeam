@@ -563,6 +563,7 @@ void init_mpi_psrfits(
         bool is_coherent )
 {
     mpf->ncoarse_chans = world_size;
+    mpf->is_writer = is_writer;
     int coarse_chan_idx = vcs_metadata->provided_coarse_chan_indices[0];
     int first_coarse_chan_idx = coarse_chan_idx - world_rank;
 
@@ -597,10 +598,10 @@ void free_mpi_psrfits( mpi_psrfits *mpf )
 
     free_psrfits( &(mpf->coarse_chan_pf) );
 
-    //if (mpf->is_writer)
-    //{
-    //    free_psrfits( &(mpf->spliced_pf) );
-    //}
+    if (mpf->is_writer)
+    {
+        free_psrfits( &(mpf->spliced_pf) );
+    }
 }
 
 void gather_splice_psrfits( mpi_psrfits *mpf )
