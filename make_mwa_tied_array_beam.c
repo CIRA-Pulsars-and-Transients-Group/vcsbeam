@@ -242,7 +242,6 @@ int main(int argc, char **argv)
         cudaStreamCreate(&(streams[p])) ;
 
     // Create structures for holding header information
-    // <<<<<
     mpi_psrfits mpfs[npointing];
     for (p = 0; p < npointing; p++)
     {
@@ -259,10 +258,7 @@ int main(int argc, char **argv)
                 (mpi_proc_id == writer),
                 true );
     }
-    // -----
-    struct psrfits  *pfs;
-    pfs = (struct psrfits *)malloc(npointing * sizeof(struct psrfits));
-    // >>>>>
+
     vdif_header     vhdr;
     struct vdifinfo *vf;
     vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
@@ -318,10 +314,6 @@ int main(int argc, char **argv)
     logger_message( log, log_message );
 
     // Populate the relevant header structs
-    for (p = 0; p < npointing; p++)
-        populate_psrfits_header( &pfs[p], obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-                NSTOKES, &beam_geom_vals[p], NULL, true );
-
     populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, coarse_chan_idx,
             beam_geom_vals, npointing );
 
@@ -358,6 +350,7 @@ int main(int argc, char **argv)
 
         // Get the next second's worth of phases / jones matrices, if needed
         logger_start_stopwatch( log, "delay", true );
+
         sec_offset = (double)(timestep_idx + begin_gps - obs_metadata->obs_id);
         mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
         for (p = 0; p < npointing; p++)
@@ -388,18 +381,19 @@ int main(int argc, char **argv)
                     detected_beam, data_buffer_coh,
                     streams, nchunk );
 
+        logger_stop_stopwatch( log, "calc" );
+
         // Invert the PFB, if requested
+        logger_start_stopwatch( log, "ipfb", true );
+
         if (opts.out_vdif)
         {
-            sprintf( log_message, "[%lu/%lu] Inverting the PFB (full)",
-                    timestep_idx+1, ntimesteps);
-            logger_timed_message( log, log_message );
             cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
         }
-        logger_stop_stopwatch( log, "calc" );
 
+        logger_stop_stopwatch( log, "ipfb" );
 
         // Write out for each pointing
         for (p = 0; p < npointing; p++)
@@ -407,7 +401,7 @@ int main(int argc, char **argv)
             logger_start_stopwatch( log, "write", true );
 
             if (opts.out_coh)
-                psrfits_write_second( &pfs[p], data_buffer_coh, nchans,
+                psrfits_write_second( &(mpfs[p].coarse_chan_pf), data_buffer_coh, nchans,
                         NSTOKES, p );
             if (opts.out_vdif)
                 vdif_write_second( &vf[p], &vhdr,
@@ -421,10 +415,8 @@ int main(int argc, char **argv)
     // Clean up channel-dependent memory
     for (p = 0; p < npointing; p++)
     {
-        if (opts.out_coh)
-        {
-            free_psrfits( &pfs[p] );
-        }
+        free_mpi_psrfits( &(mpfs[p]) );
+
         if (opts.out_vdif)
         {
             free( vf[p].b_scales  );

@@ -238,49 +238,57 @@ __global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, 
 {
     // For just doing stokes I
     // One block
-    // 128 threads each thread will do one channel
+    // 128 threads; each thread will do one channel
     // (we have already summed over all ant)
 
     // For doing the C array (I,Q,U,V)
     // ... figure it out later.
 
     // Translate GPU block/thread numbers into meaningful names
-    int chan = threadIdx.x; /* The (c)hannel number */
-    int nchan = blockDim.x; /* The total number of channels */
+    int chan    = threadIdx.x; /* The (c)hannel number */
+    int nchan   = blockDim.x;  /* The total number of channels */
+    int nstokes = blockDim.y;  /* Typically, is either 1 (just Stokes I) or 4 (Stokes IQUV) */
+    int stokes  = threadIdx.y; /* The (stokes) parameter */
+    int p       = blockIdx.x;  /* The (p)ointing number */
+
     float val, scale, offset;
+    float summed = 0.0;
 
     // Initialise min and max values to the first sample
-    float min = I[I_IDX(0,chan,nchan)];
-    float max = I[I_IDX(0,chan,nchan)];
+    float min = I[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
+    float max = I[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
 
     // Get the data statistics
     int i;
     for (i = 0; i < nstep; i++)
     {
-        val = I[I_IDX(i,chan,nchan)];
+        val = I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)];
         min = (val < min ? val : min);
         max = (val > max ? val : max);
+        summed += fabsf(val);
     }
 
     scale  = 127.0 / (max - min); // 127 = 2^7 - 1 (for signed 8-bit values)
     offset = 0.5*(max + min);
 
+    float mean = summed / nstep;
+
     // Rescale the incoherent beam
     for (i = 0; i < nstep; i++)
     {
-        val = (I[I_IDX(i,chan,nchan)] - offset) * scale;
-        I[I_IDX(i,chan,nchan)] = val;
+        val = (I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) * scale;
+        I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] *= 32.0/mean;
 
         if (Iscaled != NULL)
-            Iscaled[I_IDX(i,chan,nchan)] = (uint8_t)(val + 128.5);
+            Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 128.5);
     }
 
     // Set the scales and offsets, accounting for the 128-offset
     if (scales != NULL)
-        scales[chan] = scale;
+        scales[p*nchan + chan] = scale*mean;
 
     if (offsets != NULL)
-        offsets[chan] = offset - 128.0/scale;
+        offsets[p*nchan + chan] = (offset - 128.0/scale)/mean;
 }
 
 
@@ -363,7 +371,9 @@ void cu_form_incoh_beam(
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
 
-    flatten_bandpass_I_kernel<<<1, nchan>>>( d_incoh, nsample, d_offsets, d_scales, d_Iscaled );
+    dim3 chan_stokes(nchan, 1);
+    int npointing = 1;
+    flatten_bandpass_I_kernel<<<npointing, chan_stokes>>>( d_incoh, nsample, d_offsets, d_scales, d_Iscaled );
     gpuErrchk( cudaPeekAtLastError() );
 
     // Copy the results back into host memory
@@ -467,8 +477,9 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
     // Flatten the bandpass
     dim3 chan_stokes(nchan, NSTOKES);
-    flatten_bandpass_C_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh,
-                                                                sample_rate );
+    //flatten_bandpass_C_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate );
+    //flatten_bandpass_I_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate, d_offsets, d_scales, d_Cscaled );
+    flatten_bandpass_I_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate, NULL, NULL, NULL );
     gpuErrchk( cudaPeekAtLastError() );
 
     gpuErrchk( cudaDeviceSynchronize() );
