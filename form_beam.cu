@@ -77,7 +77,6 @@ __global__ void invj_the_data( uint8_t       *data,
                                cuDoubleComplex *JDx,
                                cuDoubleComplex *JDy,
                                float         *Ia,
-                               int            incoh,
                                uint32_t      *polX_idxs,
                                uint32_t      *polY_idxs,
                                int npol )
@@ -108,16 +107,6 @@ __global__ void invj_the_data( uint8_t       *data,
     Dx  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iX,nc,ni)]);
     Dy  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iY,nc,ni)]);
 
-    // If tile is flagged in the calibration, flag it in the incoherent beam
-    if (incoh)
-    {
-        if (cuCreal(phi[PHI_IDX(0,ant,c,nant,nc)]) == 0.0 &&
-            cuCimag(phi[PHI_IDX(0,ant,c,nant,nc)]) == 0.0)
-            Ia[JD_IDX(s,c,ant,nc,nant)] = 0.0;
-        else
-            Ia[JD_IDX(s,c,ant,nc,nant)] = DETECT(Dx) + DETECT(Dy);
-    }
-
     // Calculate the first step (J*D) of the coherent beam (B = J*phi*D)
     // Nick: by my math the order should be:
     // JDx = Jxx*Dx + Jxy*Dy
@@ -136,33 +125,25 @@ __global__ void invj_the_data( uint8_t       *data,
 __global__ void beamform_kernel( cuDoubleComplex *JDx,
                                  cuDoubleComplex *JDy,
                                  cuDoubleComplex *phi,
-                                 float *Iin,
                                  double invw,
                                  int p,
-                                 int coh_pol,
-                                 int incoh,
                                  int soffset,
                                  int nchunk,
                                  cuDoubleComplex *Bd,
                                  float *C,
-                                 float *I,
                                  int npol )
 /* Layout for input arrays:
 *   JDx  [nsamples] [nchan] [nant]               -- calibrated voltages
 *   JDy  [nsamples] [nchan] [nant]
 *   phi  [nant    ] [nchan]                      -- weights array
-*   Iin  [nsamples] [nchan] [nant]               -- detected incoh
 *   invw                                         -- inverse atrix
 * Layout of input options
 *   p                                            -- pointing number
-*   coh_pol                                      -- coherent polorisation number
-*   incoh                                        -- true if outputing an incoherent beam
 *   soffset                                      -- sample offset (10000/nchunk)
 *   nchunk                                       -- number of chunks each second is split into
 * Layout for output arrays:
 *   Bd   [nsamples] [nchan]   [npol]             -- detected beam
 *   C    [nsamples] [nstokes] [nchan]            -- coherent full stokes
-*   I    [nsamples] [nchan]                      -- incoherent
 */
 {
     // Translate GPU block/thread numbers into meaning->l names
@@ -203,8 +184,6 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
     //Nyx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     Nyy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
 
-    if ((p == 0) && (incoh)) Ia[ant] = Iin[JD_IDX(s,c,ant,nc,nant)];
-
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
     Bx[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDx[JD_IDX(s,c,ant,nc,nant)] );
@@ -224,7 +203,6 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
     {
         if (ant < h_ant)
         {
-            if ( (p == 0) && (incoh)) Ia[ant] += Ia[ant+h_ant];
             Bx[ant]  = cuCadd( Bx[ant],  Bx[ant  + h_ant] );
             By[ant]  = cuCadd( By[ant],  By[ant  + h_ant] );
             Nxx[ant] = cuCadd( Nxx[ant], Nxx[ant + h_ant] );
@@ -246,17 +224,11 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
         cuDoubleComplex bnXY = cuCsub( cuCmul( Bx[0], cuConj( By[0] ) ),
                                     Nxy[0] );
 
-        // The incoherent beam
-        if ( (p == 0) && (incoh)) I[I_IDX(s+soffset,c,nc)] = Ia[0];
-
         // Stokes I, Q, U, V:
-        C[C_IDX(p,s+soffset,0,c,ns,coh_pol,nc)] = invw*(bnXX + bnYY);
-        if ( coh_pol == 4 )
-        {
-            C[C_IDX(p,s+soffset,1,c,ns,coh_pol,nc)] = invw*(bnXX - bnYY);
-            C[C_IDX(p,s+soffset,2,c,ns,coh_pol,nc)] =  2.0*invw*cuCreal( bnXY );
-            C[C_IDX(p,s+soffset,3,c,ns,coh_pol,nc)] = -2.0*invw*cuCimag( bnXY );
-        }
+        C[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = invw*(bnXX + bnYY);
+        C[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = invw*(bnXX - bnYY);
+        C[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] =  2.0*invw*cuCreal( bnXY );
+        C[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
 
         // The beamformed products
         Bd[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = Bx[0];
@@ -407,10 +379,10 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
                    cuDoubleComplex *d_phi,
                    cuDoubleComplex ****invJi, int file_no,
                    int npointing, int nstation, int nchan,
-                   int npol, int outpol_coh, double invw,
+                   int npol, double invw,
                    struct gpu_formbeam_arrays *g,
-                   cuDoubleComplex ****detected_beam, float *coh, float *incoh,
-                   cudaStream_t *streams, int incoh_check, int nchunk )
+                   cuDoubleComplex ****detected_beam, float *coh,
+                   cudaStream_t *streams, int nchunk )
 /* Inputs:
 *   data    = array of 4bit+4bit complex numbers. For data order, refer to the
 *             documentation.
@@ -421,7 +393,6 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 *   nstation     = number of antennas
 *   nchan        = number of channels
 *   npol         = number of polarisations (=2)
-*   outpol_coh   = 4 (I,Q,U,V)
 *   invw         = the reciprocal of the sum of the antenna weights
 *   g            = struct containing pointers to various arrays on
 *                  both host and device
@@ -477,7 +448,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
         // convert the data and multiply it by J
         invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, d_phi, g->d_JDx, g->d_JDy,
-                                               g->d_Ia, incoh_check, g->d_polX_idxs, g->d_polY_idxs,
+                                               g->d_Ia, g->d_polX_idxs, g->d_polY_idxs,
                                                npol );
 
         // Send off a parallel CUDA stream for each pointing
@@ -486,9 +457,9 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
             // Call the beamformer kernel
             // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
             beamform_kernel<<<chan_samples, stat, 11*nstation*sizeof(double), streams[p]>>>( g->d_JDx, g->d_JDy,
-                            d_phi, g->d_Ia, invw,
-                            p, outpol_coh , incoh_check, ichunk*sample_rate/nchunk, nchunk,
-                            g->d_Bd, g->d_coh, g->d_incoh, npol );
+                            d_phi, invw,
+                            p, ichunk*sample_rate/nchunk, nchunk,
+                            g->d_Bd, g->d_coh, npol );
 
             gpuErrchk( cudaPeekAtLastError() );
         }
@@ -497,13 +468,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
 
     // Flatten the bandpass
-    if ( incoh_check )
-    {
-        flatten_bandpass_I_kernel<<<1, nchan, 0, streams[0]>>>( g->d_incoh, sample_rate, NULL, NULL, NULL );
-        gpuErrchk( cudaPeekAtLastError() );
-    }
-    // Now do the same for the coherent beam
-    dim3 chan_stokes(nchan, outpol_coh);
+    dim3 chan_stokes(nchan, NSTOKES);
     flatten_bandpass_C_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh,
                                                                 sample_rate );
     gpuErrchk( cudaPeekAtLastError() );
@@ -512,7 +477,6 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
     // Copy the results back into host memory
     gpuErrchk(cudaMemcpyAsync( g->Bd, g->d_Bd,    g->Bd_size,    cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( incoh, g->d_incoh, g->incoh_size, cudaMemcpyDeviceToHost ));
     gpuErrchk(cudaMemcpyAsync( coh,   g->d_coh,   g->coh_size,   cudaMemcpyDeviceToHost ));
 
     // Copy the data back from Bd back into the detected_beam array

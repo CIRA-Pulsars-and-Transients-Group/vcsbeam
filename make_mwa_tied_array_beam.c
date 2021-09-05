@@ -41,7 +41,6 @@ struct make_tied_array_beam_opts {
     char              *custom_flags;  // Use custom list for flagging antennas
 
     // Output options
-    int                out_incoh;     // Default = PSRFITS (incoherent) output turned OFF
     int                out_coh;       // Default = PSRFITS (coherent)   output turned OFF
     int                out_vdif;      // Default = VDIF                 output turned OFF
     int                out_uvdif;     // Default = upsampled VDIF       output turned OFF
@@ -350,17 +349,16 @@ int main(int argc, char **argv)
 
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
-        logger_message( log, "" ); // Print a blank line
-
         timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
         gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
 
-        // Read in data from next file
-        sprintf( log_message, "[%lu/%lu] Reading in data for gps second %ld",
-                timestep_idx+1, ntimesteps, gps_second );
-        logger_timed_message( log, log_message );
+        sprintf( log_message, "---Processing GPS second %ld [%lu/%lu]---",
+                gps_second, timestep_idx+1, ntimesteps );
+        logger_message( log, log_message );
 
-        logger_start_stopwatch( log, "read", false );
+        // Read in data from next file
+        logger_start_stopwatch( log, "read", true );
+
         if (mwalib_voltage_context_read_second(
                     vcs_context,
                     gps_second,
@@ -377,11 +375,7 @@ int main(int argc, char **argv)
         logger_stop_stopwatch( log, "read" );
 
         // Get the next second's worth of phases / jones matrices, if needed
-        sprintf( log_message, "[%lu/%lu] Calculating Jones matrices",
-                timestep_idx+1, ntimesteps );
-        logger_timed_message( log, log_message );
-
-        logger_start_stopwatch( log, "delay", false );
+        logger_start_stopwatch( log, "delay", true );
         sec_offset = (double)(timestep_idx + begin_gps - obs_metadata->obs_id);
         mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
         for (p = 0; p < npointing; p++)
@@ -406,10 +400,7 @@ int main(int argc, char **argv)
         logger_stop_stopwatch( log, "delay" );
 
         // Form the beams
-        sprintf( log_message, "[%lu/%lu] Calculating beam", timestep_idx+1, ntimesteps);
-        logger_timed_message( log, log_message );
-
-        logger_start_stopwatch( log, "calc", false );
+        logger_start_stopwatch( log, "calc", true );
         if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
         {
             // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
@@ -436,9 +427,9 @@ int main(int argc, char **argv)
         else // beamform (the default mode)
         {
             cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
-                    npointing, nants, nchans, npols, outpol_coh, invw, &gf,
-                    detected_beam, data_buffer_coh, data_buffer_incoh,
-                    streams, opts.out_incoh, nchunk );
+                    npointing, nants, nchans, npols, &gf,
+                    detected_beam, data_buffer_coh,
+                    streams, nchunk );
         }
 
         // Invert the PFB, if requested
@@ -457,18 +448,11 @@ int main(int argc, char **argv)
         // Write out for each pointing
         for (p = 0; p < npointing; p++)
         {
-            sprintf( log_message, "[%lu/%lu] [%d/%d] Writing data to file(s)",
-                    timestep_idx+1, ntimesteps, p+1, npointing );
-            logger_timed_message( log, log_message );
-
-            logger_start_stopwatch( log, "write", false );
+            logger_start_stopwatch( log, "write", true );
 
             if (opts.out_coh)
                 psrfits_write_second( &pfs[p], data_buffer_coh, nchans,
                         outpol_coh, p );
-            if (opts.out_incoh && p == 0)
-                psrfits_write_second( &pf_incoh, data_buffer_incoh,
-                        nchans, outpol_incoh, p );
             if (opts.out_vdif)
                 vdif_write_second( &vf[p], &vhdr,
                         data_buffer_vdif + p * vf->sizeof_buffer );
@@ -479,10 +463,6 @@ int main(int argc, char **argv)
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
 
     // Clean up channel-dependent memory
-    if (opts.out_incoh)
-    {
-        free_psrfits( &pf_incoh );
-    }
     for (p = 0; p < npointing; p++)
     {
         if (opts.out_coh)
@@ -572,7 +552,6 @@ void usage() {
             "\t                           relative to the first or last channel in the observation\n"
             "\t                           respectively. Otherwise, it is treated as a receiver channel number\n"
             "\t                           (0-255) [default: \"+0\"]\n"
-            "\t-i, --incoh                Turn on incoherent PSRFITS beam output.                             [default: OFF]\n"
             "\t-p, --psrfits              Turn on coherent PSRFITS output (will be turned on if none of\n"
             "\t                           -i, -p, -u, -v are chosen).                                         [default: OFF]\n"
             "\t-v, --vdif                 Turn on VDIF output with upsampling                                 [default: OFF]\n"
@@ -623,7 +602,6 @@ void make_tied_array_beam_parse_cmdline(
     opts->datadir            = NULL; // The path to where the recombined data live
     opts->metafits           = NULL; // filename of the metafits file for the target observation
     opts->coarse_chan_str    = NULL; // Absolute or relative coarse channel
-    opts->out_incoh          = 0;    // Default = PSRFITS (incoherent) output turned OFF
     opts->out_coh            = 0;    // Default = PSRFITS (coherent)   output turned OFF
     opts->out_vdif           = 0;    // Default = VDIF                 output turned OFF
     opts->out_bf             = 1;    // Default = beamform all (non-flagged) antennas
@@ -649,7 +627,6 @@ void make_tied_array_beam_parse_cmdline(
 
             static struct option long_options[] = {
                 {"begin",           required_argument, 0, 'b'},
-                {"incoh",           no_argument,       0, 'i'},
                 {"psrfits",         no_argument,       0, 'p'},
                 {"vdif",            no_argument,       0, 'v'},
                 {"summed",          no_argument,       0, 's'},
@@ -674,7 +651,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:c:d:C:f:F:g:him:OpP:R:sS:t:T:UvVX",
+                             "A:b:c:d:C:f:F:g:hm:OpP:R:sS:t:T:UvVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -711,9 +688,6 @@ void make_tied_array_beam_parse_cmdline(
                 case 'h':
                     usage();
                     exit(0);
-                    break;
-                case 'i':
-                    opts->out_incoh = 1;
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);
@@ -802,7 +776,7 @@ void make_tied_array_beam_parse_cmdline(
     }
 
     // If neither -i, -p, nor -v were chosen, set -p by default
-    if ( !opts->out_incoh && !opts->out_coh && !opts->out_vdif )
+    if ( !opts->out_coh && !opts->out_vdif )
     {
         opts->out_coh = 1;
     }

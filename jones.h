@@ -13,6 +13,8 @@
 #include <cuComplex.h>
 #include <mwalib.h>
 
+#define NSTOKES  4
+
 #define cudaCheckErrors(msg) \
     do { \
         cudaError_t __err = cudaGetLastError(); \
