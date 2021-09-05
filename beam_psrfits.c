@@ -598,14 +598,14 @@ void init_mpi_psrfits(
 
     // Create MPI vector types designed to splice the coarse channels together
     // correctly during MPI_Gather
-    MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan*nstokes, MPI_BYTE, &(mpf->coarse_chan_spectrum) );
+    MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE, &(mpf->coarse_chan_spectrum) );
     MPI_Type_commit( &(mpf->coarse_chan_spectrum) );
 
-    MPI_Type_vector( mpf->coarse_chan_pf.hdr.nsblk, 1, mpf->ncoarse_chans,
+    MPI_Type_vector( mpf->coarse_chan_pf.hdr.nsblk*nstokes, 1, mpf->ncoarse_chans,
             mpf->coarse_chan_spectrum, &(mpf->total_spectrum_type) );
     MPI_Type_commit( &(mpf->total_spectrum_type) );
 
-    MPI_Type_create_resized( mpf->total_spectrum_type, 0, mpf->coarse_chan_pf.hdr.nchan*nstokes, &(mpf->spliced_type) );
+    MPI_Type_create_resized( mpf->total_spectrum_type, 0, mpf->coarse_chan_pf.hdr.nchan, &(mpf->spliced_type) );
     MPI_Type_commit( &(mpf->spliced_type) );
 }
 

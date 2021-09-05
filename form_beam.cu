@@ -286,10 +286,10 @@ __global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, 
 
     // Set the scales and offsets, accounting for the 128-offset
     if (scales != NULL)
-        scales[p*nchan + chan] = scale*mean;
+        scales[p*nstokes*nchan + stokes*nchan + chan] = scale*mean;
 
     if (offsets != NULL)
-        offsets[p*nchan + chan] = (offset - 128.0/scale)/mean;
+        offsets[p*nstokes*nchan + stokes*nchan + chan] = (offset - 128.0/scale)/mean;
 }
 
 
@@ -412,10 +412,6 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 *                   [2*nsamples][nchan][npol]
 *   coh           = result in Stokes parameters (minus noise floor)
 *                   [nsamples][nstokes][nchan]
-*   incoh         = result (just Stokes I)
-*                   [nsamples][nchan]
-*
-* Assumes "coh" and "incoh" contain only zeros.
 */
 {
     // Setup input values (= populate J)
