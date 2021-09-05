@@ -68,7 +68,8 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex *d_p
                    int npointing, int nstation, int nchan,
                    int npol, double invw, struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
-                   cudaStream_t *streams, int nchunk  );
+                   cudaStream_t *streams, int nchunk,
+                   mpi_psrfits *mpfs );
 
 float *create_pinned_data_buffer_psrfits( size_t size );
         

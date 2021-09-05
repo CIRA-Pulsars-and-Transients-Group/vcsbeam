@@ -72,7 +72,7 @@ void init_mpi_psrfits(
         int world_size,
         int world_rank,
         int max_sec_per_file,
-        int outpols,
+        int nstokes,
         struct beam_geom *bg,
         char *outfile,
         bool is_writer,

@@ -14,6 +14,7 @@
 #include <cuda_runtime.h>
 
 #include "jones.h"
+#include "beam_psrfits.h"
 
 extern "C" {
 #include "geometry.h"
@@ -390,7 +391,8 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
                    int npol, double invw,
                    struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
-                   cudaStream_t *streams, int nchunk )
+                   cudaStream_t *streams, int nchunk,
+                   mpi_psrfits *mpfs )
 /* Inputs:
 *   data    = array of 4bit+4bit complex numbers. For data order, refer to the
 *             documentation.
@@ -476,13 +478,45 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
 
     // Flatten the bandpass
-    dim3 chan_stokes(nchan, NSTOKES);
-    //flatten_bandpass_C_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate );
-    //flatten_bandpass_I_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate, d_offsets, d_scales, d_Cscaled );
-    flatten_bandpass_I_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate, NULL, NULL, NULL );
-    gpuErrchk( cudaPeekAtLastError() );
+    float *d_offsets, *offsets;
+    float *d_scales, *scales;
+    uint8_t *d_Cscaled, *Cscaled;
 
+    size_t offsets_size = npointing*nchan*NSTOKES*sizeof(float);
+    size_t scales_size  = npointing*nchan*NSTOKES*sizeof(float);
+    size_t Cscaled_size = npointing*sample_rate*nchan*NSTOKES*sizeof(uint8_t);
+
+    gpuErrchk(cudaMalloc( (void **)&d_offsets, offsets_size ));
+    gpuErrchk(cudaMalloc( (void **)&d_scales,  scales_size ));
+    gpuErrchk(cudaMalloc( (void **)&d_Cscaled, Cscaled_size ));
+
+    gpuErrchk(cudaMallocHost( (void **)&offsets, offsets_size ));
+    gpuErrchk(cudaMallocHost( (void **)&scales,  scales_size ));
+    gpuErrchk(cudaMallocHost( (void **)&Cscaled, Cscaled_size ));
+
+    dim3 chan_stokes(nchan, NSTOKES);
+    flatten_bandpass_I_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate, d_offsets, d_scales, d_Cscaled );
+    gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
+
+    gpuErrchk(cudaMemcpyAsync( offsets, d_offsets, offsets_size, cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( scales,  d_scales,  scales_size,  cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( Cscaled, d_Cscaled, Cscaled_size, cudaMemcpyDeviceToHost ));
+
+    for (int p = 0; p < npointing; p++)
+    {
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(offsets[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(scales[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(Cscaled[p*sample_rate*nchan*NSTOKES]), sample_rate*nchan*NSTOKES );
+    }
+
+    gpuErrchk(cudaFreeHost( offsets ));
+    gpuErrchk(cudaFreeHost( scales ));
+    gpuErrchk(cudaFreeHost( Cscaled ));
+
+    gpuErrchk(cudaFree( d_offsets ));
+    gpuErrchk(cudaFree( d_scales ));
+    gpuErrchk(cudaFree( d_Cscaled ));
 
     // Copy the results back into host memory
     gpuErrchk(cudaMemcpyAsync( g->Bd, g->d_Bd,    g->Bd_size,    cudaMemcpyDeviceToHost ));

@@ -88,6 +88,7 @@ int main(int argc, char **argv)
     logger_add_stopwatch( log, "delay", "Calculating geometric and cable delays" );
     logger_add_stopwatch( log, "calc", "Calculating tied-array beam" );
     logger_add_stopwatch( log, "ipfb", "Inverting the PFB" );
+    logger_add_stopwatch( log, "splice", "Splicing coarse channels together" );
     logger_add_stopwatch( log, "write", "Writing out data to file" );
     char log_message[MAX_COMMAND_LENGTH];
 
@@ -379,7 +380,7 @@ int main(int argc, char **argv)
             cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
                     npointing, nants, nchans, npols, invw, &gf,
                     detected_beam, data_buffer_coh,
-                    streams, nchunk );
+                    streams, nchunk, mpfs );
 
         logger_stop_stopwatch( log, "calc" );
 
@@ -395,17 +396,49 @@ int main(int argc, char **argv)
 
         logger_stop_stopwatch( log, "ipfb" );
 
+        // Splice channels together
+        if (opts.out_coh)
+        {
+            logger_start_stopwatch( log, "splice", true );
+
+            for (p = 0; p < npointing; p++)
+            {
+                gather_splice_psrfits( &(mpfs[p]), writer );
+            }
+
+            logger_stop_stopwatch( log, "splice" );
+        }
+
         // Write out for each pointing
         for (p = 0; p < npointing; p++)
         {
             logger_start_stopwatch( log, "write", true );
 
             if (opts.out_coh)
+            {
+                // Write out the individual channels
                 psrfits_write_second( &(mpfs[p].coarse_chan_pf), data_buffer_coh, nchans,
                         NSTOKES, p );
+
+                if (mpfs[p].is_writer)
+                {
+                    // Write out the spliced channels
+                    wait_splice_psrfits( &(mpfs[p]) );
+                    if (psrfits_write_subint( &(mpfs[p].spliced_pf) ) != 0)
+                    {
+                        fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    mpfs[p].spliced_pf.sub.offs = roundf(mpfs[p].spliced_pf.tot_rows * mpfs[p].spliced_pf.sub.tsubint) + 0.5*mpfs[p].spliced_pf.sub.tsubint;
+                    mpfs[p].spliced_pf.sub.lst += mpfs[p].spliced_pf.sub.tsubint;
+                }
+            }
             if (opts.out_vdif)
+            {
                 vdif_write_second( &vf[p], &vhdr,
                         data_buffer_vdif + p * vf->sizeof_buffer );
+            }
+
             logger_stop_stopwatch( log, "write" );
         }
     }

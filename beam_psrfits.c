@@ -17,6 +17,7 @@
 #include "beam_psrfits.h"
 #include "geometry.h"
 #include "metadata.h"
+#include "jones.h"
 
 void float_to_unit8(float * in, int n, int8_t *out)
 {
@@ -574,7 +575,7 @@ void init_mpi_psrfits(
         int world_size,
         int world_rank,
         int max_sec_per_file,
-        int outpols,
+        int nstokes,
         struct beam_geom *bg,
         char *outfile,
         bool is_writer,
@@ -588,23 +589,23 @@ void init_mpi_psrfits(
     // Populate the PSRFITS header struct for the combined (spliced) output file
     if (is_writer)
         populate_spliced_psrfits_header( &(mpf->spliced_pf), obs_metadata, vcs_metadata,
-                first_coarse_chan_idx, mpf->ncoarse_chans, max_sec_per_file, outpols,
+                first_coarse_chan_idx, mpf->ncoarse_chans, max_sec_per_file, nstokes,
                 bg, outfile, is_coherent );
 
     // Populate the PSRFITS header struct for a single channel
     populate_psrfits_header( &(mpf->coarse_chan_pf), obs_metadata, vcs_metadata, coarse_chan_idx, max_sec_per_file,
-            outpols, bg, outfile, is_coherent );
+            nstokes, bg, outfile, is_coherent );
 
     // Create MPI vector types designed to splice the coarse channels together
     // correctly during MPI_Gather
-    MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE, &(mpf->coarse_chan_spectrum) );
+    MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan*nstokes, MPI_BYTE, &(mpf->coarse_chan_spectrum) );
     MPI_Type_commit( &(mpf->coarse_chan_spectrum) );
 
     MPI_Type_vector( mpf->coarse_chan_pf.hdr.nsblk, 1, mpf->ncoarse_chans,
             mpf->coarse_chan_spectrum, &(mpf->total_spectrum_type) );
     MPI_Type_commit( &(mpf->total_spectrum_type) );
 
-    MPI_Type_create_resized( mpf->total_spectrum_type, 0, mpf->coarse_chan_pf.hdr.nchan, &(mpf->spliced_type) );
+    MPI_Type_create_resized( mpf->total_spectrum_type, 0, mpf->coarse_chan_pf.hdr.nchan*nstokes, &(mpf->spliced_type) );
     MPI_Type_commit( &(mpf->spliced_type) );
 }
 
