@@ -17,7 +17,6 @@
 struct gpu_formbeam_arrays
 {
     size_t coh_size;
-    size_t incoh_size;
     size_t data_size;
     size_t Bd_size;
     size_t J_size;
@@ -29,8 +28,6 @@ struct gpu_formbeam_arrays
     cuDoubleComplex *JDy, *d_JDy;
     uint8_t *d_data;
     float   *d_coh;
-    float   *d_incoh;
-    float   *d_Ia;
     uint32_t *polX_idxs, *d_polX_idxs;
     uint32_t *polY_idxs, *d_polY_idxs;
 };
@@ -38,7 +35,7 @@ struct gpu_formbeam_arrays
 
 void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
                       int nstation, int nchan, int npol, int *nchunk, float gpu_mem_gb, int outpol_coh,
-                      int outpol_incoh, int npointing, logger *log );
+                      int npointing, logger *log );
 void free_formbeam( struct gpu_formbeam_arrays *g );
 
 

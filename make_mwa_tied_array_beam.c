@@ -47,7 +47,6 @@ struct make_tied_array_beam_opts {
 
     // Other options
     char              *synth_filter;  // Which synthesis filter to use
-    int                out_summed;    // Default = output only Stokes I output turned OFF
     int                max_sec_per_file;    // Number of seconds per fits files
     float              gpu_mem;       // Default = -1.0. If -1.0 use all GPU mem
 };
@@ -121,10 +120,6 @@ int main(int argc, char **argv)
     uintptr_t nchans         = obs_metadata->num_volt_fine_chans_per_coarse;
     //int chan_width           = obs_metadata->volt_fine_chan_width_hz;
     uintptr_t npols          = obs_metadata->num_ant_pols;   // (X,Y)
-    uintptr_t outpol_coh     = 4;  // (I,Q,U,V)
-    if ( opts.out_summed )
-        outpol_coh           = 1;  // (I)
-    const uintptr_t outpol_incoh = 1;  // ("I")
     unsigned int nsamples = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
     uintptr_t timestep;
@@ -220,7 +215,7 @@ int main(int argc, char **argv)
     struct gpu_ipfb_arrays gi;
     int nchunk;
     malloc_formbeam( &gf, nsamples, nants, nchans, npols, &nchunk, opts.gpu_mem,
-                     outpol_coh, outpol_incoh, npointing, log );
+                     NSTOKES, npointing, log );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
     create_antenna_lists( obs_metadata, gf.polX_idxs, gf.polY_idxs );
@@ -232,7 +227,7 @@ int main(int argc, char **argv)
     float *data_buffer_coh    = NULL;
     float *data_buffer_vdif   = NULL;
 
-    data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans * outpol_coh * nsamples );
+    data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans * NSTOKES * nsamples );
     data_buffer_vdif  = create_pinned_data_buffer_vdif( nsamples * nchans * npols * npointing * 2 * sizeof(float) );
 
     if (opts.out_vdif)
@@ -258,7 +253,7 @@ int main(int argc, char **argv)
                 ncoarse_chans,
                 mpi_proc_id,
                 opts.max_sec_per_file,
-                outpol_coh,
+                NSTOKES,
                 &(beam_geom_vals[p]),
                 NULL,
                 (mpi_proc_id == writer),
@@ -266,7 +261,6 @@ int main(int argc, char **argv)
     }
     // -----
     struct psrfits  *pfs;
-    struct psrfits   pf_incoh;
     pfs = (struct psrfits *)malloc(npointing * sizeof(struct psrfits));
     // >>>>>
     vdif_header     vhdr;
@@ -326,10 +320,7 @@ int main(int argc, char **argv)
     // Populate the relevant header structs
     for (p = 0; p < npointing; p++)
         populate_psrfits_header( &pfs[p], obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-                outpol_coh, &beam_geom_vals[p], NULL, true );
-
-    populate_psrfits_header( &pf_incoh, obs_metadata, vcs_metadata, coarse_chan_idx, opts.max_sec_per_file,
-            outpol_incoh, &beam_geom_vals[0], NULL, false );
+                NSTOKES, &beam_geom_vals[p], NULL, true );
 
     populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, coarse_chan_idx,
             beam_geom_vals, npointing );
@@ -417,7 +408,7 @@ int main(int argc, char **argv)
 
             if (opts.out_coh)
                 psrfits_write_second( &pfs[p], data_buffer_coh, nchans,
-                        outpol_coh, p );
+                        NSTOKES, p );
             if (opts.out_vdif)
                 vdif_write_second( &vf[p], &vhdr,
                         data_buffer_vdif + p * vf->sizeof_buffer );
@@ -518,7 +509,6 @@ void usage() {
             "\t-p, --psrfits              Turn on coherent PSRFITS output (will be turned on if none of\n"
             "\t                           -i, -p, -u, -v are chosen).                                         [default: OFF]\n"
             "\t-v, --vdif                 Turn on VDIF output with upsampling                                 [default: OFF]\n"
-            "\t-s, --summed               Turn on summed polarisations of the coherent output (only Stokes I) [default: OFF]\n"
             "\t-t, --max_t                Maximum number of seconds per output fits file. [default: 200]\n"
             "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
             "\t                           filter can be MIRROR or LSQ12.\n"
@@ -566,7 +556,6 @@ void make_tied_array_beam_parse_cmdline(
     opts->out_coh            = 0;    // Default = PSRFITS (coherent)   output turned OFF
     opts->out_vdif           = 0;    // Default = VDIF                 output turned OFF
     opts->synth_filter       = NULL;
-    opts->out_summed         = 0;    // Default = output only Stokes I output turned OFF
     opts->max_sec_per_file   = 200;  // Number of seconds per fits files
     opts->gpu_mem            = -1.0;
 
@@ -588,7 +577,6 @@ void make_tied_array_beam_parse_cmdline(
                 {"begin",           required_argument, 0, 'b'},
                 {"psrfits",         no_argument,       0, 'p'},
                 {"vdif",            no_argument,       0, 'v'},
-                {"summed",          no_argument,       0, 's'},
                 {"max_t",           required_argument, 0, 't'},
                 {"synth_filter",    required_argument, 0, 'S'},
                 {"nseconds",        required_argument, 0, 'T'},
@@ -609,7 +597,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:c:d:C:f:F:g:hm:OpP:R:sS:t:T:UvVX",
+                             "b:c:d:C:f:F:g:hm:OpP:R:S:t:T:UvVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -662,9 +650,6 @@ void make_tied_array_beam_parse_cmdline(
                 case 'S':
                     opts->synth_filter = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->synth_filter, optarg );
-                    break;
-                case 's':
-                    opts->out_summed = 1;
                     break;
                 case 't':
                     opts->max_sec_per_file = atoi(optarg);

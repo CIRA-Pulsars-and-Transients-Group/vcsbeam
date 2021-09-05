@@ -76,7 +76,6 @@ __global__ void invj_the_data( uint8_t       *data,
                                cuDoubleComplex *phi,
                                cuDoubleComplex *JDx,
                                cuDoubleComplex *JDy,
-                               float         *Ia,
                                uint32_t      *polX_idxs,
                                uint32_t      *polY_idxs,
                                int npol )
@@ -447,7 +446,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
         // convert the data and multiply it by J
         invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, d_phi, g->d_JDx, g->d_JDy,
-                                               g->d_Ia, g->d_polX_idxs, g->d_polY_idxs,
+                                               g->d_polX_idxs, g->d_polY_idxs,
                                                npol );
 
         // Send off a parallel CUDA stream for each pointing
@@ -500,14 +499,13 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
 void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
                       int nstation, int nchan, int npol, int *nchunk, float gpu_mem_gb, int outpol_coh,
-                      int outpol_incoh, int npointing, logger *log )
+                      int npointing, logger *log )
 {
     size_t data_base_size;
     size_t JD_base_size;
 
     // Calculate array sizes for host and device
     g->coh_size    = npointing * sample_rate * outpol_coh * nchan * sizeof(float);
-    g->incoh_size  = sample_rate * outpol_incoh * nchan * sizeof(float);
     data_base_size = sample_rate * nstation * nchan * npol * sizeof(uint8_t);
     //g->data_size  = sample_rate * nstation * nchan * npol / nchunk * sizeof(uint8_t);
     g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
@@ -541,7 +539,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
             *nchunk += 1;
         }
         gpu_mem_used = (phi_size + g->J_size + g->Bd_size + data_base_size / *nchunk +
-                        g->coh_size + g->incoh_size + 3*JD_base_size / *nchunk);
+                        g->coh_size + 3*JD_base_size / *nchunk);
     }
     float gpu_mem_used_gb = (float)gpu_mem_used / (float)(1024*1024*1024);
 
@@ -569,9 +567,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
     sprintf( log_message, "coh_size   %9.3f MB GPU mem", (float)g->coh_size  / (float)(1024*1024) );
     logger_timed_message( log, log_message );
 
-    sprintf( log_message, "incoh_size %9.3f MB GPU mem", (float)g->incoh_size/ (float)(1024*1024) );
-    logger_timed_message( log, log_message );
-
     sprintf( log_message, "data_size  %9.3f MB GPU mem", (float)g->data_size / (float)(1024*1024) );
     logger_timed_message( log, log_message );
 
@@ -592,11 +587,9 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
     gpuErrchk(cudaMalloc( (void **)&g->d_J,     g->J_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDx,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDy,   g->JD_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_Ia,    g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_Bd,    g->Bd_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_data,  g->data_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_coh,   g->coh_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_incoh, g->incoh_size ));
 
     // Allocate memory on both host and device for polX and polY idx arrays
     g->pol_idxs_size = nstation * sizeof(uint32_t);
@@ -623,7 +616,6 @@ void free_formbeam( struct gpu_formbeam_arrays *g )
     cudaFree( g->d_Bd );
     cudaFree( g->d_data );
     cudaFree( g->d_coh );
-    cudaFree( g->d_incoh );
     cudaFree( g->d_polX_idxs );
     cudaFree( g->d_polY_idxs );
 }
