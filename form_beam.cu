@@ -163,7 +163,6 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
     // Organise dynamically allocated shared arrays (see tag 11NSTATION for kernel call)
     extern __shared__ double arrays[];
 
-    double *Ia           = arrays;
     cuDoubleComplex *Bx  = (cuDoubleComplex *)(&arrays[1*nant]);
     cuDoubleComplex *By  = (cuDoubleComplex *)(&arrays[3*nant]);
     cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[5*nant]);

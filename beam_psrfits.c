@@ -52,7 +52,7 @@ void populate_spliced_psrfits_header(
         int               max_sec_per_file,
         int               outpol,
         struct beam_geom *beam_geom_vals,
-        char             *incoh_basename,
+        char             *basename,
         bool              is_coherent )
 {
     if ( !( outpol == 1 || outpol == 4 ) )
@@ -89,7 +89,7 @@ void populate_spliced_psrfits_header(
     strcpy(pf->hdr.feed_mode,  "FA");
 
     pf->hdr.dt   = 1.0/sample_rate; // (sec)
-    uintptr_t last_coarse_chan_idx = first_coarse_chan_idx + ncoarse_chans - 1;
+    int last_coarse_chan_idx = first_coarse_chan_idx + ncoarse_chans - 1;
     pf->hdr.fctr = 0.5*(
             obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_centre_hz +
             obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_centre_hz) / 1e6; // (MHz)
@@ -206,21 +206,39 @@ void populate_spliced_psrfits_header(
         pf->sub.tel_az   = pf->hdr.azimuth;
         pf->sub.tel_zen  = pf->hdr.zenith_ang;
 
-        if (is_coherent)
-        {
-            sprintf( pf->basefilename, "%s_%s_%s_%s",
-                    pf->hdr.project_id,
-                    pf->hdr.source, 
-                    pf->hdr.ra_str, pf->hdr.dec_str );
-        }
+        // Construct the output filename
+        if (basename != NULL)
+            strcpy( pf->basefilename, basename );
         else
         {
-            if (incoh_basename != NULL)
-                strcpy( pf->basefilename, incoh_basename );
+            char chan_str[16];
+            if (first_coarse_chan_idx == last_coarse_chan_idx)
+            {
+                sprintf( chan_str, "%03ld",
+                        obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].rec_chan_number );
+            }
             else
-                sprintf( pf->basefilename, "%s_%s_incoh",
+            {
+                sprintf( chan_str, "%03ld-%03ld",
+                        obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].rec_chan_number,
+                        obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].rec_chan_number );
+            }
+
+            if (is_coherent)
+            {
+                sprintf( pf->basefilename, "%s_%s_%s_%s_ch%s",
                         pf->hdr.project_id,
-                        pf->hdr.source );
+                        pf->hdr.source, 
+                        pf->hdr.ra_str, pf->hdr.dec_str,
+                        chan_str );
+            }
+            else
+            {
+                sprintf( pf->basefilename, "%s_%s_ch%s_incoh",
+                        pf->hdr.project_id,
+                        pf->hdr.source,
+                        chan_str );
+            }
         }
     }
 }

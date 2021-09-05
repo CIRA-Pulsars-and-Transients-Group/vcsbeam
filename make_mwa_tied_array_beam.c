@@ -44,8 +44,6 @@ struct make_tied_array_beam_opts {
     int                out_coh;       // Default = PSRFITS (coherent)   output turned OFF
     int                out_vdif;      // Default = VDIF                 output turned OFF
     int                out_uvdif;     // Default = upsampled VDIF       output turned OFF
-    int                out_bf;        // Default = beamform over all (non-flagged) antennas
-    int                out_ant;       // The antenna number (0-127) to write out if out_bf = 0
 
     // Other options
     char              *synth_filter;  // Which synthesis filter to use
@@ -90,6 +88,7 @@ int main(int argc, char **argv)
     logger_add_stopwatch( log, "read", "Reading in data" );
     logger_add_stopwatch( log, "delay", "Calculating geometric and cable delays" );
     logger_add_stopwatch( log, "calc", "Calculating tied-array beam" );
+    logger_add_stopwatch( log, "ipfb", "Inverting the PFB" );
     logger_add_stopwatch( log, "write", "Writing out data to file" );
     char log_message[MAX_COMMAND_LENGTH];
 
@@ -122,17 +121,11 @@ int main(int argc, char **argv)
     uintptr_t nchans         = obs_metadata->num_volt_fine_chans_per_coarse;
     //int chan_width           = obs_metadata->volt_fine_chan_width_hz;
     uintptr_t npols          = obs_metadata->num_ant_pols;   // (X,Y)
-    uintptr_t ninput         = obs_metadata->num_rf_inputs;
     uintptr_t outpol_coh     = 4;  // (I,Q,U,V)
     if ( opts.out_summed )
         outpol_coh           = 1;  // (I)
     const uintptr_t outpol_incoh = 1;  // ("I")
     unsigned int nsamples = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
-
-    int offset;
-    unsigned int s;
-    uintptr_t ch;
-    uintptr_t pol;
 
     uintptr_t timestep;
     uintptr_t timestep_idx;
@@ -237,11 +230,9 @@ int main(int argc, char **argv)
 
     // Create output buffer arrays
     float *data_buffer_coh    = NULL;
-    float *data_buffer_incoh  = NULL;
     float *data_buffer_vdif   = NULL;
 
     data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans * outpol_coh * nsamples );
-    data_buffer_incoh = create_pinned_data_buffer_psrfits( nchans * outpol_incoh * nsamples );
     data_buffer_vdif  = create_pinned_data_buffer_vdif( nsamples * nchans * npols * npointing * 2 * sizeof(float) );
 
     if (opts.out_vdif)
@@ -401,36 +392,10 @@ int main(int argc, char **argv)
 
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
-        if (!opts.out_bf) // don't beamform, but only procoess one ant/pol combination
-        {
-            // Populate the detected_beam, data_buffer_coh, and data_buffer_incoh arrays
-            // detected_beam = [2*nsamples][nchans][npols] = [20000][128][2] (cuDoubleComplex)
-            if (timestep_idx % 2 == 0)
-                offset = 0;
-            else
-                offset = nsamples;
-
-            for (p   = 0; p   < npointing;   p++  )
-                for (s   = 0; s   < nsamples; s++  )
-                    for (ch  = 0; ch  < nchans;       ch++ )
-                        for (pol = 0; pol < npols;        pol++)
-                        {
-                            int i;
-                            if (pol == 0)
-                                i = gf.polX_idxs[opts.out_ant];
-                            else
-                                i = gf.polY_idxs[opts.out_ant];
-                            detected_beam[p][s+offset][ch][pol] = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,ch,i,nchans,ninput)]);
-                            detected_beam[p][s+offset][ch][pol] = cuCmul(detected_beam[p][s+offset][ch][pol], make_cuDoubleComplex(128.0, 0.0));
-                        }
-        }
-        else // beamform (the default mode)
-        {
             cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
-                    npointing, nants, nchans, npols, &gf,
+                    npointing, nants, nchans, npols, invw, &gf,
                     detected_beam, data_buffer_coh,
                     streams, nchunk );
-        }
 
         // Invert the PFB, if requested
         if (opts.out_vdif)
@@ -492,8 +457,6 @@ int main(int argc, char **argv)
 
     cudaFreeHost( data_buffer_coh   );
     cudaCheckErrors( "cudaFreeHost(data_buffer_coh) failed" );
-    cudaFreeHost( data_buffer_incoh );
-    cudaCheckErrors( "cudaFreeHost(data_buffer_incoh) failed" );
     cudaFreeHost( data_buffer_vdif  );
     cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
     cudaFreeHost( data );
@@ -557,8 +520,6 @@ void usage() {
             "\t-v, --vdif                 Turn on VDIF output with upsampling                                 [default: OFF]\n"
             "\t-s, --summed               Turn on summed polarisations of the coherent output (only Stokes I) [default: OFF]\n"
             "\t-t, --max_t                Maximum number of seconds per output fits file. [default: 200]\n"
-            "\t-A, --antpol=ant           Do not beamform. Instead, only operate on the specified ant\n"
-            "\t                           stream (0-127)\n" 
             "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
             "\t                           filter can be MIRROR or LSQ12.\n"
             "\t                           [default: LSQ12]\n"
@@ -604,8 +565,6 @@ void make_tied_array_beam_parse_cmdline(
     opts->coarse_chan_str    = NULL; // Absolute or relative coarse channel
     opts->out_coh            = 0;    // Default = PSRFITS (coherent)   output turned OFF
     opts->out_vdif           = 0;    // Default = VDIF                 output turned OFF
-    opts->out_bf             = 1;    // Default = beamform all (non-flagged) antennas
-    opts->out_ant            = 0;    // The antenna number (0-127) to write out if out_bf = 0
     opts->synth_filter       = NULL;
     opts->out_summed         = 0;    // Default = output only Stokes I output turned OFF
     opts->max_sec_per_file   = 200;  // Number of seconds per fits files
@@ -633,7 +592,6 @@ void make_tied_array_beam_parse_cmdline(
                 {"max_t",           required_argument, 0, 't'},
                 {"synth_filter",    required_argument, 0, 'S'},
                 {"nseconds",        required_argument, 0, 'T'},
-                {"antpol",          required_argument, 0, 'A'},
                 {"pointings",       required_argument, 0, 'P'},
                 {"data-location",   required_argument, 0, 'd'},
                 {"cal-location",    required_argument, 0, 'C'},
@@ -651,17 +609,13 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:c:d:C:f:F:g:hm:OpP:R:sS:t:T:UvVX",
+                             "b:c:d:C:f:F:g:hm:OpP:R:sS:t:T:UvVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
 
             switch(c) {
 
-                case 'A':
-                    opts->out_bf = 0; // Turn off normal beamforming
-                    opts->out_ant = atoi(optarg); // 0-127
-                    break;
                 case 'b':
                     opts->begin_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->begin_str, optarg );
