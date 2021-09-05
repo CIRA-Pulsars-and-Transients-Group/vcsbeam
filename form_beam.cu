@@ -248,8 +248,10 @@ __global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, 
     // Translate GPU block/thread numbers into meaningful names
     int chan    = threadIdx.x; /* The (c)hannel number */
     int nchan   = blockDim.x;  /* The total number of channels */
-    int nstokes = blockDim.y;  /* Typically, is either 1 (just Stokes I) or 4 (Stokes IQUV) */
+
     int stokes  = threadIdx.y; /* The (stokes) parameter */
+    int nstokes = blockDim.y;  /* Typically, is either 1 (just Stokes I) or 4 (Stokes IQUV) */
+
     int p       = blockIdx.x;  /* The (p)ointing number */
 
     float val, scale, offset;
@@ -281,15 +283,23 @@ __global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, 
         I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] *= 32.0/mean;
 
         if (Iscaled != NULL)
+        {
             Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 128.5);
+        }
     }
 
     // Set the scales and offsets, accounting for the 128-offset
     if (scales != NULL)
+    {
         scales[p*nstokes*nchan + stokes*nchan + chan] = scale*mean;
+        //scales[p*nstokes*nchan + chan*nstokes + stokes] = scale*mean;
+    }
 
     if (offsets != NULL)
+    {
         offsets[p*nstokes*nchan + stokes*nchan + chan] = (offset - 128.0/scale)/mean;
+        //offsets[p*nstokes*nchan + chan*nstokes + stokes] = (offset - 128.0/scale)/mean;
+    }
 }
 
 
@@ -480,7 +490,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
     size_t offsets_size = npointing*nchan*NSTOKES*sizeof(float);
     size_t scales_size  = npointing*nchan*NSTOKES*sizeof(float);
-    size_t Cscaled_size = npointing*sample_rate*nchan*NSTOKES*sizeof(uint8_t);
+    size_t Cscaled_size = npointing*mpfs[0].coarse_chan_pf.sub.bytes_per_subint;
 
     gpuErrchk(cudaMalloc( (void **)&d_offsets, offsets_size ));
     gpuErrchk(cudaMalloc( (void **)&d_scales,  scales_size ));
@@ -495,9 +505,9 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
 
-    gpuErrchk(cudaMemcpyAsync( offsets, d_offsets, offsets_size, cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( scales,  d_scales,  scales_size,  cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( Cscaled, d_Cscaled, Cscaled_size, cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( offsets, d_offsets, offsets_size, cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( scales,  d_scales,  scales_size,  cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( Cscaled, d_Cscaled, Cscaled_size, cudaMemcpyDeviceToHost ));
 
     for (int p = 0; p < npointing; p++)
     {

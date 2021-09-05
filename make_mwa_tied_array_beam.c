@@ -424,6 +424,7 @@ int main(int argc, char **argv)
                 {
                     // Write out the spliced channels
                     wait_splice_psrfits( &(mpfs[p]) );
+
                     if (psrfits_write_subint( &(mpfs[p].spliced_pf) ) != 0)
                     {
                         fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");

@@ -625,19 +625,23 @@ void free_mpi_psrfits( mpi_psrfits *mpf )
 
 void gather_splice_psrfits( mpi_psrfits *mpf, int writer_proc_id )
 {
+    int nsamples = mpf->coarse_chan_pf.hdr.nsblk;
+    int nstokes = mpf->coarse_chan_pf.hdr.npol;
+    int nfinechans = mpf->coarse_chan_pf.hdr.nchan;
+
     MPI_Igather(
-            mpf->coarse_chan_pf.sub.data, mpf->coarse_chan_pf.hdr.nsblk, mpf->coarse_chan_spectrum,
+            mpf->coarse_chan_pf.sub.data, nsamples*nstokes, mpf->coarse_chan_spectrum,
             mpf->spliced_pf.sub.data, 1, mpf->spliced_type,
             writer_proc_id, MPI_COMM_WORLD, &(mpf->request_data) );
 
     MPI_Igather(
-            mpf->coarse_chan_pf.sub.dat_offsets, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
-            mpf->spliced_pf.sub.dat_offsets, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
+            mpf->coarse_chan_pf.sub.dat_offsets, nfinechans*nstokes, MPI_FLOAT,
+            mpf->spliced_pf.sub.dat_offsets, nfinechans*nstokes, MPI_FLOAT,
             writer_proc_id, MPI_COMM_WORLD, &(mpf->request_offsets) );
 
     MPI_Igather(
-            mpf->coarse_chan_pf.sub.dat_scales, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
-            mpf->spliced_pf.sub.dat_scales, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
+            mpf->coarse_chan_pf.sub.dat_scales, nfinechans*nstokes, MPI_FLOAT,
+            mpf->spliced_pf.sub.dat_scales, nfinechans*nstokes, MPI_FLOAT,
             writer_proc_id, MPI_COMM_WORLD, &(mpf->request_scales) );
 }
 
