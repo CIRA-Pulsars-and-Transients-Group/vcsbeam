@@ -604,22 +604,22 @@ void free_mpi_psrfits( mpi_psrfits *mpf )
     }
 }
 
-void gather_splice_psrfits( mpi_psrfits *mpf )
+void gather_splice_psrfits( mpi_psrfits *mpf, int writer_proc_id )
 {
     MPI_Igather(
             mpf->coarse_chan_pf.sub.data, mpf->coarse_chan_pf.hdr.nsblk, mpf->coarse_chan_spectrum,
             mpf->spliced_pf.sub.data, 1, mpf->spliced_type,
-            0, MPI_COMM_WORLD, &(mpf->request_data) );
+            writer_proc_id, MPI_COMM_WORLD, &(mpf->request_data) );
 
     MPI_Igather(
             mpf->coarse_chan_pf.sub.dat_offsets, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
             mpf->spliced_pf.sub.dat_offsets, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
-            0, MPI_COMM_WORLD, &(mpf->request_offsets) );
+            writer_proc_id, MPI_COMM_WORLD, &(mpf->request_offsets) );
 
     MPI_Igather(
             mpf->coarse_chan_pf.sub.dat_scales, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
             mpf->spliced_pf.sub.dat_scales, mpf->coarse_chan_pf.hdr.nchan, MPI_BYTE,
-            0, MPI_COMM_WORLD, &(mpf->request_scales) );
+            writer_proc_id, MPI_COMM_WORLD, &(mpf->request_scales) );
 }
 
 void wait_splice_psrfits( mpi_psrfits *mpf )

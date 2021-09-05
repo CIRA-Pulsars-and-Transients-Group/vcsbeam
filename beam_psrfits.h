@@ -80,6 +80,6 @@ void init_mpi_psrfits(
 
 void free_mpi_psrfits( mpi_psrfits *mpf );
 
-void gather_splice_psrfits( mpi_psrfits *mpf );
+void gather_splice_psrfits( mpi_psrfits *mpf, int writer_proc_id );
 void wait_splice_psrfits( mpi_psrfits *mpf );
 #endif

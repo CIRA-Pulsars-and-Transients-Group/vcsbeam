@@ -66,6 +66,7 @@ int main(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_proc_id);
 
     const int writer = 0; // Designate process 0 to write out the files
+    const int chans_per_proc = 1;
 
     // Parse command line arguments
     struct cmd_line_opts opts;
@@ -98,7 +99,7 @@ int main(int argc, char **argv)
     VoltageContext   *vcs_context  = NULL;
     VoltageMetadata  *vcs_metadata = NULL;
     get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
-            begin_gps, opts.nseconds, opts.datadir, coarse_chan_idx, 1 );
+            begin_gps, opts.nseconds, opts.datadir, coarse_chan_idx, chans_per_proc );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t    ntimesteps      = vcs_metadata->num_provided_timesteps;
@@ -198,7 +199,7 @@ int main(int argc, char **argv)
         // Splice the channels together
         logger_start_stopwatch( log, "splice", true );
 
-        gather_splice_psrfits( &mpf );
+        gather_splice_psrfits( &mpf, writer );
 
         logger_stop_stopwatch( log, "splice" );
     }
