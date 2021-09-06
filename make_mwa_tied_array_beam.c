@@ -416,10 +416,6 @@ int main(int argc, char **argv)
 
             if (opts.out_coh)
             {
-                // Write out the individual channels
-                psrfits_write_second( &(mpfs[p].coarse_chan_pf), data_buffer_coh, nchans,
-                        NSTOKES, p );
-
                 if (mpfs[p].is_writer)
                 {
                     // Write out the spliced channels
@@ -433,6 +429,10 @@ int main(int argc, char **argv)
                     mpfs[p].spliced_pf.sub.offs = roundf(mpfs[p].spliced_pf.tot_rows * mpfs[p].spliced_pf.sub.tsubint) + 0.5*mpfs[p].spliced_pf.sub.tsubint;
                     mpfs[p].spliced_pf.sub.lst += mpfs[p].spliced_pf.sub.tsubint;
                 }
+
+                // Write out the individual channels
+                psrfits_write_second( &(mpfs[p].coarse_chan_pf), data_buffer_coh, nchans,
+                        NSTOKES, p );
             }
             if (opts.out_vdif)
             {

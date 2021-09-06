@@ -281,13 +281,13 @@ __global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, 
     {
         if (Iscaled != NULL)
         {
-            float val1 = (I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) / scale;
-            //Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 0.5);
+            val = (I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) / scale;
+            Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 0.5);
 
-            val = I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)]*32.0/mean;
-            val = (val > 127.0 ? 127.0 : val);
-            val = (val < -128.0 ? -128.0 : val);
-            Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 128.0);
+            //val = I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)]*32.0/mean;
+            //val = (val > 127.0 ? 127.0 : val);
+            //val = (val < -128.0 ? -128.0 : val);
+            //Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 128.0);
             //if (chan == 0 && stokes == 1 && i < 200) printf( "%10.2f\t%10.2f\t%10.2f\n", val1 + 0.5, val + 128.0, mean );
         }
 
