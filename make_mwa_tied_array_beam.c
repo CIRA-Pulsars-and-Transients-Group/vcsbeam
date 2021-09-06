@@ -41,8 +41,8 @@ struct make_tied_array_beam_opts {
     //char              *custom_flags;    // Use custom list for flagging antennas
 
     // Output options
-    int                out_fine;         // Output fine channelised data (PSRFITS)
-    int                out_coarse;       // Output coarse channelised data (VDIF)
+    bool               out_fine;         // Output fine channelised data (PSRFITS)
+    bool               out_coarse;       // Output coarse channelised data (VDIF)
 
     // Other options
     char              *synth_filter;     // Which synthesis filter to use
@@ -67,8 +67,8 @@ int main(int argc, char **argv)
     // Initialise MPI
     MPI_Init( NULL, NULL );
     int world_size, mpi_proc_id;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_proc_id);
+    MPI_Comm_size( MPI_COMM_WORLD, &world_size );
+    MPI_Comm_rank( MPI_COMM_WORLD, &mpi_proc_id );
 
     const int writer = 0; // Designate process 0 to write out the files
     const int ncoarse_chans = world_size;
@@ -274,7 +274,7 @@ int main(int argc, char **argv)
                 NSTOKES,
                 &(beam_geom_vals[p]),
                 NULL,
-                (mpi_proc_id == writer),
+                writer,
                 true );
     }
 
@@ -395,10 +395,11 @@ int main(int argc, char **argv)
 
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
-            cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
-                    npointing, nants, nchans, npols, invw, &gf,
-                    detected_beam, data_buffer_coh,
-                    streams, nchunk, mpfs );
+
+        cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
+                npointing, nants, nchans, npols, invw, &gf,
+                detected_beam, data_buffer_coh,
+                streams, nchunk, mpfs );
 
         logger_stop_stopwatch( log, "calc" );
 
@@ -415,13 +416,13 @@ int main(int argc, char **argv)
         logger_stop_stopwatch( log, "ipfb" );
 
         // Splice channels together
-        if (opts.out_fine)
+        if (opts.out_fine) // Only PSRFITS output can be combined into a single file
         {
             logger_start_stopwatch( log, "splice", true );
 
             for (p = 0; p < npointing; p++)
             {
-                gather_splice_psrfits( &(mpfs[p]), writer );
+                gather_splice_psrfits( &(mpfs[p]) );
             }
 
             logger_stop_stopwatch( log, "splice" );
@@ -434,7 +435,7 @@ int main(int argc, char **argv)
 
             if (opts.out_fine)
             {
-                if (mpfs[p].is_writer)
+                if (mpi_proc_id == mpfs[p].writer_id)
                 {
                     // Write out the spliced channels
                     wait_splice_psrfits( &(mpfs[p]) );
@@ -588,20 +589,20 @@ void make_tied_array_beam_parse_cmdline(
         int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal )
 {
     // Set defaults
-    opts->begin_str          = NULL; // Absolute or relative GPS time -- when to start beamforming
-    opts->nseconds           = -1;   // How many seconds to process (-1 = as many as possible)
-    opts->pointings_file     = NULL; // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
-    opts->datadir            = NULL; // The path to where the recombined data live
-    opts->metafits           = NULL; // filename of the metafits file for the target observation
-    opts->coarse_chan_str    = NULL; // Absolute or relative coarse channel
-    opts->out_fine           = 0;    // Output fine channelised data (PSRFITS)
-    opts->out_coarse         = 0;    // Output coarse channelised data (VDIF)
+    opts->begin_str          = NULL;  // Absolute or relative GPS time -- when to start beamforming
+    opts->nseconds           = -1;    // How many seconds to process (-1 = as many as possible)
+    opts->pointings_file     = NULL;  // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
+    opts->datadir            = NULL;  // The path to where the recombined data live
+    opts->metafits           = NULL;  // filename of the metafits file for the target observation
+    opts->coarse_chan_str    = NULL;  // Absolute or relative coarse channel
+    opts->out_fine           = false; // Output fine channelised data (PSRFITS)
+    opts->out_coarse         = false; // Output coarse channelised data (VDIF)
     opts->synth_filter       = NULL;
-    opts->max_sec_per_file   = 200;  // Number of seconds per fits files
+    opts->max_sec_per_file   = 200;   // Number of seconds per fits files
     opts->gpu_mem            = -1.0;
 
-    cal->metafits            = NULL; // filename of the metafits file for the calibration observation
-    cal->caldir              = NULL; // The path to where the calibration solutions live
+    cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
+    cal->caldir              = NULL;  // The path to where the calibration solutions live
     cal->cal_type            = CAL_RTS;
     cal->ref_ant             = 0;
     cal->cross_terms         = 0;
@@ -679,7 +680,7 @@ void make_tied_array_beam_parse_cmdline(
                     cal->cal_type = CAL_OFFRINGA;
                     break;
                 case 'p':
-                    opts->out_fine = 1;
+                    opts->out_fine = true;
                     break;
                 case 'P':
                     opts->pointings_file = (char *)malloc( strlen(optarg) + 1 );
@@ -708,7 +709,7 @@ void make_tied_array_beam_parse_cmdline(
                     cal->apply_xy_correction = false;
                     break;
                 case 'v':
-                    opts->out_coarse = 1;
+                    opts->out_coarse = true;
                     break;
                 case 'V':
                     printf( "MWA Beamformer %s\n", VERSION_BEAMFORMER);

@@ -28,10 +28,8 @@ typedef struct mpi_psrfits_t
     struct psrfits  coarse_chan_pf;
     struct psrfits  spliced_pf;
 
-    bool            is_writer;
+    int             writer_id;
 } mpi_psrfits;
-
-void printf_psrfits( struct psrfits *pf );  /* Prints values in psrfits struct to stdout */
 
 void populate_psrfits_header(
         struct psrfits   *pf,
@@ -58,11 +56,6 @@ void populate_spliced_psrfits_header(
 
 void free_psrfits( struct psrfits *pf );
 
-void correct_psrfits_stt( struct psrfits *pf );
-
-void psrfits_write_second( struct psrfits *pf, float *data_buffer, int nchan,
-        int outpol, int p);
-
 float *create_data_buffer_psrfits( size_t size );
 
 void init_mpi_psrfits(
@@ -75,11 +68,12 @@ void init_mpi_psrfits(
         int nstokes,
         struct beam_geom *bg,
         char *outfile,
-        bool is_writer,
+        int writer_id,
         bool is_coherent );
 
 void free_mpi_psrfits( mpi_psrfits *mpf );
 
-void gather_splice_psrfits( mpi_psrfits *mpf, int writer_proc_id );
+void gather_splice_psrfits( mpi_psrfits *mpf );
 void wait_splice_psrfits( mpi_psrfits *mpf );
+
 #endif

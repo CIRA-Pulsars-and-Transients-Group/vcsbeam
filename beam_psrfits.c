@@ -19,31 +19,6 @@
 #include "metadata.h"
 #include "jones.h"
 
-void float_to_unit8(float * in, int n, int8_t *out)
-{
-    int j;
-    float min = -128.0; // -126.0 and -128.0 give the same result on test data
-    float max = 127.0;
-    // use a temp var so we don't modify the input data
-    float scratch;
-    for (j = 0; j < n; j++) {
-        // TODO: count the number of samples that were clipped, store that and put it in the psrfits header
-        // the if branching and ternary updates seem to be equivalent execution time
-        if (in[j]> max) {
-            scratch = max;
-        } else if (in[j] < min) {
-            scratch = min;
-        } else {
-            scratch = in[j];
-        }
-//        scratch = (in[j] > max) ? (max) : in[j];
-//        scratch = (in[j] < min) ? (min) : scratch;
-        out[j] = (uint8_t)( (int8_t)rint(scratch) + 128);
-    }
-
-}
-
-
 void populate_spliced_psrfits_header(
         struct psrfits   *pf,
         MetafitsMetadata *obs_metadata,
@@ -431,136 +406,6 @@ void free_psrfits( struct psrfits *pf )
     free( pf->sub.dat_scales  );
 }
 
-void correct_psrfits_stt( struct psrfits *pf )
-{
-    /* now we have to correct the STT_SMJD/STT_OFFS as they will have been broken by the write_psrfits*/
-    int    itmp    = 0;
-    int    itmp2   = 0;
-    double dtmp    = 0;
-    int    status  = 0;
-
-    //fits_open_file(&(pf.fptr), pf.filename, READWRITE, &status);
-
-    fits_read_key(pf->fptr, TDOUBLE, "STT_OFFS", &dtmp,  NULL, &status);
-    fits_read_key(pf->fptr, TINT,    "STT_SMJD", &itmp,  NULL, &status);
-    fits_read_key(pf->fptr, TINT,    "STT_IMJD", &itmp2, NULL, &status);
-
-    if (dtmp > 0.5) {
-        itmp = itmp+1;
-        if (itmp == 86400) {
-            itmp = 0;
-            itmp2++;
-        }
-    }
-    dtmp = 0.0;
-
-    fits_update_key(pf->fptr, TINT, "STT_SMJD", &itmp, NULL, &status);
-    fits_update_key(pf->fptr, TINT, "STT_IMJD", &itmp2, NULL, &status);
-    fits_update_key(pf->fptr, TDOUBLE, "STT_OFFS", &dtmp, NULL, &status);
-
-}
-
-
-void psrfits_write_second( struct psrfits *pf, float *data_buffer, int nchan,
-                           int outpol, int p )
-{
-    int sec_size = outpol * nchan * pf->hdr.nsblk;
-    int8_t *out_buffer_8 = (int8_t *)malloc( sec_size * sizeof(int8_t) );
-
-    // pointing_offset makes the buffer start at the memory assigned the pointing
-    int pointing_offset = p * sec_size;
-    float *pointing_buffer  = malloc( sec_size * sizeof(float) );
-    memcpy(pointing_buffer, data_buffer + pointing_offset, sec_size * sizeof(float) );
-    float_to_unit8( pointing_buffer, sec_size, out_buffer_8);
-    
-    memcpy( pf->sub.data, out_buffer_8, pf->sub.bytes_per_subint );
-    //memset(pf->filename,0,strlen(pf->filename));
-    //memset(pf->hdr.poln_order,0,strlen(pf->hdr.poln_order));
-    
-    if (psrfits_write_subint(pf) != 0)
-    {
-        fprintf(stderr, "error: Write subint failed. File exists?\n");
-        exit(EXIT_FAILURE);
-    }
-    pf->sub.offs = roundf(pf->tot_rows * pf->sub.tsubint) + 0.5*pf->sub.tsubint;
-    pf->sub.lst += pf->sub.tsubint;
-    
-    free( pointing_buffer );
-    free( out_buffer_8 );
-}
-
-
-void printf_psrfits( struct psrfits *pf )
-{
-    fprintf(stdout, "\nPSRFITS:\n");
-    fprintf(stdout, "Basename of output file     [%s]\n", pf->basefilename);
-    fprintf(stdout, "Filename of output file     [%s]\n", pf->filename);
-    fprintf(stdout, "CFITSIO file pointer        [%p]\n", pf->fptr);
-
-    fprintf(stdout, "\nPSRFITS HDRINFO:\n");
-    fprintf(stdout, "Obs mode                    [%s]\n", pf->hdr.obs_mode);
-    fprintf(stdout, "Telescope                   [%s]\n", pf->hdr.telescope);
-    fprintf(stdout, "Observer                    [%s]\n", pf->hdr.observer);
-    fprintf(stdout, "Source                      [%s]\n", pf->hdr.source);
-    fprintf(stdout, "Front End                   [%s]\n", pf->hdr.frontend);
-    fprintf(stdout, "Back End                    [%s]\n", pf->hdr.backend);
-    fprintf(stdout, "Project ID                  [%s]\n", pf->hdr.project_id);
-    fprintf(stdout, "Date Obs                    [%s]\n", pf->hdr.date_obs);
-    fprintf(stdout, "RA (string)                 [%s]\n", pf->hdr.ra_str);
-    fprintf(stdout, "Dec (string)                [%s]\n", pf->hdr.dec_str);
-    fprintf(stdout, "Pol recorded (LIN or CIRC)  [%s]\n", pf->hdr.poln_type);
-    fprintf(stdout, "Order of pols               [%s]\n", pf->hdr.poln_order);
-    fprintf(stdout, "Track mode                  [%s]\n", pf->hdr.track_mode);
-    fprintf(stdout, "Cal mode                    [%s]\n", pf->hdr.cal_mode);
-    fprintf(stdout, "Feed mode                   [%s]\n", pf->hdr.feed_mode);
-    fprintf(stdout, "Start MJD                   [%Lf]\n", pf->hdr.MJD_epoch);
-    fprintf(stdout, "Sample Time (s)             [%lf]\n", pf->hdr.dt);
-    fprintf(stdout, "Centre Frequency (MHz)      [%lf]\n", pf->hdr.fctr);
-    fprintf(stdout, "Orig freq spacing (MHz)     [%lf]\n", pf->hdr.orig_df);
-    fprintf(stdout, "Freq spacing (MHz)          [%lf]\n", pf->hdr.df);
-    fprintf(stdout, "Bandwidth (MHz)             [%lf]\n", pf->hdr.BW);
-    fprintf(stdout, "RA (2000) (deg)             [%lf]\n", pf->hdr.ra2000);
-    fprintf(stdout, "Dec (2000) (deg)            [%lf]\n", pf->hdr.dec2000);
-    fprintf(stdout, "Azimuth (deg)               [%lf]\n", pf->hdr.azimuth);
-    fprintf(stdout, "Zenith Angle (deg)          [%lf]\n", pf->hdr.zenith_ang);
-    fprintf(stdout, "Beam FWHM (deg)             [%lf]\n", pf->hdr.beam_FWHM);
-
-    fprintf(stdout, "Length of scan in this file [%lf]\n", pf->hdr.scanlen);
-    fprintf(stdout, "Seconds past 00h LST        [%lf]\n", pf->hdr.start_lst);
-    fprintf(stdout, "Seconds past 00h UTC        [%lf]\n", pf->hdr.start_sec);
-
-    fprintf(stdout, "Start MJD (whole day)       [%d]\n", pf->hdr.start_day);
-    fprintf(stdout, "Scan Number                 [%d]\n", pf->hdr.scan_number);
-    fprintf(stdout, "Number of bits per sample   [%d]\n", pf->hdr.nbits);
-
-    fprintf(stdout, "Number of Channels          [%d]\n", pf->hdr.nchan);
-    fprintf(stdout, "Number of polarisations     [%d]\n", pf->hdr.npol);
-    fprintf(stdout, "Number of spectra per row   [%d]\n", pf->hdr.nsblk);
-
-    fprintf(stdout, "Summed Polarisations? [1/0] [%d]\n", pf->hdr.summed_polns);
-    fprintf(stdout, "Receiver Polarisation       [%d]\n", pf->hdr.rcvr_polns);
-    fprintf(stdout, "Offset Subint               [%d]\n", pf->hdr.offset_subint);
-    fprintf(stdout, "Dwnsmpl fact in time        [%d]\n", pf->hdr.ds_time_fact);
-    fprintf(stdout, "Dwnsmpl fact in freq        [%d]\n", pf->hdr.ds_freq_fact);
-    fprintf(stdout, "Only Stokes I?              [%d]\n", pf->hdr.onlyI);
-
-    fprintf(stdout, "\nPSRFITS SUBINT:\n");
-    fprintf(stdout, "Length of subint (sec)      [%lf]\n", pf->sub.tsubint);
-    fprintf(stdout, "Offset (sec)                [%lf]\n", pf->sub.offs);
-    fprintf(stdout, "LST (sec)                   [%lf]\n", pf->sub.lst);
-    fprintf(stdout, "RA (J2000) (deg)            [%lf]\n", pf->sub.ra);
-    fprintf(stdout, "Dec (J2000) (deg)           [%lf]\n", pf->sub.dec);
-    fprintf(stdout, "Gal. long. (deg)            [%lf]\n", pf->sub.glon);
-    fprintf(stdout, "Gal. lat. (deg)             [%lf]\n", pf->sub.glat);
-    fprintf(stdout, "Feed angle (deg)            [%lf]\n", pf->sub.feed_ang);
-    fprintf(stdout, "Pos angle of feed (deg)     [%lf]\n", pf->sub.pos_ang);
-    fprintf(stdout, "Parallactic angle           [%lf]\n", pf->sub.par_ang);
-    fprintf(stdout, "Telescope azimuth           [%lf]\n", pf->sub.tel_az);
-    fprintf(stdout, "Telescope zenith angle      [%lf]\n", pf->sub.tel_zen);
-    fprintf(stdout, "Bytes per row of raw data   [%d]\n", pf->sub.bytes_per_subint);
-    fprintf(stdout, "FITS data typecode          [%d]\n", pf->sub.FITS_typecode);
-
-}
 
 float *create_data_buffer_psrfits( size_t size )
 {
@@ -578,16 +423,16 @@ void init_mpi_psrfits(
         int nstokes,
         struct beam_geom *bg,
         char *outfile,
-        bool is_writer,
+        int writer_id,
         bool is_coherent )
 {
     mpf->ncoarse_chans = world_size;
-    mpf->is_writer = is_writer;
+    mpf->writer_id = writer_id;
     int coarse_chan_idx = vcs_metadata->provided_coarse_chan_indices[0];
     int first_coarse_chan_idx = coarse_chan_idx - world_rank;
 
     // Populate the PSRFITS header struct for the combined (spliced) output file
-    if (is_writer)
+    if (world_rank == writer_id)
         populate_spliced_psrfits_header( &(mpf->spliced_pf), obs_metadata, vcs_metadata,
                 first_coarse_chan_idx, mpf->ncoarse_chans, max_sec_per_file, nstokes,
                 bg, outfile, is_coherent );
@@ -617,13 +462,15 @@ void free_mpi_psrfits( mpi_psrfits *mpf )
 
     free_psrfits( &(mpf->coarse_chan_pf) );
 
-    if (mpf->is_writer)
+    int mpi_proc_id;
+    MPI_Comm_rank( MPI_COMM_WORLD, &mpi_proc_id );
+    if (mpi_proc_id == mpf->writer_id)
     {
         free_psrfits( &(mpf->spliced_pf) );
     }
 }
 
-void gather_splice_psrfits( mpi_psrfits *mpf, int writer_proc_id )
+void gather_splice_psrfits( mpi_psrfits *mpf )
 {
     int nsamples = mpf->coarse_chan_pf.hdr.nsblk;
     int nstokes = mpf->coarse_chan_pf.hdr.npol;
@@ -632,17 +479,17 @@ void gather_splice_psrfits( mpi_psrfits *mpf, int writer_proc_id )
     MPI_Igather(
             mpf->coarse_chan_pf.sub.data, nsamples*nstokes, mpf->coarse_chan_spectrum,
             mpf->spliced_pf.sub.data, 1, mpf->spliced_type,
-            writer_proc_id, MPI_COMM_WORLD, &(mpf->request_data) );
+            mpf->writer_id, MPI_COMM_WORLD, &(mpf->request_data) );
 
     MPI_Igather(
             mpf->coarse_chan_pf.sub.dat_offsets, nfinechans*nstokes, MPI_FLOAT,
             mpf->spliced_pf.sub.dat_offsets, nfinechans*nstokes, MPI_FLOAT,
-            writer_proc_id, MPI_COMM_WORLD, &(mpf->request_offsets) );
+            mpf->writer_id, MPI_COMM_WORLD, &(mpf->request_offsets) );
 
     MPI_Igather(
             mpf->coarse_chan_pf.sub.dat_scales, nfinechans*nstokes, MPI_FLOAT,
             mpf->spliced_pf.sub.dat_scales, nfinechans*nstokes, MPI_FLOAT,
-            writer_proc_id, MPI_COMM_WORLD, &(mpf->request_scales) );
+            mpf->writer_id, MPI_COMM_WORLD, &(mpf->request_scales) );
 }
 
 void wait_splice_psrfits( mpi_psrfits *mpf )

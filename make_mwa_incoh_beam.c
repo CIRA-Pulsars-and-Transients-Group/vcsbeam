@@ -152,7 +152,7 @@ int main(int argc, char **argv)
         outpol_incoh,
         &beam_geom_vals,
         opts.outfile,
-        (mpi_proc_id == writer),
+        writer,
         false );
 
     // Begin the main loop: go through data one second at a time
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
         // Splice the channels together
         logger_start_stopwatch( log, "splice", true );
 
-        gather_splice_psrfits( &mpf, writer );
+        gather_splice_psrfits( &mpf );
 
         logger_stop_stopwatch( log, "splice" );
     }
@@ -411,7 +411,10 @@ void write_step( mpi_psrfits *mpf, logger *log )
 {
     wait_splice_psrfits( mpf );
 
-    if (mpf->is_writer)
+    int mpi_proc_id;
+    MPI_Comm_rank( MPI_COMM_WORLD, &mpi_proc_id );
+
+    if (mpi_proc_id == mpf->writer_id)
     {
         // Write second's worth of data to file
         logger_start_stopwatch( log, "write", true );
