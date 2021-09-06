@@ -58,6 +58,9 @@ void usage();
 void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal );
 void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings );
 
+void write_step( mpi_psrfits *mpfs, int npointing, bool out_fine, bool out_coarse,
+        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif, logger *log );
+
 /********
  * MAIN *
  ********/
@@ -393,6 +396,15 @@ int main(int argc, char **argv)
 
         logger_stop_stopwatch( log, "delay" );
 
+        // The writing (of the previous second) is put here in order to
+        // allow the possibility that it can overlap with the reading step.
+        // Because of this, another "write" has to happen after this loop
+        // has terminated
+        if (timestep_idx > 0) // i.e. don't do this the first time around
+        {
+            write_step( mpfs, npointing, opts.out_fine, opts.out_coarse, vf, &vhdr, data_buffer_vdif, log );
+        }
+
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
 
@@ -427,37 +439,10 @@ int main(int argc, char **argv)
 
             logger_stop_stopwatch( log, "splice" );
         }
-
-        // Write out for each pointing
-        for (p = 0; p < npointing; p++)
-        {
-            logger_start_stopwatch( log, "write", true );
-
-            if (opts.out_fine)
-            {
-                if (mpi_proc_id == mpfs[p].writer_id)
-                {
-                    // Write out the spliced channels
-                    wait_splice_psrfits( &(mpfs[p]) );
-
-                    if (psrfits_write_subint( &(mpfs[p].spliced_pf) ) != 0)
-                    {
-                        fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");
-                        exit(EXIT_FAILURE);
-                    }
-                    mpfs[p].spliced_pf.sub.offs = roundf(mpfs[p].spliced_pf.tot_rows * mpfs[p].spliced_pf.sub.tsubint) + 0.5*mpfs[p].spliced_pf.sub.tsubint;
-                    mpfs[p].spliced_pf.sub.lst += mpfs[p].spliced_pf.sub.tsubint;
-                }
-            }
-            if (opts.out_coarse)
-            {
-                vdif_write_second( &vf[p], &vhdr,
-                        data_buffer_vdif + p * vf->sizeof_buffer );
-            }
-
-            logger_stop_stopwatch( log, "write" );
-        }
     }
+
+    // Write out the last second's worth of data
+    write_step( mpfs, npointing, opts.out_fine, opts.out_coarse, vf, &vhdr, data_buffer_vdif, log );
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
 
@@ -849,4 +834,43 @@ void parse_pointing_file( const char *filename, double **ras_hours, double **dec
 
     // Close the file
     fclose( f );
+}
+
+
+void write_step( mpi_psrfits *mpfs, int npointing, bool out_fine, bool out_coarse,
+        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif, logger *log )
+{
+    int mpi_proc_id;
+    MPI_Comm_rank( MPI_COMM_WORLD, &mpi_proc_id );
+
+    int p;
+    for (p = 0; p < npointing; p++)
+    {
+        logger_start_stopwatch( log, "write", true );
+
+        if (out_fine)
+        {
+            if (mpi_proc_id == mpfs[p].writer_id)
+            {
+                // Write out the spliced channels
+                wait_splice_psrfits( &(mpfs[p]) );
+
+                if (psrfits_write_subint( &(mpfs[p].spliced_pf) ) != 0)
+                {
+                    fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");
+                    exit(EXIT_FAILURE);
+                }
+                mpfs[p].spliced_pf.sub.offs = roundf(mpfs[p].spliced_pf.tot_rows * mpfs[p].spliced_pf.sub.tsubint) + 0.5*mpfs[p].spliced_pf.sub.tsubint;
+                mpfs[p].spliced_pf.sub.lst += mpfs[p].spliced_pf.sub.tsubint;
+            }
+        }
+
+        if (out_coarse)
+        {
+            vdif_write_second( &vf[p], vhdr,
+                    data_buffer_vdif + p * vf->sizeof_buffer );
+        }
+
+        logger_stop_stopwatch( log, "write" );
+    }
 }
