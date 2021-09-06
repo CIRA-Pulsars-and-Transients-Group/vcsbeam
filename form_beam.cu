@@ -235,7 +235,7 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
     }
 }
 
-__global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, float *scales, uint8_t *Iscaled )
+__global__ void renormalise_channels_kernel( float *I, int nstep, float *offsets, float *scales, uint8_t *Iscaled )
 {
     // For just doing stokes I
     // One block
@@ -255,7 +255,7 @@ __global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, 
     int p       = blockIdx.x;  /* The (p)ointing number */
 
     float val, scale, offset;
-    float summed = 0.0;
+    //float summed = 0.0;
 
     // Initialise min and max values to the first sample
     float min = I[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
@@ -268,89 +268,41 @@ __global__ void flatten_bandpass_I_kernel( float *I, int nstep, float *offsets, 
         val = I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)];
         min = (val < min ? val : min);
         max = (val > max ? val : max);
-        summed += fabsf(val);
+        //summed += fabsf(val);
     }
 
+    // Rescale the incoherent beam to fit the available 8 bits
     scale  = (max - min) / 256.0; // (for 8-bit values)
     offset = min + 0.5*scale;
 
-    float mean = summed / nstep;
-
-    // Rescale the incoherent beam
     for (i = 0; i < nstep; i++)
     {
-        if (Iscaled != NULL)
-        {
-            val = (I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) / scale;
-            Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 0.5);
-
-            //val = I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)]*32.0/mean;
-            //val = (val > 127.0 ? 127.0 : val);
-            //val = (val < -128.0 ? -128.0 : val);
-            //Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 128.0);
-            //if (chan == 0 && stokes == 1 && i < 200) printf( "%10.2f\t%10.2f\t%10.2f\n", val1 + 0.5, val + 128.0, mean );
-        }
-
-        I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] *= 32.0/mean;
+        val = (I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) / scale;
+        Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 0.5);
     }
 
     // Set the scales and offsets
-    if (scales != NULL)
-    {
-        scales[p*nstokes*nchan + stokes*nchan + chan] = scale/mean;
-        //scales[p*nstokes*nchan + chan*nstokes + stokes] = scale/mean;
-    }
+    scales[p*nstokes*nchan + stokes*nchan + chan] = scale;
+    offsets[p*nstokes*nchan + stokes*nchan + chan] = offset;
 
-    if (offsets != NULL)
-    {
-        offsets[p*nstokes*nchan + stokes*nchan + chan] = offset/mean;
-        //offsets[p*nstokes*nchan + chan*nstokes + stokes] = offset/mean;
-    }
-}
+    // Originally, this function's purpose was to "flatten the bandpass";
+    // however, it appears that all downstream pulsar software does this
+    // routinely anyway. Along with the commented-out lines above relating
+    // to the calculation of the mean, the following line was the original
+    // "flattening" instruction, with "32" being a magic number to get
+    // the range to fit nicely (NB but not perfectly!) into 8 bits.
+    // As it is, Iscaled as calculated above, only affects the PSRFITS
+    // output, while uncommenting the following line (along with the other
+    // necessary lines above) will only affect the VDIF output.
+    //
+    // In particular, I currently believe that the PFB inversion should
+    // in principle have higher fidelity if the bandpass is _not_ flattened
+    // first, since the inverse filter is designed to be the complement of
+    // the forward filter anyway. However, preliminary tests show that the
+    // difference it marginal, even negligible. Uncomment at your own risk!
 
-
-__global__ void flatten_bandpass_C_kernel( float *C, int nstep )
-{
-    // For just doing stokes I
-    // One block
-    // 128 threads each thread will do one channel
-    // (we have already summed over all ant)
-
-    // For doing the C array (I,Q,U,V)
-    // ... figure it out later.
-
-    // Translate GPU block/thread numbers into meaningful names
-    int chan    = threadIdx.x; /* The (c)hannel number */
-    int nchan   = blockDim.x;  /* The (n)umber of (c)hannels */
-    int stokes  = threadIdx.y; /* The (stokes) number */
-    int nstokes = blockDim.y;  /* The (n)umber of (stokes) */
-
-    int p      = blockIdx.x;  /* The (p)ointing number */
-
-    float band;
-
-    int new_var = 32; /* magic number */
-    int i;
-
-    float *data_ptr;
-
-    // initialise the band 'array'
-    band = 0.0;
-
-    // accumulate abs(data) over all time samples and save into band
-    //data_ptr = C + C_IDX(0,stokes,chan,nchan);
-    for (i=0;i<nstep;i++) { // time steps
-        data_ptr = C + C_IDX(p,i,stokes,chan,nstep,nstokes,nchan);
-        band += fabsf(*data_ptr);
-    }
-
-    // now normalise the coherent beam
-    //data_ptr = C + C_IDX(0,stokes,chan,nchan);
-    for (i=0;i<nstep;i++) { // time steps
-        data_ptr = C + C_IDX(p,i,stokes,chan,nstep,nstokes,nchan);
-        *data_ptr = (*data_ptr)/( (band/nstep)/new_var );
-    }
-
+    //float mean = summed / nstep;
+    //I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] *= 32.0/mean;
 }
 
 
@@ -390,7 +342,7 @@ void cu_form_incoh_beam(
 
     dim3 chan_stokes(nchan, 1);
     int npointing = 1;
-    flatten_bandpass_I_kernel<<<npointing, chan_stokes>>>( d_incoh, nsample, d_offsets, d_scales, d_Iscaled );
+    renormalise_channels_kernel<<<npointing, chan_stokes>>>( d_incoh, nsample, d_offsets, d_scales, d_Iscaled );
     gpuErrchk( cudaPeekAtLastError() );
 
     // Copy the results back into host memory
@@ -507,7 +459,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
     gpuErrchk(cudaMallocHost( (void **)&Cscaled, Cscaled_size ));
 
     dim3 chan_stokes(nchan, NSTOKES);
-    flatten_bandpass_I_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate, d_offsets, d_scales, d_Cscaled );
+    renormalise_channels_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, sample_rate, d_offsets, d_scales, d_Cscaled );
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
 
