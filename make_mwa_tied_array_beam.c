@@ -30,25 +30,24 @@
 #define MAX_COMMAND_LENGTH 1024
 
 struct make_tied_array_beam_opts {
-    char              *begin_str;     // Absolute or relative GPS time -- when to start beamforming
-    unsigned long int  nseconds;      // How many seconds to process
-    char              *pointings_file; // Name of file containing pointings (e.g. "hh:mm:ss dd:mm:ss")
-    char              *datadir;       // The path to where the recombined data live
-    char              *metafits;      // filename of the metafits file
-    char              *coarse_chan_str;   // Absolute or relative coarse channel number
+    char              *begin_str;        // Absolute or relative GPS time -- when to start beamforming
+    unsigned long int  nseconds;         // How many seconds to process
+    char              *pointings_file;   // Name of file containing pointings (e.g. "hh:mm:ss dd:mm:ss")
+    char              *datadir;          // The path to where the recombined data live
+    char              *metafits;         // filename of the metafits file
+    char              *coarse_chan_str;  // Absolute or relative coarse channel number
 
     // Variables for MWA/VCS configuration
-    char              *custom_flags;  // Use custom list for flagging antennas
+    //char              *custom_flags;    // Use custom list for flagging antennas
 
     // Output options
-    int                out_coh;       // Default = PSRFITS (coherent)   output turned OFF
-    int                out_vdif;      // Default = VDIF                 output turned OFF
-    int                out_uvdif;     // Default = upsampled VDIF       output turned OFF
+    int                out_fine;         // Output fine channelised data (PSRFITS)
+    int                out_coarse;       // Output coarse channelised data (VDIF)
 
     // Other options
-    char              *synth_filter;  // Which synthesis filter to use
-    int                max_sec_per_file;    // Number of seconds per fits files
-    float              gpu_mem;       // Default = -1.0. If -1.0 use all GPU mem
+    char              *synth_filter;     // Which synthesis filter to use
+    int                max_sec_per_file; // Number of seconds per fits files
+    float              gpu_mem;          // Default = -1.0. If -1.0 use all GPU mem
 };
 
 /***********************
@@ -115,6 +114,25 @@ int main(int argc, char **argv)
     get_mwalib_metafits_metadata( cal.metafits, &cal_metadata, &cal_context );
 
     uintptr_t ntimesteps = vcs_metadata->num_provided_timesteps;
+
+    // Set the default output mode (fine vs coarse channelised) to match the input,
+    // if no explicit output mode was requested
+    if (!opts.out_fine && !opts.out_coarse)
+    {
+        switch (obs_metadata->mwa_version)
+        {
+            case VCSLegacyRecombined:
+                opts.out_fine = true;
+                break;
+            case VCSMWAXv2:
+                opts.out_coarse = true;
+                break;
+            default:
+                fprintf( stderr, "error: this observation does not appear to be a VCS observation\n" );
+                exit(EXIT_FAILURE);
+                break;
+        }
+    }
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nants          = obs_metadata->num_ants;
@@ -231,7 +249,7 @@ int main(int argc, char **argv)
     data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans * NSTOKES * nsamples );
     data_buffer_vdif  = create_pinned_data_buffer_vdif( nsamples * nchans * npols * npointing * 2 * sizeof(float) );
 
-    if (opts.out_vdif)
+    if (opts.out_coarse)
     {
         malloc_ipfb( &gi, ntaps, nsamples, nchans, npols, fil_size, npointing );
         cu_load_filter( coeffs, twiddles, &gi, nchans );
@@ -387,7 +405,7 @@ int main(int argc, char **argv)
         // Invert the PFB, if requested
         logger_start_stopwatch( log, "ipfb", true );
 
-        if (opts.out_vdif)
+        if (opts.out_coarse)
         {
             cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
@@ -397,7 +415,7 @@ int main(int argc, char **argv)
         logger_stop_stopwatch( log, "ipfb" );
 
         // Splice channels together
-        if (opts.out_coh)
+        if (opts.out_fine)
         {
             logger_start_stopwatch( log, "splice", true );
 
@@ -414,7 +432,7 @@ int main(int argc, char **argv)
         {
             logger_start_stopwatch( log, "write", true );
 
-            if (opts.out_coh)
+            if (opts.out_fine)
             {
                 if (mpfs[p].is_writer)
                 {
@@ -430,7 +448,7 @@ int main(int argc, char **argv)
                     mpfs[p].spliced_pf.sub.lst += mpfs[p].spliced_pf.sub.tsubint;
                 }
             }
-            if (opts.out_vdif)
+            if (opts.out_coarse)
             {
                 vdif_write_second( &vf[p], &vhdr,
                         data_buffer_vdif + p * vf->sizeof_buffer );
@@ -447,7 +465,7 @@ int main(int argc, char **argv)
     {
         free_mpi_psrfits( &(mpfs[p]) );
 
-        if (opts.out_vdif)
+        if (opts.out_coarse)
         {
             free( vf[p].b_scales  );
             free( vf[p].b_offsets );
@@ -484,7 +502,7 @@ int main(int argc, char **argv)
     free( opts.synth_filter    );
 
     free_formbeam( &gf );
-    if (opts.out_vdif)
+    if (opts.out_coarse)
     {
         free_ipfb( &gi );
     }
@@ -528,9 +546,10 @@ void usage() {
             "\t                           relative to the first or last channel in the observation\n"
             "\t                           respectively. Otherwise, it is treated as a receiver channel number\n"
             "\t                           (0-255) [default: \"+0\"]\n"
-            "\t-p, --psrfits              Turn on coherent PSRFITS output (will be turned on if none of\n"
-            "\t                           -i, -p, -u, -v are chosen).                                         [default: OFF]\n"
-            "\t-v, --vdif                 Turn on VDIF output with upsampling                                 [default: OFF]\n"
+            "\t-p, --out-fine             Output fine-channelised, full-Stokes data (PSRFITS)\n"
+            "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
+            "\t-v, --out-coarse           Output coarse-channelised, 2-pol (XY) data (VDIF)\n"
+            "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
             "\t-t, --max_t                Maximum number of seconds per output fits file. [default: 200]\n"
             "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
             "\t                           filter can be MIRROR or LSQ12.\n"
@@ -575,8 +594,8 @@ void make_tied_array_beam_parse_cmdline(
     opts->datadir            = NULL; // The path to where the recombined data live
     opts->metafits           = NULL; // filename of the metafits file for the target observation
     opts->coarse_chan_str    = NULL; // Absolute or relative coarse channel
-    opts->out_coh            = 0;    // Default = PSRFITS (coherent)   output turned OFF
-    opts->out_vdif           = 0;    // Default = VDIF                 output turned OFF
+    opts->out_fine           = 0;    // Output fine channelised data (PSRFITS)
+    opts->out_coarse         = 0;    // Output coarse channelised data (VDIF)
     opts->synth_filter       = NULL;
     opts->max_sec_per_file   = 200;  // Number of seconds per fits files
     opts->gpu_mem            = -1.0;
@@ -597,8 +616,8 @@ void make_tied_array_beam_parse_cmdline(
 
             static struct option long_options[] = {
                 {"begin",           required_argument, 0, 'b'},
-                {"psrfits",         no_argument,       0, 'p'},
-                {"vdif",            no_argument,       0, 'v'},
+                {"out-fine",        no_argument,       0, 'p'},
+                {"out-coarse",      no_argument,       0, 'v'},
                 {"max_t",           required_argument, 0, 't'},
                 {"synth_filter",    required_argument, 0, 'S'},
                 {"nseconds",        required_argument, 0, 'T'},
@@ -660,7 +679,7 @@ void make_tied_array_beam_parse_cmdline(
                     cal->cal_type = CAL_OFFRINGA;
                     break;
                 case 'p':
-                    opts->out_coh = 1;
+                    opts->out_fine = 1;
                     break;
                 case 'P':
                     opts->pointings_file = (char *)malloc( strlen(optarg) + 1 );
@@ -689,7 +708,7 @@ void make_tied_array_beam_parse_cmdline(
                     cal->apply_xy_correction = false;
                     break;
                 case 'v':
-                    opts->out_vdif = 1;
+                    opts->out_coarse = 1;
                     break;
                 case 'V':
                     printf( "MWA Beamformer %s\n", VERSION_BEAMFORMER);
@@ -735,13 +754,6 @@ void make_tied_array_beam_parse_cmdline(
         opts->coarse_chan_str = (char *)malloc( 3 );
         strcpy( opts->coarse_chan_str, "+0" );
     }
-
-    // If neither -i, -p, nor -v were chosen, set -p by default
-    if ( !opts->out_coh && !opts->out_vdif )
-    {
-        opts->out_coh = 1;
-    }
-
 }
 
 
