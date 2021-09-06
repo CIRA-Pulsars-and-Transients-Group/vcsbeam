@@ -20,5 +20,6 @@ The coefficients for each filter described below can be found in this directory 
 
 ## More information
 
-The above filters are described in more detail
+The above filters, and how they are determined, are described in more detail in the following paper:
+
 McSweeney et al. (2020). *MWA tied-array processing III: Microsecond time resolution via a polyphase synthesis filter.* **PASA**, 37, e034. [https://doi.org/10.1017/pasa.2020.24](https://doi.org/10.1017/pasa.2020.24)
