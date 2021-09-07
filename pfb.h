@@ -4,8 +4,8 @@
  *                                                      *
  ********************************************************/
 
-#ifndef IPFB_H
-#define IPFB_H
+#ifndef __PFB_H__
+#define __PFB_H__
 
 #include <cuda_runtime.h>
 #include <cuComplex.h>
@@ -25,11 +25,11 @@ struct gpu_ipfb_arrays
     float *d_out;
 };
 
-void cu_invert_pfb_ord( cuDoubleComplex ****detected_beam, int file_no,
+void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
                         int npointing, int nsamples, int nchan, int npol, int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_uvdif );
 
-void cu_load_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g );
+void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g );
 
 void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
         int npol, int npointing );

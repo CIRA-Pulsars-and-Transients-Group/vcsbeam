@@ -11,7 +11,7 @@
 #include <cuComplex.h>
 
 extern "C" {
-#include "ipfb.h"
+#include "pfb.h"
 #include "filter.h"
 }
 
@@ -100,7 +100,7 @@ __global__ void filter_kernel( float *in_real, float *in_imag,
             // The index into the ft (= filter/twiddle) array is
             ft = F*tw + f;
 
-            // The "in" index (see cu_invert_pfb_ord() for how the in[] arrays
+            // The "in" index (see cu_invert_pfb() for how the in[] arrays
             // were packed)
             // The fine channel time index, m, must be adjusted to ensure that
             // n=0 corresponds to the first full filter's worth of input samples
@@ -122,7 +122,7 @@ __global__ void filter_kernel( float *in_real, float *in_imag,
 }
 
 extern "C"
-void cu_invert_pfb_ord( cuDoubleComplex ****detected_beam, int file_no,
+void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
                         int npointing, int nsamples, int nchan, int npol,
                         int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_vdif )
@@ -208,7 +208,7 @@ void cu_invert_pfb_ord( cuDoubleComplex ****detected_beam, int file_no,
 }
 
 
-void cu_load_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
+void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
 /* This function loads the inverse filter coefficients and the twiddle factors
    into GPU memory. If they were loaded separately (as floats), then the
    multiplication of the filter coefficients and the twiddle factors will be

@@ -25,7 +25,7 @@
 #include "primary_beam.h"
 #include "geometry.h"
 #include "performance.h"
-#include "ipfb.h"
+#include "pfb.h"
 
 #define MAX_COMMAND_LENGTH 1024
 
@@ -229,7 +229,7 @@ int main(int argc, char **argv)
     if (opts.out_coarse)
     {
         malloc_ipfb( &gi, filter, nsamples, npols, npointing );
-        cu_load_filter( filter, &gi );
+        cu_load_ipfb_filter( filter, &gi );
     }
 
     // Set up parallel streams
@@ -394,7 +394,7 @@ int main(int argc, char **argv)
 
         if (opts.out_coarse && obs_metadata->mwa_version == VCSLegacyRecombined)
         {
-            cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
+            cu_invert_pfb( detected_beam, timestep_idx, npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
         }

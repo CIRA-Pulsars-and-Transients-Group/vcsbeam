@@ -33,11 +33,9 @@
                                (c) * (ni)      + \
                                (i))
 
-#define vMWAX_IDX(s,c,i,nc,ni)
-
 #define VSPVB  64000  /* "Vcsmwax Samples Per Voltage Block"
                          (i.e. the size of the TIME dimension in a voltage block */
-#define VCSMWAX_IDX(s,i,ni) ((s)*(ni) + (i)*VSPVB + (s%VSPVB))
+#define vMWAX_IDX(s,i,ni) ((s)*(ni) + (i)*VSPVB + (s%VSPVB))
 
 #define J_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol*npol*(nc))      + \
                                     (c)  * (npol*npol)           + \

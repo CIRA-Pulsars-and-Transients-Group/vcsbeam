@@ -32,7 +32,7 @@ find_package(MWALIB)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 
-add_executable(make_mwa_tied_array_beam "beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;jones.c;ipfb.cu;make_mwa_tied_array_beam.c;ascii_header.c;vdifio.c;calibration.c;primary_beam.c;geometry.c;metadata.c;performance.c")
+add_executable(make_mwa_tied_array_beam "beam_psrfits.c;beam_vdif.c;filter.c;form_beam.cu;jones.c;pfb.cu;make_mwa_tied_array_beam.c;ascii_header.c;vdifio.c;calibration.c;primary_beam.c;geometry.c;metadata.c;performance.c")
 add_executable(make_mwa_incoh_beam "beam_psrfits.c;form_beam.cu;make_mwa_incoh_beam.c;ascii_header.c;metadata.c;geometry.c;performance.c")
 add_executable(mwa_track_primary_beam_response "mwa_track_primary_beam_response.c;jones.c;metadata.c;geometry.c;primary_beam.c;form_beam.cu;performance.c")
 
