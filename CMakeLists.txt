@@ -13,7 +13,7 @@ execute_process(
 message("VCSBeam ${VCSBEAM_VERSION}")
 
 if(NOT RUNTIME_DIR)
-    set(RUNTIME_DIR ${CMAKE_INSTALL_PREFIX}/bin)
+    set(RUNTIME_DIR ${CMAKE_INSTALL_PREFIX}/bin/vcsbeam_runtime)
 endif(NOT RUNTIME_DIR)
 
 project (vcsbeam LANGUAGES C CUDA)
@@ -50,6 +50,10 @@ message("${M_LIBRARY}, ${RT_LIBRARY}")
 
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_tied_array_beam ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_incoh_beam ${CMAKE_CURRENT_BINARY_DIR}/mwa_track_primary_beam_response DESTINATION bin)
 
-install(FILES xy_phase_correction.txt DESTINATION ${RUNTIME_DIR})
+install(FILES xy_phase_correction.txt
+    pfb_filter/MIRROR.dat
+    pfb_filter/LSQ12.dat
+    pfb_filter/FINEPFB.dat
+    DESTINATION ${RUNTIME_DIR})
 
 message("Runtime files will be installed in ${RUNTIME_DIR}")
