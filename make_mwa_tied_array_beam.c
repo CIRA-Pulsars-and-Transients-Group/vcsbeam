@@ -392,7 +392,7 @@ int main(int argc, char **argv)
         // Invert the PFB, if requested
         logger_start_stopwatch( log, "ipfb", true );
 
-        if (opts.out_coarse)
+        if (opts.out_coarse && obs_metadata->mwa_version == VCSLegacyRecombined)
         {
             cu_invert_pfb_ord( detected_beam, timestep_idx, npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
