@@ -178,9 +178,7 @@ int main(int argc, char **argv)
     for (p = 0; p < npointing; p++)
         calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
-    // Create structures for the PFB filter coefficients
-    int ntaps, fil_size = 0;
-    double *coeffs = NULL;
+    // Create a structure for the PFB filter coefficients
 
     // If no synthesis filter was explicitly chosen, choose the LSQ12 filter
     if (!opts.synth_filter)
@@ -188,39 +186,15 @@ int main(int argc, char **argv)
         opts.synth_filter = (char *)malloc( 6 );
         strcpy( opts.synth_filter, "LSQ12" );
     }
-    if (strcmp( opts.synth_filter, "LSQ12" ) == 0)
-    {
-        ntaps = 12;
-        fil_size = ntaps * nchans; // = 12 * 128 = 1536
-        coeffs = (double *)malloc( fil_size * sizeof(double) );
-        double tmp_coeffs[] = LSQ12_FILTER_COEFFS; // I'll have to change the way these coefficients are stored
-                                                   // in order to avoid this cumbersome loading procedure
-        for (i = 0; i < fil_size; i++)
-            coeffs[i] = tmp_coeffs[i];
-    }
-    else if (strcmp( opts.synth_filter, "MIRROR" ) == 0)
-    {
-        ntaps = 12;
-        fil_size = ntaps * nchans; // = 12 * 128 = 1536
-        coeffs = (double *)malloc( fil_size * sizeof(double) );
-        double tmp_coeffs[] = MIRROR_FILTER_COEFFS;
-        for (i = 0; i < fil_size; i++)
-            coeffs[i] = tmp_coeffs[i];
-    }
-    else
-    {
-        fprintf( stderr, "error: unrecognised synthesis filter: %s\n",
-                opts.synth_filter );
-        exit(EXIT_FAILURE);
-    }
-    cuDoubleComplex *twiddles = roots_of_unity( nchans );
+
+    pfb_filter *filter = load_filter_coefficients( opts.synth_filter, ANALYSIS_FILTER, nchans );
 
     // Adjust by the scaling that was introduced by the forward PFB,
     // along with any other scaling that I, Lord and Master of the inverse
     // PFB, feel is appropriate.
     double approx_filter_scale = 15.0/7.2; // 7.2 = 16384/117964.8
-    for (i = 0; i < fil_size; i++)
-        coeffs[i] *= approx_filter_scale;
+    for (i = 0; i < filter->size; i++)
+        filter->coeffs[i] *= approx_filter_scale;
 
     /*********************
      * Memory Allocation *
@@ -254,8 +228,8 @@ int main(int argc, char **argv)
 
     if (opts.out_coarse)
     {
-        malloc_ipfb( &gi, ntaps, nsamples, nchans, npols, fil_size, npointing );
-        cu_load_filter( coeffs, twiddles, &gi, nchans );
+        malloc_ipfb( &gi, filter->ntaps, nsamples, filter->nchans, npols, filter->size, npointing );
+        cu_load_filter( filter->coeffs, filter->twiddles, &gi, filter->nchans );
     }
 
     // Set up parallel streams
@@ -469,8 +443,7 @@ int main(int argc, char **argv)
     destroy_invJi( invJi, nants, nchans, npols );
     destroy_detected_beam( detected_beam, npointing, 2*nsamples, nchans );
 
-    free( twiddles );
-    free( coeffs );
+    free_pfb_filter( filter );
 
     cudaFreeHost( data_buffer_coh   );
     cudaCheckErrors( "cudaFreeHost(data_buffer_coh) failed" );

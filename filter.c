@@ -42,3 +42,95 @@ cuDoubleComplex *roots_of_unity( int N )
 }
 
 
+pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nchans )
+/* Load a set of filter coefficients
+ * Inputs:
+ *   FILTERNAME - string specifying a filter. There should be a corresponding
+ *                file in the RUNTIME_DIR called FILTERNAME.dat.
+ *   TYPE       - Whether it's an ANALYSIS_FILTER or a SYNTHESIS_FILTER
+ *   NCHANS     - the number of channels that this filter will be applied to.
+ *                For both ANALYSIS and SYNTHESIS filters, this should be
+ *                the number of ANALYSIS channels.
+ * Outputs:
+ *   [return value] - pointer to the newly allocated struct containing the
+ *                    coefficients. This should be freed using
+ *                    free_pfb_filter()
+ */
+{
+    // Make sure function arguments are not NULL
+    if (filtername == NULL)
+    {
+        fprintf( stderr, "error: load_filter_coefficients: "
+                "arguments must not be NULL\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    // Generate the file path from the given filtername
+    char path[1024];
+    sprintf( path, "%s/%s.dat", RUNTIME_DIR, filtername );
+
+    // Open the file for reading
+    FILE *f = fopen( path, "r" );
+    if (f == NULL)
+    {
+        fprintf( stderr, "error: load_filter_coefficients: "
+                "could not find filter '%s'\n", filtername );
+        exit(EXIT_FAILURE);
+    }
+
+    // Go through file and count the number of coefficients
+    // We assume that the file contains ONLY ASCII floating point
+    // numbers separated by whitespace.
+    double dummy;
+    int num_read;
+
+    pfb_filter *filter = (pfb_filter *)malloc( sizeof(pfb_filter) );
+    filter->nchans     = nchans;
+    filter->size       = 0;
+    filter->type       = type;
+
+    while ((num_read = fscanf( f, "%lf", &dummy )) != EOF)
+        filter->size++;
+
+    // Check to see that there is at least 1 coefficient!
+    if (filter->size == 0)
+    {
+        fprintf( stderr, "error: load_filter_coefficients: "
+                "No coefficients found in '%s'\n", filtername );
+        exit(EXIT_FAILURE);
+    }
+    filter->coeffs = (double *)malloc( filter->size * sizeof(double) );
+
+    // Rewind back to the beginning of the file and read them into
+    // a new buffer.
+    rewind( f );
+    for (num_read = 0; num_read < filter->size; num_read++)
+        fscanf( f, "%lf", &(filter->coeffs[num_read]) );
+
+    // Work out the number of taps, and issue a warning if the number
+    // of channels does not divide evenly into the number of coefficients
+    if (filter->size % nchans != 0)
+    {
+        fprintf( stderr, "warning: load_filter_coefficients: "
+                "number of channels (%d) does not divide evenly into the "
+                "number of coefficients (%d)\n", nchans, filter->size );
+    }
+    filter->ntaps = filter->size / nchans;
+
+    // Pre-calculate the twiddle factors
+    filter->twiddles = roots_of_unity( nchans );
+
+    // Close the file and return the pointer
+    fclose( f );
+
+    return filter;
+}
+
+
+void free_pfb_filter( pfb_filter *filter )
+/* Free the memory allocated in load_filter_coefficients()
+ */
+{
+    free( filter->coeffs );
+    free( filter );
+}
