@@ -10,6 +10,8 @@
 #include <cuda_runtime.h>
 #include <cuComplex.h>
 
+#include "filter.h"
+
 struct gpu_ipfb_arrays
 {
     int ntaps;
@@ -27,11 +29,10 @@ void cu_invert_pfb_ord( cuDoubleComplex ****detected_beam, int file_no,
                         int npointing, int nsamples, int nchan, int npol, int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_uvdif );
 
-void cu_load_filter( double *coeffs, cuDoubleComplex *twiddles, struct gpu_ipfb_arrays *g,
-        int nchan );
+void cu_load_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g );
 
-void malloc_ipfb( struct gpu_ipfb_arrays *g, int ntaps, int nsamples,
-        int nchan, int npol, int fil_size, int npointing );
+void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
+        int npol, int npointing );
 
 void free_ipfb( struct gpu_ipfb_arrays *g );
 

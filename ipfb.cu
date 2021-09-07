@@ -12,6 +12,7 @@
 
 extern "C" {
 #include "ipfb.h"
+#include "filter.h"
 }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -207,8 +208,7 @@ void cu_invert_pfb_ord( cuDoubleComplex ****detected_beam, int file_no,
 }
 
 
-void cu_load_filter( double *coeffs, cuDoubleComplex *twiddles, struct gpu_ipfb_arrays *g,
-        int nchan )
+void cu_load_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
 /* This function loads the inverse filter coefficients and the twiddle factors
    into GPU memory. If they were loaded separately (as floats), then the
    multiplication of the filter coefficients and the twiddle factors will be
@@ -225,26 +225,20 @@ void cu_load_filter( double *coeffs, cuDoubleComplex *twiddles, struct gpu_ipfb_
    k = i / N
    and K is the number of channels (nchan).
 
-   This function assumes that the size of resulting array has already been
-   calculated (in bytes) and set in
-     g->ft_size
-   and that the number of elements in twiddles is
-     nchan
 */
 {
     int ch, f, i;
-    int fil_size = g->ft_size / nchan / sizeof(float);
 
     // Setup filter values:
     cuDoubleComplex ft; // pre-calculated filter coeffs times twiddle factor
     cuDoubleComplex cf; // temp variable for complex version of filter coeffs
-    for (f = 0; f < fil_size; f++)
+    for (f = 0; f < filter->size; f++)
     {
-        cf = make_cuDoubleComplex( coeffs[f], 0.0 );
-        for (ch = 0; ch < nchan; ch++)
+        cf = make_cuDoubleComplex( filter->coeffs[f], 0.0 );
+        for (ch = 0; ch < filter->nchans; ch++)
         {
-            i = fil_size*ch + f;
-            ft = cuCmul( twiddles[ch], cf );
+            i = filter->size*ch + f;
+            ft = cuCmul( filter->twiddles[ch], cf );
             g->ft_real[i] = cuCreal( ft );
             g->ft_imag[i] = cuCimag( ft );
         }
@@ -255,9 +249,14 @@ void cu_load_filter( double *coeffs, cuDoubleComplex *twiddles, struct gpu_ipfb_
 }
 
 
-void malloc_ipfb( struct gpu_ipfb_arrays *g, int ntaps, int nsamples,
-        int nchan, int npol, int fil_size, int npointing )
+void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
+        int npol, int npointing )
 {
+    // Some shorthand variables:
+    int ntaps = filter->ntaps;
+    int nchan = filter->nchans;
+    int fil_size = filter->size;
+
     // Flatten the input array (detected_array) for GPU.
     // We only need one second's worth, plus 12 time samples tacked onto the
     // beginning (from the previous second)
@@ -265,7 +264,7 @@ void malloc_ipfb( struct gpu_ipfb_arrays *g, int ntaps, int nsamples,
     g->ntaps     = ntaps;
     g->in_size   = npointing * ((nsamples + ntaps) * nchan * npol) * sizeof(float);
     g->ft_size   = fil_size * nchan * sizeof(float);
-    g->out_size  = npointing * nsamples * nchan * npol * 2 * sizeof(float);
+    g->out_size  = npointing * nsamples * filter->nchans * npol * 2 * sizeof(float);
 
     // Allocate memory on the device
     gpuErrchk(cudaMalloc( (void **)&g->d_in_real, g->in_size ));

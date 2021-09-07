@@ -228,8 +228,8 @@ int main(int argc, char **argv)
 
     if (opts.out_coarse)
     {
-        malloc_ipfb( &gi, filter->ntaps, nsamples, filter->nchans, npols, filter->size, npointing );
-        cu_load_filter( filter->coeffs, filter->twiddles, &gi, filter->nchans );
+        malloc_ipfb( &gi, filter, nsamples, npols, npointing );
+        cu_load_filter( filter, &gi );
     }
 
     // Set up parallel streams
