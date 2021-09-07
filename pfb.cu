@@ -34,9 +34,44 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 // define a macro for accessing gpuAssert
 #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
-__global__ void filter_kernel( float *in_real, float *in_imag,
-                               float *ft_real, float *ft_imag,
-                               int ntaps, int npol, float *out )
+
+__global__ void legacy_pfb_kernel(
+        int8_t *indata, uint8_t *outdata, int *filter_coeffs, int ntaps )
+/* This kernel attempts to emulate the "fine PFB" algorithm that was
+   implemented on the FPGAs of Phase 1 & 2 of the MWA. As described in
+   McSweeney et al. (2020), this algorithm is a version of the "weighted
+   overlap-add" algorithm (see their Eq. (3)):
+
+            K-1
+   X_k[m] = SUM b_m[n] e^(-2πjkn/K),
+            n=0
+
+   where
+            P-1
+   b_m[n] = SUM h[Kρ-n] x[n+mM-Kρ].
+            ρ=0
+
+   A full description of these symbols is given in the reference, but it
+   should be noted here that
+
+     - "x" represents the input data (INDATA),
+     - "X" represents the output data (OUTDATA),
+     - "h" represents the filter coefficients (FILTER_COEFFS),
+     - "P" represents the number of taps (NTAPS)
+
+   Apart from the weighted overlap-add algorithm, this kernel also performs
+   the truncation and rounding scheme also implemented on the FPGAs, whose
+   ultimate effect is to pack the data into (4+4)-bit complex values. These
+   operations are described (along with a short dicussion of its disadvant-
+   ages) can be found in the Appendix of McSweeney et al. (2020).
+ */
+{
+}
+
+__global__ void ipfb_kernel(
+    float *in_real, float *in_imag,
+    float *ft_real, float *ft_imag,
+    int ntaps, int npol, float *out )
 /* This kernel computes the synthesis filter:
 
               1              K-1
@@ -197,7 +232,7 @@ void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
         fprintf( stderr, "error: PFB inversion currently only supports a single pointing\n" );
         exit(EXIT_FAILURE);
     }
-    filter_kernel<<<nsamples, nchan*npol>>>( g->d_in_real, g->d_in_imag,
+    ipfb_kernel<<<nsamples, nchan*npol>>>( g->d_in_real, g->d_in_imag,
                                              g->d_ft_real, g->d_ft_imag,
                                              g->ntaps, npol, g->d_out );
     gpuErrchk( cudaPeekAtLastError() );
