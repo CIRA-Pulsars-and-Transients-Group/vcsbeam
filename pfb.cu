@@ -203,26 +203,39 @@ __global__ void pack_into_recombined_format( cuDoubleComplex *ffted, uint8_t *ou
 
     // Pull the values to be manipulated into register memory (because the
     // packing macro below involves a lot of repetition of the arguments)
-    double x = b[b_idx].x;
-    double y = b[b_idx].y;
+    double re = b[b_idx].x;
+    double im = b[b_idx].y;
 
     // Put the packed value back into global memory at the appropriate place
-    X[X_idx] = PACK_NIBBLES(x, y);
+    X[X_idx] = PACK_NIBBLES(re, im);
 
     __syncthreads();
 }
 
-void cu_forward_pfb_fpga_version(
-        char2            *htr_data,    // The input data, as obtained via mwalib from coarse channelised data
-        uint8_t          *vcs_data,    // The output data, fine channelised and packed into the VCS recombined format
-        cufftHandle      *plan,        // The plan for performing the FFT step
-        MetafitsMetadata *obs_metadata // The metadata for the observation
-        )
+void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host )
 /* The wrapper function that performs the forward PFB algorithm as originally
    implemented on the FPGAs for MWA Phases 1 & 2.
    A cuFFT plan must already have been made, via make_forward_pfb_fpga_fft_plan().
  */
 {
+    // Init: Extract the necessary data dimensions from the metadata
+    //       and copy data to device
+
+    // ...
+    gpuErrchk(cudaMemcpy( fpfb->d_htr_data, fpfb->htr_data, fpfb->htr_size, cudaMemcpyHostToDevice ));
+
+    // PFB algorithm:
+    // 1st step: weighted overlap add
+
+    // 2nd step: FFT
+
+    // 3rd step: packaging the result
+
+    // Finally, copy the answer back to host memory, if requested
+    if (copy_result_to_host)
+    {
+        gpuErrchk(cudaMemcpy( fpfb->vcs_data, fpfb->d_vcs_data, fpfb->vcs_size, cudaMemcpyDeviceToHost ));
+    }
 }
 
 /**********************************

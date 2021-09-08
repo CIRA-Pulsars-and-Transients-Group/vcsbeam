@@ -9,6 +9,9 @@
 
 #include <cuda_runtime.h>
 #include <cuComplex.h>
+#include <cufft.h>
+
+#include <mwalib.h>
 
 #include "filter.h"
 
@@ -21,6 +24,24 @@
 #define INT_TO_UINT8(x)    ((x) < 0 ? CLIP(x,8) + 0x10 : CLIP(x,8))
 #define DEMOTE(x)  (INT_TO_UINT8((int)round(x)))
 #define PACK_NIBBLES(r,i)  ((DEMOTE(i) << 4) + DEMOTE(r))
+
+typedef struct forward_pfb_t
+{
+    char2            *htr_data;     // The input data, as obtained via mwalib from coarse channelised data
+    char2            *d_htr_data;   // Same as above, on device
+
+    uint8_t          *vcs_data;     // The output data, fine channelised and packed into the VCS recombined format
+    uint8_t          *d_vcs_data;   // Same as above, on device
+
+    size_t            htr_size;     // The size (in bytes) of htr_data
+    size_t            vcs_size;     // The size (in bytes) of vcs_data
+
+    cuDoubleComplex  *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
+
+    MetafitsMetadata *obs_metadata; // The observation metadata (mwalib struct)
+
+    cufftHandle      *plan;         // The cuFFT plan for performing the FFT part of the forward PFB
+} forward_pfb;
 
 struct gpu_ipfb_arrays
 {
