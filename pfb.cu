@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>
 #include <cuda_runtime.h>
 #include <cuComplex.h>
@@ -13,6 +14,7 @@
 extern "C" {
 #include "pfb.h"
 #include "filter.h"
+#include "jones.h"
 }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -34,13 +36,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 // define a macro for accessing gpuAssert
 #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
-
-__global__ void legacy_pfb_kernel(
-        int8_t *indata, uint8_t *outdata, int *filter_coeffs, int ntaps )
-/* This kernel attempts to emulate the "fine PFB" algorithm that was
-   implemented on the FPGAs of Phase 1 & 2 of the MWA. As described in
-   McSweeney et al. (2020), this algorithm is a version of the "weighted
-   overlap-add" algorithm (see their Eq. (3)):
+/* The following kernels are part of an "offline" version of the "fine PFB"
+   algorithm that was implemented on the FPGAs of Phase 1 & 2 of the MWA. As
+   described in McSweeney et al. (2020), this algorithm is a version of the
+   "weighted overlap-add" algorithm (see their Eq. (3)):
 
             K-1
    X_k[m] = SUM b_m[n] e^(-2πjkn/K),
@@ -52,20 +51,115 @@ __global__ void legacy_pfb_kernel(
             ρ=0
 
    A full description of these symbols is given in the reference, but it
-   should be noted here that
+   should be noted here that, for the kernels below,
 
      - "x" represents the input data (INDATA),
      - "X" represents the output data (OUTDATA),
      - "h" represents the filter coefficients (FILTER_COEFFS),
      - "P" represents the number of taps (NTAPS)
+     - "b" represents the weighted overlap-add array (WEIGHTED_OVERLAP_ARRAY)
 
-   Apart from the weighted overlap-add algorithm, this kernel also performs
-   the truncation and rounding scheme also implemented on the FPGAs, whose
-   ultimate effect is to pack the data into (4+4)-bit complex values. These
-   operations are described (along with a short dicussion of its disadvant-
-   ages) can be found in the Appendix of McSweeney et al. (2020).
+   The algorithm is broken up into three parts:
+     (1) the weighted overlap-add, which forms "b" from "x" and "h",
+     (2) the FFT, which is implemented using the cuFFT library, and
+     (3) the demotion and packaging of the result into the required
+         output format, which is described in the Appendix of McSweeney et al.
+         (2020).
+
+   Notes:
+
+    - INDATA is expected to have the same data layout as delivered by mwalib's
+      mwalib_voltage_context_read_second() function when applied to MWAX high
+      time resolution data, whose format description can be found at
+      https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System
+      The samples are organised according to the vMWAX_IDX macro.
+
+    - OUTDATA will have the same data layout as "recombined" legacy VCS data:
+      (4+4)-bit complex samples, with imaginary component occupying the first
+      4 bits, and samples organised according to the v_IDX macro.
+
+    - Each thread will operate on one RF input (i.e. antenna/pol combination)
+      and generate the spectrum for a single "fine-channelised" time step
+      (the "m" index). The "weighted overlap-add" array ("b") also resides in
+      device memory, in order that it can make use of cuFFT. This is a 
  */
+
+__global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
+        int *filter_coeffs, cuDoubleComplex *weighted_overlap_array )
 {
+    // Parse the block and thread idxs:
+    //   <<<(nspectra,I),(K,P)>>>
+    // where nspectra is the number of output spectra,
+    //       I        is the number of RF inputs,
+    //       K        is the size of the output spectrum
+    //       P        is the number of taps
+    // ...and put everything into the mathematical notation used in McSweeney
+    // et al. (2020) (see equation in comments above)
+    int              m        = blockIdx.x;
+    int              nspectra = gridDim.x;
+    int              I        = gridDim.y;
+    int              i        = blockIdx.y;
+    int              K        = blockDim.x;
+    int              M        = K; // This enforces a critical sampled PFB
+    //int              P        = blockDim.y;
+    int              n        = threadIdx.x;
+    int              p        = threadIdx.y;
+
+    int             *h = filter_coeffs;
+    char2           *x = indata;
+    cuDoubleComplex *b = weighted_overlap_array;
+
+    // Use shared memory as a temporary workspace for preparing the b array
+    // For one block, this should have K elements
+    extern __shared__ int2 bint[];
+
+    // Let the first tap (p=0) have the responsibility of initialising the
+    // bint array to zeros
+    if (p == 0)
+    {
+        bint[n].x = 0;
+        bint[n].y = 0;
+    }
+    __syncthreads();
+
+    // Now calculate the index into the various arrays that also
+    // takes into account the fact that these arrays contain all RF inputs.
+    // MEMO TO SELF: My current going theory is that I don't have to do any
+    // re-ordering of the antennas, as that is dealt with elsewhere.
+    int h_idx = K*p - n;
+    int x_idx = vMWAX_IDX(n + m*M - K*p, i, I);
+    int b_idx = (K*i + m)*nspectra + n; // This puts each set of K samples to
+                                        // be FFT'd in a contiguous memory block
+
+    // Now perform the weighted overlap-add operation
+    int   hval = h[h_idx];
+    char2 xval = x[x_idx];
+
+    atomicAdd( &bint[n].x, hval*(int)xval.x );
+    atomicAdd( &bint[n].y, hval*(int)xval.y );
+
+    __syncthreads();
+
+    // In keeping with the original FPGA implementation, the result now needs to
+    // be demoted and rounded. Only one tap needs to do this
+    int X, Y; // To avoid too many shared memory accesses
+    if (p == 0)
+    {
+        X = bint[n].x;
+        Y = bint[n].y;
+
+        // Rounding:
+        if (X > 0)  X += 0x2000;
+        if (Y > 0)  Y += 0x2000;
+
+        // Demotion:
+        X >>= 14;
+        Y >>= 14;
+
+        // Promote the result to doubles and put it in the b array in global memory
+        // in preparation for being FFTed
+        b[b_idx] = make_cuDoubleComplex( (double)X, (double)Y );
+    }
 }
 
 __global__ void ipfb_kernel(
