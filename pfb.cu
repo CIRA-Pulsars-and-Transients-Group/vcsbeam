@@ -10,6 +10,7 @@
 #include <math.h>
 #include <cuda_runtime.h>
 #include <cuComplex.h>
+#include <cufft.h>
 
 extern "C" {
 #include "pfb.h"
@@ -36,19 +37,24 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 // define a macro for accessing gpuAssert
 #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
+/*******************************
+ * FORWARD (ANALYSIS) FINE PFB *
+ *******************************/
+
 /* The following kernels are part of an "offline" version of the "fine PFB"
    algorithm that was implemented on the FPGAs of Phase 1 & 2 of the MWA. As
    described in McSweeney et al. (2020), this algorithm is a version of the
    "weighted overlap-add" algorithm (see their Eq. (3)):
 
-            K-1
-   X_k[m] = SUM b_m[n] e^(-2πjkn/K),
-            n=0
+              K-1
+     X_k[m] = SUM b_m[n] e^(-2πjkn/K),
+              n=0
 
    where
-            P-1
-   b_m[n] = SUM h[Kρ-n] x[n+mM-Kρ].
-            ρ=0
+
+              P-1
+     b_m[n] = SUM h[Kρ-n] x[n+mM-Kρ].
+              ρ=0
 
    A full description of these symbols is given in the reference, but it
    should be noted here that, for the kernels below,
@@ -160,7 +166,68 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
         // in preparation for being FFTed
         b[b_idx] = make_cuDoubleComplex( (double)X, (double)Y );
     }
+
+    __syncthreads();
 }
+
+__global__ void pack_into_recombined_format( cuDoubleComplex *ffted, uint8_t *outdata )
+/* This is the final step in the forward fine PFB algorithm that emulates what
+   was implemented on the MWA FPGAs in Phase 1 & 2 (see above for details).
+   At this point, the FFTED array contains the Fourier-transformed data that
+   already represents the final channelisation. All that remains to be done is
+   to pack it into the same format as the VCS recombined data.
+
+   Kernel signature:
+     <<<(M,K),I>>>
+   where
+     M is the number of (fine-channelised) time samples
+     K is the number of channels
+     I is the number of RF inputs
+*/
+{
+    // Parse the kernel signature, using the same mathematical notation
+    // described above
+    int nspectra = gridDim.x;
+    int K        = gridDim.y;
+    int m        = blockIdx.x;
+    int k        = blockIdx.y;
+    int i        = threadIdx.x;
+    int I        = blockIdx.x;
+
+    cuDoubleComplex *b = ffted;
+    uint8_t         *X = outdata;
+
+    // Calculate the idxs into b and X
+    int b_idx = (K*i + m)*nspectra + k;
+    int X_idx = v_IDX(m, k, i, K, I);
+
+    // Pull the values to be manipulated into register memory (because the
+    // packing macro below involves a lot of repetition of the arguments)
+    double x = b[b_idx].x;
+    double y = b[b_idx].y;
+
+    // Put the packed value back into global memory at the appropriate place
+    X[X_idx] = PACK_NIBBLES(x, y);
+
+    __syncthreads();
+}
+
+void cu_forward_pfb_fpga_version(
+        char2            *htr_data,    // The input data, as obtained via mwalib from coarse channelised data
+        uint8_t          *vcs_data,    // The output data, fine channelised and packed into the VCS recombined format
+        cufftHandle      *plan,        // The plan for performing the FFT step
+        MetafitsMetadata *obs_metadata // The metadata for the observation
+        )
+/* The wrapper function that performs the forward PFB algorithm as originally
+   implemented on the FPGAs for MWA Phases 1 & 2.
+   A cuFFT plan must already have been made, via make_forward_pfb_fpga_fft_plan().
+ */
+{
+}
+
+/**********************************
+ * BACKWARDS (SYNTHESIS) FINE PFB *
+ **********************************/
 
 __global__ void ipfb_kernel(
     float *in_real, float *in_imag,
@@ -250,7 +317,6 @@ __global__ void ipfb_kernel(
     __syncthreads();
 }
 
-extern "C"
 void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
                         int npointing, int nsamples, int nchan, int npol,
                         int sizeof_buffer,

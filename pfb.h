@@ -12,6 +12,16 @@
 
 #include "filter.h"
 
+/* The final step in the forward PFB version that emulates the FPGA
+ * implementation packs the data into (4+4)-bit complex samples. The
+ * following macros collectively achieve this.
+ */
+#define CLIP(x,max)        ((x) < -(max)   ? -(max)   : \
+                            (x) >  (max)-1 ?  (max)-1 : (x))
+#define INT_TO_UINT8(x)    ((x) < 0 ? CLIP(x,8) + 0x10 : CLIP(x,8))
+#define DEMOTE(x)  (INT_TO_UINT8((int)round(x)))
+#define PACK_NIBBLES(r,i)  ((DEMOTE(i) << 4) + DEMOTE(r))
+
 struct gpu_ipfb_arrays
 {
     int ntaps;
