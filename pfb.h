@@ -25,23 +25,44 @@
 #define DEMOTE(x)  (INT_TO_UINT8((int)round(x)))
 #define PACK_NIBBLES(r,i)  ((DEMOTE(i) << 4) + DEMOTE(r))
 
+/*******************************
+ * FORWARD (ANALYSIS) FINE PFB *
+ *******************************/
+
 typedef struct forward_pfb_t
 {
-    char2            *htr_data;     // The input data, as obtained via mwalib from coarse channelised data
-    char2            *d_htr_data;   // Same as above, on device
+    char2            *htr_data;               // The input data, as obtained via mwalib from coarse channelised data
+    char2            *htr_data_extended;      // For any extra "spillover" data beyond htr_data
+    char2            *d_htr_data;             // All of the data, from both htr_data and htr_data_extended, on the device
 
-    uint8_t          *vcs_data;     // The output data, fine channelised and packed into the VCS recombined format
-    uint8_t          *d_vcs_data;   // Same as above, on device
+    uint8_t          *vcs_data;               // The output data, fine channelised and packed into the VCS recombined format
+    uint8_t          *d_vcs_data;             // Same as above, on device
 
-    size_t            htr_size;     // The size (in bytes) of htr_data
-    size_t            vcs_size;     // The size (in bytes) of vcs_data
+    size_t            htr_size;               // The size (in bytes) of htr_data
+    size_t            htr_extended_size;      // The size (in bytes) of htr_data_extended
+    size_t            vcs_size;               // The size (in bytes) of vcs_data
 
-    cuDoubleComplex  *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
+    cuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
 
-    MetafitsMetadata *obs_metadata; // The observation metadata (mwalib struct)
+    int              *filter_coeffs;          // The filter to be applied
+    int              *d_filter_coeffs;        // As above, on the device
 
-    cufftHandle      *plan;         // The cuFFT plan for performing the FFT part of the forward PFB
+    int               nspectra;               // The number of spectra to generate
+    int               M;                      // The "stride" of the PFB (setting M=K means critically sampled)
+    int               K;                      // The number of channels
+    int               I;                      // The number of RF inputs
+    int               P;                      // The number of taps
+
+    MetafitsMetadata *obs_metadata;           // The observation metadata (mwalib struct)
+
+    cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
 } forward_pfb;
+
+void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host );
+
+/**********************************
+ * BACKWARDS (SYNTHESIS) FINE PFB *
+ **********************************/
 
 struct gpu_ipfb_arrays
 {

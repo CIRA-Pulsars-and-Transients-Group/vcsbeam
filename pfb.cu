@@ -91,7 +91,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
  */
 
 __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
-        int *filter_coeffs, cuDoubleComplex *weighted_overlap_array )
+        int *filter_coeffs, cuFloatComplex *weighted_overlap_array )
 {
     // Parse the block and thread idxs:
     //   <<<(nspectra,I),(K,P)>>>
@@ -113,7 +113,7 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
 
     int             *h = filter_coeffs;
     char2           *x = indata;
-    cuDoubleComplex *b = weighted_overlap_array;
+    cuFloatComplex  *b = weighted_overlap_array;
 
     // Use shared memory as a temporary workspace for preparing the b array
     // For one block, this should have K elements
@@ -164,13 +164,13 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
 
         // Promote the result to doubles and put it in the b array in global memory
         // in preparation for being FFTed
-        b[b_idx] = make_cuDoubleComplex( (double)X, (double)Y );
+        b[b_idx] = make_cuFloatComplex( (double)X, (double)Y );
     }
 
     __syncthreads();
 }
 
-__global__ void pack_into_recombined_format( cuDoubleComplex *ffted, uint8_t *outdata )
+__global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *outdata )
 /* This is the final step in the forward fine PFB algorithm that emulates what
    was implemented on the MWA FPGAs in Phase 1 & 2 (see above for details).
    At this point, the FFTED array contains the Fourier-transformed data that
@@ -178,11 +178,11 @@ __global__ void pack_into_recombined_format( cuDoubleComplex *ffted, uint8_t *ou
    to pack it into the same format as the VCS recombined data.
 
    Kernel signature:
-     <<<(M,K),I>>>
+     <<<(nspectra,K),I>>>
    where
-     M is the number of (fine-channelised) time samples
-     K is the number of channels
-     I is the number of RF inputs
+     nspectra is the number of (fine-channelised) time samples
+     K        is the number of channels
+     I        is the number of RF inputs
 */
 {
     // Parse the kernel signature, using the same mathematical notation
@@ -194,7 +194,7 @@ __global__ void pack_into_recombined_format( cuDoubleComplex *ffted, uint8_t *ou
     int i        = threadIdx.x;
     int I        = blockIdx.x;
 
-    cuDoubleComplex *b = ffted;
+    cuFloatComplex  *b = ffted;
     uint8_t         *X = outdata;
 
     // Calculate the idxs into b and X
@@ -218,18 +218,28 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host )
    A cuFFT plan must already have been made, via make_forward_pfb_fpga_fft_plan().
  */
 {
-    // Init: Extract the necessary data dimensions from the metadata
-    //       and copy data to device
-
-    // ...
+    // Copy data to device
     gpuErrchk(cudaMemcpy( fpfb->d_htr_data, fpfb->htr_data, fpfb->htr_size, cudaMemcpyHostToDevice ));
+    if (fpfb->htr_data_extended != NULL)
+        gpuErrchk(cudaMemcpy( fpfb->d_htr_data + fpfb->htr_size, fpfb->htr_data_extended, fpfb->htr_extended_size, cudaMemcpyHostToDevice ));
 
     // PFB algorithm:
     // 1st step: weighted overlap add
+    dim3 blocks( fpfb->nspectra, fpfb->I );
+    dim3 threads( fpfb->K, fpfb->P );
+
+    legacy_pfb_weighted_overlap_add<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
+    gpuErrchk( cudaPeekAtLastError() );
 
     // 2nd step: FFT
+    cufftExecC2C( fpfb->plan, fpfb->d_weighted_overlap_add, fpfb->d_weighted_overlap_add, CUFFT_FORWARD );
 
     // 3rd step: packaging the result
+    dim3 blocks2( fpfb->nspectra, fpfb->K );
+    dim3 threads2( fpfb->I );
+
+    pack_into_recombined_format<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add, fpfb->d_vcs_data );
+    gpuErrchk( cudaPeekAtLastError() );
 
     // Finally, copy the answer back to host memory, if requested
     if (copy_result_to_host)

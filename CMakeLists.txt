@@ -22,13 +22,13 @@ add_definitions( -DVERSION_BEAMFORMER="${VCSBEAM_VERSION}" -DRUNTIME_DIR="${RUNT
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-find_package(CUDA)
-find_package(MPI)
-find_package(PAL)
-find_package(CFITSIO)
-find_package(PSRFITS_UTILS)
-find_package(HYPERBEAM)
-find_package(MWALIB)
+find_package(CUDA REQUIRED)
+find_package(MPI REQUIRED)
+find_package(PAL REQUIRED)
+find_package(CFITSIO REQUIRED)
+find_package(PSRFITS_UTILS REQUIRED)
+find_package(HYPERBEAM REQUIRED)
+find_package(MWALIB REQUIRED)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 
@@ -42,7 +42,7 @@ set_target_properties(mwa_track_primary_beam_response PROPERTIES COMPILE_FLAGS "
 
 include_directories(${PSRFITS_UTILS_INCLUDE_DIR} ${CFITSIO_INCLUDE_DIR} ${PAL_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${HYPERBEAM_INCLUDE_DIR} ${MWALIB_INCLUDE_DIR} ${MPI_INCLUDE_PATH})
 
-target_link_libraries(make_mwa_tied_array_beam ${PSRFITS_UTILS_LIBRARY} ${CFITSIO_LIBRARY} ${PAL_LIBRARY} ${M_LIBRARY} ${HYPERBEAM_LIB} ${MWALIB_LIB} ${MPI_C_LIBRARIES})
+target_link_libraries(make_mwa_tied_array_beam ${PSRFITS_UTILS_LIBRARY} ${CFITSIO_LIBRARY} ${PAL_LIBRARY} ${M_LIBRARY} ${HYPERBEAM_LIB} ${MWALIB_LIB} ${MPI_C_LIBRARIES} cufft)
 target_link_libraries(make_mwa_incoh_beam ${PSRFITS_UTILS_LIBRARY} ${CFITSIO_LIBRARY} ${PAL_LIBRARY} ${M_LIBRARY} ${MWALIB_LIB} ${MPI_C_LIBRARIES})
 target_link_libraries(mwa_track_primary_beam_response ${PAL_LIBRARY} ${M_LIBRARY} ${MWALIB_LIB} ${HYPERBEAM_LIB} ${M_LIBRARY})
 
