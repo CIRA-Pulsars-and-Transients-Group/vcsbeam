@@ -214,7 +214,7 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
 
 forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
         char2 *htr_data, char2 *htr_data_extended, uint8_t *vcs_data,
-        pfb_filter *filter )
+        pfb_filter *filter, int K, int M )
 /* Create and initialise a forward_pfb struct.
 
    Inputs:
@@ -227,6 +227,11 @@ forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
                          will be put
      FILTER            - struct containing the filter coefficients
                          **WARNING! Will be forcibly typecast to int!!**
+     K                 - the number of desired output channels
+     M                 - the stride of the application of the filter
+                         (this determines the time resolution of the
+                         channelised data). Set M = K for critically
+                         sampled PFB.
 
    Output:
 
@@ -240,6 +245,16 @@ forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
     fpfb->htr_data          = htr_data;
     fpfb->htr_data_extended = htr_data_extended;
     fpfb->vcs_data          = vcs_data;
+
+    fpfb->M = M;
+    fpfb->K = K;
+    fpfb->I = obs_metadata->num_rf_inputs;
+    fpfb->P = filter->ncoeffs / K;
+    
+    // The user is responsible for making sure that the number of desired
+    // channels divides evenly into the number of filter coefficients. No
+    // error or warning is generated otherwise, not even if the inferred
+    // number of taps (P) is 0.
 
     // Return the new struct
     return fpfb;
