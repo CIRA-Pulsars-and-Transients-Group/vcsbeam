@@ -164,7 +164,7 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
 
         // Promote the result to doubles and put it in the b array in global memory
         // in preparation for being FFTed
-        b[b_idx] = make_cuFloatComplex( (double)X, (double)Y );
+        b[b_idx] = make_cuFloatComplex( (float)X, (float)Y );
     }
 
     __syncthreads();
@@ -212,7 +212,8 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     __syncthreads();
 }
 
-forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
+forward_pfb *init_forward_pfb(
+        MetafitsMetadata *obs_metadata, VoltageMetadata *vcs_metadata,
         char2 *htr_data, char2 *htr_data_extended, uint8_t *vcs_data,
         pfb_filter *filter, int K, int M )
 /* Create and initialise a forward_pfb struct.
@@ -220,6 +221,7 @@ forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
    Inputs:
 
      OBS_METADATA      - mwalib metadata struct
+     VCS_METADATA      - mwalib voltage metadata struct
      HTR_DATA          - pointer to host memory to be PFB'd
      HTR_DATA_EXTENDED - pointer to extended host memory to be PFB'd
                          (will be tacked onto the end of HTR_DATA)
@@ -246,23 +248,68 @@ forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
     fpfb->htr_data_extended = htr_data_extended;
     fpfb->vcs_data          = vcs_data;
 
-    fpfb->M = M;
-    fpfb->K = K;
-    fpfb->I = obs_metadata->num_rf_inputs;
-    fpfb->P = filter->ncoeffs / K;
-    
-    // The user is responsible for making sure that the number of desired
+    // Some of the data dimensions
+    unsigned int nsamples = vcs_metadata->num_samples_per_voltage_block *
+                            vcs_metadata->num_voltage_blocks_per_second;
+
+    fpfb->nspectra = nsamples / M;
+    fpfb->M        = M;
+    fpfb->K        = K;
+    fpfb->I        = obs_metadata->num_rf_inputs;
+    fpfb->P        = filter->ncoeffs / K;
+    // ^^^ The user is responsible for making sure that the number of desired
     // channels divides evenly into the number of filter coefficients. No
     // error or warning is generated otherwise, not even if the inferred
     // number of taps (P) is 0.
+
+    // Work out the sizes of the various arrays
+    fpfb->htr_size          = vcs_metadata->num_voltage_blocks_per_timestep *
+                              vcs_metadata->voltage_block_size_bytes;
+    fpfb->htr_extended_size = vcs_metadata->voltage_block_size_bytes;
+        // ^^^ This choice only makes sense for MWAX data... but then again,
+        // the same is true for this whole function!
+    fpfb->vcs_size = fpfb->nspectra * obs_metadata->num_rf_inputs * K * sizeof(uint8_t);
+
+    size_t weighted_overlap_add_size = (fpfb->htr_size * sizeof(cuFloatComplex)) / sizeof(char2);
+    size_t filter_size = filter->ncoeffs * sizeof(int);
+
+    // Allocate memory for filter and copy across the filter coefficients,
+    // casting to int
+    gpuErrchk(cudaMallocHost( (void **)&(fpfb->filter_coeffs),   filter_size ));
+    gpuErrchk(cudaMalloc(     (void **)&(fpfb->d_filter_coeffs), filter_size ));
+    int i;
+    for (i = 0; i < filter->ncoeffs; i++)
+        fpfb->filter_coeffs[i] = (int)filter->coeffs[i]; // **WARNING! Forcible typecast to int!**
+    gpuErrchk(cudaMemcpyAsync( fpfb->d_filter_coeffs, fpfb->filter_coeffs, filter_size, cudaMemcpyHostToDevice ));
+
+    // Allocate device memory for the other arrays
+    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->htr_size + fpfb->htr_extended_size ));
+    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_vcs_data), fpfb->vcs_size ));
+    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_weighted_overlap_add), weighted_overlap_add_size ));
+
+    // Construct the cuFFT plan
+    int rank     = 1;     // i.e. a 1D FFT
+    int n        = K;     // size of each FFT
+    int *inembed = NULL;  // Setting this to null makes all subsequent "data layout" parameters ignored
+                          // to use the default layout (contiguous data in memory)
+    cufftPlanMany( &(fpfb->plan), rank, &n,
+            inembed, 0, 0, NULL, 0, 0,  // <-- Here are all the ignored data layout parameters
+            CUFFT_C2C, fpfb->nspectra );
 
     // Return the new struct
     return fpfb;
 }
 
 void free_forward_pfb( forward_pfb *fpfb )
-// Free the memory allocated in init_forward_pfb
+/* Free host and device memory allocated in init_forward_pfb
+ */
 {
+    cufftDestroy( fpfb->plan );
+    gpuErrchk(cudaFreeHost( fpfb->filter_coeffs ));
+    gpuErrchk(cudaFree( fpfb->d_filter_coeffs ));
+    gpuErrchk(cudaFree( fpfb->d_htr_data ));
+    gpuErrchk(cudaFree( fpfb->d_vcs_data ));
+    gpuErrchk(cudaFree( fpfb->d_weighted_overlap_add ));
     free( fpfb );
 }
 
@@ -287,6 +334,7 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host )
 
     // 2nd step: FFT
     cufftExecC2C( fpfb->plan, fpfb->d_weighted_overlap_add, fpfb->d_weighted_overlap_add, CUFFT_FORWARD );
+    cudaDeviceSynchronize();
 
     // 3rd step: packaging the result
     dim3 blocks2( fpfb->nspectra, fpfb->K );

@@ -56,7 +56,10 @@ typedef struct forward_pfb_t
     cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
 } forward_pfb;
 
-//forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata );
+forward_pfb *init_forward_pfb(
+        MetafitsMetadata *obs_metadata, VoltageMetadata *vcs_metadata,
+        char2 *htr_data, char2 *htr_data_extended, uint8_t *vcs_data,
+        pfb_filter *filter, int K, int M );
 void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host );
 
 /**********************************
