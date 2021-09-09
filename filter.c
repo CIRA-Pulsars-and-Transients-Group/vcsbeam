@@ -86,36 +86,36 @@ pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nc
 
     pfb_filter *filter = (pfb_filter *)malloc( sizeof(pfb_filter) );
     filter->nchans     = nchans;
-    filter->size       = 0;
+    filter->ncoeffs    = 0;
     filter->type       = type;
 
     while ((num_read = fscanf( f, "%lf", &dummy )) != EOF)
-        filter->size++;
+        filter->ncoeffs++;
 
     // Check to see that there is at least 1 coefficient!
-    if (filter->size == 0)
+    if (filter->ncoeffs == 0)
     {
         fprintf( stderr, "error: load_filter_coefficients: "
                 "No coefficients found in '%s'\n", filtername );
         exit(EXIT_FAILURE);
     }
-    filter->coeffs = (double *)malloc( filter->size * sizeof(double) );
+    filter->coeffs = (double *)malloc( filter->ncoeffs * sizeof(double) );
 
     // Rewind back to the beginning of the file and read them into
     // a new buffer.
     rewind( f );
-    for (num_read = 0; num_read < filter->size; num_read++)
+    for (num_read = 0; num_read < filter->ncoeffs; num_read++)
         fscanf( f, "%lf", &(filter->coeffs[num_read]) );
 
     // Work out the number of taps, and issue a warning if the number
     // of channels does not divide evenly into the number of coefficients
-    if (filter->size % nchans != 0)
+    if (filter->ncoeffs % nchans != 0)
     {
         fprintf( stderr, "warning: load_filter_coefficients: "
                 "number of channels (%d) does not divide evenly into the "
-                "number of coefficients (%d)\n", nchans, filter->size );
+                "number of coefficients (%d)\n", nchans, filter->ncoeffs );
     }
-    filter->ntaps = filter->size / nchans;
+    filter->ntaps = filter->ncoeffs / nchans;
 
     // Pre-calculate the twiddle factors
     filter->twiddles = roots_of_unity( nchans );

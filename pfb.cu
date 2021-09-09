@@ -212,6 +212,36 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     __syncthreads();
 }
 
+forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
+        char2 *htr_data, char2 *htr_data_extended, uint8_t *vcs_data,
+        pfb_filter *filter )
+/* Create and initialise a forward_pfb struct.
+
+   Inputs:
+     OBS_METADATA      - mwalib metadata struct
+     HTR_DATA          - pointer to host memory to be PFB'd
+     HTR_DATA_EXTENDED - pointer to extended host memory to be PFB'd
+                         (will be tacked onto the end of
+
+   Output:
+     FPFB         - Pointer to struct to be initialised
+ */
+{
+    // Create the struct in memory
+    forward_pfb *fpfb = (forward_pfb *)malloc( sizeof(forward_pfb) );
+
+    // Host memory is assumed to be allocated
+    fpfb->htr_data          = htr_data;
+    fpfb->htr_data_extended = htr_data_extended;
+    fpfb->vcs_data          = vcs_data;
+}
+
+void free_forward_pfb( forward_pfb *pfb )
+// Free the memory allocated in init_forward_pfb
+{
+    free( fpfb );
+}
+
 void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host )
 /* The wrapper function that performs the forward PFB algorithm as originally
    implemented on the FPGAs for MWA Phases 1 & 2.

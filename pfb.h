@@ -53,11 +53,10 @@ typedef struct forward_pfb_t
     int               I;                      // The number of RF inputs
     int               P;                      // The number of taps
 
-    MetafitsMetadata *obs_metadata;           // The observation metadata (mwalib struct)
-
     cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
 } forward_pfb;
 
+//forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata );
 void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host );
 
 /**********************************

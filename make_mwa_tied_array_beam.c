@@ -187,13 +187,13 @@ int main(int argc, char **argv)
         strcpy( opts.synth_filter, "LSQ12" );
     }
 
-    pfb_filter *filter = load_filter_coefficients( opts.synth_filter, ANALYSIS_FILTER, nchans );
+    pfb_filter *filter = load_filter_coefficients( opts.synth_filter, SYNTHESIS_FILTER, nchans );
 
     // Adjust by the scaling that was introduced by the forward PFB,
     // along with any other scaling that I, Lord and Master of the inverse
     // PFB, feel is appropriate.
     double approx_filter_scale = 15.0/7.2; // 7.2 = 16384/117964.8
-    for (i = 0; i < filter->size; i++)
+    for (i = 0; i < filter->ncoeffs; i++)
         filter->coeffs[i] *= approx_filter_scale;
 
     /*********************
