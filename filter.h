@@ -21,7 +21,7 @@ typedef enum filter_type_t
 typedef struct pfb_filter_t
 {
     double          *coeffs;
-    size_t           ncoeffs;
+    int              ncoeffs;
     int              ntaps;
     int              nchans; // = size/ntaps
     cuDoubleComplex *twiddles; // twiddle factors

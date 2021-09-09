@@ -218,12 +218,18 @@ forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
 /* Create and initialise a forward_pfb struct.
 
    Inputs:
+
      OBS_METADATA      - mwalib metadata struct
      HTR_DATA          - pointer to host memory to be PFB'd
      HTR_DATA_EXTENDED - pointer to extended host memory to be PFB'd
-                         (will be tacked onto the end of
+                         (will be tacked onto the end of HTR_DATA)
+     VCS_DATA          - pointer to host memory where the result
+                         will be put
+     FILTER            - struct containing the filter coefficients
+                         **WARNING! Will be forcibly typecast to int!!**
 
    Output:
+
      FPFB         - Pointer to struct to be initialised
  */
 {
@@ -234,9 +240,12 @@ forward_pfb *init_forward_pfb( MetafitsMetadata *obs_metadata,
     fpfb->htr_data          = htr_data;
     fpfb->htr_data_extended = htr_data_extended;
     fpfb->vcs_data          = vcs_data;
+
+    // Return the new struct
+    return fpfb;
 }
 
-void free_forward_pfb( forward_pfb *pfb )
+void free_forward_pfb( forward_pfb *fpfb )
 // Free the memory allocated in init_forward_pfb
 {
     free( fpfb );
@@ -480,12 +489,12 @@ void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
     // Setup filter values:
     cuDoubleComplex ft; // pre-calculated filter coeffs times twiddle factor
     cuDoubleComplex cf; // temp variable for complex version of filter coeffs
-    for (f = 0; f < filter->size; f++)
+    for (f = 0; f < filter->ncoeffs; f++)
     {
         cf = make_cuDoubleComplex( filter->coeffs[f], 0.0 );
         for (ch = 0; ch < filter->nchans; ch++)
         {
-            i = filter->size*ch + f;
+            i = filter->ncoeffs*ch + f;
             ft = cuCmul( filter->twiddles[ch], cf );
             g->ft_real[i] = cuCreal( ft );
             g->ft_imag[i] = cuCimag( ft );
@@ -503,7 +512,7 @@ void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
     // Some shorthand variables:
     int ntaps = filter->ntaps;
     int nchan = filter->nchans;
-    int fil_size = filter->size;
+    int fil_size = filter->ncoeffs;
 
     // Flatten the input array (detected_array) for GPU.
     // We only need one second's worth, plus 12 time samples tacked onto the

@@ -44,7 +44,7 @@ typedef struct forward_pfb_t
 
     cuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
 
-    int              *filter_coeffs;          // The filter to be applied
+    int              *filter_coeffs;          // The filter to be applied **WARNING! Filter will be typecast to int!!**
     int              *d_filter_coeffs;        // As above, on the device
 
     int               nspectra;               // The number of spectra to generate
