@@ -12,6 +12,8 @@
 
 #define PERFORMANCE_NO_STOPWATCH_FOUND  -1
 
+#define PERFORMANCE_NO_MPI              -1
+
 #include <stdio.h>
 #include <time.h>
 

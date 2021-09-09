@@ -484,7 +484,8 @@ int main(int argc, char **argv)
 }
 
 
-void usage() {
+void usage()
+{
     printf( "\nusage: make_mwa_tied_array_beam [OPTIONS]\n");
 
     printf( "\nREQUIRED OPTIONS\n\n"
@@ -602,8 +603,8 @@ void make_tied_array_beam_parse_cmdline(
             if (c == -1)
                 break;
 
-            switch(c) {
-
+            switch(c)
+            {
                 case 'b':
                     opts->begin_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->begin_str, optarg );
@@ -629,7 +630,7 @@ void make_tied_array_beam_parse_cmdline(
                     break;
                 case 'h':
                     usage();
-                    exit(0);
+                    exit(EXIT_SUCCESS);
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);
@@ -684,7 +685,8 @@ void make_tied_array_beam_parse_cmdline(
             }
         }
     }
-    else {
+    else
+    {
         usage();
         exit(EXIT_FAILURE);
     }
