@@ -131,7 +131,6 @@ int main(int argc, char **argv)
     parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &npointing );
 
     // Allocate memory for various data products
-    cuDoubleComplex  ****invJi         = create_invJi( nants, nchans, npols );
     cuDoubleComplex  ****detected_beam = create_detected_beam( npointing, 2*nsamples, nchans, npols );
 
     double invw = 1.0/get_num_not_flagged_rf_inputs( vm );
@@ -176,7 +175,7 @@ int main(int argc, char **argv)
 
     struct gpu_ipfb_arrays gi;
     int nchunk;
-    malloc_formbeam( &gf, nsamples, nants, nchans, npols, &nchunk, opts.gpu_mem,
+    malloc_formbeam( &gf, vm, &nchunk, opts.gpu_mem,
                      NSTOKES, npointing, log );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
@@ -333,7 +332,7 @@ int main(int argc, char **argv)
                 &cal,                   // struct holding info about calibration
                 D,                      // Calibration Jones matrices
                 pb.B,                   // Primary beam jones matrices
-                invJi );                // invJi array           (answer will be output here)
+                gf.J );                 // inverse Jones array (output)
 
         logger_stop_stopwatch( log, "delay" );
 
@@ -349,7 +348,7 @@ int main(int argc, char **argv)
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
 
-        cu_form_beam( data, nsamples, gdelays.d_phi, invJi, timestep_idx,
+        cu_form_beam( data, nsamples, gdelays.d_phi, timestep_idx,
                 npointing, nants, nchans, npols, invw, &gf,
                 detected_beam, data_buffer_coh,
                 streams, nchunk, mpfs );
@@ -407,7 +406,6 @@ int main(int argc, char **argv)
     // Free up memory
     logger_timed_message( log, "Starting clean-up" );
 
-    destroy_invJi( invJi, nants, nchans, npols );
     destroy_detected_beam( detected_beam, npointing, 2*nsamples, nchans );
 
     free_pfb_filter( filter );
@@ -677,48 +675,6 @@ void make_tied_array_beam_parse_cmdline(
         opts->coarse_chan_str = (char *)malloc( 3 );
         strcpy( opts->coarse_chan_str, "+0" );
     }
-}
-
-
-
-cuDoubleComplex ****create_invJi( int nants, int nchans, int npols )
-// Allocate memory for (inverse) Jones matrices
-{
-    int ant, pol, ch; // Loop variables
-    cuDoubleComplex ****invJi;
-    invJi = (cuDoubleComplex ****)malloc( nants * sizeof(cuDoubleComplex ***) );
-
-    for (ant = 0; ant < nants; ant++)
-    {
-        invJi[ant] =(cuDoubleComplex ***)malloc( nchans * sizeof(cuDoubleComplex **) );
-
-        for (ch = 0; ch < nchans; ch++)
-        {
-            invJi[ant][ch] = (cuDoubleComplex **)malloc( npols * sizeof(cuDoubleComplex *) );
-
-            for (pol = 0; pol < npols; pol++)
-                invJi[ant][ch][pol] = (cuDoubleComplex *)malloc( npols * sizeof(cuDoubleComplex) );
-        }
-    }
-    return invJi;
-}
-
-
-void destroy_invJi( cuDoubleComplex ****array, int nants, int nchans, int npols )
-{
-    int ant, ch, pol;
-    for (ant = 0; ant < nants; ant++)
-    {
-        for (ch = 0; ch < nchans; ch++)
-        {
-            for (pol = 0; pol < npols; pol++)
-                free( array[ant][ch][pol] );
-
-            free( array[ant][ch] );
-        }
-        free( array[ant] );
-    }
-    free( array );
 }
 
 

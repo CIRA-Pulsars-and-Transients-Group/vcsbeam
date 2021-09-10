@@ -48,7 +48,7 @@ void get_jones(
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
         cuDoubleComplex       *B,
-        cuDoubleComplex    ****invJi )                 // output: invJi[ant][ch][pol][pol]
+        cuDoubleComplex       *invJi )
 {
 
     // Give "shorthand" variables for often-used values in metafits
@@ -103,11 +103,11 @@ void get_jones(
                 Fnorm = norm2x2( Ji, Ji );
 
                 if (Fnorm != 0.0)
-                    inv2x2S( Ji, invJi[ant][ch] );
+                    inv2x2S( Ji, &(invJi[J_IDX(ant,ch,0,0,nchan,npol)]) );
                 else {
                     for (p1 = 0; p1 < npol;  p1++)
                     for (p2 = 0; p2 < npol;  p2++)
-                        invJi[ant][ch][p1][p2] = make_cuDoubleComplex( 0.0, 0.0 );
+                        invJi[J_IDX(ant,ch,p1,p2,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
                 }
 
             } // end loop through antenna/pol (rf_input)
@@ -179,7 +179,7 @@ void inv2x2d(double *Min, double *Mout)
 }
 
 
-void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex **Mout)
+void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 // Same as inv2x2(), but the output is a 2x2 2D array, instead of a 4-element
 // 1D array
 {
@@ -187,10 +187,10 @@ void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex **Mout)
     cuDoubleComplex m2 = cuCmul( Min[1], Min[2] );
     cuDoubleComplex det = cuCsub( m1, m2 );
     cuDoubleComplex inv_det = reciprocal_complex( det );
-    Mout[0][0] = cuCmul(       inv_det,  Min[3] );
-    Mout[0][1] = cuCmul( negate_complex(inv_det), Min[1] );
-    Mout[1][0] = cuCmul( negate_complex(inv_det), Min[2] );
-    Mout[1][1] = cuCmul(       inv_det,  Min[0] );
+    Mout[0] = cuCmul(       inv_det,  Min[3] );
+    Mout[1] = cuCmul( negate_complex(inv_det), Min[1] );
+    Mout[2] = cuCmul( negate_complex(inv_det), Min[2] );
+    Mout[3] = cuCmul(       inv_det,  Min[0] );
 }
 
 

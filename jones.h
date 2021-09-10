@@ -70,7 +70,7 @@ void get_jones(
         struct                 calibration *cal,
         cuDoubleComplex     ***D,
         cuDoubleComplex       *B,
-        cuDoubleComplex    ****invJi                   // output
+        cuDoubleComplex       *invJi // <-- output
 );
 
 /**** MATRIX OPERATIONS ****/
@@ -78,7 +78,7 @@ void get_jones(
 void cp2x2( cuDoubleComplex *Min, cuDoubleComplex *Mout );
 void inv2x2( cuDoubleComplex *Min, cuDoubleComplex *Mout );
 void inv2x2d( double *Min, double *Mout );
-void inv2x2S( cuDoubleComplex *Min, cuDoubleComplex **Mout );
+void inv2x2S( cuDoubleComplex *Min, cuDoubleComplex *Mout );
 void mult2x2d( cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout );
 void mult2x2d_RxC( double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout );
 void conj2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );

@@ -93,6 +93,13 @@ vcsbeam_metadata *init_vcsbeam_metadata(
             break;
     }
 
+    // Compute the "shorthand" variables
+    vm->sample_rate = vm->vcs_metadata->num_samples_per_voltage_block *
+                      vm->vcs_metadata->num_voltage_blocks_per_second;
+
+    vm->bytes_per_second = vm->vcs_metadata->num_voltage_blocks_per_timestep *
+                           vm->vcs_metadata->voltage_block_size_bytes;
+
     // Return the new struct pointer
     return vm;
 }

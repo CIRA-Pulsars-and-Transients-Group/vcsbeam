@@ -33,8 +33,8 @@ struct gpu_formbeam_arrays
 };
 
 
-void malloc_formbeam( struct gpu_formbeam_arrays *g, unsigned int sample_rate,
-                      int nstation, int nchan, int npol, int *nchunk, float gpu_mem_gb, int outpol_coh,
+void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
+                      int *nchunk, float gpu_mem_gb, int outpol_coh,
                       int npointing, logger *log );
 void free_formbeam( struct gpu_formbeam_arrays *g );
 
@@ -64,7 +64,7 @@ void cu_form_incoh_beam(
 
 
 void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex *d_phi,
-                   cuDoubleComplex ****J, int file_no, 
+                   int file_no, 
                    int npointing, int nstation, int nchan,
                    int npol, double invw, struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,

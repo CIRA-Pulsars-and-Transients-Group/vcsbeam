@@ -52,6 +52,12 @@ typedef struct vcsbeam_metadata_t
 
     bool do_forward_pfb;              // Whether to perform the forward PFB
     bool do_inverse_pfb;              // Whether to perform the inverse PFB
+
+    // Some "shorthand" variables
+    // These can be worked out from the other fields, but are computed here
+    // for convenience.
+    int sample_rate;                  // Number of samples per second
+    int bytes_per_second;             // Bytes per second of data
 } vcsbeam_metadata;
 
 /* INIT_VCSBEAM_METADATA
