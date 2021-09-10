@@ -66,8 +66,10 @@ typedef struct vcsbeam_metadata_t
  *   CAL_METAFITS_FILENAME       - The name of the metafits file for the associated calibration observation (can be NULL if not required)
  *   FIRST_COARSE_CHAN_STR       - A string representation* of the first coarse channel to be processed (*see below)
  *   NUM_COARSE_CHANS_TO_PROCESS - The number of (contiguous) coarse channels to be processed
+ *   COARSE_CHAN_IDX_OFFSET      - Force the processing to begin at a different coarse channel idx
  *   FIRST_GPS_SECOND_STR        - A string representation* of the first gps second to be processed (*see below)
  *   NUM_GPS_SECONDS_TO_PROCESS  - The number of (contiguous) gps seconds to be processed
+ *   GPS_SECOND_OFFSET           - Force the processing to begin at a different gps second
  *   DATADIR                     - The folder containing the observation data files
  *
  * Returns:
@@ -75,8 +77,8 @@ typedef struct vcsbeam_metadata_t
  */
 vcsbeam_metadata *init_vcsbeam_metadata(
         char *obs_metafits_filename, char *cal_metafits_filename,
-        char *first_coarse_chan_str, int num_coarse_chans_to_process,
-        char *first_gps_second_str, int num_gps_seconds_to_process,
+        char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
+        char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir );
 
 

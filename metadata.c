@@ -12,8 +12,8 @@
 
 vcsbeam_metadata *init_vcsbeam_metadata(
         char *obs_metafits_filename, char *cal_metafits_filename,
-        char *first_coarse_chan_str, int num_coarse_chans_to_process,
-        char *first_gps_second_str, int num_gps_seconds_to_process,
+        char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
+        char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir )
 {
     // Allocate memory for the VCSBEAM_METADATA struct
@@ -26,8 +26,8 @@ vcsbeam_metadata *init_vcsbeam_metadata(
             &(vm->obs_context) );
 
     // Convert the (first) chan and gps strings to numbers
-    uint32_t first_gps_second = parse_begin_string( vm->obs_metadata, first_gps_second_str );
-    int first_coarse_chan_idx = parse_coarse_chan_string( vm->obs_metadata, first_coarse_chan_str );
+    uint32_t first_gps_second = parse_begin_string( vm->obs_metadata, first_gps_second_str ) + gps_second_offset;
+    int first_coarse_chan_idx = parse_coarse_chan_string( vm->obs_metadata, first_coarse_chan_str ) + coarse_chan_idx_offset;
 
     // Get the voltage context and metadata
     vm->num_gps_seconds_to_process  = num_gps_seconds_to_process;

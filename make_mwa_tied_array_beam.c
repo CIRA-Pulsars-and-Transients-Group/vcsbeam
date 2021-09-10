@@ -97,8 +97,13 @@ int main(int argc, char **argv)
     // Create an mwalib metafits context and associated metadata
     logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
-    char error_message[ERROR_MESSAGE_LEN];
-
+    // <<<<<
+    vcsbeam_metadata *vm = init_vcsbeam_metadata(
+        opts.metafits, cal.metafits,
+        opts.coarse_chan_str, 1, mpi_proc_id,
+        opts.begin_str, opts.nseconds, 0,
+        opts.datadir );
+    // -----
     MetafitsContext  *obs_context  = NULL;
     MetafitsMetadata *obs_metadata = NULL;
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
@@ -115,6 +120,7 @@ int main(int argc, char **argv)
     MetafitsContext  *cal_context  = NULL;
     MetafitsMetadata *cal_metadata = NULL;
     get_mwalib_metafits_metadata( cal.metafits, &cal_metadata, &cal_context );
+    // >>>>>
 
     uintptr_t ntimesteps = vcs_metadata->num_provided_timesteps;
 
@@ -316,6 +322,7 @@ int main(int argc, char **argv)
     // Begin the main loop: go through data one second at a time
 
     logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
+    char error_message[ERROR_MESSAGE_LEN];
 
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
@@ -470,12 +477,16 @@ int main(int argc, char **argv)
     free_primary_beam( &pb );
     free_geometric_delays( &gdelays );
 
+    // <<<<<
+    destroy_vcsbeam_metadata( vm );
+    // -----
     // Clean up memory associated with mwalib
     mwalib_metafits_metadata_free( obs_metadata );
     mwalib_voltage_metadata_free( vcs_metadata );
     mwalib_voltage_context_free( vcs_context );
     mwalib_metafits_metadata_free( cal_metadata );
     mwalib_metafits_context_free( cal_context );
+    // >>>>>
 
     // Finalise MPI
     MPI_Finalize();
