@@ -74,6 +74,25 @@ vcsbeam_metadata *init_vcsbeam_metadata(
         vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
     }
 
+    // Set the default output to match the same channelisation as the input
+    vm->do_forward_pfb = false;
+    vm->do_inverse_pfb = false;
+
+    switch (vm->obs_metadata->mwa_version)
+    {
+        case VCSLegacyRecombined:
+            vm->output_fine_channels = true;
+            break;
+        case VCSMWAXv2:
+            vm->output_coarse_channels = true;
+            break;
+        default:
+            fprintf( stderr, "init_vcsbeam_metadata: error: "
+                    "this observation does not appear to be a VCS observation\n" );
+            exit(EXIT_FAILURE);
+            break;
+    }
+
     // Return the new struct pointer
     return vm;
 }
@@ -101,6 +120,24 @@ void destroy_vcsbeam_metadata( vcsbeam_metadata *vm )
 
     // Finally, free the struct itself
     free( vm );
+}
+
+void set_vcsbeam_fine_output( vcsbeam_metadata *vm, bool switch_on )
+/* Turns on/off fine channelised output
+ */
+{
+    vm->output_fine_channels = switch_on;
+    if (vm->obs_metadata->mwa_version == VCSMWAXv2)
+        vm->do_forward_pfb = switch_on;
+}
+
+void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on )
+/* Turns on/off coarse channelised output
+ */
+{
+    vm->output_coarse_channels = switch_on;
+    if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+        vm->do_inverse_pfb = switch_on;
 }
 
 char **create_filenames(

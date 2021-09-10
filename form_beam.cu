@@ -15,6 +15,7 @@
 
 #include "jones.h"
 #include "beam_psrfits.h"
+#include "metadata.h"
 
 extern "C" {
 #include "geometry.h"

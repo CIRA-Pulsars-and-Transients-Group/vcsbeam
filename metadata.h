@@ -47,8 +47,11 @@ typedef struct vcsbeam_metadata_t
     int num_gps_seconds_to_process;   // The number of gps seconds to be processed
     uint32_t *gps_seconds_to_process; // A list of the gps seconds to be processed
 
-    // "Shorthand" variables
-    int ncoarse_chans;                // Total number of coarse channels in target observation (from MetafitsMetadata)
+    bool output_fine_channels;        // Whether to output fine channelised data
+    bool output_coarse_channels;      // Whether to output coarse channelised data
+
+    bool do_forward_pfb;              // Whether to perform the forward PFB
+    bool do_inverse_pfb;              // Whether to perform the inverse PFB
 } vcsbeam_metadata;
 
 /* INIT_VCSBEAM_METADATA
@@ -86,7 +89,15 @@ vcsbeam_metadata *init_vcsbeam_metadata(
  */
 void destroy_vcsbeam_metadata( vcsbeam_metadata *vm );
 
-// OTHER FUNCTIONS
+/* SET_VCSBEAM_FINE_OUTPUT & SET_VCSBEAM_COARSE_OUTPUT
+ * =======================   =========================
+ *
+ * Turns on/off fine/coarse channelised output
+ */
+void set_vcsbeam_fine_output( vcsbeam_metadata *vm, bool switch_on );
+void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on );
+
+// OTHER AUXILIARY FUNCTIONS
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,

@@ -103,24 +103,8 @@ int main(int argc, char **argv)
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
 
-    // Set the default output mode (fine vs coarse channelised) to match the input,
-    // if no explicit output mode was requested
-    if (!opts.out_fine && !opts.out_coarse)
-    {
-        switch (vm->obs_metadata->mwa_version)
-        {
-            case VCSLegacyRecombined:
-                opts.out_fine = true;
-                break;
-            case VCSMWAXv2:
-                opts.out_coarse = true;
-                break;
-            default:
-                fprintf( stderr, "error: this observation does not appear to be a VCS observation\n" );
-                exit(EXIT_FAILURE);
-                break;
-        }
-    }
+    if (opts.out_fine)    set_vcsbeam_fine_output( vm, true );
+    if (opts.out_coarse)  set_vcsbeam_coarse_output( vm, true );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nants          = vm->obs_metadata->num_ants;
@@ -208,7 +192,7 @@ int main(int argc, char **argv)
     data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans * NSTOKES * nsamples );
     data_buffer_vdif  = create_pinned_data_buffer_vdif( nsamples * nchans * npols * npointing * 2 * sizeof(float) );
 
-    if (opts.out_coarse)
+    if (vm->do_inverse_pfb)
     {
         malloc_ipfb( &gi, filter, nsamples, npols, npointing );
         cu_load_ipfb_filter( filter, &gi );
@@ -359,7 +343,7 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( mpfs, npointing, opts.out_fine, opts.out_coarse, vf, &vhdr, data_buffer_vdif, log );
+            write_step( mpfs, npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, log );
         }
 
         // Form the beams
@@ -375,7 +359,7 @@ int main(int argc, char **argv)
         // Invert the PFB, if requested
         logger_start_stopwatch( log, "ipfb", true );
 
-        if (opts.out_coarse && vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+        if (vm->do_inverse_pfb)
         {
             cu_invert_pfb( detected_beam, timestep_idx, npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
@@ -385,7 +369,7 @@ int main(int argc, char **argv)
         logger_stop_stopwatch( log, "ipfb" );
 
         // Splice channels together
-        if (opts.out_fine) // Only PSRFITS output can be combined into a single file
+        if (vm->output_fine_channels) // Only PSRFITS output can be combined into a single file
         {
             logger_start_stopwatch( log, "splice", true );
 
@@ -399,7 +383,7 @@ int main(int argc, char **argv)
     }
 
     // Write out the last second's worth of data
-    write_step( mpfs, npointing, opts.out_fine, opts.out_coarse, vf, &vhdr, data_buffer_vdif, log );
+    write_step( mpfs, npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, log );
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
 
@@ -408,7 +392,7 @@ int main(int argc, char **argv)
     {
         free_mpi_psrfits( &(mpfs[p]) );
 
-        if (opts.out_coarse)
+        if (vm->output_coarse_channels)
         {
             free( vf[p].b_scales  );
             free( vf[p].b_offsets );
@@ -444,7 +428,7 @@ int main(int argc, char **argv)
     free( opts.synth_filter    );
 
     free_formbeam( &gf );
-    if (opts.out_coarse)
+    if (vm->do_inverse_pfb)
     {
         free_ipfb( &gi );
     }
