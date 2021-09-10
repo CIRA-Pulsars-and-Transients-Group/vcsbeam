@@ -75,7 +75,6 @@ int main(int argc, char **argv)
 
     const int writer = 0; // Designate process 0 to write out the files
     const int ncoarse_chans = world_size;
-    const int chans_per_proc = 1;
 
     // Parse command line arguments
     struct make_tied_array_beam_opts opts;
@@ -97,36 +96,18 @@ int main(int argc, char **argv)
     // Create an mwalib metafits context and associated metadata
     logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
-    // <<<<<
+    const int chans_per_proc = 1;
     vcsbeam_metadata *vm = init_vcsbeam_metadata(
         opts.metafits, cal.metafits,
-        opts.coarse_chan_str, 1, mpi_proc_id,
+        opts.coarse_chan_str, chans_per_proc, mpi_proc_id,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
-    // -----
-    MetafitsContext  *obs_context  = NULL;
-    MetafitsMetadata *obs_metadata = NULL;
-    get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
-
-    unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
-    uintptr_t first_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str );
-    uintptr_t coarse_chan_idx = first_coarse_chan_idx + mpi_proc_id;
-
-    VoltageMetadata  *vcs_metadata = NULL;
-    VoltageContext   *vcs_context  = NULL;
-    get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
-            begin_gps, opts.nseconds, opts.datadir, coarse_chan_idx, chans_per_proc );
-
-    MetafitsContext  *cal_context  = NULL;
-    MetafitsMetadata *cal_metadata = NULL;
-    get_mwalib_metafits_metadata( cal.metafits, &cal_metadata, &cal_context );
-    // >>>>>
 
     // Set the default output mode (fine vs coarse channelised) to match the input,
     // if no explicit output mode was requested
     if (!opts.out_fine && !opts.out_coarse)
     {
-        switch (obs_metadata->mwa_version)
+        switch (vm->obs_metadata->mwa_version)
         {
             case VCSLegacyRecombined:
                 opts.out_fine = true;
@@ -142,16 +123,15 @@ int main(int argc, char **argv)
     }
 
     // Create some "shorthand" variables for code brevity
-    uintptr_t nants          = obs_metadata->num_ants;
-    uintptr_t nchans         = obs_metadata->num_volt_fine_chans_per_coarse;
-    //int chan_width           = obs_metadata->volt_fine_chan_width_hz;
-    uintptr_t npols          = obs_metadata->num_ant_pols;   // (X,Y)
-    unsigned int nsamples = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
+    uintptr_t nants          = vm->obs_metadata->num_ants;
+    uintptr_t nchans         = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t npols          = vm->obs_metadata->num_ant_pols;   // (X,Y)
+    unsigned int nsamples    = vm->vcs_metadata->num_samples_per_voltage_block * vm->vcs_metadata->num_voltage_blocks_per_second;
 
     uintptr_t timestep_idx;
     uint64_t  gps_second;
 
-    uintptr_t data_size = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
+    uintptr_t data_size = vm->vcs_metadata->num_voltage_blocks_per_timestep * vm->vcs_metadata->voltage_block_size_bytes;
 
     primary_beam pb;
     geometric_delays gdelays;
@@ -177,7 +157,7 @@ int main(int argc, char **argv)
     struct beam_geom beam_geom_vals[npointing];
 
     double mjd, sec_offset;
-    mjd = obs_metadata->sched_start_mjd;
+    mjd = vm->obs_metadata->sched_start_mjd;
     for (p = 0; p < npointing; p++)
         calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
@@ -217,7 +197,7 @@ int main(int argc, char **argv)
                      NSTOKES, npointing, log );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
-    create_antenna_lists( obs_metadata, gf.polX_idxs, gf.polY_idxs );
+    create_antenna_lists( vm->obs_metadata, gf.polX_idxs, gf.polY_idxs );
 
     // ... and upload them to the gpu, ready for use!
     cu_upload_pol_idx_lists( &gf );
@@ -246,8 +226,8 @@ int main(int argc, char **argv)
     {
         init_mpi_psrfits(
                 &(mpfs[p]),
-                obs_metadata,
-                vcs_metadata,
+                vm->obs_metadata,
+                vm->vcs_metadata,
                 ncoarse_chans,
                 mpi_proc_id,
                 opts.max_sec_per_file,
@@ -270,10 +250,10 @@ int main(int argc, char **argv)
 
     if (cal.cal_type == CAL_RTS)
     {
-        D = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, coarse_chan_idx );
+        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.caldir, vm->coarse_chan_idxs_to_process[0] );
         if (cal.apply_xy_correction)
         {
-            xy_phase_correction( obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
+            xy_phase_correction( vm->obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
 
             // Print a suitable message
             if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
@@ -303,17 +283,17 @@ int main(int argc, char **argv)
     // ------------------
     // Prepare primary beam and geometric delay arrays
     // ------------------
-    create_primary_beam( &pb, obs_metadata, coarse_chan_idx, npointing );
-    create_geometric_delays( &gdelays, obs_metadata, vcs_metadata, coarse_chan_idx, npointing );
+    create_primary_beam( &pb, vm->obs_metadata, vm->coarse_chan_idxs_to_process[0], npointing );
+    create_geometric_delays( &gdelays, vm->obs_metadata, vm->vcs_metadata, vm->coarse_chan_idxs_to_process[0], npointing );
 
     // ------------------
 
     sprintf( log_message, "Preparing headers for output (receiver channel %lu)",
-            obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
+            vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number );
     logger_message( log, log_message );
 
     // Populate the relevant header structs
-    populate_vdif_header( vf, &vhdr, obs_metadata, vcs_metadata, coarse_chan_idx,
+    populate_vdif_header( vf, &vhdr, vm->obs_metadata, vm->vcs_metadata, vm->coarse_chan_idxs_to_process[0],
             beam_geom_vals, npointing );
 
     // Begin the main loop: go through data one second at a time
@@ -334,10 +314,10 @@ int main(int argc, char **argv)
         logger_start_stopwatch( log, "read", true );
 
         if (mwalib_voltage_context_read_second(
-                    vcs_context,
+                    vm->vcs_context,
                     gps_second,
                     1,
-                    coarse_chan_idx,
+                    vm->coarse_chan_idxs_to_process[0],
                     data,
                     data_size,
                     error_message,
@@ -351,8 +331,8 @@ int main(int argc, char **argv)
         // Get the next second's worth of phases / jones matrices, if needed
         logger_start_stopwatch( log, "delay", true );
 
-        sec_offset = (double)(timestep_idx + begin_gps - obs_metadata->obs_id);
-        mjd = obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
+        sec_offset = (double)(timestep_idx + vm->gps_seconds_to_process[0] - vm->obs_metadata->obs_id);
+        mjd = vm->obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
         for (p = 0; p < npointing; p++)
             calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
@@ -365,8 +345,8 @@ int main(int argc, char **argv)
 
         get_jones(
                 npointing,              // number of pointings
-                obs_metadata,
-                coarse_chan_idx,
+                vm->obs_metadata,
+                vm->coarse_chan_idxs_to_process[0],
                 &cal,                   // struct holding info about calibration
                 D,                      // Calibration Jones matrices
                 pb.B,                   // Primary beam jones matrices
@@ -396,7 +376,7 @@ int main(int argc, char **argv)
         // Invert the PFB, if requested
         logger_start_stopwatch( log, "ipfb", true );
 
-        if (opts.out_coarse && obs_metadata->mwa_version == VCSLegacyRecombined)
+        if (opts.out_coarse && vm->obs_metadata->mwa_version == VCSLegacyRecombined)
         {
             cu_invert_pfb( detected_beam, timestep_idx, npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
@@ -436,7 +416,7 @@ int main(int argc, char **argv)
         }
     }
 
-    free_rts( D, cal_metadata );
+    free_rts( D, vm->cal_metadata );
 
     logger_report_all_stats( log );
     logger_message( log, "" );
@@ -474,16 +454,7 @@ int main(int argc, char **argv)
     free_primary_beam( &pb );
     free_geometric_delays( &gdelays );
 
-    // <<<<<
     destroy_vcsbeam_metadata( vm );
-    // -----
-    // Clean up memory associated with mwalib
-    mwalib_metafits_metadata_free( obs_metadata );
-    mwalib_voltage_metadata_free( vcs_metadata );
-    mwalib_voltage_context_free( vcs_context );
-    mwalib_metafits_metadata_free( cal_metadata );
-    mwalib_metafits_context_free( cal_context );
-    // >>>>>
 
     // Finalise MPI
     MPI_Finalize();
