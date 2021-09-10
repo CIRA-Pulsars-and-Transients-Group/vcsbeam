@@ -10,6 +10,109 @@
 #include <mwalib.h>
 #include "metadata.h"
 
+vcsbeam_metadata *init_vcsbeam_metadata(
+        char *obs_metafits_filename, char *cal_metafits_filename,
+        char *first_coarse_chan_str, int num_coarse_chans_to_process,
+        char *first_gps_second_str, int num_gps_seconds_to_process,
+        char *datadir )
+{
+    // Allocate memory for the VCSBEAM_METADATA struct
+    vcsbeam_metadata *vm = (vcsbeam_metadata *)malloc( sizeof(vcsbeam_metadata) );
+
+    // Get the observation context and metadata
+    get_mwalib_metafits_metadata(
+            obs_metafits_filename,
+            &(vm->obs_metadata),
+            &(vm->obs_context) );
+
+    // Convert the (first) chan and gps strings to numbers
+    uint32_t first_gps_second = parse_begin_string( vm->obs_metadata, first_gps_second_str );
+    int first_coarse_chan_idx = parse_coarse_chan_string( vm->obs_metadata, first_coarse_chan_str );
+
+    // Get the voltage context and metadata
+    vm->num_gps_seconds_to_process  = num_gps_seconds_to_process;
+    vm->num_coarse_chans_to_process = num_coarse_chans_to_process;
+
+    get_mwalib_voltage_metadata(
+            &(vm->vcs_metadata),
+            &(vm->vcs_context),
+            &(vm->obs_metadata),
+            vm->obs_context,
+            first_gps_second,
+            num_gps_seconds_to_process,
+            datadir,
+            first_coarse_chan_idx,
+            num_coarse_chans_to_process );
+
+    // Get the calibration context and metadata, if requested
+    if (cal_metafits_filename != NULL)
+    {
+        get_mwalib_metafits_metadata(
+                cal_metafits_filename,
+                &(vm->cal_metadata),
+                &(vm->cal_context) );
+    }
+    else
+    {
+        vm->cal_metadata = NULL;
+        vm->cal_context = NULL;
+    }
+
+    // Construct the gps second and coarse chan idx arrays
+    vm->gps_seconds_to_process = (uint32_t *)malloc( num_gps_seconds_to_process * sizeof(uint32_t) );
+    vm->coarse_chan_idxs_to_process = (int *)malloc( num_coarse_chans_to_process * sizeof(int) );
+
+    int g;
+    for (g = 0; g < num_gps_seconds_to_process; g++)
+    {
+        vm->gps_seconds_to_process[g] = g + first_gps_second;
+    }
+
+    int c;
+    for (c = 0; c < num_coarse_chans_to_process; c++)
+    {
+        vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
+    }
+
+    // TODO: Construct flagged antenna array
+    // (For now, just allow all antennas)
+    vm->flagged_ants = (bool *)malloc( vm->obs_metadata->num_ants * sizeof(bool) );
+    uintptr_t a;
+    for (a = 0; a < vm->obs_metadata->num_ants; a++)
+    {
+        vm->flagged_ants = false;
+    }
+
+    // Return the new struct pointer
+    return vm;
+}
+
+
+void destroy_vcsbeam_metadata( vcsbeam_metadata *vm )
+/* Frees the memory allocated in INIT_VCSBEAM_METADATA
+ */
+{
+    // Free manually created arrays
+    free( vm->gps_seconds_to_process );
+    free( vm->coarse_chan_idxs_to_process );
+    free( vm->flagged_ants );
+
+    // Free mwalib structs
+    mwalib_metafits_metadata_free( vm->obs_metadata );
+    mwalib_metafits_context_free( vm->obs_context );
+    mwalib_voltage_metadata_free( vm->vcs_metadata );
+    mwalib_voltage_context_free( vm->vcs_context );
+
+    if (vm->cal_metadata != NULL)
+    {
+        mwalib_metafits_metadata_free( vm->cal_metadata );
+        mwalib_metafits_context_free( vm->cal_context );
+    }
+
+    // Finally, free the struct itself
+    free( vm );
+}
+
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
         const struct MetafitsMetadata *metafits_metadata,
