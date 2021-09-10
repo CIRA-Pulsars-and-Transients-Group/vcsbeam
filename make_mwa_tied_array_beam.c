@@ -122,8 +122,6 @@ int main(int argc, char **argv)
     get_mwalib_metafits_metadata( cal.metafits, &cal_metadata, &cal_context );
     // >>>>>
 
-    uintptr_t ntimesteps = vcs_metadata->num_provided_timesteps;
-
     // Set the default output mode (fine vs coarse channelised) to match the input,
     // if no explicit output mode was requested
     if (!opts.out_fine && !opts.out_coarse)
@@ -150,7 +148,6 @@ int main(int argc, char **argv)
     uintptr_t npols          = obs_metadata->num_ant_pols;   // (X,Y)
     unsigned int nsamples = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
 
-    uintptr_t timestep;
     uintptr_t timestep_idx;
     uint64_t  gps_second;
 
@@ -324,10 +321,10 @@ int main(int argc, char **argv)
     logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
     char error_message[ERROR_MESSAGE_LEN];
 
+    uintptr_t ntimesteps = vm->num_gps_seconds_to_process;
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
-        timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
-        gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
+        gps_second = vm->gps_seconds_to_process[timestep_idx];
 
         sprintf( log_message, "---Processing GPS second %ld [%lu/%lu]---",
                 gps_second, timestep_idx+1, ntimesteps );
