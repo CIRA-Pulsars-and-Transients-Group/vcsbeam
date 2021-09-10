@@ -74,15 +74,6 @@ vcsbeam_metadata *init_vcsbeam_metadata(
         vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
     }
 
-    // TODO: Construct flagged antenna array
-    // (For now, just allow all antennas)
-    vm->flagged_ants = (bool *)malloc( vm->obs_metadata->num_ants * sizeof(bool) );
-    uintptr_t a;
-    for (a = 0; a < vm->obs_metadata->num_ants; a++)
-    {
-        vm->flagged_ants = false;
-    }
-
     // Return the new struct pointer
     return vm;
 }
@@ -95,7 +86,6 @@ void destroy_vcsbeam_metadata( vcsbeam_metadata *vm )
     // Free manually created arrays
     free( vm->gps_seconds_to_process );
     free( vm->coarse_chan_idxs_to_process );
-    free( vm->flagged_ants );
 
     // Free mwalib structs
     mwalib_metafits_metadata_free( vm->obs_metadata );
@@ -364,3 +354,14 @@ uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_
     return 0;
 }
 
+
+int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm )
+{
+    int num_not_flagged = 0;
+    uintptr_t i;
+    for (i = 0; i < vm->obs_metadata->num_rf_inputs; i++)
+        if (!(vm->obs_metadata->rf_inputs[i].flagged))
+            num_not_flagged++;
+
+    return num_not_flagged;
+}

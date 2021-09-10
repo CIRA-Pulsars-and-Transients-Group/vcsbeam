@@ -147,11 +147,10 @@ int main(int argc, char **argv)
     parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &npointing );
 
     // Allocate memory for various data products
-    cuDoubleComplex  ****invJi                 = create_invJi( nants, nchans, npols );
-    cuDoubleComplex  ****detected_beam         = create_detected_beam( npointing, 2*nsamples, nchans, npols );
+    cuDoubleComplex  ****invJi         = create_invJi( nants, nchans, npols );
+    cuDoubleComplex  ****detected_beam = create_detected_beam( npointing, 2*nsamples, nchans, npols );
 
-
-    double invw = 1.0/nants;
+    double invw = 1.0/get_num_not_flagged_rf_inputs( vm );
 
     // Get pointing geometry information
     struct beam_geom beam_geom_vals[npointing];

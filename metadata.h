@@ -47,9 +47,6 @@ typedef struct vcsbeam_metadata_t
     int num_gps_seconds_to_process;   // The number of gps seconds to be processed
     uint32_t *gps_seconds_to_process; // A list of the gps seconds to be processed
 
-    bool *flagged_ants;               // Which antennas are flagged (i.e. ignored during beamforming)
-                                      // flagged_ants[i] refers to obs_metadata->antennas[i]
-
     // "Shorthand" variables
     int ncoarse_chans;                // Total number of coarse channels in target observation (from MetafitsMetadata)
 } vcsbeam_metadata;
@@ -125,4 +122,5 @@ long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int rel
 long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str );
 uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_coarse_chan_str );
 
+int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm );
 #endif
