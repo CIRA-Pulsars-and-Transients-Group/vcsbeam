@@ -84,36 +84,23 @@ int main(int argc, char **argv)
     // Create an mwalib metafits context and associated metadata
     logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
-    MetafitsContext  *obs_context  = NULL;
-    MetafitsMetadata *obs_metadata = NULL;
-    get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
-
-    unsigned long int begin_gps = parse_begin_string( obs_metadata, opts.begin_str );
-
-    uintptr_t first_coarse_chan_idx = parse_coarse_chan_string( obs_metadata, opts.coarse_chan_str );
-    uintptr_t coarse_chan_idx = first_coarse_chan_idx + mpi_proc_id;
-
-    sprintf( log_message, "rank = %d, coarse_chan_idx = %lu\n", mpi_proc_id, coarse_chan_idx );
-    logger_timed_message( log, log_message );
-
-    VoltageContext   *vcs_context  = NULL;
-    VoltageMetadata  *vcs_metadata = NULL;
-    get_mwalib_voltage_metadata( &vcs_metadata, &vcs_context, &obs_metadata, obs_context,
-            begin_gps, opts.nseconds, opts.datadir, coarse_chan_idx, chans_per_proc );
+    vcsbeam_metadata *vm = init_vcsbeam_metadata(
+        opts.metafits, NULL,
+        opts.coarse_chan_str, chans_per_proc, mpi_proc_id,
+        opts.begin_str, opts.nseconds, 0,
+        opts.datadir );
 
     // Create some "shorthand" variables for code brevity
-    uintptr_t    ntimesteps      = vcs_metadata->num_provided_timesteps;
-    uintptr_t    nchans          = obs_metadata->num_volt_fine_chans_per_coarse;
-    uintptr_t    ninputs         = obs_metadata->num_rf_inputs;
-    unsigned int nsamples        = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
-    uintptr_t    data_size       = vcs_metadata->num_voltage_blocks_per_timestep * vcs_metadata->voltage_block_size_bytes;
+    uintptr_t    nchans          = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t    ninputs         = vm->obs_metadata->num_rf_inputs;
+    unsigned int nsamples        = vm->sample_rate;
+    uintptr_t    data_size       = vm->bytes_per_second;
     uintptr_t    incoh_size      = nchans * nsamples * sizeof(float);
     uintptr_t    Iscaled_size    = nchans * nsamples * sizeof(uint8_t);
+    double       ra_hours        = vm->obs_metadata->ra_tile_pointing_deg / 15.0;
+    double       dec_degs        = vm->obs_metadata->dec_tile_pointing_deg;
     uintptr_t    timestep_idx;
-    uintptr_t    timestep;
     uint64_t     gps_second;
-    double       ra_hours        = obs_metadata->ra_tile_pointing_deg / 15.0;
-    double       dec_degs        = obs_metadata->dec_tile_pointing_deg;
 
     // Allocate memory
     logger_timed_message( log, "Allocate host and device memory" );
@@ -138,14 +125,14 @@ int main(int argc, char **argv)
     // Get pointing geometry information
     struct beam_geom beam_geom_vals;
 
-    double mjd = obs_metadata->sched_start_mjd;
+    double mjd = vm->obs_metadata->sched_start_mjd;
     calc_beam_geom( ra_hours, dec_degs, mjd, &beam_geom_vals );
 
     mpi_psrfits mpf;
     init_mpi_psrfits(
         &mpf,
-        obs_metadata,
-        vcs_metadata,
+        vm->obs_metadata,
+        vm->vcs_metadata,
         world_size,
         mpi_proc_id,
         opts.max_sec_per_file,
@@ -159,18 +146,18 @@ int main(int argc, char **argv)
 
     logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
 
+    uintptr_t ntimesteps = vm->num_gps_seconds_to_process;
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
         // Get the next gps second 
-        timestep = vcs_metadata->provided_timestep_indices[timestep_idx];
-        gps_second = vcs_metadata->timesteps[timestep].gps_time_ms / 1000;
+        gps_second = vm->gps_seconds_to_process[timestep_idx];
 
         sprintf( log_message, "---Processing GPS second %ld [%lu/%lu]---",
                 gps_second, timestep_idx+1, ntimesteps );
         logger_message( log, log_message );
 
         // Read in data from next file
-        read_step( vcs_context, gps_second, coarse_chan_idx, data, data_size, log );
+        read_step( vm->vcs_context, gps_second, vm->coarse_chan_idxs_to_process[0], data, data_size, log );
 
         // The writing (of the previous second) is put here in order to
         // allow the possibility that it can overlap with the reading step.
@@ -234,9 +221,7 @@ int main(int argc, char **argv)
     cudaCheckErrors( "cudaFree(d_Iscaled) failed" );
 
     // Clean up memory associated with mwalib
-    mwalib_metafits_metadata_free( obs_metadata );
-    mwalib_voltage_metadata_free( vcs_metadata );
-    mwalib_voltage_context_free( vcs_context );
+    destroy_vcsbeam_metadata( vm );
 
     // Free the logger
     logger_timed_message( log, "Exiting successfully" );
@@ -382,8 +367,9 @@ void make_incoh_beam_parse_cmdline(
         opts->coarse_chan_str = strdup( "+0" );
 }
 
-void read_step( VoltageContext *vcs_context, uint64_t gps_second, uintptr_t
-        coarse_chan_idx, uint8_t *data, uintptr_t data_size, logger *log )
+void read_step( VoltageContext *vcs_context, uint64_t gps_second,
+        uintptr_t coarse_chan_idx, uint8_t *data, uintptr_t data_size,
+        logger *log )
 {
     // Read second's worth of data from file
     logger_start_stopwatch( log, "read", true );

@@ -110,12 +110,12 @@ int main(int argc, char **argv)
     uintptr_t nants          = vm->obs_metadata->num_ants;
     uintptr_t nchans         = vm->obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t npols          = vm->obs_metadata->num_ant_pols;   // (X,Y)
-    unsigned int nsamples    = vm->vcs_metadata->num_samples_per_voltage_block * vm->vcs_metadata->num_voltage_blocks_per_second;
+    unsigned int nsamples    = vm->sample_rate;
+    uintptr_t data_size      = vm->bytes_per_second;
+
 
     uintptr_t timestep_idx;
     uint64_t  gps_second;
-
-    uintptr_t data_size = vm->vcs_metadata->num_voltage_blocks_per_timestep * vm->vcs_metadata->voltage_block_size_bytes;
 
     primary_beam pb;
     geometric_delays gdelays;
