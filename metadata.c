@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 #include <mwalib.h>
 #include "metadata.h"
 
@@ -154,7 +155,8 @@ char **create_filenames(
         unsigned long int              nseconds,
         char                          *datadir,
         uintptr_t                      begin_coarse_chan_idx,
-        uintptr_t                      ncoarse_chans
+        uintptr_t                      ncoarse_chans,
+        int                           *nfiles
         )
 /* Create an array of filenames; free with destroy_filenames()
  */
@@ -178,25 +180,36 @@ char **create_filenames(
         exit(EXIT_FAILURE);
     }
 
+    // Work out the number of files
+    int timestep_duration_sec      = (metafits_metadata->mwa_version == VCSMWAXv2 ? 8 : 1); // <-- Raise an issue with mwalib (I shouldn't have to do this)
+    uint64_t end_gps               = begin_gps + nseconds - 1;
+    uint64_t t0_timestep_second    = metafits_metadata->metafits_timesteps[0].gps_time_ms/1000;
+    uint64_t start_timestep_second = begin_gps - (begin_gps % timestep_duration_sec);
+    uint64_t end_timestep_second   = end_gps - (end_gps % timestep_duration_sec);
+    unsigned int ntimesteps        = (end_timestep_second - start_timestep_second)/timestep_duration_sec + 1;
+    unsigned int t0_idx            = (start_timestep_second - t0_timestep_second)/timestep_duration_sec;
+
+    *nfiles = ncoarse_chans * ntimesteps;
+
     // Allocate memory for the file name list
     char filename[MAX_COMMAND_LENGTH]; // Just the mwalib-generated filename (without the path)
-    char **filenames = (char **)malloc( nseconds * ncoarse_chans *sizeof(char *) ); // The full array of filenames, including the paths
+    char **filenames = (char **)malloc( *nfiles * ncoarse_chans * sizeof(char *) ); // The full array of filenames, including the paths
 
     // Allocate memory and write filenames
-    unsigned int t_idx, f_idx, second;
+    unsigned int t_idx, f_idx;
     uintptr_t c_idx;
-    for (second = 0; second < nseconds; second++)
+    for (t_idx = 0; t_idx < ntimesteps; t_idx++)
     {
-        t_idx = begin_gps - (metafits_metadata->metafits_timesteps[0].gps_time_ms / 1000) + second;
-
         for (c_idx = begin_coarse_chan_idx; c_idx < begin_coarse_chan_idx + ncoarse_chans; c_idx++)
         {
             //f_idx = second*ncoarse_chans + c_idx - begin_coarse_chan_idx; // <-- this order seems to break mwalib (v0.9.4)
-            f_idx = (c_idx - begin_coarse_chan_idx)*nseconds + second;
-            filenames[f_idx] = (char *)malloc( MAX_COMMAND_LENGTH*sizeof(char) );
+            f_idx = (c_idx - begin_coarse_chan_idx)*ntimesteps + t_idx;
+            filenames[f_idx] = (char *)malloc( MAX_COMMAND_LENGTH );
+            memset( filename, 0, MAX_COMMAND_LENGTH );
+
             if (mwalib_metafits_get_expected_volt_filename(
                         metafits_context,
-                        t_idx,
+                        t_idx + t0_idx,
                         c_idx,
                         filename,
                         MAX_COMMAND_LENGTH,
@@ -277,10 +290,9 @@ void get_mwalib_voltage_metadata(
         exit(EXIT_FAILURE);
     }
 
-    int nfiles = nseconds * ncoarse_chans;
-
     // Create list of filenames
-    char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, coarse_chan_idx, ncoarse_chans );
+    int nfiles;
+    char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, coarse_chan_idx, ncoarse_chans, &nfiles );
 
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
@@ -314,7 +326,7 @@ void get_mwalib_voltage_metadata(
     }
 
     // Free memory
-    destroy_filenames( filenames, nseconds );
+    destroy_filenames( filenames, nfiles );
     free( voltage_files );
 }
 

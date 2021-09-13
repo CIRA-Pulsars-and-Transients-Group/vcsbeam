@@ -112,7 +112,8 @@ char **create_filenames(
         unsigned long int              nseconds,
         char                          *datadir,
         uintptr_t                      begin_coarse_chan_idx,
-        uintptr_t                      ncoarse_chans
+        uintptr_t                      ncoarse_chans,
+        int                           *nfiles
         );
 
 void destroy_filenames( char **filenames, int nfiles );

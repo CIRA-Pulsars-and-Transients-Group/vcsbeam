@@ -269,7 +269,7 @@ forward_pfb *init_forward_pfb(
         // the same is true for this whole function!
     fpfb->vcs_size = fpfb->nspectra * obs_metadata->num_rf_inputs * K * sizeof(uint8_t);
 
-    size_t weighted_overlap_add_size = (fpfb->htr_size * sizeof(cuFloatComplex)) / sizeof(char2);
+    size_t weighted_overlap_add_size = fpfb->htr_size * (sizeof(cuFloatComplex) / sizeof(char2));
     size_t filter_size = filter->ncoeffs * sizeof(int);
 
     // Allocate memory for filter and copy across the filter coefficients,
