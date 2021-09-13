@@ -49,7 +49,12 @@ int main( int argc, char *argv[] )
     // Start a logger for output messages and time-keeping
     logger *log = create_logger( stdout, PERFORMANCE_NO_MPI );
     logger_add_stopwatch( log, "read", "Reading in data" );
+    logger_add_stopwatch( log, "upload", "Uploading the data to the device" );
+    logger_add_stopwatch( log, "wola", "Weighted overlap-add" );
+    logger_add_stopwatch( log, "fft", "Performing the FFT" );
     logger_add_stopwatch( log, "pfb", "Performing the PFB" );
+    logger_add_stopwatch( log, "pack", "Packing the data into the recombined format" );
+    logger_add_stopwatch( log, "download", "Downloading the data to the host" );
     logger_add_stopwatch( log, "write", "Writing out data to file" );
     //char log_message[MAX_COMMAND_LENGTH];
 
@@ -71,7 +76,12 @@ int main( int argc, char *argv[] )
 
     // Load the filter
     int K = 128; // The number of desired output channels
-    pfb_filter *filter = load_filter_coefficients( "FINEPFB", ANALYSIS_FILTER, K );
+    pfb_filter *filter = load_filter_coefficients( opts.synth_filter, ANALYSIS_FILTER, K );
+
+    // Create and init the PFB struct
+    int M = 128; // The filter stride (M=K -> "critically sampled PFB")
+    forward_pfb *fpfb = init_forward_pfb(
+            vm->obs_metadata, vm->vcs_metadata, filter, K, M );
 
     // Create data buffers on host for the input coarse channel data.
     // Two seconds are on the go at any one time, because the last few output
@@ -82,12 +92,7 @@ int main( int argc, char *argv[] )
     char2 *indata[nseconds];
     int i;
     for (i = 0; i < nseconds; i++)
-        indata[i] = (char2 *)malloc( vm->bytes_per_second );
-
-    // Create and init the PFB struct
-    int M = 128; // The filter stride (M=K -> "critically sampled PFB")
-    forward_pfb *fpfb = init_forward_pfb(
-            vm->obs_metadata, vm->vcs_metadata, filter, K, M );
+        indata[i] = (char2 *)malloc( fpfb->htr_size );
 
     // Create buffer for the final PFB'd data
     uint8_t *outdata = (uint8_t *)malloc( fpfb->vcs_size );
@@ -115,7 +120,7 @@ int main( int argc, char *argv[] )
     set_forward_pfb_output_buffer( fpfb, outdata );
 
     // Actually do the PFB
-    cu_forward_pfb_fpga_version( fpfb, true );
+    cu_forward_pfb_fpga_version( fpfb, true, log );
 
     // Write out the answer to a file
     FILE *f = fopen( "test_output.dat", "w" );

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
+#include <string.h>
 #include <cuda_runtime.h>
 #include <cuComplex.h>
 #include <cufft.h>
@@ -16,6 +17,7 @@ extern "C" {
 #include "pfb.h"
 #include "filter.h"
 #include "jones.h"
+#include "performance.h"
 }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -94,7 +96,7 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
         int *filter_coeffs, cuFloatComplex *weighted_overlap_array )
 {
     // Parse the block and thread idxs:
-    //   <<<(nspectra,I),(K,P)>>>
+    //   <<<(nspectra,I,P),(K)>>>
     // where nspectra is the number of output spectra,
     //       I        is the number of RF inputs,
     //       K        is the size of the output spectrum
@@ -102,14 +104,14 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     // ...and put everything into the mathematical notation used in McSweeney
     // et al. (2020) (see equation in comments above)
     int              m        = blockIdx.x;
-    int              nspectra = gridDim.x;
+    //int              nspectra = gridDim.x;
     int              I        = gridDim.y;
     int              i        = blockIdx.y;
     int              K        = blockDim.x;
     int              M        = K; // This enforces a critical sampled PFB
     //int              P        = blockDim.y;
     int              n        = threadIdx.x;
-    int              p        = threadIdx.y;
+    int              p        = blockIdx.z;
 
     int             *h = filter_coeffs;
     char2           *x = indata;
@@ -132,10 +134,10 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     // takes into account the fact that these arrays contain all RF inputs.
     // MEMO TO SELF: My current going theory is that I don't have to do any
     // re-ordering of the antennas, as that is dealt with elsewhere.
-    int h_idx = K*p - n;
-    int x_idx = vMWAX_IDX(n + m*M - K*p, i, I);
-    int b_idx = (K*i + m)*nspectra + n; // This puts each set of K samples to
-                                        // be FFT'd in a contiguous memory block
+    int h_idx = K*(p+1) - n - 1; // This reverses the filter (think "convolution")
+    unsigned int x_idx = vMWAX_IDX((unsigned int)(m*M + p*K + n), i, I);
+    unsigned int b_idx = m*(K*I) + i*(K) + n; // This puts each set of K samples to
+                                              // be FFT'd in a contiguous memory block
 
     // Now perform the weighted overlap-add operation
     int   hval = h[h_idx];
@@ -162,7 +164,7 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
         X >>= 14;
         Y >>= 14;
 
-        // Promote the result to doubles and put it in the b array in global memory
+        // Promote the result to floats and put it in the b array in global memory
         // in preparation for being FFTed
         b[b_idx] = make_cuFloatComplex( (float)X, (float)Y );
     }
@@ -187,19 +189,19 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
 {
     // Parse the kernel signature, using the same mathematical notation
     // described above
-    int nspectra = gridDim.x;
+    //int nspectra = gridDim.x;
     int K        = gridDim.y;
     int m        = blockIdx.x;
     int k        = blockIdx.y;
     int i        = threadIdx.x;
-    int I        = blockIdx.x;
+    int I        = blockDim.x;
 
     cuFloatComplex  *b = ffted;
     uint8_t         *X = outdata;
 
     // Calculate the idxs into b and X
-    int b_idx = (K*i + m)*nspectra + k;
-    int X_idx = v_IDX(m, k, i, K, I);
+    unsigned int b_idx = m*(K*I) + i*(K) + k;
+    unsigned int X_idx = v_IDX(m, k, i, K, I);
 
     // Pull the values to be manipulated into register memory (because the
     // packing macro below involves a lot of repetition of the arguments)
@@ -222,8 +224,6 @@ forward_pfb *init_forward_pfb(
      OBS_METADATA      - mwalib metadata struct
      VCS_METADATA      - mwalib voltage metadata struct
      HTR_DATA          - pointer to host memory to be PFB'd
-     HTR_DATA_EXTENDED - pointer to extended host memory to be PFB'd
-                         (will be tacked onto the end of HTR_DATA)
      VCS_DATA          - pointer to host memory where the result
                          will be put
      FILTER            - struct containing the filter coefficients
@@ -244,7 +244,6 @@ forward_pfb *init_forward_pfb(
 
     // Host memory is assumed to be allocated
     fpfb->htr_data          = NULL;
-    fpfb->htr_data_extended = NULL;
     fpfb->vcs_data          = NULL;
 
     // Some of the data dimensions
@@ -262,12 +261,16 @@ forward_pfb *init_forward_pfb(
     // number of taps (P) is 0.
 
     // Work out the sizes of the various arrays
-    fpfb->htr_size          = vcs_metadata->num_voltage_blocks_per_timestep *
-                              vcs_metadata->voltage_block_size_bytes;
-    fpfb->htr_extended_size = vcs_metadata->voltage_block_size_bytes;
-        // ^^^ This choice only makes sense for MWAX data... but then again,
+    fpfb->htr_size = (vcs_metadata->num_voltage_blocks_per_second + 1) *
+                      vcs_metadata->voltage_block_size_bytes;
+        // Add room for one more voltage block, for the spillover. ^^^
+        // This choice only makes sense for MWAX data... but then again,
         // the same is true for this whole function!
     fpfb->vcs_size = fpfb->nspectra * obs_metadata->num_rf_inputs * K * sizeof(uint8_t);
+    fpfb->char2s_per_second =
+        (vcs_metadata->num_voltage_blocks_per_second *
+         vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
+    fpfb->bytes_per_block = vcs_metadata->voltage_block_size_bytes;
 
     size_t weighted_overlap_add_size = fpfb->htr_size * (sizeof(cuFloatComplex) / sizeof(char2));
     size_t filter_size = filter->ncoeffs * sizeof(int);
@@ -282,7 +285,7 @@ forward_pfb *init_forward_pfb(
     gpuErrchk(cudaMemcpyAsync( fpfb->d_filter_coeffs, fpfb->filter_coeffs, filter_size, cudaMemcpyHostToDevice ));
 
     // Allocate device memory for the other arrays
-    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->htr_size + fpfb->htr_extended_size ));
+    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->htr_size ));
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_vcs_data), fpfb->vcs_size ));
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_weighted_overlap_add), weighted_overlap_add_size ));
 
@@ -317,8 +320,12 @@ void set_forward_pfb_input_buffers(
         char2 *htr_data,
         char2 *htr_data_extended )
 {
-    fpfb->htr_data          = htr_data;
-    fpfb->htr_data_extended = htr_data_extended;
+    // Point the struct to the external buffer
+    fpfb->htr_data = htr_data;
+
+    // Copy the first "voltage block" of data to the end of the buffer.
+    // **Make sure there's enough memory allocated!!**
+    memcpy( &(fpfb->htr_data[fpfb->char2s_per_second]), htr_data_extended, fpfb->bytes_per_block );
 }
 
 void set_forward_pfb_output_buffer(
@@ -328,49 +335,70 @@ void set_forward_pfb_output_buffer(
     fpfb->vcs_data = vcs_data;
 }
 
-void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host )
+void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
 /* The wrapper function that performs the forward PFB algorithm as originally
    implemented on the FPGAs for MWA Phases 1 & 2.
    A cuFFT plan must already have been made, via make_forward_pfb_fpga_fft_plan().
  */
 {
     // Check that the input and output buffers have been set
-    if (fpfb->htr_data == NULL || fpfb->htr_data_extended == NULL || fpfb->vcs_data == NULL)
+    if (fpfb->htr_data == NULL || fpfb->vcs_data == NULL)
     {
         fprintf( stderr, "error: cu_forward_pfb_fpga_version: Input and/or output data buffers "
-                "have not been set. Use set_forward_pfb_buffers()\n" );
+                "have not been set\n" );
         exit(EXIT_FAILURE);
     }
 
     // Copy data to device
+    logger_start_stopwatch( log, "upload", true );
+
     gpuErrchk(cudaMemcpy( fpfb->d_htr_data, fpfb->htr_data, fpfb->htr_size, cudaMemcpyHostToDevice ));
-    if (fpfb->htr_data_extended != NULL)
-        gpuErrchk(cudaMemcpy( fpfb->d_htr_data + fpfb->htr_size, fpfb->htr_data_extended, fpfb->htr_extended_size, cudaMemcpyHostToDevice ));
+
+    logger_stop_stopwatch( log, "upload" );
 
     // PFB algorithm:
     // 1st step: weighted overlap add
-    dim3 blocks( fpfb->nspectra, fpfb->I );
-    dim3 threads( fpfb->K, fpfb->P );
+    dim3 blocks( fpfb->nspectra, fpfb->I, fpfb->P );
+    dim3 threads( fpfb->K );
 
-    legacy_pfb_weighted_overlap_add<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
+    logger_start_stopwatch( log, "wola", true );
+
+    legacy_pfb_weighted_overlap_add<<<blocks, threads, fpfb->K*sizeof(int2)>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
+    cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
+    logger_stop_stopwatch( log, "wola" );
+
     // 2nd step: FFT
+    logger_start_stopwatch( log, "fft", true );
+
     cufftExecC2C( fpfb->plan, fpfb->d_weighted_overlap_add, fpfb->d_weighted_overlap_add, CUFFT_FORWARD );
     cudaDeviceSynchronize();
+    gpuErrchk( cudaPeekAtLastError() );
+
+    logger_stop_stopwatch( log, "fft" );
 
     // 3rd step: packaging the result
     dim3 blocks2( fpfb->nspectra, fpfb->K );
     dim3 threads2( fpfb->I );
 
+    logger_start_stopwatch( log, "pack", true );
+
     pack_into_recombined_format<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add, fpfb->d_vcs_data );
+    cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
+    logger_stop_stopwatch( log, "pack" );
+
     // Finally, copy the answer back to host memory, if requested
+    logger_start_stopwatch( log, "download", true );
+
     if (copy_result_to_host)
     {
         gpuErrchk(cudaMemcpy( fpfb->vcs_data, fpfb->d_vcs_data, fpfb->vcs_size, cudaMemcpyDeviceToHost ));
     }
+
+    logger_stop_stopwatch( log, "download" );
 }
 
 /**********************************

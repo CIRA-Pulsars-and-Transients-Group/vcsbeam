@@ -14,6 +14,7 @@
 #include <mwalib.h>
 
 #include "filter.h"
+#include "performance.h"
 
 /* The final step in the forward PFB version that emulates the FPGA
  * implementation packs the data into (4+4)-bit complex samples. The
@@ -32,15 +33,15 @@
 typedef struct forward_pfb_t
 {
     char2            *htr_data;               // The input data, as obtained via mwalib from coarse channelised data
-    char2            *htr_data_extended;      // For any extra "spillover" data beyond htr_data
-    char2            *d_htr_data;             // All of the data, from both htr_data and htr_data_extended, on the device
+    char2            *d_htr_data;             // Same as above, on device
 
     uint8_t          *vcs_data;               // The output data, fine channelised and packed into the VCS recombined format
     uint8_t          *d_vcs_data;             // Same as above, on device
 
     size_t            htr_size;               // The size (in bytes) of htr_data
-    size_t            htr_extended_size;      // The size (in bytes) of htr_data_extended
     size_t            vcs_size;               // The size (in bytes) of vcs_data
+    size_t            char2s_per_second;      // The number of char2's in one second of HTR data
+    size_t            bytes_per_block;        // The number of bytes in one "voltage block" of HTR data
 
     cuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
 
@@ -73,7 +74,7 @@ void set_forward_pfb_output_buffer(
         forward_pfb *fpfb,
         uint8_t *vcs_data );
 
-void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host );
+void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, logger *log );
 
 /**********************************
  * BACKWARDS (SYNTHESIS) FINE PFB *
