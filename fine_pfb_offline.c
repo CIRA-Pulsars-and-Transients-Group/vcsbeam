@@ -79,22 +79,48 @@ int main( int argc, char *argv[] )
     // samples from the following second (because ntaps > 1). Thus, at any one
     // time we need two seconds' worth of data to be made available.
     int nseconds = 2;
-    int8_t *indata[nseconds];
+    char2 *indata[nseconds];
     int i;
     for (i = 0; i < nseconds; i++)
-        indata[i] = (int8_t *)malloc( vm->bytes_per_second );
-
-    // Create buffers for the final PFB'd data
-    int M = 128; // The filter stride (M=K -> "critically sampled PFB")
-    int out_sample_rate = vm->sample_rate / M;
-    int num_rf_inputs = vm->obs_metadata->num_rf_inputs;
-    // (One byte (uint8_t) is (4+4)-bit complex, so malloc size is just number
-    // of samples:)
-    uint8_t *outdata = (uint8_t *)malloc( num_rf_inputs * K * out_sample_rate );
+        indata[i] = (char2 *)malloc( vm->bytes_per_second );
 
     // Create and init the PFB struct
+    int M = 128; // The filter stride (M=K -> "critically sampled PFB")
     forward_pfb *fpfb = init_forward_pfb(
             vm->obs_metadata, vm->vcs_metadata, filter, K, M );
+
+    // Create buffer for the final PFB'd data
+    uint8_t *outdata = (uint8_t *)malloc( fpfb->vcs_size );
+
+    // Let's try it out on one second of data
+    char error_message[ERROR_MESSAGE_LEN];
+    for (i = 0; i < nseconds; i++)
+    {
+        if (mwalib_voltage_context_read_second(
+                    vm->vcs_context,
+                    vm->gps_seconds_to_process[i],
+                    1,
+                    vm->coarse_chan_idxs_to_process[0],
+                    (unsigned char *)indata[i],
+                    vm->bytes_per_second,
+                    error_message,
+                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+        {
+            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", error_message );
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    set_forward_pfb_input_buffers( fpfb, indata[0], indata[1] );
+    set_forward_pfb_output_buffer( fpfb, outdata );
+
+    // Actually do the PFB
+    cu_forward_pfb_fpga_version( fpfb, true );
+
+    // Write out the answer to a file
+    FILE *f = fopen( "test_output.dat", "w" );
+    fwrite( outdata, fpfb->vcs_size, sizeof(uint8_t), f );
+    fclose( f );
 
     // Free memory
     free_forward_pfb( fpfb );
