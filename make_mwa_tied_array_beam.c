@@ -235,7 +235,7 @@ int main(int argc, char **argv)
         D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.caldir, vm->coarse_chan_idxs_to_process[0] );
         if (cal.apply_xy_correction)
         {
-            xy_phase_correction( vm->obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
+            pq_phase_correction( vm->obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
 
             // Print a suitable message
             if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)

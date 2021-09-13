@@ -505,13 +505,13 @@ void zero_XY_and_YX( cuDoubleComplex *J )
     J[2] = make_cuDoubleComplex( 0.0, 0.0 );
 }
 
-void xy_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad )
-/* Retrieve the XY phase correction from xy_phase_correction.txt for the given
+void pq_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad )
+/* Retrieve the XY phase correction from pq_phase_correction.txt for the given
  * gps time
  */
 {
     char buffer[CAL_BUFSIZE];
-    sprintf( buffer, "%s/xy_phase_correction.txt", RUNTIME_DIR );
+    sprintf( buffer, "%s/pq_phase_correction.txt", RUNTIME_DIR );
     FILE *f = fopen( buffer, "r" );
     if (f == NULL)
     {
@@ -538,7 +538,7 @@ void xy_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, doub
         // Parse the line
         if (sscanf( buffer, "%u %u %lf %lf", &from, &to, &slope, &offset ) != 4)
         {
-            fprintf( stderr, "error: xy_phase_correction: cannot parse XY phase correction file\n" );
+            fprintf( stderr, "error: pq_phase_correction: cannot parse XY phase correction file\n" );
             exit(EXIT_FAILURE);
         }
 

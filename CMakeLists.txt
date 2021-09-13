@@ -51,7 +51,7 @@ target_link_libraries(fine_pfb_offline ${MWALIB_LIB} ${M_LIBRARY} cufft)
 
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_tied_array_beam ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_incoh_beam ${CMAKE_CURRENT_BINARY_DIR}/mwa_track_primary_beam_response DESTINATION bin)
 
-install(FILES xy_phase_correction.txt
+install(FILES pq_phase_correction.txt
     pfb_filter/MIRROR.dat
     pfb_filter/LSQ12.dat
     pfb_filter/FINEPFB.dat

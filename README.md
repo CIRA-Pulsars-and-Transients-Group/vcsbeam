@@ -35,7 +35,7 @@ MWALIB_ROOT
 
 Other optional variables can be set:
 ```bash
-RUNTIME_DIR  -- Where to install needed runtime files (e.g. xy_phase_correction.txt)
+RUNTIME_DIR  -- Where to install needed runtime files (e.g. pq_phase_correction.txt)
 ```
 
 Upon successful completion of the cmake command, the following will build and install make\_beam:

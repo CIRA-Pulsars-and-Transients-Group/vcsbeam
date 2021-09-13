@@ -42,6 +42,6 @@ void zero_XY_and_YX( cuDoubleComplex *J );
 
 uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, MetafitsMetadata *obs_metadata, uint32_t vcs_ant );
 
-void xy_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad );
+void pq_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad );
 
 #endif
