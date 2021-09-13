@@ -46,7 +46,7 @@ void get_jones(
         MetafitsMetadata      *obs_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
-        cuDoubleComplex     ***D,
+        cuDoubleComplex       *D,
         cuDoubleComplex       *B,
         cuDoubleComplex       *invJi )
 {
@@ -74,6 +74,8 @@ void get_jones(
 
     double Fnorm;
 
+    int j_idx;
+
     for (p = 0; p < npointing; p++)
     {
         // Everything from this point on is frequency-dependent
@@ -88,7 +90,11 @@ void get_jones(
 
             for (ant = 0; ant < nant; ant++)
             {
-                mult2x2d(D[ant][ch], &(B[PB_IDX(p, ant, 0, nant, npol*npol)]), Ji); // the gain in the desired look direction
+                // The index to the first element in the Jones matrix for this
+                // antenna and channel. Applies to both the D and J arrays.
+                j_idx = J_IDX(ant,ch,0,0,nchan,npol);
+
+                mult2x2d(&(D[j_idx]), &(B[PB_IDX(p, ant, 0, nant, npol*npol)]), Ji); // the gain in the desired look direction
 
                 // Apply the UV phase correction (to the bottom row of the Jones matrix)
                 Ji[2] = cuCmul( Ji[2], uv_phase );
@@ -103,7 +109,7 @@ void get_jones(
                 Fnorm = norm2x2( Ji, Ji );
 
                 if (Fnorm != 0.0)
-                    inv2x2S( Ji, &(invJi[J_IDX(ant,ch,0,0,nchan,npol)]) );
+                    inv2x2S( Ji, &(invJi[j_idx]) );
                 else {
                     for (p1 = 0; p1 < npol;  p1++)
                     for (p2 = 0; p2 < npol;  p2++)

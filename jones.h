@@ -68,7 +68,7 @@ void get_jones(
         MetafitsMetadata      *osb_metadata,
         int                    coarse_chan_idx,
         struct                 calibration *cal,
-        cuDoubleComplex     ***D,
+        cuDoubleComplex       *D,
         cuDoubleComplex       *B,
         cuDoubleComplex       *invJi // <-- output
 );

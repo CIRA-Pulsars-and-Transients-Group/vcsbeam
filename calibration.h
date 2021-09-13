@@ -15,7 +15,8 @@
 
 #define CAL_BUFSIZE    4096
 
-struct calibration {
+struct calibration
+{
     char  *metafits;           // Filename of the metafits file
     char  *caldir;             // Location of calibration data
     int    cal_type;           // Either RTS or OFFRINGA
@@ -27,12 +28,10 @@ struct calibration {
     bool   apply_xy_correction;
 };
 
-cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
+cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
         MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx );
 
-void free_rts( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata );
-
-void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname );
+void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
         MetafitsMetadata *cal_metadata, char *filename );
 int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,

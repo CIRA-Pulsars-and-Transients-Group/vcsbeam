@@ -13,13 +13,13 @@
 #include <cuComplex.h>
 #include "jones.h"
 
-cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
+cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
         MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel.
  *
- * This function allocates memory, which should be freed with free_rts().
+ * This function allocates memory, which should be freed by the caller (free())
  */
 {
     // Find the "GPUBox" number for this coarse channel
@@ -34,28 +34,30 @@ cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
     sprintf( bandpass_path, "%s/BandpassCalibration_node%03lu.dat", caldir, gpubox_number );
 
     // Allocate memory for the Jones arrays
-    uintptr_t nant  = cal_metadata->num_ants;
-    uintptr_t npol  = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
-    uintptr_t nchan = cal_metadata->num_corr_fine_chans_per_coarse;
+    uintptr_t nant    = cal_metadata->num_ants;
+    uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+    uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (X, Y)
+    uintptr_t nchan   = cal_metadata->num_corr_fine_chans_per_coarse;
 
     // Temporary arrays for DI Jones matrices ('Dd') and Bandpass matrices ('Db')
     cuDoubleComplex  **Dd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
     cuDoubleComplex ***Db = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
 
-    // The array for the final output product (Dd x Db)
-    cuDoubleComplex ***D  = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
+    // The array for the final output product (D = Dd x Db)
+    // This will have the same dimensions as the final Jones matrix, so use
+    // J_IDX for indexing
+    size_t Dsize = nant*nchan*nvispol;
+    cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
 
     uintptr_t ant, ch;
     for (ant = 0; ant < nant; ant++)
     {
-        Dd[ant] = (cuDoubleComplex * )calloc( npol,  sizeof(cuDoubleComplex  ) );
-        Db[ant] = (cuDoubleComplex **)calloc( nchan, sizeof(cuDoubleComplex *) );
-        D[ant]  = (cuDoubleComplex **)calloc( nchan, sizeof(cuDoubleComplex *) );
+        Dd[ant] = (cuDoubleComplex * )calloc( nvispol, sizeof(cuDoubleComplex  ) );
+        Db[ant] = (cuDoubleComplex **)calloc( nchan,   sizeof(cuDoubleComplex *) );
 
         for (ch = 0; ch < nchan; ch++)
         {
-            Db[ant][ch] = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
-            D[ant][ch]  = (cuDoubleComplex *)calloc( npol, sizeof(cuDoubleComplex) );
+            Db[ant][ch] = (cuDoubleComplex *)calloc( nvispol, sizeof(cuDoubleComplex) );
         }
     }
 
@@ -71,6 +73,7 @@ cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
     uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t cal_ch, cal_ant;
+    uintptr_t d_idx, dref_idx;
     for (ant = 0; ant < nant; ant++)
     {
         // Match up antenna indices between the cal and obs metadata
@@ -78,19 +81,25 @@ cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
 
         for (ch = 0; ch < vcs_nchan; ch++)
         {
-            // Dd x Db = D
+            // A pointer to the (first element of) the Jones matrix for this
+            // antenna and channel (d_idx) and the Jones matrix for the first
+            // antenna (our reference antenna)
+            d_idx    = J_IDX(ant,ch,0,0,nchan,nantpol);
+            dref_idx = J_IDX(0,ch,0,0,nchan,nantpol);
+
+            // D = Dd x Db
             // SM: Daniel Mitchell confirmed in an email dated 23 Mar 2017 that the
             // Bandpass matrices (Db) should be multiplied on the _right_ of the
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
-            mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], D[ant][ch] );
-            cp2x2( Dd[cal_ant], D[ant][ch] );
+            mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], &(D[d_idx]) );
+            cp2x2( Dd[cal_ant], &(D[d_idx]) );
 
             // By default, divide through a reference antenna...
-            remove_reference_phase( D[ant][ch], D[0][ch] );
+            remove_reference_phase( &(D[d_idx]), &(D[dref_idx]) );
 
             // ...and zero the off-diagonal terms
-            zero_XY_and_YX( D[ant][ch] );
+            zero_XY_and_YX( &(D[d_idx]) );
         }
     }
 
@@ -109,24 +118,7 @@ cuDoubleComplex ***get_rts_solution( MetafitsMetadata *cal_metadata,
     return D;
 }
 
-void free_rts( cuDoubleComplex ***D, MetafitsMetadata *cal_metadata )
-/* This function frees the memory allocated in get_rts_solution()
- */
-{
-    uintptr_t nant  = cal_metadata->num_ants;
-    uintptr_t nchan = cal_metadata->num_corr_fine_chans_per_coarse;
-
-    uintptr_t ant, ch;
-    for (ant = 0; ant < nant; ant++)
-    {
-        for (ch = 0; ch < nchan; ch++)
-            free( D[ant][ch] );
-        free( D[ant] );
-    }
-    free( D );
-}
-
-void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
+void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname )
 /* Read in an RTS file and return the direction independent Jones matrix
  * for each antenna. This implements Eq. (29) in Ord et al. (2019).
  *
@@ -174,7 +166,7 @@ void read_dijones_file( double **D, double *amp, uintptr_t nant, char *fname )
             fscanf( fp, "%lf,", &J[i] );
 
         mult2x2d( (cuDoubleComplex *)J, (cuDoubleComplex *)invA,
-                (cuDoubleComplex *)(D[ant]) );
+                (cuDoubleComplex *)(Dd[ant]) );
     }
 
     fclose(fp);
@@ -505,7 +497,7 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
 }
 
 void zero_XY_and_YX( cuDoubleComplex *J )
-/* For D = [ XX, XY ], set XY and YX to 0 for all antennas
+/* For J = [ XX, XY ], set XY and YX to 0 for all antennas
  *         [ YX, YY ]
  */
 {

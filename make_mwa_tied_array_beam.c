@@ -224,7 +224,7 @@ int main(int argc, char **argv)
     struct vdifinfo *vf;
     vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
 
-    cuDoubleComplex ***D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
+    cuDoubleComplex *D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
 
     /****************************
      * GET CALIBRATION SOLUTION *
@@ -398,8 +398,6 @@ int main(int argc, char **argv)
         }
     }
 
-    free_rts( D, vm->cal_metadata );
-
     logger_report_all_stats( log );
     logger_message( log, "" );
 
@@ -409,6 +407,8 @@ int main(int argc, char **argv)
     destroy_detected_beam( detected_beam, npointing, 2*nsamples, nchans );
 
     free_pfb_filter( filter );
+
+    free( D );
 
     cudaFreeHost( data_buffer_coh   );
     cudaCheckErrors( "cudaFreeHost(data_buffer_coh) failed" );
