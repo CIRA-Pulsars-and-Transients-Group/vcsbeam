@@ -58,8 +58,21 @@ typedef struct forward_pfb_t
 
 forward_pfb *init_forward_pfb(
         MetafitsMetadata *obs_metadata, VoltageMetadata *vcs_metadata,
-        char2 *htr_data, char2 *htr_data_extended, uint8_t *vcs_data,
         pfb_filter *filter, int K, int M );
+
+void free_forward_pfb( forward_pfb *fpfb );
+
+// "Setter" function for the pointers to the input data
+void set_forward_pfb_input_buffers(
+        forward_pfb *fpfb,
+        char2 *htr_data,
+        char2 *htr_data_extended );
+
+// "Setter" function for the pointer to the output data
+void set_forward_pfb_output_buffer(
+        forward_pfb *fpfb,
+        uint8_t *vcs_data );
+
 void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host );
 
 /**********************************

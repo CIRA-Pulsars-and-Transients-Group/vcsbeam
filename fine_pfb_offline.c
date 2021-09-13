@@ -16,6 +16,7 @@
 
 // Local includes
 #include "pfb.h"
+#include "filter.h"
 #include "metadata.h"
 #include "performance.h"
 
@@ -52,6 +53,60 @@ int main( int argc, char *argv[] )
     logger_add_stopwatch( log, "write", "Writing out data to file" );
     //char log_message[MAX_COMMAND_LENGTH];
 
+    // Set up the VCS metadata struct
+    vcsbeam_metadata *vm = init_vcsbeam_metadata(
+        opts.metafits, NULL,
+        opts.coarse_chan_str, 1, 0,
+        opts.begin_str, opts.nseconds, 0,
+        opts.datadir );
+
+    // This only works for new-style (coarse-channelised) MWAX data
+    if (vm->obs_metadata->mwa_version != VCSMWAXv2)
+    {
+        fprintf( stderr, "error: observation %u does not appear to be "
+                "coarse-channelised MWAX data\n",
+                vm->obs_metadata->obs_id );
+        exit(EXIT_FAILURE);
+    }
+
+    // Load the filter
+    int K = 128; // The number of desired output channels
+    pfb_filter *filter = load_filter_coefficients( "FINEPFB", ANALYSIS_FILTER, K );
+
+    // Create data buffers on host for the input coarse channel data.
+    // Two seconds are on the go at any one time, because the last few output
+    // samples for each second require knowledge of the first several input
+    // samples from the following second (because ntaps > 1). Thus, at any one
+    // time we need two seconds' worth of data to be made available.
+    int nseconds = 2;
+    int8_t *indata[nseconds];
+    int i;
+    for (i = 0; i < nseconds; i++)
+        indata[i] = (int8_t *)malloc( vm->bytes_per_second );
+
+    // Create buffers for the final PFB'd data
+    int M = 128; // The filter stride (M=K -> "critically sampled PFB")
+    int out_sample_rate = vm->sample_rate / M;
+    int num_rf_inputs = vm->obs_metadata->num_rf_inputs;
+    // (One byte (uint8_t) is (4+4)-bit complex, so malloc size is just number
+    // of samples:)
+    uint8_t *outdata = (uint8_t *)malloc( num_rf_inputs * K * out_sample_rate );
+
+    // Create and init the PFB struct
+    forward_pfb *fpfb = init_forward_pfb(
+            vm->obs_metadata, vm->vcs_metadata, filter, K, M );
+
+    // Free memory
+    free_forward_pfb( fpfb );
+
+    free_pfb_filter( filter );
+
+    free( outdata );
+    for (i = 0; i < nseconds; i++)
+        free( indata[i] );
+
+    destroy_vcsbeam_metadata( vm );
+
     // Exit gracefully
     return EXIT_SUCCESS;
 }
@@ -80,9 +135,8 @@ void usage()
             "\t                           relative to the first or last channel in the observation\n"
             "\t                           respectively. Otherwise, it is treated as a receiver channel number\n"
             "\t                           (0-255) [default: \"+0\"]\n"
-            "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
-            "\t                           filter can be MIRROR or LSQ12.\n"
-            "\t                           [default: LSQ12]\n"
+            "\t-S, --synth_filter=FILTER  Apply the named filter during high-time resolution synthesis.\n"
+            "\t                           File [RUNTIME_DIR]/FILTER.dat must exist [default: FINEPFB]\n"
             "\t-T, --nseconds=VAL         Process VAL seconds of data [default: as many as possible]\n"
           );
 
@@ -197,5 +251,11 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
     {
         opts->coarse_chan_str = (char *)malloc( 3 );
         strcpy( opts->coarse_chan_str, "+0" );
+    }
+
+    if (opts->synth_filter == NULL)
+    {
+        opts->synth_filter = (char *)malloc( 8 );
+        strcpy( opts->synth_filter, "FINEPFB" );
     }
 }

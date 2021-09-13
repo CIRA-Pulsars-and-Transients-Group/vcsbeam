@@ -214,7 +214,6 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
 
 forward_pfb *init_forward_pfb(
         MetafitsMetadata *obs_metadata, VoltageMetadata *vcs_metadata,
-        char2 *htr_data, char2 *htr_data_extended, uint8_t *vcs_data,
         pfb_filter *filter, int K, int M )
 /* Create and initialise a forward_pfb struct.
 
@@ -244,9 +243,9 @@ forward_pfb *init_forward_pfb(
     forward_pfb *fpfb = (forward_pfb *)malloc( sizeof(forward_pfb) );
 
     // Host memory is assumed to be allocated
-    fpfb->htr_data          = htr_data;
-    fpfb->htr_data_extended = htr_data_extended;
-    fpfb->vcs_data          = vcs_data;
+    fpfb->htr_data          = NULL;
+    fpfb->htr_data_extended = NULL;
+    fpfb->vcs_data          = NULL;
 
     // Some of the data dimensions
     unsigned int nsamples = vcs_metadata->num_samples_per_voltage_block *
@@ -313,12 +312,36 @@ void free_forward_pfb( forward_pfb *fpfb )
     free( fpfb );
 }
 
+void set_forward_pfb_input_buffers(
+        forward_pfb *fpfb,
+        char2 *htr_data,
+        char2 *htr_data_extended )
+{
+    fpfb->htr_data          = htr_data;
+    fpfb->htr_data_extended = htr_data_extended;
+}
+
+void set_forward_pfb_output_buffer(
+        forward_pfb *fpfb,
+        uint8_t *vcs_data )
+{
+    fpfb->vcs_data = vcs_data;
+}
+
 void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host )
 /* The wrapper function that performs the forward PFB algorithm as originally
    implemented on the FPGAs for MWA Phases 1 & 2.
    A cuFFT plan must already have been made, via make_forward_pfb_fpga_fft_plan().
  */
 {
+    // Check that the input and output buffers have been set
+    if (fpfb->htr_data == NULL || fpfb->htr_data_extended == NULL || fpfb->vcs_data == NULL)
+    {
+        fprintf( stderr, "error: cu_forward_pfb_fpga_version: Input and/or output data buffers "
+                "have not been set. Use set_forward_pfb_buffers()\n" );
+        exit(EXIT_FAILURE);
+    }
+
     // Copy data to device
     gpuErrchk(cudaMemcpy( fpfb->d_htr_data, fpfb->htr_data, fpfb->htr_size, cudaMemcpyHostToDevice ));
     if (fpfb->htr_data_extended != NULL)
