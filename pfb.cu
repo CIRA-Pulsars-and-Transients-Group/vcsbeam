@@ -109,7 +109,7 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     int              i        = blockIdx.y;
     int              K        = blockDim.x;
     int              M        = K; // This enforces a critical sampled PFB
-    //int              P        = blockDim.y;
+    int              P        = gridDim.z;
     int              n        = threadIdx.x;
     int              p        = blockIdx.z;
 
@@ -134,7 +134,7 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     // takes into account the fact that these arrays contain all RF inputs.
     // MEMO TO SELF: My current going theory is that I don't have to do any
     // re-ordering of the antennas, as that is dealt with elsewhere.
-    int h_idx = K*(p+1) - n - 1; // This reverses the filter (think "convolution")
+    int h_idx = K*P - K*p - n - 1; // This reverses the filter (think "convolution")
     unsigned int x_idx = vMWAX_IDX((unsigned int)(m*M + p*K + n), i, I);
     unsigned int b_idx = m*(K*I) + i*(K) + n; // This puts each set of K samples to
                                               // be FFT'd in a contiguous memory block
@@ -147,6 +147,7 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     atomicAdd( &bint[n].y, hval*(int)xval.y );
 
     __syncthreads();
+//if (m == 0 && i == 0) printf( "%u %d %d %d %d %d %d %d %d %d\n", n, p, K, P, h_idx, hval, xval.x, xval.y, bint[n].x, bint[n].y );
 
     // In keeping with the original FPGA implementation, the result now needs to
     // be demoted and rounded. Only one tap needs to do this
