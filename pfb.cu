@@ -123,11 +123,8 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
 
     // Let the first tap (p=0) have the responsibility of initialising the
     // bint array to zeros
-    if (p == 0)
-    {
-        bint[n].x = 0;
-        bint[n].y = 0;
-    }
+    bint[n].x = 0;
+    bint[n].y = 0;
     __syncthreads();
 
     // Now calculate the index into the various arrays that also
@@ -152,25 +149,23 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     // In keeping with the original FPGA implementation, the result now needs to
     // be demoted and rounded. Only one tap needs to do this
     int X, Y; // To avoid too many shared memory accesses
-    if (p == 0)
-    {
-        X = bint[n].x;
-        Y = bint[n].y;
+    X = bint[n].x;
+    Y = bint[n].y;
 
-        // Rounding:
-        if (X > 0)  X += 0x2000;
-        if (Y > 0)  Y += 0x2000;
+    // Rounding:
+    if (X > 0)  X += 0x2000;
+    if (Y > 0)  Y += 0x2000;
 
-        // Demotion:
-        X >>= 14;
-        Y >>= 14;
+    // Demotion:
+    X >>= 14;
+    Y >>= 14;
 
-        // Promote the result to floats and put it in the b array in global memory
-        // in preparation for being FFTed
-        b[b_idx] = make_cuFloatComplex( (float)X, (float)Y );
-    }
+    // Promote the result to floats and put it in the b array in global memory
+    // in preparation for being FFTed
+    b[b_idx] = make_cuFloatComplex( (float)X, (float)Y );
 
     __syncthreads();
+//if (m == 0 && i == 0 && p == 0) printf( "%d %f %f\n", n, b[b_idx].x, b[b_idx].y );
 }
 
 __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *outdata )
@@ -206,8 +201,10 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
 
     // Pull the values to be manipulated into register memory (because the
     // packing macro below involves a lot of repetition of the arguments)
-    double re = b[b_idx].x;
-    double im = b[b_idx].y;
+    // The division by K is to normalise the preceding FFT
+if (m == 0 && i == 0) printf( "%d %f %f\n", k, b[k].x, b[k].y );
+    double re = b[b_idx].x / K;
+    double im = b[b_idx].y / K;
 
     // Put the packed value back into global memory at the appropriate place
     X[X_idx] = PACK_NIBBLES(re, im);
