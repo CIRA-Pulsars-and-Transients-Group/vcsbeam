@@ -42,6 +42,8 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
 
 int main( int argc, char *argv[] )
 {
+    int i; // Generic loop counter
+
     // Parse command line arguments
     struct fine_pfb_offline_opts opts;
     fine_pfb_offline_parse_cmdline( argc, argv, &opts );
@@ -64,6 +66,19 @@ int main( int argc, char *argv[] )
         opts.coarse_chan_str, 1, 0,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
+
+    /*
+    // Print out the tile ids and the polarisations
+    for (i = 0; i < vm->obs_metadata->num_rf_inputs; i++)
+    {
+        printf( "%d %u %c %u %u\n", i,
+                vm->obs_metadata->rf_inputs[i].tile_id,
+                *(vm->obs_metadata->rf_inputs[i].pol),
+                vm->obs_metadata->rf_inputs[i].vcs_order,
+                vm->obs_metadata->rf_inputs[i].subfile_order
+                );
+    }
+    */
 
     // This only works for new-style (coarse-channelised) MWAX data
     if (vm->obs_metadata->mwa_version != VCSMWAXv2)
@@ -90,7 +105,6 @@ int main( int argc, char *argv[] )
     // time we need two seconds' worth of data to be made available.
     int nseconds = 2;
     char2 *indata[nseconds];
-    int i;
     for (i = 0; i < nseconds; i++)
         indata[i] = (char2 *)malloc( fpfb->htr_size );
 
@@ -101,7 +115,7 @@ int main( int argc, char *argv[] )
     char message[ERROR_MESSAGE_LEN];
     for (i = 0; i < nseconds; i++)
     {
-        sprintf( message, "Processing gps second %u\n", vm->gps_seconds_to_process[i] );
+        sprintf( message, "\nProcessing gps second %u", vm->gps_seconds_to_process[i] );
         logger_message( log, message );
 
         logger_start_stopwatch( log, "read", true );
@@ -130,11 +144,17 @@ int main( int argc, char *argv[] )
     cu_forward_pfb_fpga_version( fpfb, true, log );
 
     // Write out the answer to a file
+    logger_start_stopwatch( log, "write", true );
+
     FILE *f = fopen( "test_output.dat", "w" );
     fwrite( outdata, fpfb->vcs_size, sizeof(uint8_t), f );
     fclose( f );
 
+    logger_stop_stopwatch( log, "write" );
+
     // Free memory
+    logger_timed_message( log, "Finished. Freeing memory buffers" );
+
     free_forward_pfb( fpfb );
 
     free_pfb_filter( filter );
