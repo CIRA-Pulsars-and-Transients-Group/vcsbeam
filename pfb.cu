@@ -103,29 +103,22 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     //       P        is the number of taps
     // ...and put everything into the mathematical notation used in McSweeney
     // et al. (2020) (see equation in comments above)
-    int              m        = blockIdx.x;
-    //int              nspectra = gridDim.x;
-    int              I        = gridDim.y;
-    int              i        = blockIdx.y;
-    int              K        = blockDim.x;
-    int              M        = K; // This enforces a critical sampled PFB
-    int              P        = gridDim.z;
-    int              n        = threadIdx.x;
-    int              p        = blockIdx.z;
+    //int     nspectra = gridDim.x;
+    int              I = gridDim.y;
+    int              P = gridDim.z;
+
+    int              K = blockDim.x;
+
+    int              m = blockIdx.x;
+    int              i = blockIdx.y;
+    int              p = blockIdx.z;
+
+    int              M = K; // This enforces a critical sampled PFB
+    int              n = threadIdx.x;
 
     int             *h = filter_coeffs;
     char2           *x = indata;
     cuFloatComplex  *b = weighted_overlap_array;
-
-    // Use shared memory as a temporary workspace for preparing the b array
-    // For one block, this should have K elements
-    extern __shared__ int2 bint[];
-
-    // Let the first tap (p=0) have the responsibility of initialising the
-    // bint array to zeros
-    bint[n].x = 0;
-    bint[n].y = 0;
-    __syncthreads();
 
     // Now calculate the index into the various arrays that also
     // takes into account the fact that these arrays contain all RF inputs.
@@ -140,17 +133,10 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     int   hval = h[h_idx];
     char2 xval = x[x_idx];
 
-    atomicAdd( &bint[n].x, hval*(int)xval.x );
-    atomicAdd( &bint[n].y, hval*(int)xval.y );
-
-    __syncthreads();
-//if (m == 0 && i == 0) printf( "%u %d %d %d %d %d %d %d %d %d\n", n, p, K, P, h_idx, hval, xval.x, xval.y, bint[n].x, bint[n].y );
-
     // In keeping with the original FPGA implementation, the result now needs to
-    // be demoted and rounded. Only one tap needs to do this
-    int X, Y; // To avoid too many shared memory accesses
-    X = bint[n].x;
-    Y = bint[n].y;
+    // be demoted and rounded.
+    int X = hval*(int)xval.x;
+    int Y = hval*(int)xval.y;
 
     // Rounding:
     if (X > 0)  X += 0x2000;
@@ -162,10 +148,10 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
 
     // Promote the result to floats and put it in the b array in global memory
     // in preparation for being FFTed
-    b[b_idx] = make_cuFloatComplex( (float)X, (float)Y );
+    atomicAdd( &(b[b_idx].x), (float)X );
+    atomicAdd( &(b[b_idx].y), (float)Y );
 
-    __syncthreads();
-//if (m == 0 && i == 0 && p == 0) printf( "%d %f %f\n", n, b[b_idx].x, b[b_idx].y );
+//if (m == 0 && i == 0) printf( "%u %d %d %d %d %d %d %d %d %d %d %f %f\n", n, p, K, P, h_idx, hval, xval.x, xval.y, X, Y, b_idx, b[b_idx].x, b[b_idx].y );
 }
 
 __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *outdata )
@@ -192,17 +178,19 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     int i        = threadIdx.x;
     int I        = blockDim.x;
 
+    int kprime   = (k + K/2) % K; // Puts the DC bin in the "middle"
+
     cuFloatComplex  *b = ffted;
     uint8_t         *X = outdata;
 
     // Calculate the idxs into b and X
     unsigned int b_idx = m*(K*I) + i*(K) + k;
-    unsigned int X_idx = v_IDX(m, k, i, K, I);
+    unsigned int X_idx = v_IDX(m, kprime, i, K, I);
 
     // Pull the values to be manipulated into register memory (because the
     // packing macro below involves a lot of repetition of the arguments)
     // The division by K is to normalise the preceding FFT
-if (m == 0 && i == 0) printf( "%d %f %f\n", k, b[k].x, b[k].y );
+//if (m == 0 && i == 0) printf( "%d %f %f\n", k, b[k].x, b[k].y );
     double re = b[b_idx].x / K;
     double im = b[b_idx].y / K;
 
@@ -287,6 +275,9 @@ forward_pfb *init_forward_pfb(
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_vcs_data), fpfb->vcs_size ));
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_weighted_overlap_add), weighted_overlap_add_size ));
 
+    // Set the d_weighted_overlap_add array to zeros
+    gpuErrchk(cudaMemset( fpfb->d_weighted_overlap_add, 0, weighted_overlap_add_size ));
+
     // Construct the cuFFT plan
     int rank     = 1;     // i.e. a 1D FFT
     int n        = K;     // size of each FFT
@@ -361,7 +352,7 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
 
     logger_start_stopwatch( log, "wola", true );
 
-    legacy_pfb_weighted_overlap_add<<<blocks, threads, fpfb->K*sizeof(int2)>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
+    legacy_pfb_weighted_overlap_add<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
