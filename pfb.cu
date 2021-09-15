@@ -123,12 +123,18 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     char2 *x = indata;
     int2  *b = (int2 *)weighted_overlap_array;
 
+    // Because we have included a whole voltage block at the beginning of the
+    // buffer, index "m" actually needs to start at N-P, where N is the number
+    // of M-length strides in a voltage block, and P is the number of taps.
+    // For MWAX data, N is always 500.
+    int mprime = m + 500 - P;
+
     // Now calculate the index into the various arrays that also
     // takes into account the fact that these arrays contain all RF inputs.
     // MEMO TO SELF: My current going theory is that I don't have to do any
     // re-ordering of the antennas, as that is dealt with elsewhere.
     int h_idx = K*P - K*p - n - 1; // This reverses the filter (think "convolution")
-    unsigned int x_idx = vMWAX_IDX((unsigned int)(m*M + p*K + n), i, I);
+    unsigned int x_idx = vMWAX_IDX((unsigned int)(mprime*M + p*K + n), i, I);
     unsigned int b_idx = m*(K*I) + i*(K) + n; // This puts each set of K samples to
                                               // be FFT'd in a contiguous memory block
 
