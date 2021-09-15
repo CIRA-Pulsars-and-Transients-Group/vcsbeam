@@ -67,19 +67,6 @@ int main( int argc, char *argv[] )
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
 
-    /*
-    // Print out the tile ids and the polarisations
-    for (i = 0; i < vm->obs_metadata->num_rf_inputs; i++)
-    {
-        printf( "%d %u %c %u %u\n", i,
-                vm->obs_metadata->rf_inputs[i].tile_id,
-                *(vm->obs_metadata->rf_inputs[i].pol),
-                vm->obs_metadata->rf_inputs[i].vcs_order,
-                vm->obs_metadata->rf_inputs[i].subfile_order
-                );
-    }
-    */
-
     // This only works for new-style (coarse-channelised) MWAX data
     if (vm->obs_metadata->mwa_version != VCSMWAXv2)
     {
