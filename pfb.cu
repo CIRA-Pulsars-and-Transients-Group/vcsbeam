@@ -93,7 +93,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
  */
 
 __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
-        int *filter_coeffs, cuFloatComplex *weighted_overlap_array )
+        int *filter_coeffs, void *weighted_overlap_array )
 {
     // Parse the block and thread idxs:
     //   <<<(nspectra,I,P),(K)>>>
@@ -103,22 +103,22 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     //       P        is the number of taps
     // ...and put everything into the mathematical notation used in McSweeney
     // et al. (2020) (see equation in comments above)
-    //int     nspectra = gridDim.x;
-    int              I = gridDim.y;
-    int              P = gridDim.z;
+    //int nspectra = gridDim.x;
+    int    I = gridDim.y;
+    int    P = gridDim.z;
 
-    int              K = blockDim.x;
+    int    K = blockDim.x;
 
-    int              m = blockIdx.x;
-    int              i = blockIdx.y;
-    int              p = blockIdx.z;
+    int    m = blockIdx.x;
+    int    i = blockIdx.y;
+    int    p = blockIdx.z;
 
-    int              M = K; // This enforces a critical sampled PFB
-    int              n = threadIdx.x;
+    int    M = K; // This enforces a critical sampled PFB
+    int    n = threadIdx.x;
 
-    int             *h = filter_coeffs;
-    char2           *x = indata;
-    cuFloatComplex  *b = weighted_overlap_array;
+    int   *h = filter_coeffs;
+    char2 *x = indata;
+    int2  *b = (int2 *)weighted_overlap_array;
 
     // Now calculate the index into the various arrays that also
     // takes into account the fact that these arrays contain all RF inputs.
@@ -138,6 +138,37 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     int X = hval*(int)xval.x;
     int Y = hval*(int)xval.y;
 
+    // Promote the result to floats and put it in the b array in global memory
+    // in preparation for being FFTed
+    atomicAdd( &(b[b_idx].x), X );
+    atomicAdd( &(b[b_idx].y), Y );
+
+//if (m == 0 && i == 0) printf( "%u %d %d %d %d %d %d %d %d %d %d %d %d\n", n, p, K, P, h_idx, hval, xval.x, xval.y, X, Y, b_idx, b[b_idx].x, b[b_idx].y );
+}
+
+__global__ void fpga_rounding_and_demotion( void *data )
+{
+    // Parse the block and thread idxs:
+    //   <<<(nspectra,I),(K)>>>
+    // where nspectra is the number of output spectra,
+    //       I        is the number of RF inputs,
+    //       K        is the size of the output spectrum
+    // ...and put everything into the mathematical notation used in McSweeney
+    // et al. (2020) (see equation in comments above)
+    //int nspectra = gridDim.x;
+    int      I = gridDim.y;
+    int      K = blockDim.x;
+    int      m = blockIdx.x;
+    int      i = blockIdx.y;
+    int      n = threadIdx.x;
+
+    int2    *b = (int2 *)data;
+
+    unsigned int b_idx = m*(K*I) + i*(K) + n;
+
+    int X = b[b_idx].x;
+    int Y = b[b_idx].y;
+
     // Rounding:
     if (X > 0)  X += 0x2000;
     if (Y > 0)  Y += 0x2000;
@@ -146,12 +177,12 @@ __global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
     X >>= 14;
     Y >>= 14;
 
-    // Promote the result to floats and put it in the b array in global memory
-    // in preparation for being FFTed
-    atomicAdd( &(b[b_idx].x), (float)X );
-    atomicAdd( &(b[b_idx].y), (float)Y );
+    // Put the result back into global memory as (32-bit) floats
+    float *fx = (float *)&(b[b_idx].x);
+    float *fy = (float *)&(b[b_idx].y);
 
-//if (m == 0 && i == 0) printf( "%u %d %d %d %d %d %d %d %d %d %d %f %f\n", n, p, K, P, h_idx, hval, xval.x, xval.y, X, Y, b_idx, b[b_idx].x, b[b_idx].y );
+    *fx = (float)X;
+    *fy = (float)Y;
 }
 
 __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *outdata )
@@ -190,12 +221,12 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     // Pull the values to be manipulated into register memory (because the
     // packing macro below involves a lot of repetition of the arguments)
     // The division by K is to normalise the preceding FFT
-//if (m == 0 && i == 0) printf( "%d %f %f\n", k, b[k].x, b[k].y );
     double re = b[b_idx].x / K;
     double im = b[b_idx].y / K;
 
     // Put the packed value back into global memory at the appropriate place
     X[X_idx] = PACK_NIBBLES(re, im);
+//if (m == 8200 && i == 0) printf( "%d: %10.5f %10.5f --> %10.5f %10.5f --> %02x\n", b_idx, b[b_idx].x, b[b_idx].y, re, im, X[X_idx] );
 
     __syncthreads();
 }
@@ -283,9 +314,18 @@ forward_pfb *init_forward_pfb(
     int n        = K;     // size of each FFT
     int *inembed = NULL;  // Setting this to null makes all subsequent "data layout" parameters ignored
                           // to use the default layout (contiguous data in memory)
-    cufftPlanMany( &(fpfb->plan), rank, &n,
+
+    fpfb->ninputs_per_cufft_batch = 32; // This seems to work, so I'll have to call cuFFT 256/32 = 8 times
+    fpfb->cufft_batch_size = fpfb->nspectra * fpfb->ninputs_per_cufft_batch;
+
+    cufftResult res = cufftPlanMany( &(fpfb->plan), rank, &n,
             inembed, 0, 0, NULL, 0, 0,  // <-- Here are all the ignored data layout parameters
-            CUFFT_C2C, fpfb->nspectra );
+            CUFFT_C2C, fpfb->cufft_batch_size );
+    if (res != CUFFT_SUCCESS)
+    {
+        fprintf( stderr, "CUFFT error: Plan creation failed with error code %d\n", res );
+        exit(EXIT_FAILURE);
+    }
 
     // Return the new struct
     return fpfb;
@@ -350,9 +390,16 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
     dim3 blocks( fpfb->nspectra, fpfb->I, fpfb->P );
     dim3 threads( fpfb->K );
 
+    dim3 blocks2( fpfb->nspectra, fpfb->I );
+    dim3 threads2( fpfb->K );
+
     logger_start_stopwatch( log, "wola", true );
 
     legacy_pfb_weighted_overlap_add<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
+    cudaDeviceSynchronize();
+    gpuErrchk( cudaPeekAtLastError() );
+
+    fpga_rounding_and_demotion<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add );
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
@@ -361,19 +408,28 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
     // 2nd step: FFT
     logger_start_stopwatch( log, "fft", true );
 
-    cufftExecC2C( fpfb->plan, fpfb->d_weighted_overlap_add, fpfb->d_weighted_overlap_add, CUFFT_FORWARD );
+    int batch;
+    for (batch = 0; batch < fpfb->I / fpfb->ninputs_per_cufft_batch; batch++)
+    //for (batch = 0; batch < 1; batch++)
+    {
+        cufftExecC2C(
+                fpfb->plan,
+                fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
+                fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
+                CUFFT_FORWARD );
+    }
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
     logger_stop_stopwatch( log, "fft" );
 
     // 3rd step: packaging the result
-    dim3 blocks2( fpfb->nspectra, fpfb->K );
-    dim3 threads2( fpfb->I );
+    dim3 blocks3( fpfb->nspectra, fpfb->K );
+    dim3 threads3( fpfb->I );
 
     logger_start_stopwatch( log, "pack", true );
 
-    pack_into_recombined_format<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add, fpfb->d_vcs_data );
+    pack_into_recombined_format<<<blocks3, threads3>>>( fpfb->d_weighted_overlap_add, fpfb->d_vcs_data );
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 

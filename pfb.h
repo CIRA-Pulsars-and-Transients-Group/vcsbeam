@@ -43,6 +43,9 @@ typedef struct forward_pfb_t
     size_t            char2s_per_second;      // The number of char2's in one second of HTR data
     size_t            bytes_per_block;        // The number of bytes in one "voltage block" of HTR data
 
+    int               ninputs_per_cufft_batch; // Necessary because one can't do 2560000 batches, apparently
+    int               cufft_batch_size;
+
     cuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
 
     int              *filter_coeffs;          // The filter to be applied **WARNING! Filter will be typecast to int!!**

@@ -98,9 +98,14 @@ int main( int argc, char *argv[] )
     uint8_t *outdata = (uint8_t *)malloc( fpfb->vcs_size );
 
     // Let's try it out on one second of data
-    char error_message[ERROR_MESSAGE_LEN];
+    char message[ERROR_MESSAGE_LEN];
     for (i = 0; i < nseconds; i++)
     {
+        sprintf( message, "Processing gps second %u\n", vm->gps_seconds_to_process[i] );
+        logger_message( log, message );
+
+        logger_start_stopwatch( log, "read", true );
+
         if (mwalib_voltage_context_read_second(
                     vm->vcs_context,
                     vm->gps_seconds_to_process[i],
@@ -108,12 +113,14 @@ int main( int argc, char *argv[] )
                     vm->coarse_chan_idxs_to_process[0],
                     (unsigned char *)indata[i],
                     vm->bytes_per_second,
-                    error_message,
+                    message,
                     ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
         {
-            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", error_message );
+            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", message );
             exit(EXIT_FAILURE);
         }
+
+        logger_stop_stopwatch( log, "read" );
     }
 
     set_forward_pfb_input_buffers( fpfb, indata[0], indata[1] );
