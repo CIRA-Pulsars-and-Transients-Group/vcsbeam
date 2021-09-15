@@ -15,6 +15,7 @@
 
 #include "filter.h"
 #include "performance.h"
+#include "metadata.h"
 
 /* The final step in the forward PFB version that emulates the FPGA
  * implementation packs the data into (4+4)-bit complex samples. The
@@ -30,8 +31,16 @@
  * FORWARD (ANALYSIS) FINE PFB *
  *******************************/
 
+typedef enum pfb_error_t
+{
+    PFB_SUCCESS,
+    PFB_END_OF_GPSTIMES
+} pfb_error;
+
 typedef struct forward_pfb_t
 {
+    vcsbeam_metadata *vm;                     // All the necessary metadata
+
     char2            *htr_data;               // The input data, as obtained via mwalib from coarse channelised data
     char2            *d_htr_data;             // Same as above, on device
 
@@ -40,8 +49,11 @@ typedef struct forward_pfb_t
 
     size_t            htr_size;               // The size (in bytes) of htr_data
     size_t            vcs_size;               // The size (in bytes) of vcs_data
+
     size_t            char2s_per_second;      // The number of char2's in one second of HTR data
     size_t            bytes_per_block;        // The number of bytes in one "voltage block" of HTR data
+
+    size_t            current_gps_idx;        // Which gps second (in vm) to read next
 
     int               ninputs_per_cufft_batch; // Necessary because one can't do 2560000 batches, apparently
     int               cufft_batch_size;
@@ -60,22 +72,11 @@ typedef struct forward_pfb_t
     cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
 } forward_pfb;
 
-forward_pfb *init_forward_pfb(
-        MetafitsMetadata *obs_metadata, VoltageMetadata *vcs_metadata,
-        pfb_filter *filter, int M );
+forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M );
 
 void free_forward_pfb( forward_pfb *fpfb );
 
-// "Setter" function for the pointers to the input data
-void set_forward_pfb_input_buffers(
-        forward_pfb *fpfb,
-        char2 *htr_data,
-        char2 *htr_data_extended );
-
-// "Setter" function for the pointer to the output data
-void set_forward_pfb_output_buffer(
-        forward_pfb *fpfb,
-        uint8_t *vcs_data );
+pfb_error forward_pfb_read_next_second( forward_pfb *fpfb );
 
 void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, logger *log );
 

@@ -81,25 +81,12 @@ int main( int argc, char *argv[] )
     pfb_filter *filter = load_filter_coefficients( opts.synth_filter, ANALYSIS_FILTER, K );
 
     // Create and init the PFB struct
-    int M = 128; // The filter stride (M=K -> "critically sampled PFB")
-    forward_pfb *fpfb = init_forward_pfb(
-            vm->obs_metadata, vm->vcs_metadata, filter, M );
-
-    // Create data buffers on host for the input coarse channel data.
-    // Two seconds are on the go at any one time, because the last few output
-    // samples for each second require knowledge of the first several input
-    // samples from the following second (because ntaps > 1). Thus, at any one
-    // time we need two seconds' worth of data to be made available.
-    int nseconds = 2;
-    char2 *indata[nseconds];
-    for (i = 0; i < nseconds; i++)
-        indata[i] = (char2 *)malloc( fpfb->htr_size );
-
-    // Create buffer for the final PFB'd data
-    uint8_t *outdata = (uint8_t *)malloc( fpfb->vcs_size );
+    int M = K; // The filter stride (M = K <=> "critically sampled PFB")
+    forward_pfb *fpfb = init_forward_pfb( vm, filter, M );
 
     // Let's try it out on one second of data
     char message[ERROR_MESSAGE_LEN];
+    int nseconds = 1;
     for (i = 0; i < nseconds; i++)
     {
         sprintf( message, "\nProcessing gps second %u", vm->gps_seconds_to_process[i] );
@@ -107,25 +94,10 @@ int main( int argc, char *argv[] )
 
         logger_start_stopwatch( log, "read", true );
 
-        if (mwalib_voltage_context_read_second(
-                    vm->vcs_context,
-                    vm->gps_seconds_to_process[i],
-                    1,
-                    vm->coarse_chan_idxs_to_process[0],
-                    (unsigned char *)indata[i],
-                    vm->bytes_per_second,
-                    message,
-                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
-        {
-            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", message );
-            exit(EXIT_FAILURE);
-        }
+        forward_pfb_read_next_second( fpfb );
 
         logger_stop_stopwatch( log, "read" );
     }
-
-    set_forward_pfb_input_buffers( fpfb, indata[0], indata[1] );
-    set_forward_pfb_output_buffer( fpfb, outdata );
 
     // Actually do the PFB
     cu_forward_pfb_fpga_version( fpfb, true, log );
@@ -134,7 +106,7 @@ int main( int argc, char *argv[] )
     logger_start_stopwatch( log, "write", true );
 
     FILE *f = fopen( "test_output.dat", "w" );
-    fwrite( outdata, fpfb->vcs_size, sizeof(uint8_t), f );
+    fwrite( fpfb->vcs_data, fpfb->vcs_size, sizeof(uint8_t), f );
     fclose( f );
 
     logger_stop_stopwatch( log, "write" );
@@ -145,10 +117,6 @@ int main( int argc, char *argv[] )
     free_forward_pfb( fpfb );
 
     free_pfb_filter( filter );
-
-    free( outdata );
-    for (i = 0; i < nseconds; i++)
-        free( indata[i] );
 
     destroy_vcsbeam_metadata( vm );
 

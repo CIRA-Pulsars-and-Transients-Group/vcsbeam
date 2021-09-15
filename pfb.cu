@@ -13,11 +13,14 @@
 #include <cuComplex.h>
 #include <cufft.h>
 
+#include <mwalib.h>
+
 extern "C" {
 #include "pfb.h"
 #include "filter.h"
 #include "jones.h"
 #include "performance.h"
+#include "metadata.h"
 }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -231,18 +234,12 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     __syncthreads();
 }
 
-forward_pfb *init_forward_pfb(
-        MetafitsMetadata *obs_metadata, VoltageMetadata *vcs_metadata,
-        pfb_filter *filter, int M )
+forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M )
 /* Create and initialise a forward_pfb struct.
 
    Inputs:
 
-     OBS_METADATA      - mwalib metadata struct
-     VCS_METADATA      - mwalib voltage metadata struct
-     HTR_DATA          - pointer to host memory to be PFB'd
-     VCS_DATA          - pointer to host memory where the result
-                         will be put
+     VM                - vcsbeam metadata, derived from mwalib
      FILTER            - struct containing the filter coefficients
                          **WARNING! Will be forcibly typecast to int!!**
      M                 - the stride of the application of the filter
@@ -258,18 +255,20 @@ forward_pfb *init_forward_pfb(
     // Create the struct in memory
     forward_pfb *fpfb = (forward_pfb *)malloc( sizeof(forward_pfb) );
 
-    // Host memory is assumed to be allocated
-    fpfb->htr_data          = NULL;
-    fpfb->vcs_data          = NULL;
+    // Set the metadata pointer
+    fpfb->vm = vm;
+
+    // Set the next gps second to read to be the first one
+    fpfb->current_gps_idx = 0;
 
     // Some of the data dimensions
-    unsigned int nsamples = vcs_metadata->num_samples_per_voltage_block *
-                            vcs_metadata->num_voltage_blocks_per_second;
+    unsigned int nsamples = vm->vcs_metadata->num_samples_per_voltage_block *
+                            vm->vcs_metadata->num_voltage_blocks_per_second;
 
     fpfb->nspectra = nsamples / M;
     fpfb->M        = M;
     fpfb->K        = filter->nchans;
-    fpfb->I        = obs_metadata->num_rf_inputs;
+    fpfb->I        = vm->obs_metadata->num_rf_inputs;
     fpfb->P        = filter->ncoeffs / fpfb->K;
     // ^^^ The user is responsible for making sure that the number of desired
     // channels divides evenly into the number of filter coefficients. No
@@ -277,16 +276,16 @@ forward_pfb *init_forward_pfb(
     // number of taps (P) is 0.
 
     // Work out the sizes of the various arrays
-    fpfb->htr_size = (vcs_metadata->num_voltage_blocks_per_second + 1) *
-                      vcs_metadata->voltage_block_size_bytes;
+    fpfb->htr_size = (vm->vcs_metadata->num_voltage_blocks_per_second + 1) *
+                      vm->vcs_metadata->voltage_block_size_bytes;
         // Add room for one more voltage block, for the spillover. ^^^
         // This choice only makes sense for MWAX data... but then again,
         // the same is true for this whole function!
-    fpfb->vcs_size = fpfb->nspectra * obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
+    fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
     fpfb->char2s_per_second =
-        (vcs_metadata->num_voltage_blocks_per_second *
-         vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
-    fpfb->bytes_per_block = vcs_metadata->voltage_block_size_bytes;
+        (vm->vcs_metadata->num_voltage_blocks_per_second *
+         vm->vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
+    fpfb->bytes_per_block = vm->vcs_metadata->voltage_block_size_bytes;
 
     size_t weighted_overlap_add_size = fpfb->htr_size * (sizeof(cuFloatComplex) / sizeof(char2));
     size_t filter_size = filter->ncoeffs * sizeof(int);
@@ -301,6 +300,10 @@ forward_pfb *init_forward_pfb(
     gpuErrchk(cudaMemcpyAsync( fpfb->d_filter_coeffs, fpfb->filter_coeffs, filter_size, cudaMemcpyHostToDevice ));
 
     // Allocate device memory for the other arrays
+    gpuErrchk(cudaMallocHost( (void **)&(fpfb->htr_data), fpfb->htr_size ));
+    gpuErrchk(cudaMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size ));
+
+    printf( "Allocating %lu of GPU memory\n", (unsigned long)( fpfb->htr_size + fpfb->vcs_size + weighted_overlap_add_size) );
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->htr_size ));
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_vcs_data), fpfb->vcs_size ));
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_weighted_overlap_add), weighted_overlap_add_size ));
@@ -336,6 +339,8 @@ void free_forward_pfb( forward_pfb *fpfb )
 {
     cufftDestroy( fpfb->plan );
     gpuErrchk(cudaFreeHost( fpfb->filter_coeffs ));
+    gpuErrchk(cudaFreeHost( fpfb->htr_data ));
+    gpuErrchk(cudaFreeHost( fpfb->vcs_data ));
     gpuErrchk(cudaFree( fpfb->d_filter_coeffs ));
     gpuErrchk(cudaFree( fpfb->d_htr_data ));
     gpuErrchk(cudaFree( fpfb->d_vcs_data ));
@@ -343,24 +348,42 @@ void free_forward_pfb( forward_pfb *fpfb )
     free( fpfb );
 }
 
-void set_forward_pfb_input_buffers(
-        forward_pfb *fpfb,
-        char2 *htr_data,
-        char2 *htr_data_extended )
+pfb_error forward_pfb_read_next_second( forward_pfb *fpfb )
 {
-    // Point the struct to the external buffer
-    fpfb->htr_data = htr_data;
+    // Error check: there are still data files to read
+    if (fpfb->current_gps_idx >= fpfb->vm->num_gps_seconds_to_process)
+    {
+        return PFB_END_OF_GPSTIMES;
+    }
 
-    // Copy the first "voltage block" of data to the end of the buffer.
-    // **Make sure there's enough memory allocated!!**
-    memcpy( &(fpfb->htr_data[fpfb->char2s_per_second]), htr_data_extended, fpfb->bytes_per_block );
-}
+    // For catching mwalib errors
+    char message[ERROR_MESSAGE_LEN];
 
-void set_forward_pfb_output_buffer(
-        forward_pfb *fpfb,
-        uint8_t *vcs_data )
-{
-    fpfb->vcs_data = vcs_data;
+    // First, copy the last voltage block to the front of the array
+    int nchar2s_per_block = fpfb->bytes_per_block / sizeof(char2);
+    char2 *last_block = &(fpfb->htr_data[fpfb->char2s_per_second - nchar2s_per_block]);
+    memcpy( fpfb->htr_data, last_block, fpfb->bytes_per_block );
+
+    // Now, read the next second's worth of data (via mwalib API) starting
+    // at the second block
+    char2 *second_block = &(fpfb->htr_data[nchar2s_per_block]);
+    if (mwalib_voltage_context_read_second(
+                    fpfb->vm->vcs_context,
+                    fpfb->vm->gps_seconds_to_process[fpfb->current_gps_idx],
+                    1,
+                    fpfb->vm->coarse_chan_idxs_to_process[0],
+                    (unsigned char *)second_block,
+                    fpfb->vm->bytes_per_second,
+                    message,
+                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+    {
+        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", message );
+        exit(EXIT_FAILURE);
+    }
+
+    fpfb->current_gps_idx++;
+
+    return PFB_SUCCESS;
 }
 
 void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
