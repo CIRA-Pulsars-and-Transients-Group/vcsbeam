@@ -83,7 +83,7 @@ int main( int argc, char *argv[] )
     // Create and init the PFB struct
     int M = 128; // The filter stride (M=K -> "critically sampled PFB")
     forward_pfb *fpfb = init_forward_pfb(
-            vm->obs_metadata, vm->vcs_metadata, filter, K, M );
+            vm->obs_metadata, vm->vcs_metadata, filter, M );
 
     // Create data buffers on host for the input coarse channel data.
     // Two seconds are on the go at any one time, because the last few output

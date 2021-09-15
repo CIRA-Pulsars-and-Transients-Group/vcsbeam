@@ -233,7 +233,7 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
 
 forward_pfb *init_forward_pfb(
         MetafitsMetadata *obs_metadata, VoltageMetadata *vcs_metadata,
-        pfb_filter *filter, int K, int M )
+        pfb_filter *filter, int M )
 /* Create and initialise a forward_pfb struct.
 
    Inputs:
@@ -245,7 +245,6 @@ forward_pfb *init_forward_pfb(
                          will be put
      FILTER            - struct containing the filter coefficients
                          **WARNING! Will be forcibly typecast to int!!**
-     K                 - the number of desired output channels
      M                 - the stride of the application of the filter
                          (this determines the time resolution of the
                          channelised data). Set M = K for critically
@@ -269,9 +268,9 @@ forward_pfb *init_forward_pfb(
 
     fpfb->nspectra = nsamples / M;
     fpfb->M        = M;
-    fpfb->K        = K;
+    fpfb->K        = filter->nchans;
     fpfb->I        = obs_metadata->num_rf_inputs;
-    fpfb->P        = filter->ncoeffs / K;
+    fpfb->P        = filter->ncoeffs / fpfb->K;
     // ^^^ The user is responsible for making sure that the number of desired
     // channels divides evenly into the number of filter coefficients. No
     // error or warning is generated otherwise, not even if the inferred
@@ -283,7 +282,7 @@ forward_pfb *init_forward_pfb(
         // Add room for one more voltage block, for the spillover. ^^^
         // This choice only makes sense for MWAX data... but then again,
         // the same is true for this whole function!
-    fpfb->vcs_size = fpfb->nspectra * obs_metadata->num_rf_inputs * K * sizeof(uint8_t);
+    fpfb->vcs_size = fpfb->nspectra * obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
     fpfb->char2s_per_second =
         (vcs_metadata->num_voltage_blocks_per_second *
          vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
@@ -310,10 +309,10 @@ forward_pfb *init_forward_pfb(
     gpuErrchk(cudaMemset( fpfb->d_weighted_overlap_add, 0, weighted_overlap_add_size ));
 
     // Construct the cuFFT plan
-    int rank     = 1;     // i.e. a 1D FFT
-    int n        = K;     // size of each FFT
-    int *inembed = NULL;  // Setting this to null makes all subsequent "data layout" parameters ignored
-                          // to use the default layout (contiguous data in memory)
+    int rank     = 1;       // i.e. a 1D FFT
+    int n        = fpfb->K; // size of each FFT
+    int *inembed = NULL;    // Setting this to null makes all subsequent "data layout" parameters ignored
+                            // to use the default layout (contiguous data in memory)
 
     fpfb->ninputs_per_cufft_batch = 32; // This seems to work, so I'll have to call cuFFT 256/32 = 8 times
     fpfb->cufft_batch_size = fpfb->nspectra * fpfb->ninputs_per_cufft_batch;

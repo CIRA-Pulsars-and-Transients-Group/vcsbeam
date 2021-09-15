@@ -62,7 +62,7 @@ typedef struct forward_pfb_t
 
 forward_pfb *init_forward_pfb(
         MetafitsMetadata *obs_metadata, VoltageMetadata *vcs_metadata,
-        pfb_filter *filter, int K, int M );
+        pfb_filter *filter, int M );
 
 void free_forward_pfb( forward_pfb *fpfb );
 
