@@ -231,7 +231,7 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
                     }
                     break;
                 case 'V':
-                    printf( "MWA Beamformer %s\n", VERSION_BEAMFORMER);
+                    printf( "MWA Beamformer %s\n", VCSBEAM_VERSION);
                     exit(0);
                     break;
                 default:

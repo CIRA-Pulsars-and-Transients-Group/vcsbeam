@@ -92,7 +92,7 @@ int main(int argc, char **argv)
             "# ----------------------------------------------------------------------------\n"
             "# vcsbeam %s\n"
             "#    ",
-            VERSION_BEAMFORMER );
+            VCSBEAM_VERSION );
     for (i = 0; i < (uintptr_t)argc; i++)
         fprintf( opts.fout, " %s", argv[i] );
     fprintf( opts.fout,

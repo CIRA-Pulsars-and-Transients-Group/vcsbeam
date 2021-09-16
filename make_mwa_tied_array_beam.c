@@ -638,7 +638,7 @@ void make_tied_array_beam_parse_cmdline(
                     opts->out_coarse = true;
                     break;
                 case 'V':
-                    printf( "MWA Beamformer %s\n", VERSION_BEAMFORMER);
+                    printf( "MWA Beamformer %s\n", VCSBEAM_VERSION);
                     exit(0);
                     break;
                 case 'X':

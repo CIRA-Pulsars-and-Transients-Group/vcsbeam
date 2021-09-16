@@ -56,7 +56,7 @@ void populate_spliced_psrfits_header(
     strcpy( pf->hdr.frontend,  "MWA-RECVR" );
 
     snprintf( pf->hdr.source, 24, "%u", obs_metadata->obs_id );
-    snprintf( pf->hdr.backend, 24, "%s", VERSION_BEAMFORMER );
+    snprintf( pf->hdr.backend, 24, "%s", VCSBEAM_VERSION );
 
     pf->hdr.scanlen = 1.0; // in sec
 
@@ -255,7 +255,7 @@ void populate_psrfits_header(
     strcpy( pf->hdr.frontend,  "MWA-RECVR" );
 
     snprintf( pf->hdr.source, 24, "%u", obs_metadata->obs_id );
-    snprintf( pf->hdr.backend, 24, "%s", VERSION_BEAMFORMER );
+    snprintf( pf->hdr.backend, 24, "%s", VCSBEAM_VERSION );
 
     pf->hdr.scanlen = 1.0; // in sec
 

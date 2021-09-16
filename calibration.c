@@ -11,6 +11,8 @@
 #include <math.h>
 #include <mwalib.h>
 #include <cuComplex.h>
+
+#include "vcsbeam.h"
 #include "jones.h"
 
 cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,

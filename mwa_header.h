@@ -43,7 +43,7 @@
 "MWA_CAPTURE_VERSION 0.1	# Version of the Data Acquisition Software\n" \
 "MWA_SAMPLE_VERSION 0.1	# Version of the FFD FPGA Software\n" \
 "\n" \
-"VCSTOOL_VERSION " VERSION_BEAMFORMER "\n" \
+"VCSTOOL_VERSION " VCSBEAM_VERSION "\n" \
 "\n" \
 "TELESCOPE	mwa		# telescope name\n" \
 "\n" \

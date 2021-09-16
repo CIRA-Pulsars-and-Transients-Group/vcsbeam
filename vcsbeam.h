@@ -24,6 +24,10 @@
 #include <psrfits.h>
 
 
+#define VCSBEAM_VERSION  "v2.14.3_8d43a51"
+#define RUNTIME_DIR      "/home/smcsweeney/bin/vcsbeam_runtime"
+#define HYPERBEAM_HDF5   "/opt/mwa_hyperbeam/mwa_full_embedded_element_pattern.h5"
+
 
 /*******************
  *                 *

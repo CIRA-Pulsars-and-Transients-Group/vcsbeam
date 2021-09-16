@@ -336,7 +336,7 @@ void make_incoh_beam_parse_cmdline(
                     }
                     break;
                 case 'V':
-                    printf( "MWA Beamformer %s\n", VERSION_BEAMFORMER );
+                    printf( "MWA Beamformer %s\n", VCSBEAM_VERSION );
                     exit(EXIT_SUCCESS);
                     break;
                 default:
