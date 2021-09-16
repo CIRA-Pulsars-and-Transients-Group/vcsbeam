@@ -23,7 +23,6 @@
 #include "vcsbeam.h"
 #include "jones.h"
 #include "primary_beam.h"
-#include "metadata.h"
 #include "geometry.h"
 
 #define NCOMPLEXELEMENTS 4

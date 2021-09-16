@@ -11,12 +11,15 @@
 #include <math.h>
 #include <mwalib.h>
 #include <mpi.h>
-#include "star/pal.h"
-#include "star/palmac.h"
+
+#include <star/pal.h>
+#include <star/palmac.h>
+
+#include "vcsbeam.h"
+
 #include "psrfits.h"
 #include "beam_psrfits.h"
 #include "geometry.h"
-#include "metadata.h"
 #include "jones.h"
 
 void populate_spliced_psrfits_header(

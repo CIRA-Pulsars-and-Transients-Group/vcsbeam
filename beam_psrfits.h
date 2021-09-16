@@ -9,27 +9,11 @@
 
 #include <mpi.h>
 #include <mwalib.h>
+
+#include "vcsbeam.h"
 #include "geometry.h"
 #include "psrfits.h"
 
-
-typedef struct mpi_psrfits_t
-{
-    MPI_Datatype    coarse_chan_spectrum;
-    MPI_Datatype    total_spectrum_type;
-    MPI_Datatype    spliced_type;
-
-    MPI_Request     request_data;
-    MPI_Request     request_offsets;
-    MPI_Request     request_scales;
-
-    int             ncoarse_chans;
-
-    struct psrfits  coarse_chan_pf;
-    struct psrfits  spliced_pf;
-
-    int             writer_id;
-} mpi_psrfits;
 
 void populate_psrfits_header(
         struct psrfits   *pf,

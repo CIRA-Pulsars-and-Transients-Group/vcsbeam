@@ -20,12 +20,9 @@
 #include "jones.h"
 #include "beam_psrfits.h"
 #include "beam_vdif.h"
-#include "metadata.h"
-#include "form_beam.h"
 #include "calibration.h"
 #include "primary_beam.h"
 #include "geometry.h"
-#include "pfb.h"
 
 #define MAX_COMMAND_LENGTH 1024
 

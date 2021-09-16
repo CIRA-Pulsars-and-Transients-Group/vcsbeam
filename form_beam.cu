@@ -13,15 +13,11 @@
 #include <cuComplex.h>
 #include <cuda_runtime.h>
 
-#include "jones.h"
-#include "beam_psrfits.h"
-#include "metadata.h"
-
-extern "C" {
 #include "vcsbeam.h"
+
 #include "geometry.h"
-#include "form_beam.h"
-}
+#include "beam_psrfits.h"
+#include "jones.h"
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {

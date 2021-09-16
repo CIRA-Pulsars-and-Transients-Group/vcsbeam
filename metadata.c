@@ -9,7 +9,8 @@
 #include <time.h>
 #include <string.h>
 #include <mwalib.h>
-#include "metadata.h"
+
+#include "vcsbeam.h"
 
 vcsbeam_metadata *init_vcsbeam_metadata(
         char *obs_metafits_filename, char *cal_metafits_filename,

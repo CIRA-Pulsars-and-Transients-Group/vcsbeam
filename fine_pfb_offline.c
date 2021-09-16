@@ -16,8 +16,6 @@
 
 // Local includes
 #include "vcsbeam.h"
-#include "pfb.h"
-#include "metadata.h"
 
 struct fine_pfb_offline_opts {
     char              *begin_str;        // Absolute or relative GPS time -- when to start beamforming

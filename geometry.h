@@ -9,24 +9,8 @@
 
 #include <cuComplex.h>
 #include <mwalib.h>
-#include "metadata.h"
 
-#ifndef M_PI
-#define M_PI (3.14159265358979323846264338327950288)
-#endif
-
-struct beam_geom {
-    double mean_ra;
-    double mean_dec;
-    double az;
-    double el;
-    double lmst;
-    double fracmjd;
-    double intmjd;
-    double unit_N;
-    double unit_E;
-    double unit_H;
-};
+#include "vcsbeam.h"
 
 /* In order to communicate easily with the GPU, the "phi" array, which
  * contains the complex-valued geometric delay terms, is implemented

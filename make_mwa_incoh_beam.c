@@ -20,8 +20,6 @@
 #include "vcsbeam.h"
 #include "jones.h"
 #include "beam_psrfits.h"
-#include "metadata.h"
-#include "form_beam.h"
 #include "geometry.h"
 
 #define MAX_COMMAND_LENGTH 1024
