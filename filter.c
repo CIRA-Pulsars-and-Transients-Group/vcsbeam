@@ -9,7 +9,8 @@
 #include <math.h>
 #include <string.h>
 #include <cuComplex.h>
-#include "filter.h"
+
+#include "vcsbeam.h"
 
 
 cuDoubleComplex *roots_of_unity( int N )

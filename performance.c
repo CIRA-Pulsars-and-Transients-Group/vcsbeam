@@ -10,12 +10,12 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#include "performance.h"
+#include "vcsbeam.h"
 
 
-/************************************************
- * Helper functions not listed in performance.h *
- ************************************************/
+/********************************************
+ * Helper functions not listed in vcsbeam.h *
+ *******************************************/
 
 double now()
 /* Get the precise current time in seconds as a double

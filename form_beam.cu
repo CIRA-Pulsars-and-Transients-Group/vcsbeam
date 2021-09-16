@@ -18,9 +18,9 @@
 #include "metadata.h"
 
 extern "C" {
+#include "vcsbeam.h"
 #include "geometry.h"
 #include "form_beam.h"
-#include "performance.h"
 }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)

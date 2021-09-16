@@ -20,6 +20,7 @@
 #include <mwa_hyperbeam.h>
 
 // Local includes
+#include "vcsbeam.h"
 #include "jones.h"
 #include "primary_beam.h"
 #include "metadata.h"

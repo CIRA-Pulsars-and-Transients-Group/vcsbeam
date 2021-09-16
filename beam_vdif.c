@@ -10,6 +10,8 @@
 #include <math.h>
 #include <mwalib.h>
 #include <cuComplex.h>
+
+#include "vcsbeam.h"
 #include "vdifio.h"
 #include "psrfits.h"
 #include "star/pal.h"
@@ -18,7 +20,6 @@
 #include "mwa_header.h"
 #include "vdifio.h"
 #include "ascii_header.h"
-#include "filter.h"
 #include "geometry.h"
 
 

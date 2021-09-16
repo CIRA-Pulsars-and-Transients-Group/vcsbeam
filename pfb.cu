@@ -16,10 +16,9 @@
 #include <mwalib.h>
 
 extern "C" {
+#include "vcsbeam.h"
 #include "pfb.h"
-#include "filter.h"
 #include "jones.h"
-#include "performance.h"
 #include "metadata.h"
 }
 

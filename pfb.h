@@ -13,8 +13,7 @@
 
 #include <mwalib.h>
 
-#include "filter.h"
-#include "performance.h"
+#include "vcsbeam.h"
 #include "metadata.h"
 
 /* The final step in the forward PFB version that emulates the FPGA

@@ -16,6 +16,7 @@
 #include <mpi.h>
 
 // Local includes
+#include "vcsbeam.h"
 #include "jones.h"
 #include "beam_psrfits.h"
 #include "beam_vdif.h"
@@ -24,7 +25,6 @@
 #include "calibration.h"
 #include "primary_beam.h"
 #include "geometry.h"
-#include "performance.h"
 #include "pfb.h"
 
 #define MAX_COMMAND_LENGTH 1024

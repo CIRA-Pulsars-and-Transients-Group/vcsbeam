@@ -9,8 +9,9 @@
 
 #include <mwalib.h>
 #include <cuComplex.h>
+
+#include "vcsbeam.h"
 #include "vdifio.h"
-#include "filter.h"
 #include "geometry.h"
 
 #define  VDIF_HEADER_SIZE  32

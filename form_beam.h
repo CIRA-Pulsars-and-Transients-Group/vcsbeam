@@ -11,7 +11,7 @@
 #define FORM_BEAM_H
 
 #include "jones.h"
-#include "performance.h"
+#include "vcsbeam.h"
 
 /* structure for managing data arrays to be allocated on both host and device */
 struct gpu_formbeam_arrays

@@ -15,10 +15,9 @@
 #include <mwalib.h>
 
 // Local includes
+#include "vcsbeam.h"
 #include "pfb.h"
-#include "filter.h"
 #include "metadata.h"
-#include "performance.h"
 
 struct fine_pfb_offline_opts {
     char              *begin_str;        // Absolute or relative GPS time -- when to start beamforming
