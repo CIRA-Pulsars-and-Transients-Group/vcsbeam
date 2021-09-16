@@ -83,7 +83,7 @@ int main( int argc, char *argv[] )
 
     // Create and init the PFB struct
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
-    forward_pfb *fpfb = init_forward_pfb( vm, filter, M );
+    forward_pfb *fpfb = init_forward_pfb( vm, filter, M, PFB_MALLOC_ALL );
 
     logger_stop_stopwatch( log, "init" );
 

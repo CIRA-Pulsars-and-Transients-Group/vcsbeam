@@ -37,6 +37,15 @@ typedef enum pfb_result_t
     PFB_END_OF_GPSTIMES
 } pfb_result;
 
+typedef enum pfb_flags_t
+{
+    PFB_MALLOC_HOST_INPUT    = 0x01,
+    PFB_MALLOC_HOST_OUTPUT   = 0x02,
+    PFB_MALLOC_DEVICE_INPUT  = 0x04,
+    PFB_MALLOC_DEVICE_OUTPUT = 0x08,
+    PFB_MALLOC_ALL           = 0x0F
+} pfb_flags;
+
 typedef struct forward_pfb_t
 {
     vcsbeam_metadata *vm;                     // All the necessary metadata
@@ -75,7 +84,7 @@ typedef struct forward_pfb_t
     bool              read_locked;            // For multi-threading: lock for reading
 } forward_pfb;
 
-forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M );
+forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, pfb_flags flags );
 
 void free_forward_pfb( forward_pfb *fpfb );
 

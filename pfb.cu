@@ -240,7 +240,7 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     __syncthreads();
 }
 
-forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M )
+forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, pfb_flags flags )
 /* Create and initialise a forward_pfb struct.
 
    Inputs:
@@ -252,6 +252,8 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M )
                          (this determines the time resolution of the
                          channelised data). Set M = K for critically
                          sampled PFB.
+     FLAGS             - Various flags for whether to allocate memory
+                         (see pfb_flags enum)
 
    Output:
 
@@ -307,12 +309,16 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M )
     gpuErrchk(cudaMemcpyAsync( fpfb->d_filter_coeffs, fpfb->filter_coeffs, filter_size, cudaMemcpyHostToDevice ));
 
     // Allocate device memory for the other arrays
-    gpuErrchk(cudaMallocHost( (void **)&(fpfb->htr_data), fpfb->htr_size ));
-    gpuErrchk(cudaMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size ));
+    if (flags & PFB_MALLOC_HOST_INPUT)
+        gpuErrchk(cudaMallocHost( (void **)&(fpfb->htr_data), fpfb->htr_size ));
+    if (flags & PFB_MALLOC_HOST_OUTPUT)
+        gpuErrchk(cudaMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size ));
 
     //printf( "Allocating %lu of GPU memory\n", (unsigned long)( fpfb->htr_size + fpfb->vcs_size + fpfb->weighted_overlap_add_size) );
-    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->htr_size ));
-    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_vcs_data), fpfb->vcs_size ));
+    if (flags & PFB_MALLOC_DEVICE_INPUT)
+        gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->htr_size ));
+    if (flags & PFB_MALLOC_DEVICE_OUTPUT)
+        gpuErrchk(cudaMalloc( (void **)&(fpfb->d_vcs_data), fpfb->vcs_size ));
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_weighted_overlap_add), fpfb->weighted_overlap_add_size ));
 
     // Construct the cuFFT plan
