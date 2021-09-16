@@ -293,7 +293,7 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M )
          vm->vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
     fpfb->bytes_per_block = vm->vcs_metadata->voltage_block_size_bytes;
 
-    size_t weighted_overlap_add_size = fpfb->htr_size * (sizeof(cuFloatComplex) / sizeof(char2));
+    fpfb->weighted_overlap_add_size = fpfb->htr_size * (sizeof(cuFloatComplex) / sizeof(char2));
     size_t filter_size = filter->ncoeffs * sizeof(int);
 
     // Allocate memory for filter and copy across the filter coefficients,
@@ -309,13 +309,10 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M )
     gpuErrchk(cudaMallocHost( (void **)&(fpfb->htr_data), fpfb->htr_size ));
     gpuErrchk(cudaMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size ));
 
-    printf( "Allocating %lu of GPU memory\n", (unsigned long)( fpfb->htr_size + fpfb->vcs_size + weighted_overlap_add_size) );
+    //printf( "Allocating %lu of GPU memory\n", (unsigned long)( fpfb->htr_size + fpfb->vcs_size + fpfb->weighted_overlap_add_size) );
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->htr_size ));
     gpuErrchk(cudaMalloc( (void **)&(fpfb->d_vcs_data), fpfb->vcs_size ));
-    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_weighted_overlap_add), weighted_overlap_add_size ));
-
-    // Set the d_weighted_overlap_add array to zeros
-    gpuErrchk(cudaMemset( fpfb->d_weighted_overlap_add, 0, weighted_overlap_add_size ));
+    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_weighted_overlap_add), fpfb->weighted_overlap_add_size ));
 
     // Construct the cuFFT plan
     int rank     = 1;       // i.e. a 1D FFT
@@ -354,7 +351,7 @@ void free_forward_pfb( forward_pfb *fpfb )
     free( fpfb );
 }
 
-pfb_error forward_pfb_read_next_second( forward_pfb *fpfb )
+pfb_result forward_pfb_read_next_second( forward_pfb *fpfb )
 {
     // Error check: there are still data files to read
     if (fpfb->current_gps_idx >= fpfb->vm->num_gps_seconds_to_process)
@@ -422,6 +419,9 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
     dim3 threads2( fpfb->K );
 
     logger_start_stopwatch( log, "wola", true );
+
+    // Set the d_weighted_overlap_add array to zeros
+    gpuErrchk(cudaMemset( fpfb->d_weighted_overlap_add, 0, fpfb->weighted_overlap_add_size ));
 
     legacy_pfb_weighted_overlap_add<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
     cudaDeviceSynchronize();

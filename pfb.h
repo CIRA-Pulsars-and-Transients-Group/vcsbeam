@@ -31,11 +31,11 @@
  * FORWARD (ANALYSIS) FINE PFB *
  *******************************/
 
-typedef enum pfb_error_t
+typedef enum pfb_result_t
 {
     PFB_SUCCESS,
     PFB_END_OF_GPSTIMES
-} pfb_error;
+} pfb_result;
 
 typedef struct forward_pfb_t
 {
@@ -59,6 +59,7 @@ typedef struct forward_pfb_t
     int               cufft_batch_size;
 
     cuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
+    size_t            weighted_overlap_add_size; // The size (in bytes) of d_weighted_overlap_add
 
     int              *filter_coeffs;          // The filter to be applied **WARNING! Filter will be typecast to int!!**
     int              *d_filter_coeffs;        // As above, on the device
@@ -76,7 +77,7 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M )
 
 void free_forward_pfb( forward_pfb *fpfb );
 
-pfb_error forward_pfb_read_next_second( forward_pfb *fpfb );
+pfb_result forward_pfb_read_next_second( forward_pfb *fpfb );
 
 void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, logger *log );
 

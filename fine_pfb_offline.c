@@ -42,22 +42,20 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
 
 int main( int argc, char *argv[] )
 {
-    int i; // Generic loop counter
-
     // Parse command line arguments
     struct fine_pfb_offline_opts opts;
     fine_pfb_offline_parse_cmdline( argc, argv, &opts );
 
     // Start a logger for output messages and time-keeping
     logger *log = create_logger( stdout, PERFORMANCE_NO_MPI );
-    logger_add_stopwatch( log, "read", "Reading in data" );
-    logger_add_stopwatch( log, "upload", "Uploading the data to the device" );
-    logger_add_stopwatch( log, "wola", "Weighted overlap-add" );
-    logger_add_stopwatch( log, "fft", "Performing the FFT" );
-    logger_add_stopwatch( log, "pfb", "Performing the PFB" );
-    logger_add_stopwatch( log, "pack", "Packing the data into the recombined format" );
+    logger_add_stopwatch( log, "read",     "Reading in data" );
+    logger_add_stopwatch( log, "upload",   "Uploading the data to the device" );
+    logger_add_stopwatch( log, "wola",     "Weighted overlap-add" );
+    logger_add_stopwatch( log, "fft",      "Performing the FFT" );
+    logger_add_stopwatch( log, "pfb",      "Performing the PFB" );
+    logger_add_stopwatch( log, "pack",     "Packing the data into the recombined format" );
     logger_add_stopwatch( log, "download", "Downloading the data to the host" );
-    logger_add_stopwatch( log, "write", "Writing out data to file" );
+    logger_add_stopwatch( log, "write",    "Writing out data to file" );
     //char log_message[MAX_COMMAND_LENGTH];
 
     // Set up the VCS metadata struct
@@ -85,39 +83,41 @@ int main( int argc, char *argv[] )
     forward_pfb *fpfb = init_forward_pfb( vm, filter, M );
 
     // Let's try it out on one second of data
-    char message[ERROR_MESSAGE_LEN];
-    int nseconds = 1;
-    for (i = 0; i < nseconds; i++)
+    char filename[128];
+    pfb_result status;
+    logger_start_stopwatch( log, "read", true );
+    while ((status = forward_pfb_read_next_second( fpfb )) == PFB_SUCCESS)
     {
-        sprintf( message, "\nProcessing gps second %u", vm->gps_seconds_to_process[i] );
-        logger_message( log, message );
-
-        logger_start_stopwatch( log, "read", true );
-
-        forward_pfb_read_next_second( fpfb );
-
         logger_stop_stopwatch( log, "read" );
+
+        // Actually do the PFB
+        cu_forward_pfb_fpga_version( fpfb, true, log );
+
+        // Write out the answer to a file
+        logger_start_stopwatch( log, "write", true );
+
+        sprintf( filename, "%010u_%010u_ch%03lu.dat",
+                vm->obs_metadata->obs_id,
+                vm->gps_seconds_to_process[fpfb->current_gps_idx - 1],
+                vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number
+               );
+
+        FILE *f = fopen( filename, "w" );
+        fwrite( fpfb->vcs_data, fpfb->vcs_size, sizeof(uint8_t), f );
+        fclose( f );
+
+        logger_stop_stopwatch( log, "write" );
+
+        // Start the read timer again in prep for the next read
+        logger_start_stopwatch( log, "read", true );
     }
-
-    // Actually do the PFB
-    cu_forward_pfb_fpga_version( fpfb, true, log );
-
-    // Write out the answer to a file
-    logger_start_stopwatch( log, "write", true );
-
-    FILE *f = fopen( "test_output.dat", "w" );
-    fwrite( fpfb->vcs_data, fpfb->vcs_size, sizeof(uint8_t), f );
-    fclose( f );
-
-    logger_stop_stopwatch( log, "write" );
+    logger_stop_stopwatch( log, "read" );
 
     // Free memory
-    logger_timed_message( log, "Finished. Freeing memory buffers" );
+    logger_timed_message( log, "... j/k. I'm out of files to read. Freeing memory buffers" );
 
     free_forward_pfb( fpfb );
-
     free_pfb_filter( filter );
-
     destroy_vcsbeam_metadata( vm );
 
     // Exit gracefully
