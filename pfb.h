@@ -71,6 +71,8 @@ typedef struct forward_pfb_t
     int               P;                      // The number of taps
 
     cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
+
+    bool              read_locked;            // For multi-threading: lock for reading
 } forward_pfb;
 
 forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M );

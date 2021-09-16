@@ -266,6 +266,7 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M )
 
     // Set the next gps second to read to be the first one
     fpfb->current_gps_idx = 0;
+    fpfb->read_locked     = false; // Allow reading to happen!
 
     // Some of the data dimensions
     unsigned int nsamples = vm->vcs_metadata->num_samples_per_voltage_block *
@@ -359,6 +360,9 @@ pfb_result forward_pfb_read_next_second( forward_pfb *fpfb )
         return PFB_END_OF_GPSTIMES;
     }
 
+    // Turn the read lock on
+    fpfb->read_locked = true;
+
     // For catching mwalib errors
     char message[ERROR_MESSAGE_LEN];
 
@@ -409,6 +413,9 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
     gpuErrchk(cudaMemcpy( fpfb->d_htr_data, fpfb->htr_data, fpfb->htr_size, cudaMemcpyHostToDevice ));
 
     logger_stop_stopwatch( log, "upload" );
+
+    // Read lock can now be switched off
+    fpfb->read_locked = false;
 
     // PFB algorithm:
     // 1st step: weighted overlap add

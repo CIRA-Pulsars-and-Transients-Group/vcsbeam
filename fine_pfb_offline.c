@@ -48,6 +48,7 @@ int main( int argc, char *argv[] )
 
     // Start a logger for output messages and time-keeping
     logger *log = create_logger( stdout, PERFORMANCE_NO_MPI );
+    logger_add_stopwatch( log, "init",     "Initialising the offline forward PFB" );
     logger_add_stopwatch( log, "read",     "Reading in data" );
     logger_add_stopwatch( log, "upload",   "Uploading the data to the device" );
     logger_add_stopwatch( log, "wola",     "Weighted overlap-add" );
@@ -57,6 +58,8 @@ int main( int argc, char *argv[] )
     logger_add_stopwatch( log, "download", "Downloading the data to the host" );
     logger_add_stopwatch( log, "write",    "Writing out data to file" );
     //char log_message[MAX_COMMAND_LENGTH];
+
+    logger_start_stopwatch( log, "init", true );
 
     // Set up the VCS metadata struct
     vcsbeam_metadata *vm = init_vcsbeam_metadata(
@@ -82,6 +85,8 @@ int main( int argc, char *argv[] )
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
     forward_pfb *fpfb = init_forward_pfb( vm, filter, M );
 
+    logger_stop_stopwatch( log, "init" );
+
     // Let's try it out on one second of data
     char filename[128];
     pfb_result status;
@@ -91,7 +96,9 @@ int main( int argc, char *argv[] )
         logger_stop_stopwatch( log, "read" );
 
         // Actually do the PFB
+        logger_start_stopwatch( log, "pfb", false );
         cu_forward_pfb_fpga_version( fpfb, true, log );
+        logger_stop_stopwatch( log, "pfb" );
 
         // Write out the answer to a file
         logger_start_stopwatch( log, "write", true );
