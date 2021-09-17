@@ -11,9 +11,6 @@
 #include <string.h>
 #include <assert.h>
 
-// Non-standard dependencies
-#include <mwalib.h>
-
 // Local includes
 #include "vcsbeam.h"
 
