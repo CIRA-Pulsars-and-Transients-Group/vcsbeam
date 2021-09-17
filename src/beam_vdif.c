@@ -147,12 +147,15 @@ void populate_vdif_header(
         createVDIFHeader( vhdr, vf[p].frame_length, vf[p].threadid, vf[p].bits, vf[p].nchan,
                                 vf[p].iscomplex, vf[p].stationid);
 
+        fprintf( stderr, "vf[p].frame_length = %d\nvf[p].frame_rate = %d\nvf[p].block_size = %ld\nvf[p].sizeof_beam = %ld\nvf[p].sizeof_buffer = %ld\n",
+                vf[p].frame_length, vf[p].frame_rate, vf[p].block_size, vf[p].sizeof_beam, vf[p].sizeof_buffer );
+
         // Now we have to add the time
         uint64_t start_day = beam_geom_vals->intmjd;
         uint64_t start_sec = roundf( beam_geom_vals->fracmjd * 86400.0 );
         uint64_t mjdsec    = (start_day * 86400) + start_sec; // Note the VDIFEpoch is strange - from the standard
 
-        setVDIFEpoch( vhdr, start_day );
+        setVDIFEpochMJD( vhdr, start_day );
         setVDIFFrameMJDSec( vhdr, mjdsec );
         setVDIFFrameNumber( vhdr, 0 );
 
