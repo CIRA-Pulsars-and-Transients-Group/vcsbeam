@@ -16,7 +16,6 @@
 #include <mwalib.h>
 
 #include "vcsbeam.h"
-#include "jones.h"
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {

@@ -15,10 +15,6 @@
 
 #include "vcsbeam.h"
 
-#include "geometry.h"
-#include "beam_psrfits.h"
-#include "jones.h"
-
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
     /* Wrapper function for GPU/CUDA error handling. Every CUDA call goes through

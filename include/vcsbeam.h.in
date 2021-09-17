@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include <cuda_runtime.h>
 #include <cufft.h>
@@ -22,11 +23,29 @@
 #include <star/pal.h>
 #include <star/palmac.h>
 #include <psrfits.h>
+#include <vdifio.h>
+#include <mwa_hyperbeam.h>
+
 
 
 #cmakedefine VCSBEAM_VERSION  "@VCSBEAM_VERSION@"
 #cmakedefine RUNTIME_DIR      "@RUNTIME_DIR@"
 #cmakedefine HYPERBEAM_HDF5   "@HYPERBEAM_HDF5@"
+
+
+/* Boilerplate CUDA code for error checking */
+
+#define cudaCheckErrors(msg) \
+    do { \
+        cudaError_t __err = cudaGetLastError(); \
+        if (__err != cudaSuccess) { \
+            fprintf(stderr, "Fatal error: %s (%s at %s:%d)\n", \
+                msg, cudaGetErrorString(__err), \
+                __FILE__, __LINE__); \
+            fprintf(stderr, "*** FAILED - ABORTING\n"); \
+            exit(1); \
+        } \
+    } while (0)
 
 
 /*******************
@@ -120,6 +139,136 @@ void logger_report_all_stats( logger *log );
 
 #ifdef __cplusplus
 } // End extern "C"
+#endif
+
+
+/*******************
+ *                 *
+ *   CALIBRATION   *
+ *                 *
+ *******************/
+
+// Calibration solution types
+#define CAL_NONE      0
+#define CAL_RTS       1
+#define CAL_OFFRINGA  2
+
+#define NDBL_PER_JONES  8
+#define BANDPASS_ROWS_PER_ANT  8
+
+#define CAL_BUFSIZE    4096
+
+
+struct calibration
+{
+    char  *metafits;           // Filename of the metafits file
+    char  *caldir;             // Location of calibration data
+    int    cal_type;           // Either RTS or OFFRINGA
+    int    ref_ant;            // Reference antenna for calibration phases
+    int    cross_terms;        // Include XY and YX of calibration Jones matrices
+    double phase_offset;       // Rotate the phase of Y by m*freq + c, where
+    double phase_slope;        //   m = phase_slope (rad/Hz)
+                               //   c = phase_offset (rad)
+    bool   apply_xy_correction;
+};
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
+        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx );
+
+void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname );
+void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
+        MetafitsMetadata *cal_metadata, char *filename );
+int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
+        int coarse_chan, char *gains_file );
+
+void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
+void zero_XY_and_YX( cuDoubleComplex *J );
+
+uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, MetafitsMetadata *obs_metadata, uint32_t vcs_ant );
+
+void pq_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad );
+
+#ifdef __cplusplus
+}
+#endif
+
+
+/******************
+ *                *
+ *     JONES      *
+ *                *
+ ******************/
+
+#define NSTOKES  4
+
+/* Calculating array indices for various flavours of Jones matrix arrays */
+
+#define v_IDX(s,c,i,nc,ni)    ((s) * (ni)*(nc) + \
+                               (c) * (ni)      + \
+                               (i))
+
+#define VSPVB  64000  /* "Vcsmwax Samples Per Voltage Block"
+                         (i.e. the size of the TIME dimension in a voltage block */
+#define vMWAX_IDX(s,i,ni) (((s/VSPVB)*(ni) + (i))*VSPVB + (s%VSPVB))
+
+#define J_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol*npol*(nc))      + \
+                                    (c)  * (npol*npol)           + \
+                                    (p1) * (npol)                + \
+                                    (p2))
+
+#define JD_IDX(s,c,a,nc,na)  ((s) * (na)*(nc) + \
+                              (c) * (na)      + \
+                              (a))
+
+#define B_IDX(p,s,c,pol,ns,nc,npol) ((p)  * (npol)*(nc)*(ns)   + \
+                                     (s)  * (npol)*(nc)        + \
+                                     (c)  * (npol)             + \
+                                     (pol))
+
+#define C_IDX(p,s,st,c,ns,nst,nc)  ((p)  * ((nc)*(nst)*(ns)) + \
+                                    (s)  * ((nc)*(nst))      + \
+                                    (st) *  (nc)               + \
+                                    (c))
+
+#define I_IDX(s,c,nc)          ((s)*(nc) + (c))
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
+
+void get_jones(
+        // an array of pointings [pointing][ra/dec][characters]
+        int                    npointing, // number of pointings
+        MetafitsMetadata      *osb_metadata,
+        int                    coarse_chan_idx,
+        struct                 calibration *cal,
+        cuDoubleComplex       *D,
+        cuDoubleComplex       *B,
+        cuDoubleComplex       *invJi // <-- output
+);
+
+/**** MATRIX OPERATIONS ****/
+
+void cp2x2( cuDoubleComplex *Min, cuDoubleComplex *Mout );
+void inv2x2( cuDoubleComplex *Min, cuDoubleComplex *Mout );
+void inv2x2d( double *Min, double *Mout );
+void inv2x2S( cuDoubleComplex *Min, cuDoubleComplex *Mout );
+void mult2x2d( cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout );
+void mult2x2d_RxC( double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout );
+void conj2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
+double norm2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
+void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H );
+void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *c );
+
+#ifdef __cplusplus
+}
 #endif
 
 /*******************
@@ -331,6 +480,16 @@ int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm );
 #define M_PI (3.14159265358979323846264338327950288)
 #endif
 
+/* In order to communicate easily with the GPU, the "phi" array, which
+ * contains the complex-valued geometric delay terms, is implemented
+ * as a 1D array, which uses the following indexing macro to access
+ * the correct term for a given (p)ointing, (a)ntenna, and (c)hannel.
+ */
+
+#define PHI_IDX(p,a,c,na,nc)   ((p) * (nc)*(na)  + \
+                                (a) * (nc)       + \
+                                (c))
+
 struct beam_geom {
     double mean_ra;
     double mean_dec;
@@ -343,6 +502,74 @@ struct beam_geom {
     double unit_E;
     double unit_H;
 };
+
+
+typedef struct geometric_delays_t {
+    cuDoubleComplex   *phi;
+    cuDoubleComplex   *d_phi;
+    uintptr_t          npointings;
+    uintptr_t          nant;
+    uintptr_t          nchan;
+    double            *chan_freqs_hz;
+    MetafitsMetadata  *obs_metadata;
+} geometric_delays;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Calculate the geometric delay (in radians) for the given pointings
+ */
+void calc_all_geometric_delays(
+        geometric_delays  *gdelays,
+        struct beam_geom  *beam_geom_vals );
+
+void calc_geometric_delays(
+        struct beam_geom  *beam_geom_vals,
+        uint32_t           freq_hz,
+        MetafitsMetadata  *obs_metadata,
+        cuDoubleComplex   *phi );
+
+/* Allocates memory for the geometric delay arrays ("phi") on both host and device.
+ * Free with free_geometric_delays()
+ */
+void create_geometric_delays(
+        geometric_delays  *gdelays,
+        MetafitsMetadata  *obs_metadata,
+        VoltageMetadata   *vcs_metadata,
+        uintptr_t          coarse_chan,
+        uintptr_t          npointings );
+
+/* Free memory allocated with create_geometric_delays()
+ */
+void free_geometric_delays( geometric_delays *gdelays );
+
+/* Copy host memory block to device
+ */
+void push_geometric_delays_to_device( geometric_delays *gdelays );
+
+double calc_array_factor(
+        MetafitsMetadata *obs_metadata,
+        uint32_t          freq_hz,
+        struct beam_geom *bg1,
+        struct beam_geom *bg2 );
+
+void calc_beam_geom(
+        double            ras_hours,
+        double            decs_degs,
+        double            mjd,
+        struct beam_geom  *bg );
+
+void dec2hms( char *out, double in, int sflag );
+void utc2mjd( char *, double *, double * ); // "2000-01-01T00:00:00" --> MJD_int + MJD_fraction
+void mjd2lst( double, double * );
+
+double parse_dec( char* ); // "01:23:45.67" --> Dec in degrees
+double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
+
+#ifdef __cplusplus
+}
+#endif
 
 
 /********************
@@ -590,5 +817,217 @@ void flatten_bandpass( int nstep, int nchan, int npol, void *data);
 #ifdef __cplusplus
 }
 #endif
+
+
+
+/********************
+ *                  *
+ *   BEAM_PSRFITS   *
+ *                  *
+ ********************/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void populate_psrfits_header(
+        struct psrfits   *pf,
+        MetafitsMetadata *obs_metadata,
+        VoltageMetadata  *vcs_metadata,
+        int               coarse_chan_idx,
+        int               max_sec_per_file,
+        int               outpol,
+        struct beam_geom *beam_geom_vals,
+        char             *incoh_basename,
+        bool              is_coherent );
+
+void populate_spliced_psrfits_header(
+        struct psrfits   *pf,
+        MetafitsMetadata *obs_metadata,
+        VoltageMetadata  *vcs_metadata,
+        int               first_coarse_chan_idx,
+        int               ncoarse_chans,
+        int               max_sec_per_file,
+        int               outpol,
+        struct beam_geom *beam_geom_vals,
+        char             *incoh_basename,
+        bool              is_coherent );
+
+void free_psrfits( struct psrfits *pf );
+
+float *create_data_buffer_psrfits( size_t size );
+
+void init_mpi_psrfits(
+        mpi_psrfits *mpf,
+        MetafitsMetadata *obs_metadata,
+        VoltageMetadata *vcs_metadata,
+        int world_size,
+        int world_rank,
+        int max_sec_per_file,
+        int nstokes,
+        struct beam_geom *bg,
+        char *outfile,
+        int writer_id,
+        bool is_coherent );
+
+void free_mpi_psrfits( mpi_psrfits *mpf );
+
+void gather_splice_psrfits( mpi_psrfits *mpf );
+void wait_splice_psrfits( mpi_psrfits *mpf );
+
+#ifdef __cplusplus
+}
+#endif
+
+
+/*******************
+ *                 *
+ *    BEAM_VDIF    *
+ *                 *
+ *******************/
+
+/* convenience type - this just collects all the vdif info together */
+struct vdifinfo {
+
+    int frame_length; //length of the vdif frame
+    int frame_rate; // frames per second
+    size_t samples_per_frame; // number of time samples per vdif frame
+    int bits; // bits per sample
+    int nchan; // channels per framme
+    int chan_width; // channel width in hertz
+    int sample_rate;  // sample rate in hertz
+    int iscomplex; // complex sample flag
+    int threadid; // which thread are we
+    char stationid[3]; // which station are we.
+    char exp_name[17]; // Experiment name
+    char scan_name[17]; // scan_name
+    size_t block_size; // size of one second of output data including headers
+    size_t sizeof_buffer; // size of one second of 32bit complex beam data (no headers)
+    size_t sizeof_beam; // size of 1 sample of 32bit complex beam data (no headers)
+    float *b_scales; // bandpass mean
+    float *b_offsets; // bandpass offset
+
+    // observation info
+    char telescope[24];
+    char source[24];
+    char obs_mode[8];
+    double fctr;
+
+    char ra_str[16];
+    char dec_str[16];
+
+    double BW;
+
+    long double MJD_epoch;
+
+    char date_obs[24];
+    char basefilename[1024];
+
+    int got_scales;
+
+};
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+void vdif_write_data( struct vdifinfo *vf, int8_t *output );
+void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
+        float *data_buffer_vdif );
+
+void populate_vdif_header(
+        struct vdifinfo  *vf,
+        vdif_header      *vhdr,
+        MetafitsMetadata *obs_metadata,
+        VoltageMetadata  *vcs_metadata,
+        int               coarse_chan_idx,
+        struct beam_geom *beam_geom_vals,
+        int               npointing );
+
+cuFloatComplex get_std_dev_complex( cuFloatComplex *input, int nsamples );
+
+void set_level_occupancy( cuFloatComplex *input, int nsamples,
+                          float *new_gain );
+
+void get_mean_complex( cuFloatComplex *input, int nsamples, float *rmean,
+                       float *imean, cuFloatComplex *cmean );
+
+void normalise_complex( cuFloatComplex *input, int nsamples, float scale );
+
+void to_offset_binary( int8_t *i, int n );
+
+float *create_data_buffer_vdif( size_t size );
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
+/********************
+ *                  *
+ *   PRIMARY_BEAM   *
+ *                  *
+ ********************/
+
+#define NCONFIGS           138
+#define DEAD_CONFIG        (NCONFIGS - 1)
+#define MANY_DEAD_DIPOLES  -1
+
+#define PB_IDX(p,a,pol,na,npol) ((p)*(na)*(npol) + (a)*(npol) + (pol))
+
+typedef struct primary_beam_t
+{
+    cuDoubleComplex  *B;
+    FEEBeam          *beam;
+    uint32_t        **delays;
+    double          **amps;
+    uintptr_t         npointings;
+    uintptr_t         nant;
+    uintptr_t         npol;
+    uint32_t          freq_hz;
+    MetafitsMetadata *obs_metadata;
+} primary_beam;
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void create_delays_amps_from_metafits(
+        MetafitsMetadata *metafits_metadata, uint32_t ***delays, double ***amps );
+
+void free_delays_amps(
+        MetafitsMetadata *metafits_metadata, uint32_t **delays, double **amps );
+
+void parallactic_angle_correction(
+    double *P,    // output rotation matrix
+    double lat,   // observing latitude (radians)
+    double az,    // azimuth angle (radians)
+    double za);   // zenith angle (radians)
+
+int hash_dipole_config( double * );
+
+void calc_primary_beam(
+        primary_beam      *pb,
+        struct beam_geom  *beam_geom_vals );
+
+void create_primary_beam(
+        primary_beam      *pb,
+        MetafitsMetadata  *obs_metadata,
+        uintptr_t          coarse_chan,
+        uintptr_t          npointings );
+
+void free_primary_beam( primary_beam *pb );
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
 
 #endif

@@ -9,16 +9,17 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
+#include <string.h>
 #include <cuComplex.h>
+
+#include <mwalib.h>
 #include <star/pal.h>
 #include <star/palmac.h>
-#include "psrfits.h"
-#include "fitsio.h"
-#include <string.h>
-#include <mwalib.h>
-#include "jones.h"
+#include <psrfits.h>
+#include <fitsio.h>
 #include <mwa_hyperbeam.h>
-#include "calibration.h"
+
+#include "vcsbeam.h"
 #include "primary_beam.h"
 
 void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs )

@@ -8,7 +8,6 @@ add_library(vcsbeam STATIC
     jones.c
     pfb.cu
     ascii_header.c
-    vdifio.c
     calibration.c
     primary_beam.c
     geometry.c
@@ -21,15 +20,18 @@ set_target_properties(vcsbeam
 
 target_include_directories(vcsbeam PUBLIC
     ${PSRFITS_UTILS_INCLUDE_DIR}
+    ${VDIFIO_INCLUDE_DIR}
     ${CFITSIO_INCLUDE_DIR}
     ${PAL_INCLUDE_DIR}
     ${CUDA_INCLUDE_DIRS}
     ${HYPERBEAM_INCLUDE_DIR}
     ${MWALIB_INCLUDE_DIR}
-    ${MPI_INCLUDE_PATH})
+    ${MPI_INCLUDE_PATH}
+    ${CMAKE_BINARY_DIR})
 
 target_link_libraries(vcsbeam
     ${PSRFITS_UTILS_LIBRARY}
+    ${VDIFIO_LIBRARY}
     ${CFITSIO_LIBRARY}
     ${PAL_LIBRARY}
     ${M_LIBRARY}

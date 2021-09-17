@@ -15,7 +15,6 @@
 #include <star/pal.h>
 #include <star/palmac.h>
 #include "geometry.h"
-#include "jones.h"
 
 void calc_geometric_delays(
         struct beam_geom  *beam_geom_vals,

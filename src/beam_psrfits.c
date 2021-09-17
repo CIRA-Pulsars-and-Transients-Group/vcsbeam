@@ -9,18 +9,14 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#include <mwalib.h>
 #include <mpi.h>
 
+#include <mwalib.h>
 #include <star/pal.h>
 #include <star/palmac.h>
+#include <psrfits.h>
 
 #include "vcsbeam.h"
-
-#include "psrfits.h"
-#include "beam_psrfits.h"
-#include "geometry.h"
-#include "jones.h"
 
 void populate_spliced_psrfits_header(
         struct psrfits   *pf,

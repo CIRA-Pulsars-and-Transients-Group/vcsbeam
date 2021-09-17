@@ -8,19 +8,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <mwalib.h>
 #include <cuComplex.h>
 
+#include <mwalib.h>
+#include <psrfits.h>
+#include <star/pal.h>
+#include <star/palmac.h>
+#include <vdifio.h>
+
 #include "vcsbeam.h"
-#include "vdifio.h"
-#include "psrfits.h"
-#include "star/pal.h"
-#include "star/palmac.h"
-#include "beam_vdif.h"
+
 #include "mwa_header.h"
 #include "vdifio.h"
 #include "ascii_header.h"
-#include "geometry.h"
 
 
 void float2int8_trunc(float *f, int n, float min, float max, int8_t *i)
