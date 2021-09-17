@@ -20,7 +20,6 @@
 #include <mwa_hyperbeam.h>
 
 #include "vcsbeam.h"
-#include "primary_beam.h"
 
 void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs )
 /* Creates a list of indexes into the data for the X and Y polarisations,

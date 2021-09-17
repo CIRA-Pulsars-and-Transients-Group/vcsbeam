@@ -46,10 +46,10 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
     while  (offset_out_vdif < vf->block_size) {
 
         // Add the current header
-        memcpy( (out_buffer_8_vdif + offset_out_vdif), vhdr, VDIF_HEADER_SIZE );
+        memcpy( (out_buffer_8_vdif + offset_out_vdif), vhdr, VDIF_HEADER_BYTES );
 
         // Offset into the output array
-        offset_out_vdif += VDIF_HEADER_SIZE;
+        offset_out_vdif += VDIF_HEADER_BYTES;
 
         // Convert from float to int8
         float2int8_trunc( data_buffer_ptr, vf->sizeof_beam, -126.0, 127.0,
@@ -57,7 +57,7 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
         to_offset_binary( (out_buffer_8_vdif + offset_out_vdif),
                           vf->sizeof_beam );
 
-        offset_out_vdif += vf->frame_length - VDIF_HEADER_SIZE; // increment output offset
+        offset_out_vdif += vf->frame_length - VDIF_HEADER_BYTES; // increment output offset
         data_buffer_ptr += vf->sizeof_beam;
         nextVDIFHeader( vhdr, vf->frame_rate );
     }
@@ -131,7 +131,7 @@ void populate_vdif_header(
         vf[p].BW                = obs_metadata->coarse_chan_width_hz / 1e6;  // (MHz)
 
         vf[p].frame_length  = (vf[p].nchan * (vf[p].iscomplex+1) * vf[p].samples_per_frame) +
-                            VDIF_HEADER_SIZE;                                         // = 544
+                            VDIF_HEADER_BYTES;                                         // = 544
         vf[p].threadid      = 0;
         sprintf( vf[p].stationid, "mw" );
 
@@ -153,7 +153,7 @@ void populate_vdif_header(
         uint64_t mjdsec    = (start_day * 86400) + start_sec; // Note the VDIFEpoch is strange - from the standard
 
         setVDIFEpoch( vhdr, start_day );
-        setVDIFMJDSec( vhdr, mjdsec );
+        setVDIFFrameMJDSec( vhdr, mjdsec );
         setVDIFFrameNumber( vhdr, 0 );
 
         strcpy( vf[p].exp_name, obs_metadata->project_id );

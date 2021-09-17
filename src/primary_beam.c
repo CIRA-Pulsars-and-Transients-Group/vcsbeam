@@ -11,7 +11,7 @@
 #include <star/pal.h>
 #include <star/palmac.h>
 
-#include "primary_beam.h"
+#include "vcsbeam.h"
 
 
 void calc_primary_beam(

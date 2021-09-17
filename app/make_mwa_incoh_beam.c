@@ -18,9 +18,6 @@
 
 // Local includes
 #include "vcsbeam.h"
-#include "jones.h"
-#include "beam_psrfits.h"
-#include "geometry.h"
 
 #define MAX_COMMAND_LENGTH 1024
 

@@ -21,9 +21,6 @@
 
 // Local includes
 #include "vcsbeam.h"
-#include "jones.h"
-#include "primary_beam.h"
-#include "geometry.h"
 
 #define NCOMPLEXELEMENTS 4
 
