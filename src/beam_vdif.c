@@ -147,8 +147,18 @@ void populate_vdif_header(
         createVDIFHeader( vhdr, vf[p].frame_length, vf[p].threadid, vf[p].bits, vf[p].nchan,
                                 vf[p].iscomplex, vf[p].stationid);
 
-        fprintf( stderr, "vf[p].frame_length = %d\nvf[p].frame_rate = %d\nvf[p].block_size = %ld\nvf[p].sizeof_beam = %ld\nvf[p].sizeof_buffer = %ld\n",
-                vf[p].frame_length, vf[p].frame_rate, vf[p].block_size, vf[p].sizeof_beam, vf[p].sizeof_buffer );
+        fprintf( stderr, "vf[p].frame_length = %d, %x\nvf[p].frame_rate = %d, %x\nvf[p].block_size = %ld, %lx\nvf[p].sizeof_beam = %ld, %lx\nvf[p].sizeof_buffer = %ld, %lx\nvf[p].threadid = %d\nvf[p].bits = %d\nvf[p].nchan = %d\nvf[p].iscomplex = %d\nvf[p].stationid = %s\n",
+                vf[p].frame_length,
+                vf[p].frame_length,
+                vf[p].frame_rate,
+                vf[p].frame_rate,
+                vf[p].block_size,
+                vf[p].block_size,
+                vf[p].sizeof_beam,
+                vf[p].sizeof_beam,
+                vf[p].sizeof_buffer,
+                vf[p].sizeof_buffer,
+                vf[p].threadid, vf[p].bits, vf[p].nchan, vf[p].iscomplex, vf[p].stationid );
 
         // Now we have to add the time
         uint64_t start_day = beam_geom_vals->intmjd;
