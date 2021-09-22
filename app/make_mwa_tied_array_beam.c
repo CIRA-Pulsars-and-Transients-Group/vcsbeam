@@ -180,8 +180,8 @@ int main(int argc, char **argv)
     float *data_buffer_coh    = NULL;
     float *data_buffer_vdif   = NULL;
 
-    data_buffer_coh   = create_pinned_data_buffer_psrfits( npointing * nchans * NSTOKES * nsamples );
-    data_buffer_vdif  = create_pinned_data_buffer_vdif( nsamples * nchans * npols * npointing * 2 * sizeof(float) );
+    data_buffer_coh   = create_pinned_data_buffer( npointing * nchans * NSTOKES * nsamples * sizeof(float) );
+    data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * npointing * 2 * sizeof(float) );
 
     if (vm->do_inverse_pfb)
     {

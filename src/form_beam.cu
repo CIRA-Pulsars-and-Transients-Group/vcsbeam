@@ -612,23 +612,15 @@ void free_formbeam( struct gpu_formbeam_arrays *g )
     cudaFree( g->d_polY_idxs );
 }
 
-float *create_pinned_data_buffer_psrfits( size_t size )
+float *create_pinned_data_buffer( size_t size )
 {
     float *ptr;
-    cudaMallocHost( &ptr, size * sizeof(float) );
-    //cudaError_t status = cudaHostRegister((void**)&ptr, size * sizeof(float),
-    //                                      cudaHostRegisterPortable );
-    cudaCheckErrors("cudaMallocHost data_buffer_psrfits fail");
-    return ptr;
-}
+    cudaMallocHost( &ptr, size );
+    cudaCheckErrors("cudaMallocHost data_buffer fail");
 
-float *create_pinned_data_buffer_vdif( size_t size )
-{
-    float *ptr;
-    cudaMallocHost( &ptr, size * sizeof(float) );
-    //cudaError_t status = cudaHostRegister((void**)&ptr, size * sizeof(float),
-    //                                      cudaHostRegisterPortable );
-    cudaCheckErrors("cudaMallocHost data_buffer_vdif fail");
+    // Initialise to zeros
+    memset( ptr, 0, size );
+
     return ptr;
 }
 
