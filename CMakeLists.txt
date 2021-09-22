@@ -35,3 +35,9 @@ add_subdirectory(src)
 add_subdirectory(app)
 
 message("Runtime files will be installed in ${RUNTIME_DIR}")
+
+install(FILES pq_phase_correction.txt
+    pfb_filter/MIRROR.dat
+    pfb_filter/LSQ12.dat
+    pfb_filter/FINEPFB.dat
+    DESTINATION ${RUNTIME_DIR})
