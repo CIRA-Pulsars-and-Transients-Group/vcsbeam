@@ -12,6 +12,7 @@ Installation
  - [psrfits\_utils](https://github.com/demorest/psrfits_utils)
  - [mwa\_hyperbeam](https://github.com/mwatelescope/mwa_hyperbeam)
  - [mwalib](https://github.com/MWATelescope/mwalib)
+ - [vdifio](https://github.com/demorest/vdifio)
 
 ### Compiling
 
@@ -31,6 +32,7 @@ CFITSIO_ROOT_DIR
 PSRFITS_UTILS_ROOT_DIR
 HYPERBEAM_ROOT
 MWALIB_ROOT
+VDIFIO_ROOT
 ```
 
 Other optional variables can be set:
