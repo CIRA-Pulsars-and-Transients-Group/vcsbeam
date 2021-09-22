@@ -887,25 +887,26 @@ void wait_splice_psrfits( mpi_psrfits *mpf );
  *******************/
 
 /* convenience type - this just collects all the vdif info together */
-struct vdifinfo {
-
-    int frame_length; //length of the vdif frame
-    int frame_rate; // frames per second
-    size_t samples_per_frame; // number of time samples per vdif frame
-    int bits; // bits per sample
-    int nchan; // channels per framme
-    int chan_width; // channel width in hertz
-    int sample_rate;  // sample rate in hertz
-    int iscomplex; // complex sample flag
-    int threadid; // which thread are we
-    char stationid[3]; // which station are we.
-    char exp_name[17]; // Experiment name
-    char scan_name[17]; // scan_name
-    size_t block_size; // size of one second of output data including headers
-    size_t sizeof_buffer; // size of one second of 32bit complex beam data (no headers)
-    size_t sizeof_beam; // size of 1 sample of 32bit complex beam data (no headers)
-    float *b_scales; // bandpass mean
-    float *b_offsets; // bandpass offset
+struct vdifinfo
+{
+    int frame_length;         // Length of the vdif frame
+    int frame_rate;           // Frames per second
+    size_t samples_per_frame; // Number of time samples per vdif frame
+    int dataarraylength;      // The frame length minus the header
+    int bits;                 // Bits per sample
+    int nchan;                // Channels per framme
+    int chan_width;           // Channel width in hertz
+    int sample_rate;          // Sample rate in hertz
+    int iscomplex;            // Complex sample flag
+    int threadid;             // Which thread are we
+    char stationid[3];        // Which station are we
+    char exp_name[17];        // Experiment name
+    char scan_name[17];       // Scan_name
+    size_t block_size;        // Size of one second of output data including headers
+    size_t sizeof_buffer;     // Size of one second of 32bit complex beam data (no headers)
+    size_t sizeof_beam;       // Size of 1 sample of 32bit complex beam data (no headers)
+    float *b_scales;          // Bandpass mean
+    float *b_offsets;         // Bandpass offset
 
     // observation info
     char telescope[24];
@@ -924,7 +925,6 @@ struct vdifinfo {
     char basefilename[1024];
 
     int got_scales;
-
 };
 
 #ifdef __cplusplus

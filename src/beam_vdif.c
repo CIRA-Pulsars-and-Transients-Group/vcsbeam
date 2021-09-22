@@ -130,35 +130,22 @@ void populate_vdif_header(
         vf[p].sample_rate       = sample_rate * vcs_metadata->num_fine_chans_per_coarse; // For coarse channelised data
         vf[p].BW                = obs_metadata->coarse_chan_width_hz / 1e6;  // (MHz)
 
-        vf[p].frame_length  = (vf[p].nchan * (vf[p].iscomplex+1) * vf[p].samples_per_frame) +
-                            VDIF_HEADER_BYTES;                                         // = 544
+        vf[p].dataarraylength = (vf[p].nchan * (vf[p].iscomplex+1) * vf[p].samples_per_frame); // = 512
+        vf[p].frame_length  = vf[p].dataarraylength + VDIF_HEADER_BYTES;                       // = 544
         vf[p].threadid      = 0;
         sprintf( vf[p].stationid, "mw" );
 
-        vf[p].frame_rate = sample_rate;                                                 // = 10000
-        vf[p].block_size = vf[p].frame_length * vf[p].frame_rate;                           // = 5440000
+        vf[p].frame_rate = sample_rate;                                                        // = 10000
+        vf[p].block_size = vf[p].frame_length * vf[p].frame_rate;                              // = 5440000
 
         // A single frame (128 samples). Remember vf.nchan is kludged to npol
-        vf[p].sizeof_beam = vf[p].samples_per_frame * vf[p].nchan * (vf[p].iscomplex+1);      // = 512
+        vf[p].sizeof_beam = vf[p].samples_per_frame * vf[p].nchan * (vf[p].iscomplex+1);       // = 512
 
         // One full second (1.28 million 2 bit samples)
-        vf[p].sizeof_buffer = vf[p].frame_rate * vf[p].sizeof_beam;                         // = 5120000
+        vf[p].sizeof_buffer = vf[p].frame_rate * vf[p].sizeof_beam;                            // = 5120000
 
-        createVDIFHeader( vhdr, vf[p].frame_length, vf[p].threadid, vf[p].bits, vf[p].nchan,
+        createVDIFHeader( vhdr, vf[p].dataarraylength, vf[p].threadid, vf[p].bits, vf[p].nchan,
                                 vf[p].iscomplex, vf[p].stationid);
-
-        fprintf( stderr, "vf[p].frame_length = %d, %x\nvf[p].frame_rate = %d, %x\nvf[p].block_size = %ld, %lx\nvf[p].sizeof_beam = %ld, %lx\nvf[p].sizeof_buffer = %ld, %lx\nvf[p].threadid = %d\nvf[p].bits = %d\nvf[p].nchan = %d\nvf[p].iscomplex = %d\nvf[p].stationid = %s\n",
-                vf[p].frame_length,
-                vf[p].frame_length,
-                vf[p].frame_rate,
-                vf[p].frame_rate,
-                vf[p].block_size,
-                vf[p].block_size,
-                vf[p].sizeof_beam,
-                vf[p].sizeof_beam,
-                vf[p].sizeof_buffer,
-                vf[p].sizeof_buffer,
-                vf[p].threadid, vf[p].bits, vf[p].nchan, vf[p].iscomplex, vf[p].stationid );
 
         // Now we have to add the time
         uint64_t start_day = beam_geom_vals->intmjd;
