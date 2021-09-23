@@ -13,6 +13,7 @@ Installation
  - [mwa\_hyperbeam](https://github.com/mwatelescope/mwa_hyperbeam)
  - [mwalib](https://github.com/MWATelescope/mwalib)
  - [vdifio](https://github.com/demorest/vdifio)
+ - [xGPU](https://github.com/GPU-correlators/xGPU) (optional)
 
 ### Compiling
 
@@ -40,17 +41,42 @@ Other optional variables can be set:
 RUNTIME_DIR  -- Where to install needed runtime files (e.g. pq_phase_correction.txt)
 ```
 
-Upon successful completion of the cmake command, the following will build and install make\_beam:
+The Hyperbeam dependency also requires the file `mwa_full_embedded_element_pattern.h5` (which it supplies), the full path to which must be passed to cmake with the option
+```
+-DHYPERBEAM_HDF5=/path/to/mwa_full_embedded_element_pattern.h5
+```
+
+Upon successful completion of the cmake command, the following will build and install the vcsbeam library, as well as several applications that make use of it (see below):
 ```bash
 make
 make install
 ```
 
-A Docker image containing (a possibly deprecated version of) make\_beam can be found [here](https://cloud.docker.com/u/cirapulsarsandtransients/repository/docker/cirapulsarsandtransients/vcstools)
+Exectuable Programs (Apps)
+------
+Currently the following apps are built along with the vcsbeam library:
+1. `fine_pfb_offline`
+2. `make_mwa_incoh_beam`
+3. `make_mwa_tied_array_beam`
+4. `mwa_track_primary_beam_response`
+
+Their dependencies are as follows (however, currently all but xGPU are "required" at compile time):
+
+|                                   | PAL | cfitsio | psrfits\_utils | mwa\_hyperbeam | mwalib | vdifio | xGPU |
+|-----------------------------------|:---:|:-------:|:--------------:|:--------------:|:------:|:------:|:----:|
+| `fine_pfb_offline`                |     |         |                |                |    Y   |        |      |
+| `make_mwa_incoh_beam`             |     |    Y    |        Y       |                |    Y   |        |      |
+| `make_mwa_tied_array_beam`        |  Y  |    Y    |        Y       |        Y       |    Y   |    Y   |      |
+| `mwa_track_primary_beam_response` |  Y  |         |                |        Y       |    Y   |        |      |
+| `offline_correlator`              |     |         |                |                |        |        |   Y  |
+
+Alternatives
+------
+A Docker image containing (a possibly deprecated version of) similar beamforming code can be found [here](https://cloud.docker.com/u/cirapulsarsandtransients/repository/docker/cirapulsarsandtransients/vcstools)
 
 Help
 ------
-Documentation on how to process MWA VCS data, including the use of make\_beam, can be found [here](https://wiki.mwatelescope.org/display/MP/Documentation)
+(Still coming!)
 
 Credit
 ------

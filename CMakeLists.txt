@@ -28,6 +28,7 @@ find_package(PSRFITS_UTILS REQUIRED)
 find_package(HYPERBEAM REQUIRED)
 find_package(MWALIB REQUIRED)
 find_package(VDIFIO REQUIRED)
+find_package(XGPU)
 
 configure_file(include/vcsbeam.h.in vcsbeam.h)
 
