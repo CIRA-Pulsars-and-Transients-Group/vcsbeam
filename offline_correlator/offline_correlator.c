@@ -327,7 +327,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
     int nintegrations = NCMPLX_SAMPLES / xgpu_info.vecLength / opt.dumps_per_second;
-    fprintf( stderr, "nintegrations = %d\n", nintegrations );
+    fprintf( stderr, "nintegrations = %d / %d / %d = %d\n", NCMPLX_SAMPLES, xgpu_info.vecLength, opt.dumps_per_second, nintegrations );
 
     // Allocate output matrix array
     size_t full_matLength = NFREQUENCY * NSTATION * NSTATION * NPOL * NPOL;

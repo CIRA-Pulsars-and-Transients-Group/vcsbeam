@@ -46,11 +46,13 @@ inline void integrate(char * output,uint8_t *input, int factor, int nint,int nfr
     int integration = 0;
     uint16_t *output_samp = (uint16_t *) output;
 
-    for (integration=0;integration<nint;integration++) {
-
-        for (int chan=0;chan<nfreq;chan++){
+    for (integration=0;integration<nint;integration++)
+    {
+        int chan;
+        for (chan=0;chan<nfreq;chan++){
             uint8_t *inp_ptr = input + (integration*factor*nfreq);
-            for (int sample=0;sample<factor;sample++) {
+            int sample;
+            for (sample=0;sample<factor;sample++) {
                 if (sample == 0) {
                     output_samp[integration*nfreq+chan] = *inp_ptr;
                 }
