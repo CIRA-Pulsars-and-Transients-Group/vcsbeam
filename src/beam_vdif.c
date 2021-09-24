@@ -9,16 +9,31 @@
 #include <string.h>
 #include <math.h>
 #include <cuComplex.h>
-#include "vdifio.h"
-#include "psrfits.h"
-#include "star/pal.h"
-#include "star/palmac.h"
-#include "beam_common.h"
-#include "beam_vdif.h"
+
+#include <mwalib.h>
+#include <psrfits.h>
+#include <star/pal.h>
+#include <star/palmac.h>
+#include <vdifio.h>
+
+#include "vcsbeam.h"
+
 #include "mwa_header.h"
 #include "vdifio.h"
 #include "ascii_header.h"
-#include "filter.h"
+
+
+void float2int8_trunc(float *f, int n, float min, float max, int8_t *i)
+{
+    int j;
+    for (j = 0; j < n; j++) {
+        f[j] = (f[j] > max) ? (max) : f[j];
+        f[j] = (f[j] < min) ? (min) : f[j];
+        i[j] = (int8_t) rint(f[j]);
+
+    }
+}
+
 
 void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
                         float *data_buffer_vdif )
@@ -31,10 +46,10 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
     while  (offset_out_vdif < vf->block_size) {
 
         // Add the current header
-        memcpy( (out_buffer_8_vdif + offset_out_vdif), vhdr, VDIF_HEADER_SIZE );
+        memcpy( (out_buffer_8_vdif + offset_out_vdif), vhdr, VDIF_HEADER_BYTES );
 
         // Offset into the output array
-        offset_out_vdif += VDIF_HEADER_SIZE;
+        offset_out_vdif += VDIF_HEADER_BYTES;
 
         // Convert from float to int8
         float2int8_trunc( data_buffer_ptr, vf->sizeof_beam, -126.0, 127.0,
@@ -42,7 +57,7 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
         to_offset_binary( (out_buffer_8_vdif + offset_out_vdif),
                           vf->sizeof_beam );
 
-        offset_out_vdif += vf->frame_length - VDIF_HEADER_SIZE; // increment output offset
+        offset_out_vdif += vf->frame_length - VDIF_HEADER_BYTES; // increment output offset
         data_buffer_ptr += vf->sizeof_beam;
         nextVDIFHeader( vhdr, vf->frame_rate );
     }
@@ -88,64 +103,61 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
 
 
 void populate_vdif_header(
-        struct vdifinfo *vf,
-        vdif_header     *vhdr,
-        char            *metafits,
-        char            *obsid,
-        char            *time_utc,
-        int              sample_rate,
-        long int         frequency,
-        int              nchan, 
-        long int         chan_width,
-        char            *rec_channel,
-        struct delays   *delay_vals,
-        int              npointing )
+        struct vdifinfo  *vf,
+        vdif_header      *vhdr,
+        MetafitsMetadata *obs_metadata,
+        VoltageMetadata *vcs_metadata,
+        int               coarse_chan_idx,
+        struct beam_geom *beam_geom_vals,
+        int               npointing )
 {
-    for ( int p=0; p<npointing; p++ )
+    // Convert the UTC obs time into a string
+    struct tm *ts = gmtime( &(obs_metadata->sched_start_utc) );
+    char   time_utc[24];
+    strftime( time_utc, sizeof(time_utc), "%Y-%m-%dT%H:%M:%S", ts );
+
+    // Get the sample rate
+    unsigned int sample_rate = vcs_metadata->num_samples_per_voltage_block * vcs_metadata->num_voltage_blocks_per_second;
+
+    int p;
+    for (p = 0; p < npointing; p++)
     {
-        // First how big is a DataFrame
+        // Define DataFrame dimensions
         vf[p].bits              = 8;   // this is because it is all the downstream apps support (dspsr/diFX)
         vf[p].iscomplex         = 1;   // (it is complex data)
         vf[p].nchan             = 2;   // I am hardcoding this to 2 channels per thread - one per pol
-        vf[p].samples_per_frame = 128; // also hardcoding to 128 time-samples per frame
-        vf[p].sample_rate       = sample_rate*128;  // = 1280000 (also hardcoding this to the raw channel rate)
-        vf[p].BW                = 1.28;
+        vf[p].samples_per_frame = 128; // Hardcoding to 128 time-samples per frame
+        vf[p].sample_rate       = sample_rate * vcs_metadata->num_fine_chans_per_coarse; // For coarse channelised data
+        vf[p].BW                = obs_metadata->coarse_chan_width_hz / 1e6;  // (MHz)
 
-        vf[p].frame_length  = (vf[p].nchan * (vf[p].iscomplex+1) * vf[p].samples_per_frame) +
-                            VDIF_HEADER_SIZE;                                         // = 544
+        vf[p].dataarraylength = (vf[p].nchan * (vf[p].iscomplex+1) * vf[p].samples_per_frame); // = 512
+        vf[p].frame_length  = vf[p].dataarraylength + VDIF_HEADER_BYTES;                       // = 544
         vf[p].threadid      = 0;
         sprintf( vf[p].stationid, "mw" );
 
-        vf[p].frame_rate = sample_rate;                                                 // = 10000
-        vf[p].block_size = vf[p].frame_length * vf[p].frame_rate;                           // = 5440000
+        vf[p].frame_rate = sample_rate;                                                        // = 10000
+        vf[p].block_size = vf[p].frame_length * vf[p].frame_rate;                              // = 5440000
 
         // A single frame (128 samples). Remember vf.nchan is kludged to npol
-        vf[p].sizeof_beam = vf[p].samples_per_frame * vf[p].nchan * (vf[p].iscomplex+1);      // = 512
+        vf[p].sizeof_beam = vf[p].samples_per_frame * vf[p].nchan * (vf[p].iscomplex+1);       // = 512
 
         // One full second (1.28 million 2 bit samples)
-        vf[p].sizeof_buffer = vf[p].frame_rate * vf[p].sizeof_beam;                         // = 5120000
+        vf[p].sizeof_buffer = vf[p].frame_rate * vf[p].sizeof_beam;                            // = 5120000
 
-        createVDIFHeader( vhdr, vf[p].frame_length, vf[p].threadid, vf[p].bits, vf[p].nchan,
+        createVDIFHeader( vhdr, vf[p].dataarraylength, vf[p].threadid, vf[p].bits, vf[p].nchan,
                                 vf[p].iscomplex, vf[p].stationid);
 
         // Now we have to add the time
-        uint64_t start_day = delay_vals->intmjd;
-        uint64_t start_sec = roundf( delay_vals->fracmjd * 86400.0 );
+        uint64_t start_day = beam_geom_vals->intmjd;
+        uint64_t start_sec = roundf( beam_geom_vals->fracmjd * 86400.0 );
         uint64_t mjdsec    = (start_day * 86400) + start_sec; // Note the VDIFEpoch is strange - from the standard
 
-        setVDIFEpoch( vhdr, start_day );
-        setVDIFMJDSec( vhdr, mjdsec );
+        setVDIFEpochMJD( vhdr, start_day );
+        setVDIFFrameMJDSec( vhdr, mjdsec );
         setVDIFFrameNumber( vhdr, 0 );
 
-        // Get the project ID directly from the metafits file
-        fitsfile *fptr = NULL;
-        int status     = 0;
-
-        fits_open_file(&fptr, metafits, READONLY, &status);
-        fits_read_key(fptr, TSTRING, "PROJECT", vf[p].exp_name, NULL, &status);
-        fits_close_file(fptr, &status);
-
-        strncpy( vf[p].scan_name, obsid, 17 );
+        strcpy( vf[p].exp_name, obs_metadata->project_id );
+        snprintf( vf[p].scan_name, 17, "%d", obs_metadata->obs_id );
 
         vf[p].b_scales   = (float *)malloc( sizeof(float) * vf[p].nchan );
         vf[p].b_offsets  = (float *)malloc( sizeof(float) * vf[p].nchan );
@@ -155,22 +167,25 @@ void populate_vdif_header(
         strncpy( vf[p].obs_mode,  "PSR", 8);
 
         // Determine the RA and Dec strings
-        double ra2000  = delay_vals[p].mean_ra  * PAL__DR2D;
-        double dec2000 = delay_vals[p].mean_dec * PAL__DR2D;
+        double ra2000  = beam_geom_vals[p].mean_ra  * PAL__DR2D;
+        double dec2000 = beam_geom_vals[p].mean_dec * PAL__DR2D;
 
         dec2hms(vf[p].ra_str,  ra2000/15.0, 0); // 0 = no '+' sign
         dec2hms(vf[p].dec_str, dec2000,     1); // 1 = with '+' sign
 
-        strncpy( vf[p].date_obs, time_utc, 24);
+        strncpy( vf[p].date_obs, time_utc, sizeof(time_utc) );
 
-        vf[p].MJD_epoch = delay_vals->intmjd + delay_vals->fracmjd;
-        vf[p].fctr      = (frequency + (nchan/2.0)*chan_width)/1.0e6; // (MHz)
+        vf[p].MJD_epoch = beam_geom_vals->intmjd + beam_geom_vals->fracmjd;
+        vf[p].fctr      = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz / 1e6; // (MHz)
         strncpy( vf[p].source, "unset", 24 );
 
         // The output file basename
-        int ch = atoi(rec_channel);
-        sprintf( vf[p].basefilename, "%s_%s_%s_%s_ch%03d",
-                 vf[p].exp_name, vf[p].scan_name, vf[p].ra_str, vf[p].dec_str, ch);
+        sprintf( vf[p].basefilename, "%s_%s_%s_%s_ch%03ld",
+                 vf[p].exp_name,
+                 vf[p].scan_name,
+                 vf[p].ra_str,
+                 vf[p].dec_str,
+                 obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
     }
 }
 
@@ -182,13 +197,13 @@ cuFloatComplex get_std_dev_complex(cuFloatComplex *input, int nsamples)
     float itotal = 0;
     float isigma = 0;
     float rsigma = 0;
-    int i;
 
-    for (i=0;i<nsamples;i++){
+    int i;
+    for (i = 0; i < nsamples; i++)
+    {
          rtotal = rtotal+(cuCrealf(input[i])*cuCrealf(input[i]));
          itotal = itotal+(cuCimagf(input[i])*cuCimagf(input[i]));
-
-     }
+    }
     rsigma = sqrtf((1.0/(nsamples-1))*rtotal);
     isigma = sqrtf((1.0/(nsamples-1))*itotal);
 
@@ -258,9 +273,9 @@ void get_mean_complex( cuFloatComplex *input, int nsamples, float *rmean,
 
 void normalise_complex(cuFloatComplex *input, int nsamples, float scale)
 {
-    int i=0;
-
-    for (i=0;i<nsamples;i++){
+    int i;
+    for (i = 0; i < nsamples; i++)
+    {
         input[i] = make_cuFloatComplex( cuCrealf(input[i])*scale, cuCimagf(input[i])*scale );
     }
 }
@@ -272,6 +287,12 @@ void to_offset_binary(int8_t *i, int n)
     for (j = 0; j < n; j++) {
         i[j] = i[j] ^ 0x80;
     }
+}
+
+float *create_data_buffer_vdif( size_t size )
+{
+    float *ptr  = (float *)malloc( size * sizeof(float) );
+    return ptr;
 }
 
 
