@@ -35,6 +35,11 @@ configure_file(include/vcsbeam.h.in vcsbeam.h)
 add_subdirectory(src)
 add_subdirectory(app)
 
+message("XGPU_FOUND = ${XGPU_FOUND}")
+if(XGPU_FOUND)
+    add_subdirectory(offline_correlator)
+endif(XGPU_FOUND)
+
 message("Runtime files will be installed in ${RUNTIME_DIR}")
 
 install(FILES pq_phase_correction.txt

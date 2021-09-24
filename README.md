@@ -68,7 +68,7 @@ Their dependencies are as follows (however, currently all but xGPU are "required
 | `make_mwa_incoh_beam`             |     |    Y    |        Y       |                |    Y   |        |      |
 | `make_mwa_tied_array_beam`        |  Y  |    Y    |        Y       |        Y       |    Y   |    Y   |      |
 | `mwa_track_primary_beam_response` |  Y  |         |                |        Y       |    Y   |        |      |
-| `offline_correlator`              |     |         |                |                |        |        |   Y  |
+| `offline_correlator`              |     |    Y    |                |                |        |        |   Y  |
 
 Alternatives
 ------
