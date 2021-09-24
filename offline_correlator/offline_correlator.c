@@ -51,7 +51,6 @@
 typedef struct Options_t {
     int coarse_chan;
     int edge;
-    int dumps_to_aver;
     int chan_to_aver;
     time_t starttime;
     char *in_file;
@@ -73,9 +72,6 @@ void usage()
             "[default: 0]\n" );
     printf( "   -h\n" );
     printf( "        Display this help and exit\n" );
-    printf( "   -i TIME_AVERAGE\n" );
-    printf( "        Average TIME_AVERAGE xGPU correlator dumps in the final output "
-            "[default: 1]\n" );
     printf( "   -n CHAN_AVERAGE\n" );
     printf( "        Average CHAN_AVERAGE adjacent channels in the final output "
             "[default: 4]\n" );
@@ -99,7 +95,7 @@ void parse_cmdline(int argc, char *argv[], Options *opt)
     }
 
     int arg = 0;
-    while ((arg = getopt(argc, argv, "c:d:e:hi:n:o:r:s:")) != -1) {
+    while ((arg = getopt(argc, argv, "c:d:e:hn:o:r:s:")) != -1) {
 
         switch (arg) {
             case 'c':
@@ -114,9 +110,6 @@ void parse_cmdline(int argc, char *argv[], Options *opt)
             case 'h':
                 usage();
                 exit(EXIT_SUCCESS);
-            case 'i':
-                opt->dumps_to_aver=atoi(optarg);
-                break;
             case 'n':
                 opt->chan_to_aver=atoi(optarg);
                 break;
@@ -128,6 +121,10 @@ void parse_cmdline(int argc, char *argv[], Options *opt)
                 break;
             case 's':
                 opt->starttime = (time_t) atol(optarg);
+                break;
+            default:
+                usage();
+                exit(EXIT_FAILURE);
                 break;
         }
     }
@@ -258,7 +255,6 @@ int main(int argc, char **argv)
     opt.obsid            = NULL;
     opt.starttime        = -1;
     opt.chan_to_aver     = 4; // number of channels to combine on output
-    opt.dumps_to_aver    = 1; // number of correlator dumps to combine on output
     opt.edge             = 0;
     opt.coarse_chan      = -1; // only set in the header if this is >= 0
     opt.out_file         = NULL;
@@ -432,7 +428,7 @@ int main(int argc, char **argv)
     manager_t the_manager;
     the_manager.shutdown      = 0;
     the_manager.offline       = opt.offline;
-    the_manager.integrate     = opt.dumps_to_aver;
+    the_manager.integrate     = 0;
     the_manager.chan_to_aver  = opt.chan_to_aver;
     the_manager.edge          = opt.edge;
     the_manager.nbit          = NBIT;
