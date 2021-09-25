@@ -44,11 +44,6 @@ Other optional variables can be set:
 RUNTIME_DIR  -- Where to install needed runtime files (e.g. pq_phase_correction.txt)
 ```
 
-The Hyperbeam dependency also requires the file `mwa_full_embedded_element_pattern.h5` (which it supplies), the full path to which must be passed to cmake with the option
-```
--DHYPERBEAM_HDF5=/path/to/mwa_full_embedded_element_pattern.h5
-```
-
 Upon successful completion of the cmake command, the following will build and install the vcsbeam library, as well as several applications that make use of it (see below):
 ```bash
 make
