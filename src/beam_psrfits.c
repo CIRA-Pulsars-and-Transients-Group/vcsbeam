@@ -148,8 +148,8 @@ void populate_spliced_psrfits_header(
     {
         if (is_coherent) 
         {
-            pf->hdr.ra2000  = beam_geom_vals->mean_ra  * PAL__DR2D;
-            pf->hdr.dec2000 = beam_geom_vals->mean_dec * PAL__DR2D;
+            pf->hdr.ra2000  = beam_geom_vals->mean_ra  * R2D;
+            pf->hdr.dec2000 = beam_geom_vals->mean_dec * R2D;
         } 
         else
         {
@@ -161,8 +161,8 @@ void populate_spliced_psrfits_header(
         dec2hms( pf->hdr.ra_str,  pf->hdr.ra2000/15.0, 0 );
         dec2hms( pf->hdr.dec_str, pf->hdr.dec2000,     1 );
 
-        pf->hdr.azimuth    = beam_geom_vals->az*PAL__DR2D;
-        pf->hdr.zenith_ang = 90.0 - (beam_geom_vals->el*PAL__DR2D);
+        pf->hdr.azimuth    = beam_geom_vals->az*R2D;
+        pf->hdr.zenith_ang = 90.0 - (beam_geom_vals->el*R2D);
 
         pf->hdr.beam_FWHM = 0.25;
         pf->hdr.start_lst = beam_geom_vals->lmst * 60.0 * 60.0;        // Local Apparent Sidereal Time in seconds
@@ -174,10 +174,10 @@ void populate_spliced_psrfits_header(
         pf->sub.lst      = pf->hdr.start_lst;
         pf->sub.ra       = pf->hdr.ra2000;
         pf->sub.dec      = pf->hdr.dec2000;
-        palEqgal(pf->hdr.ra2000*PAL__DD2R, pf->hdr.dec2000*PAL__DD2R,
+        palEqgal(pf->hdr.ra2000*D2R, pf->hdr.dec2000*D2R,
                 &pf->sub.glon, &pf->sub.glat);
-        pf->sub.glon    *= PAL__DR2D;
-        pf->sub.glat    *= PAL__DR2D;
+        pf->sub.glon    *= R2D;
+        pf->sub.glat    *= R2D;
         pf->sub.tel_az   = pf->hdr.azimuth;
         pf->sub.tel_zen  = pf->hdr.zenith_ang;
 
@@ -341,8 +341,8 @@ void populate_psrfits_header(
     {
         if (is_coherent) 
         {
-            pf->hdr.ra2000  = beam_geom_vals->mean_ra  * PAL__DR2D;
-            pf->hdr.dec2000 = beam_geom_vals->mean_dec * PAL__DR2D;
+            pf->hdr.ra2000  = beam_geom_vals->mean_ra  * R2D;
+            pf->hdr.dec2000 = beam_geom_vals->mean_dec * R2D;
         } 
         else
         {
@@ -354,8 +354,8 @@ void populate_psrfits_header(
         dec2hms( pf->hdr.ra_str,  pf->hdr.ra2000/15.0, 0 );
         dec2hms( pf->hdr.dec_str, pf->hdr.dec2000,     1 );
 
-        pf->hdr.azimuth    = beam_geom_vals->az*PAL__DR2D;
-        pf->hdr.zenith_ang = 90.0 - (beam_geom_vals->el*PAL__DR2D);
+        pf->hdr.azimuth    = beam_geom_vals->az*R2D;
+        pf->hdr.zenith_ang = 90.0 - (beam_geom_vals->el*R2D);
 
         pf->hdr.beam_FWHM = 0.25;
         pf->hdr.start_lst = beam_geom_vals->lmst * 60.0 * 60.0;        // Local Apparent Sidereal Time in seconds
@@ -367,10 +367,10 @@ void populate_psrfits_header(
         pf->sub.lst      = pf->hdr.start_lst;
         pf->sub.ra       = pf->hdr.ra2000;
         pf->sub.dec      = pf->hdr.dec2000;
-        palEqgal(pf->hdr.ra2000*PAL__DD2R, pf->hdr.dec2000*PAL__DD2R,
+        palEqgal(pf->hdr.ra2000*D2R, pf->hdr.dec2000*D2R,
                 &pf->sub.glon, &pf->sub.glat);
-        pf->sub.glon    *= PAL__DR2D;
-        pf->sub.glat    *= PAL__DR2D;
+        pf->sub.glon    *= R2D;
+        pf->sub.glat    *= R2D;
         pf->sub.tel_az   = pf->hdr.azimuth;
         pf->sub.tel_zen  = pf->hdr.zenith_ang;
 

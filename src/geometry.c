@@ -178,8 +178,8 @@ void calc_beam_geom(
 
     /* for the look direction <not the tile> */
 
-    mean_ra = ras_hours * PAL__DH2R;
-    mean_dec = decs_degs * PAL__DD2R;
+    mean_ra = ras_hours * H2R;
+    mean_dec = decs_degs * D2R;
 
     palMap(mean_ra, mean_dec, pr, pd, px, rv, eq, mjd, &ra_ap, &dec_ap);
 
@@ -287,7 +287,7 @@ double parse_ra( char* ra_hhmmss )
         exit(EXIT_FAILURE);
     }
 
-    return ra_rad*PAL__DR2H;
+    return ra_rad*R2H;
 }
 
 double parse_dec( char* dec_ddmmss )
@@ -319,7 +319,7 @@ double parse_dec( char* dec_ddmmss )
         exit(EXIT_FAILURE);
     }
 
-    return dec_rad*PAL__DR2D*sign;
+    return dec_rad*R2D*sign;
 }
 
 

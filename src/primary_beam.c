@@ -7,9 +7,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <cuComplex.h>
 
-#include <star/pal.h>
-#include <star/palmac.h>
+#include <mwalib.h>
+#include <mwa_hyperbeam.h>
 
 #include "vcsbeam.h"
 
@@ -56,7 +57,7 @@ void calc_primary_beam(
     for (p = 0; p < pb->npointings; p++)
     {
         az = beam_geom_vals[p].az;
-        za = PAL__DPIBY2 - beam_geom_vals[p].el;
+        za = PIBY2 - beam_geom_vals[p].el;
 
         // Calculate the parallactic angle correction for this pointing
         parallactic_angle_correction( P, MWA_LATITUDE_RADIANS, az, za );
@@ -307,7 +308,7 @@ void parallactic_angle_correction(
     //   [  0   1 ] [ cos(χ)  -sin(χ) ]  =  [  sin(χ)  cos(χ) ]
     //   [  1   0 ] [ sin(χ)   cos(χ) ]     [  cos(χ) -sin(χ) ]
 
-    double el = PAL__DPIBY2 - za;
+    double el = PIBY2 - za;
 
     double ha, dec;
     palDh2e(az, el, lat, &ha, &dec);

@@ -13,11 +13,6 @@
 #include <cuComplex.h>
 
 #include <mwalib.h>
-#include <star/pal.h>
-#include <star/palmac.h>
-#include <psrfits.h>
-#include <fitsio.h>
-#include <mwa_hyperbeam.h>
 
 #include "vcsbeam.h"
 

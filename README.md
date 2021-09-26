@@ -6,14 +6,15 @@ Installation
 
 ### Dependencies
 
- - CUDA
+ - CUDA (required)
+ - MPI
  - [PAL](https://github.com/Starlink/pal)
  - [cfitsio](https://heasarc.gsfc.nasa.gov/fitsio/)
  - [psrfits\_utils](https://github.com/demorest/psrfits_utils)
  - [mwa\_hyperbeam](https://github.com/mwatelescope/mwa_hyperbeam)
- - [mwalib](https://github.com/MWATelescope/mwalib)
+ - [mwalib](https://github.com/MWATelescope/mwalib) (required)
  - [vdifio](https://github.com/demorest/vdifio)
- - [xGPU](https://github.com/GPU-correlators/xGPU) (optional)
+ - [xGPU](https://github.com/GPU-correlators/xGPU)
 
 ### Compiling
 
@@ -58,15 +59,15 @@ Currently the following apps are built along with the vcsbeam library:
 3. `make_mwa_tied_array_beam`
 4. `mwa_track_primary_beam_response`
 
-Their dependencies are as follows (however, currently all but xGPU are "required" at compile time):
+Their dependencies are as follows ('Y' = required, 'C' = required only at compile time):
 
-|                                   | PAL | cfitsio | psrfits\_utils | mwa\_hyperbeam | mwalib | vdifio | xGPU |
-|-----------------------------------|:---:|:-------:|:--------------:|:--------------:|:------:|:------:|:----:|
-| `fine_pfb_offline`                |     |         |                |                |    Y   |        |      |
-| `make_mwa_incoh_beam`             |     |    Y    |        Y       |                |    Y   |        |      |
-| `make_mwa_tied_array_beam`        |  Y  |    Y    |        Y       |        Y       |    Y   |    Y   |      |
-| `mwa_track_primary_beam_response` |  Y  |         |                |        Y       |    Y   |        |      |
-| `offline_correlator`              |     |    Y    |                |                |        |        |   Y  |
+|                                   | CUDA | MPI | PAL | cfitsio | psrfits\_utils | mwa\_hyperbeam | mwalib | vdifio | xGPU |
+|-----------------------------------|:----:|:---:|:---:|:-------:|:--------------:|:--------------:|:------:|:------:|:----:|
+| `fine_pfb_offline`                |   Y  |     |     |         |                |                |    Y   |        |      |
+| `make_mwa_incoh_beam`             |   Y  |  Y  |     |    Y    |        Y       |                |    Y   |        |      |
+| `make_mwa_tied_array_beam`        |   Y  |  Y  |  Y  |    Y    |        Y       |        Y       |    Y   |    Y   |      |
+| `mwa_track_primary_beam_response` |   C  |     |  Y  |         |                |        Y       |    Y   |        |      |
+| `offline_correlator`              |   Y  |     |     |    Y    |                |                |    C   |        |   Y  |
 
 Alternatives
 ------
@@ -74,7 +75,7 @@ A Docker image containing (a possibly deprecated version of) similar beamforming
 
 Help
 ------
-(Still coming!)
+**(In progress)** [Documentation](https://wiki.mwatelescope.org/display/MP/Processing+high+time+resolution+data+with+VCSBeam)
 
 Credit
 ------

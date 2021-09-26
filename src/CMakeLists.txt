@@ -1,18 +1,30 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 
 add_library(vcsbeam STATIC
-    beam_psrfits.c
-    beam_vdif.c
+    ascii_header.c
+    performance.c
     filter.c
     form_beam.cu
     jones.c
     pfb.cu
-    ascii_header.c
     calibration.c
-    primary_beam.c
-    geometry.c
-    metadata.c
-    performance.c)
+    metadata.c)
+
+if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
+    target_sources(vcsbeam PRIVATE beam_psrfits.c)
+endif ()
+
+if (PAL_FOUND)
+    target_sources(vcsbeam PRIVATE geometry.c)
+endif ()
+
+if (VDIFIO_FOUND)
+    target_sources(vcsbeam PRIVATE beam_vdif.c)
+endif ()
+
+if (HYPERBEAM_FOUND)
+    target_sources(vcsbeam PRIVATE primary_beam.c)
+endif ()
 
 set_target_properties(vcsbeam
     PROPERTIES PUBLIC_HEADER ${CMAKE_BINARY_DIR}/vcsbeam.h
