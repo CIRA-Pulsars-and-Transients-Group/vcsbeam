@@ -1045,5 +1045,17 @@ void free_primary_beam( primary_beam *pb );
 
 
 
+/********************
+ *                  *
+ *    DM_CONTEXT    *
+ *                  *
+ ********************/
+
+typedef struct dm_context_t
+{
+    double DM;           // pc/cm^3
+    double ref_freq_MHz;
+} dm_context;
+
 
 #endif
