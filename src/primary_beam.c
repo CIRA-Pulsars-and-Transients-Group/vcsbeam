@@ -14,6 +14,13 @@
 
 #include "vcsbeam.h"
 
+#define NCOMPLEXELEMENTS 4
+
+const double Isky[] = { 0.5, 0. , 0. ,  0. , 0. , 0. ,  0.5, 0. };
+const double Qsky[] = { 0.5, 0. , 0. ,  0. , 0. , 0. , -0.5, 0. };
+const double Usky[] = { 0. , 0. , 0.5,  0. , 0.5, 0. ,  0. , 0. };
+const double Vsky[] = { 0. , 0. , 0. , -0.5, 0  , 0.5,  0. , 0. };
+const double *sky[] = { Isky, Qsky, Usky, Vsky };
 
 void calc_primary_beam(
         primary_beam      *pb,
@@ -318,5 +325,42 @@ void parallactic_angle_correction(
     P[1] = cos(pa);
     P[2] = cos(pa);
     P[3] = -sin(pa);
+}
+
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV )
+{
+    cuDoubleComplex *J; // This must be unallocated because Hyperbeam's calc_jones() does the allocation
+    cuDoubleComplex JH[NCOMPLEXELEMENTS];
+    cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
+    cuDoubleComplex coherency[NCOMPLEXELEMENTS];
+    double P[NCOMPLEXELEMENTS]; // (Real-valued) parallactic angle correction matrix
+
+    // Calculate the parallactic angle correction
+    parallactic_angle_correction( P, MWA_LATITUDE_RADIANS, az, za );
+
+    // Calculate the primary beam for this channel, in this direction
+    int zenith_norm = 1;
+    J = (cuDoubleComplex *)calc_jones( beam, az, za, freq_hz, delays, amps, zenith_norm );
+    mult2x2d_RxC( P, J, J );
+
+    // Convert this jones matrix to Stokes parameters for I, Q, U, V skies
+    int stokes;
+    for (stokes = 0; stokes < 4; stokes++)
+    {
+        calc_hermitian( J, JH );
+        mult2x2d( (cuDoubleComplex *)sky[stokes], JH, sky_x_JH );
+        mult2x2d( J, sky_x_JH, coherency );
+
+        if (stokes == 0) // Stokes I
+            IQUV[0] = 0.5*cuCreal( cuCadd( coherency[0], coherency[3] ) );
+        else if (stokes == 1) // Stokes Q
+            IQUV[1] = 0.5*cuCreal( cuCsub( coherency[0], coherency[3] ) );
+        else if (stokes == 2) // Stokes U
+            IQUV[2] =  cuCreal( coherency[1] );
+        else  // if (stokes == 3) // Stokes V
+            IQUV[3] = -cuCimag( coherency[1] );
+    }
+
+    free( J );
 }
 

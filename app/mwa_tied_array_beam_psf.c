@@ -19,15 +19,18 @@ struct mwa_track_primary_beam_response_opts {
     char *metafits;        // filename of the metafits file
     char *ra_str;          // String representing the RA
     char *dec_str;         // String representing the Dec
-    char *arrf_ra_str;     // String representing the RA of a tied-array beam
-    char *arrf_dec_str;    // String representing the Dec of a tied-array beam
+    double height_deg;     // Height of image in degrees
+    double width_deg;      // Width of image in degrees
+    int height_pixels;     // Height of image in pixels
+    int width_pixels;      // Width of image in pixels
+    double freq_MHz;       // The frequency in MHz
     FILE *fout;            // Where to put the output (default STDOUT)
-    bool  do_array_factor; // Whether to calculate the array factor or not
 };
 
 void usage();
 void mwa_track_primary_beam_response_parse_cmdline(
         int argc, char **argv, struct mwa_track_primary_beam_response_opts *opts );
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV );
 
 int main(int argc, char **argv)
 {
@@ -39,19 +42,29 @@ int main(int argc, char **argv)
     double ra_hours = parse_ra( opts.ra_str );
     double dec_degs = parse_dec( opts.dec_str );
 
-    double arrf_ra_hours = parse_ra( opts.arrf_ra_str );
-    double arrf_dec_degs = parse_dec( opts.arrf_dec_str );
+    // Set up the grid coordinates
+    double width_hours = opts.width_deg / cos( dec_degs*D2R ) * D2R*R2H;
+    double dX = width_hours / opts.width_pixels;
+    double dY = opts.height_deg / opts.height_pixels;
+    double X0 = ra_hours - width_hours/2.0 + dX/2.0;
+    double Y0 = dec_degs - opts.height_deg/2.0 + dY/2.0;
 
     // Get the metadata for the selected observation
     MetafitsContext  *obs_context  = NULL;
     MetafitsMetadata *obs_metadata = NULL;
     get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
 
+    // If no frequency was selected, get the obs centre frequency
+    uint32_t freq_hz;
+    if (opts.freq_MHz == 0.0)
+        freq_hz = obs_metadata->centre_freq_hz;
+    else
+        freq_hz = (uint32_t)(opts.freq_MHz * 1e6);
+
     // Get a "beam geometry" struct (and other variables) ready
     struct beam_geom bg, arrf_bg;
     double mjd;
     double az, za; // Shorthand for azimuth and zenith angle
-    uint32_t freq_hz;
     double IQUV[4];
     double array_factor;
 
@@ -69,8 +82,8 @@ int main(int argc, char **argv)
 
     // Write out the output header
     fprintf( opts.fout,
-            "# Zenith-normalised Stokes response for given primary beam and tied-array beam\n"
-            "# ----------------------------------------------------------------------------\n"
+            "# Point spread function for an MWA tied-array beam\n"
+            "# ------------------------------------------------\n"
             "# vcsbeam %s\n"
             "#    ",
             VCSBEAM_VERSION );
@@ -82,54 +95,46 @@ int main(int argc, char **argv)
             "# Tile pointing centre: Azimuth = %f°; Zenith angle = %f°\n"
             "# (Initial) tile pos:   RA      = %f°; Dec = %f°\n"
             "# Tied array position:  RA      = %f°; Dec = %f°\n"
+            "# Frequency:            %f MHz\n"
             "#\n"
-            "# 1        2                3            4                5                             6  7  8  9  10\n"
-            "# Seconds  Frequency_(MHz)  Azimuth_(°)  ZenithAngle_(°)  Distance_from_tile_centre_(°) I  Q  U  V  Array_factor\n",
+            "# 1            2            3\n"
+            "# RA (hours) | Dec (degs) | Array_factor\n",
             obs_metadata->sched_start_mjd,
             obs_metadata->az_deg, obs_metadata->za_deg,
             obs_metadata->ra_tile_pointing_deg, obs_metadata->dec_tile_pointing_deg,
-            ra_hours * PAL__DH2R * PAL__DR2D, dec_degs
+            ra_hours * H2R * R2D, dec_degs,
+            opts.freq_MHz
            );
 
-    // Loop over the coarse channels
-    uintptr_t c, t;
-    for (c = 0; c < obs_metadata->num_metafits_coarse_chans; c++)
+    // Calculate the beam geometry for the requested pointing
+    mjd = obs_metadata->sched_start_mjd;
+    calc_beam_geom( ra_hours, dec_degs, mjd, &bg );
+    az = bg.az;
+    za = PIBY2 - bg.el;
+
+    // Loop over RA
+    int X_idx, Y_idx;
+    double X, Y;
+    for (X_idx = 0; X_idx < opts.width_pixels; X_idx++)
     {
-        // Get the frequency of this channel
-        freq_hz = obs_metadata->metafits_coarse_chans[c].chan_centre_hz;
+        X = X0 + X_idx*dX;
 
-        // Loop over the gps seconds
-        for (t = 0; t < obs_metadata->num_metafits_timesteps; t++)
+        // Loop over Dec
+        for (Y_idx = 0; Y_idx < opts.height_pixels; Y_idx++)
         {
-            // Calculate the beam geometry for the requested pointing
-            mjd = obs_metadata->sched_start_mjd + (double)t/86400.0;
-            calc_beam_geom( ra_hours, dec_degs, mjd, &bg );
-            az = bg.az;
-            za = PAL__DPIBY2 - bg.el;
+            Y = Y0 + Y_idx*dY;
 
-            array_factor = 1.0;
-            if (opts.do_array_factor)
-            {
-                calc_beam_geom( arrf_ra_hours, arrf_dec_degs, mjd, &arrf_bg );
-                array_factor = calc_array_factor( obs_metadata, freq_hz, &bg, &arrf_bg );
-            }
+            calc_beam_geom( X, Y, mjd, &arrf_bg );
+            array_factor = calc_array_factor( obs_metadata, freq_hz, &arrf_bg, &bg );
 
             calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV );
 
             // Print out the results
-            fprintf( opts.fout, "%lu %f %f %f %f %f %f %f %f %f\n",
-                    t, freq_hz/1e6,
-                    az*PAL__DR2D, za*PAL__DR2D,
-                    palDsep( az, bg.el,
-                        obs_metadata->az_deg*PAL__DD2R, obs_metadata->alt_deg*PAL__DD2R ) * PAL__DR2D,
-                    IQUV[0],
-                    IQUV[1],
-                    IQUV[2],
-                    IQUV[3],
-                    array_factor );
+            fprintf( opts.fout, "%f %f %f\n",
+                    X, Y, array_factor*IQUV[0] );
         }
 
-        // Insert a blank line in the output, to delimit different frequencies
+        // Insert a blank line in the output, to delimit different rows
         fprintf( opts.fout, "\n" );
     }
 
@@ -153,9 +158,12 @@ void usage()
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation (required)\n"
             "\t-r, --RA=HH:MM:SS          Tied-array pointing direction, right ascension (required)\n"
             "\t-d, --Dec=DD:MM:SS         Tied-array pointing direction, declination (required)\n"
-            "\t-R, --RA-tied=HH:MM:SS     Direction for array factor calculation, right ascension\n"
-            "\t-D, --Dec-tied=DD:MM:SS    Direction for array factor calculation, declination\n"
-            "\t-o, --outfile=FILENAME     Write the results to FILENAME [default is to write to STDOUT\n"
+            "\t-f, --freq_MHz=MHZ         Frequency in MHz [default: mid-frequency of observation]\n"
+            "\t-x, --width=DEG            Width of image in degrees [default: 1.0]\n"
+            "\t-X, --npixelsx=PIXELS      Width of image in pixels [default: 100]\n"
+            "\t-y, --height=DEG           Height of image in degrees [default: 1.0]\n"
+            "\t-Y, --npixelsy=PIXELS      Height of image in pixels [default: 100]\n"
+            "\t-o, --outfile=FILENAME     Write the results to FILENAME [default is to write to STDOUT]\n"
             "\t-h, --help                 Write this help message and exit\n\n"
           );
 }
@@ -167,10 +175,12 @@ void mwa_track_primary_beam_response_parse_cmdline(
     opts->metafits        = NULL;
     opts->ra_str          = NULL;
     opts->dec_str         = NULL;
-    opts->arrf_ra_str     = NULL;
-    opts->arrf_dec_str    = NULL;
+    opts->height_deg      = 1.0;     // Height of image in degrees
+    opts->width_deg       = 1.0;     // Width of image in degrees
+    opts->height_pixels   = 100;     // Height of image in pixels
+    opts->width_pixels    = 100;     // Width of image in pixels
+    opts->freq_MHz        = 0.0;     // The frequency in MHz (0.0 means get obs centre frequency)
     opts->fout            = stdout;
-    opts->do_array_factor = false;
 
     if (argc > 1)
     {
@@ -181,14 +191,17 @@ void mwa_track_primary_beam_response_parse_cmdline(
                 {"metafits",        required_argument, 0, 'm'},
                 {"RA",              required_argument, 0, 'r'},
                 {"Dec",             required_argument, 0, 'd'},
-                {"RA-tied",         required_argument, 0, 'R'},
-                {"Dec-tied",        required_argument, 0, 'D'},
+                {"width",           required_argument, 0, 'x'},
+                {"npixelsx",        required_argument, 0, 'X'},
+                {"height",          required_argument, 0, 'y'},
+                {"npixelsy",        required_argument, 0, 'Y'},
+                {"freq_MHz",        required_argument, 0, 'f'},
                 {"outfile",         required_argument, 0, 'o'},
                 {"help",            required_argument, 0, 'h'}
             };
 
             int option_index = 0;
-            c = getopt_long( argc, argv, "d:D:hm:o:r:R:", long_options, &option_index);
+            c = getopt_long( argc, argv, "d:f:hm:o:r:x:X:y:Y:", long_options, &option_index);
 
             if (c == -1)
                 break;
@@ -199,9 +212,8 @@ void mwa_track_primary_beam_response_parse_cmdline(
                     opts->dec_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->dec_str, optarg );
                     break;
-                case 'D':
-                    opts->arrf_dec_str = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( opts->arrf_dec_str, optarg );
+                case 'f':
+                    opts->freq_MHz = atof( optarg );
                     break;
                 case 'h':
                     usage();
@@ -223,9 +235,17 @@ void mwa_track_primary_beam_response_parse_cmdline(
                     opts->ra_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->ra_str, optarg );
                     break;
-                case 'R':
-                    opts->arrf_ra_str = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( opts->arrf_ra_str, optarg );
+                case 'x':
+                    opts->width_deg = atof( optarg );
+                    break;
+                case 'y':
+                    opts->height_deg = atof( optarg );
+                    break;
+                case 'X':
+                    opts->width_pixels = atoi( optarg );
+                    break;
+                case 'Y':
+                    opts->height_pixels = atoi( optarg );
                     break;
                 default:
                     fprintf( stderr, "error: unrecognised option '%s'\n", optarg );
@@ -241,13 +261,14 @@ void mwa_track_primary_beam_response_parse_cmdline(
     }
 
     // Check that all the required arguments have been provided
+    // and that all the numbers are sensible
     assert( opts->metafits       != NULL );
     assert( opts->ra_str         != NULL );
     assert( opts->dec_str        != NULL );
+    assert( opts->width_deg      > 0.0 );
+    assert( opts->height_deg     > 0.0 );
+    assert( opts->width_pixels   > 0   );
+    assert( opts->height_pixels  > 0   );
 
-    if (opts->arrf_ra_str && opts->arrf_dec_str)
-    {
-        opts->do_array_factor = true;
-    }
 }
 

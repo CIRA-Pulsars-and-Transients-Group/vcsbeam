@@ -32,3 +32,12 @@ if (PAL_FOUND AND HYPERBEAM_FOUND)
     target_include_directories(mwa_track_primary_beam_response PUBLIC ${CMAKE_BINARY_DIR})
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/mwa_track_primary_beam_response DESTINATION bin)
 endif ()
+
+# Tied-array beam PSF
+if (PAL_FOUND AND HYPERBEAM_FOUND)
+    add_executable(mwa_tied_array_beam_psf mwa_tied_array_beam_psf.c)
+    target_link_libraries(mwa_tied_array_beam_psf vcsbeam)
+    target_include_directories(mwa_tied_array_beam_psf PUBLIC ${CMAKE_BINARY_DIR})
+    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/mwa_tied_array_beam_psf DESTINATION bin)
+endif ()
+
