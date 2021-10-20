@@ -498,7 +498,8 @@ void zero_XY_and_YX( cuDoubleComplex *J )
     J[2] = make_cuDoubleComplex( 0.0, 0.0 );
 }
 
-void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata, logger *log )
+void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
+        int coarse_chan_idx, logger *log )
 /* Retrieve the XY phase correction from pq_phase_correction.txt for the given
  * gps time
  */
@@ -518,7 +519,8 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
 
     // Values to be read in
     uint32_t from, to;
-    double slope = 0.0, offset = 0.0;
+    double slope = 0.0; // rad/Hz
+    double offset = 0.0; // rad
     char ref_tile_name[32];
 
     // Read in the file line by line
@@ -549,6 +551,13 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
         // Nothing else to do, so exit
         return;
     }
+
+    // Variables for converting slope and offset to a complex phase
+    double uv_angle; // rad
+    cuDoubleComplex uv_phase; // complex phase
+    long int freq_ch; // Hz
+    long int frequency  = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_start_hz; // Hz
+    int      chan_width = obs_metadata->corr_fine_chan_width_hz; // Hz
 
     // Get the reference antenna index
     int ref_ant = find_antenna_by_name( obs_metadata, ref_tile_name );
@@ -581,17 +590,26 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
         dref_idx = J_IDX(ref_ant,ch,0,0,nchan,nantpol);
         cp2x2( &(D[dref_idx]), Dref );
 
+        // Convert the slope and offset into a complex phase
+        freq_ch = frequency + ch*chan_width;    // The frequency of this fine channel (Hz)
+        uv_angle = slope*freq_ch + offset;      // (rad)
+        uv_phase = make_cuDoubleComplex( cos(uv_angle), sin(uv_angle) );
+
         for (ant = 0; ant < nant; ant++)
         {
             // A pointer to the (first element of) the Jones matrix for this
             // antenna and channel
             d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
 
-            // By default, divide through a reference antenna...
+            // Divide through a reference antenna...
             remove_reference_phase( &(D[d_idx]), Dref );
 
-            // ...and zero the off-diagonal terms
+            // ...zero the off-diagonal terms...
             zero_XY_and_YX( &(D[d_idx]) );
+
+            // ...and apply the PQ phase correction
+            d_idx = J_IDX(ant,ch,1,1,nchan,nantpol);
+            D[d_idx] = cuCmul( D[d_idx], uv_phase );
         }
     }
 }

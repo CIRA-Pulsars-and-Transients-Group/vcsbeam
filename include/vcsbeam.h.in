@@ -209,7 +209,8 @@ void zero_XY_and_YX( cuDoubleComplex *J );
 
 uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, MetafitsMetadata *obs_metadata, uint32_t vcs_ant );
 
-void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata, logger *log );
+void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
+        int coarse_chan_idx, logger *log );
 
 #ifdef __cplusplus
 }
@@ -265,8 +266,6 @@ void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
         MetafitsMetadata      *osb_metadata,
-        int                    coarse_chan_idx,
-        struct                 calibration *cal,
         cuDoubleComplex       *D,
         cuDoubleComplex       *B,
         cuDoubleComplex       *invJi // <-- output

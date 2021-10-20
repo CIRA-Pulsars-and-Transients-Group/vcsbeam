@@ -39,19 +39,15 @@ void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
         MetafitsMetadata      *obs_metadata,
-        int                    coarse_chan_idx,
-        struct                 calibration *cal,
         cuDoubleComplex       *D,
         cuDoubleComplex       *B,
         cuDoubleComplex       *invJi )
 {
 
     // Give "shorthand" variables for often-used values in metafits
-    long int frequency = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_start_hz;
     int nant           = obs_metadata->num_ants;
     int nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
     int npol           = obs_metadata->num_ant_pols;   // (X,Y)
-    int chan_width     = obs_metadata->corr_fine_chan_width_hz;
 
     int p;       // Pointing number
     int ant;     // Antenna number
@@ -62,11 +58,6 @@ void get_jones(
 
     cuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
 
-    long int freq_ch;
-
-    double uv_angle;
-    cuDoubleComplex uv_phase; // For the UV phase correction
-
     double Fnorm;
 
     int j_idx;
@@ -76,13 +67,6 @@ void get_jones(
         // Everything from this point on is frequency-dependent
         for (ch = 0; ch < nchan; ch++) {
 
-            // Calculating direction-dependent matrices
-            freq_ch = frequency + ch*chan_width;    // The frequency of this fine channel
-
-            // Calculate the UV phase correction for this channel
-            uv_angle = cal->phase_slope*freq_ch + cal->phase_offset;
-            uv_phase = make_cuDoubleComplex( cos(uv_angle), sin(uv_angle) );
-
             for (ant = 0; ant < nant; ant++)
             {
                 // The index to the first element in the Jones matrix for this
@@ -90,10 +74,6 @@ void get_jones(
                 j_idx = J_IDX(ant,ch,0,0,nchan,npol);
 
                 mult2x2d(&(D[j_idx]), &(B[PB_IDX(p, ant, 0, nant, npol*npol)]), Ji); // the gain in the desired look direction
-
-                // Apply the UV phase correction (to the bottom row of the Jones matrix)
-                Ji[2] = cuCmul( Ji[2], uv_phase );
-                Ji[3] = cuCmul( Ji[3], uv_phase );
 
                 // Now, calculate the inverse Jones matrix
 

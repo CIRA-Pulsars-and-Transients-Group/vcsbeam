@@ -239,7 +239,8 @@ int main(int argc, char **argv)
     // Apply the PQ phase correction, if needed/requested
     if (cal.apply_xy_correction)
     {
-        pq_phase_correction( vm->obs_metadata->obs_id, D, vm->obs_metadata, log );
+        pq_phase_correction( vm->obs_metadata->obs_id, D, vm->obs_metadata,
+                vm->coarse_chan_idxs_to_process[0], log );
     }
     else
     {
@@ -314,8 +315,6 @@ int main(int argc, char **argv)
         get_jones(
                 npointing,              // number of pointings
                 vm->obs_metadata,
-                vm->coarse_chan_idxs_to_process[0],
-                &cal,                   // struct holding info about calibration
                 D,                      // Calibration Jones matrices
                 pb.B,                   // Primary beam jones matrices
                 gf.J );                 // inverse Jones array (output)
