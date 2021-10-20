@@ -209,7 +209,7 @@ void zero_XY_and_YX( cuDoubleComplex *J );
 
 uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, MetafitsMetadata *obs_metadata, uint32_t vcs_ant );
 
-void pq_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad );
+void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata, logger *log );
 
 #ifdef __cplusplus
 }
@@ -397,6 +397,7 @@ typedef struct vcsbeam_metadata_t
     int bytes_per_second;             // Bytes per second of data
 } vcsbeam_metadata;
 
+#define NO_ANTENNA_FOUND  -1
 
 #ifdef __cplusplus
 extern "C" {
@@ -483,6 +484,8 @@ long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begi
 uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_coarse_chan_str );
 
 int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm );
+
+int find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name );
 
 #ifdef __cplusplus
 } // End extern "C"

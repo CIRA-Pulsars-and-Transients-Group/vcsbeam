@@ -225,24 +225,6 @@ int main(int argc, char **argv)
     if (cal.cal_type == CAL_RTS)
     {
         D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.caldir, vm->coarse_chan_idxs_to_process[0] );
-        if (cal.apply_xy_correction)
-        {
-            pq_phase_correction( vm->obs_metadata->obs_id, &cal.phase_slope, &cal.phase_offset );
-
-            // Print a suitable message
-            if (cal.phase_slope == 0.0 && cal.phase_offset == 0.0)
-                logger_timed_message( log, "No XY phase correction information for this obsid" );
-            else
-            {
-                sprintf( log_message, "Applying XY phase correction %.2e*freq%+.2e",
-                        cal.phase_slope, cal.phase_offset );
-                logger_timed_message( log, log_message );
-            }
-        }
-        else
-        {
-            logger_timed_message( log, "Not applying XY phase correction" );
-        }
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
@@ -252,6 +234,18 @@ int main(int argc, char **argv)
         // Find the ordering of antennas in Offringa solutions from metafits file
         read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
         */
+    }
+
+    // Apply the PQ phase correction, if needed/requested
+    if (cal.apply_xy_correction)
+    {
+        pq_phase_correction( vm->obs_metadata->obs_id, D, vm->obs_metadata, log );
+    }
+    else
+    {
+        logger_timed_message( log, "No PQ phase correction applied" );
+        cal.phase_slope  = 0.0;
+        cal.phase_offset = 0.0;
     }
 
     // ------------------

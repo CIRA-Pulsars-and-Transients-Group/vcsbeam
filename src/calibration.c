@@ -73,7 +73,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t cal_ch, cal_ant;
-    uintptr_t d_idx, dref_idx;
+    uintptr_t d_idx;
     for (ant = 0; ant < nant; ant++)
     {
         // Match up antenna indices between the cal and obs metadata
@@ -85,7 +85,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // antenna and channel (d_idx) and the Jones matrix for the first
             // antenna (our reference antenna)
             d_idx    = J_IDX(ant,ch,0,0,nchan,nantpol);
-            dref_idx = J_IDX(0,ch,0,0,nchan,nantpol);
 
             // D = Dd x Db
             // SM: Daniel Mitchell confirmed in an email dated 23 Mar 2017 that the
@@ -94,12 +93,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             cal_ch = ch / interp_factor;
             mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], &(D[d_idx]) );
             cp2x2( Dd[cal_ant], &(D[d_idx]) );
-
-            // By default, divide through a reference antenna...
-            remove_reference_phase( &(D[d_idx]), &(D[dref_idx]) );
-
-            // ...and zero the off-diagonal terms
-            zero_XY_and_YX( &(D[d_idx]) );
         }
     }
 
@@ -505,28 +498,28 @@ void zero_XY_and_YX( cuDoubleComplex *J )
     J[2] = make_cuDoubleComplex( 0.0, 0.0 );
 }
 
-void pq_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, double *phase_offset_rad )
+void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata, logger *log )
 /* Retrieve the XY phase correction from pq_phase_correction.txt for the given
  * gps time
  */
 {
+    char log_message[CAL_BUFSIZE + 100];
     char buffer[CAL_BUFSIZE];
     sprintf( buffer, "%s/pq_phase_correction.txt", RUNTIME_DIR );
     FILE *f = fopen( buffer, "r" );
     if (f == NULL)
     {
-        fprintf( stderr, "warning: cannot find file '%s' -- will not apply any XY correction\n",
+        sprintf( log_message, "warning: Cannot find file '%s' -- will not apply any PQ correction",
                 buffer );
-
-        *phase_slope_rad_per_hz = 0.0;
-        *phase_offset_rad       = 0.0;
+        logger_timed_message( log, log_message );
 
         return;
     }
 
-    // Temporary placeholders for the read-in values
+    // Values to be read in
     uint32_t from, to;
-    double slope, offset;
+    double slope = 0.0, offset = 0.0;
+    char ref_tile_name[32];
 
     // Read in the file line by line
     while (fgets( buffer, CAL_BUFSIZE, f ) != NULL)
@@ -536,28 +529,69 @@ void pq_phase_correction( uint32_t gpstime, double *phase_slope_rad_per_hz, doub
             continue;
 
         // Parse the line
-        if (sscanf( buffer, "%u %u %lf %lf", &from, &to, &slope, &offset ) != 4)
+        if (sscanf( buffer, "%u %u %lf %lf %s", &from, &to, &slope, &offset, ref_tile_name ) != 5)
         {
-            fprintf( stderr, "error: pq_phase_correction: cannot parse XY phase correction file\n" );
+            logger_timed_message( log, "ERROR: pq_phase_correction: cannot parse PQ phase correction file" );
             exit(EXIT_FAILURE);
         }
 
         // If the given gpstime is in the right range, keep the values and
         // stop looking
         if (from <= gpstime && gpstime <= to)
-        {
-            *phase_slope_rad_per_hz = slope;
-            *phase_offset_rad       = offset;
-
             break;
-        }
     }
 
     // Close the file
     fclose( f );
 
-    // If we got this far, then nothing within the date range suited, so set
-    // the phase and offset to zero
-    *phase_slope_rad_per_hz = 0.0;
-    *phase_offset_rad       = 0.0;
+    if (slope == 0.0 && offset == 0.0)
+    {
+        // Nothing else to do, so exit
+        return;
+    }
+
+    // Get the reference antenna index
+    int ref_ant = find_antenna_by_name( obs_metadata, ref_tile_name );
+    if (ref_ant == NO_ANTENNA_FOUND)
+    {
+        sprintf( log_message, "PQ-PHASE: Antenna \"%s\" not found in this observation", ref_tile_name );
+        logger_timed_message( log, log_message );
+
+        ref_ant = 0;
+        sprintf( log_message, "PQ-PHASE: Using (default) \"%s\" (antenna #0 in VCS) instead",
+                obs_metadata->antennas[ref_ant].tile_name );
+        logger_timed_message( log, log_message );
+    }
+    uintptr_t d_idx, dref_idx;
+
+    uintptr_t nant    = obs_metadata->num_ants;
+    uintptr_t nantpol = obs_metadata->num_ant_pols; // = 2 (X, Y)
+    uintptr_t nchan   = obs_metadata->num_corr_fine_chans_per_coarse;
+
+    // A temporary copy of the reference antenna matrix, so that we don't clobber it midway
+    // through this operation!
+    cuDoubleComplex Dref[nantpol*nantpol];
+
+    // Go through all the antennas and divide the phases by the reference antenna
+    uintptr_t ant, ch;
+    for (ch = 0; ch < nchan; ch++)
+    {
+        // Make a copy of the reference Jones matrix for this channel
+        // reference antenna and channel
+        dref_idx = J_IDX(ref_ant,ch,0,0,nchan,nantpol);
+        cp2x2( &(D[dref_idx]), Dref );
+
+        for (ant = 0; ant < nant; ant++)
+        {
+            // A pointer to the (first element of) the Jones matrix for this
+            // antenna and channel
+            d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+
+            // By default, divide through a reference antenna...
+            remove_reference_phase( &(D[d_idx]), Dref );
+
+            // ...and zero the off-diagonal terms
+            zero_XY_and_YX( &(D[d_idx]) );
+        }
+    }
 }

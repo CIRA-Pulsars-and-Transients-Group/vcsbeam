@@ -1,3 +1,3 @@
-#  From_(gpstime)  To_(gpstime)  Phase_slope_(rad/Hz)  Phase_offset_(rad)  Notes
-1201478418  1280275218  7.725758047219426e-09   0.489798482526478  # From https://wiki.mwatelescope.org/display/MP/Polarimetry (accessed: 19 Aug 2021)
-1164110416  1165080856  5.6e-09                -0.06283            # Determined from B0628-28 in obsid 1165080856
+#  From_(gpstime) | To_(gpstime) | Phase_slope_(rad/Hz) | Phase_offset_(rad) | Referece Tile Name | Notes
+1201478418  1280275218  7.7258e-09   0.4898   LBG8     # From https://wiki.mwatelescope.org/display/MP/Polarimetry (accessed: 19 Aug 2021)
+1164110416  1165080856  5.6e-09     -0.06283  Tile011  # Determined from B0628-28 in obsid 1165080856
