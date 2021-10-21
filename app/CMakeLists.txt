@@ -6,6 +6,11 @@ target_link_libraries(fine_pfb_offline vcsbeam)
 target_include_directories(fine_pfb_offline PUBLIC ${CMAKE_BINARY_DIR})
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/fine_pfb_offline DESTINATION bin)
 
+add_executable(mwa_plot_calibration mwa_plot_calibration.c)
+target_link_libraries(mwa_plot_calibration vcsbeam)
+target_include_directories(mwa_plot_calibration PUBLIC ${CMAKE_BINARY_DIR})
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/mwa_plot_calibration DESTINATION bin)
+
 # Tied array beamformer
 
 if (PAL_FOUND AND PSRFITS_UTILS_FOUND AND HYPERBEAM_FOUND AND VDIFIO_FOUND)

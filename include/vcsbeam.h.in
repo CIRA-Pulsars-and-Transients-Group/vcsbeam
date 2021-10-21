@@ -187,7 +187,7 @@ struct calibration
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where
     double phase_slope;        //   m = phase_slope (rad/Hz)
                                //   c = phase_offset (rad)
-    bool   apply_xy_correction;
+    bool   apply_pq_correction;
 };
 
 

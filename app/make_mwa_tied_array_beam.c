@@ -216,11 +216,11 @@ int main(int argc, char **argv)
     struct vdifinfo *vf;
     vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
 
-    cuDoubleComplex *D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
-
     /****************************
      * GET CALIBRATION SOLUTION *
      ****************************/
+
+    cuDoubleComplex *D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
 
     if (cal.cal_type == CAL_RTS)
     {
@@ -237,7 +237,7 @@ int main(int argc, char **argv)
     }
 
     // Apply the PQ phase correction, if needed/requested
-    if (cal.apply_xy_correction)
+    if (cal.apply_pq_correction)
     {
         pq_phase_correction( vm->obs_metadata->obs_id, D, vm->obs_metadata,
                 vm->coarse_chan_idxs_to_process[0], log );
@@ -517,7 +517,7 @@ void make_tied_array_beam_parse_cmdline(
     cal->cross_terms         = 0;
     cal->phase_offset        = 0.0;
     cal->phase_slope         = 0.0;
-    cal->apply_xy_correction = true;
+    cal->apply_pq_correction = true;
 
     if (argc > 1) {
 
@@ -619,7 +619,7 @@ void make_tied_array_beam_parse_cmdline(
                     }
                     break;
                 case 'U':
-                    cal->apply_xy_correction = false;
+                    cal->apply_pq_correction = false;
                     break;
                 case 'v':
                     opts->out_coarse = true;

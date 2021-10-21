@@ -512,7 +512,10 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
     {
         sprintf( log_message, "warning: Cannot find file '%s' -- will not apply any PQ correction",
                 buffer );
-        logger_timed_message( log, log_message );
+        if (log)
+            logger_timed_message( log, log_message );
+        else
+            fprintf( stderr, "%s\n", log_message );
 
         return;
     }
@@ -533,7 +536,11 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
         // Parse the line
         if (sscanf( buffer, "%u %u %lf %lf %s", &from, &to, &slope, &offset, ref_tile_name ) != 5)
         {
-            logger_timed_message( log, "ERROR: pq_phase_correction: cannot parse PQ phase correction file" );
+            sprintf( log_message, "ERROR: pq_phase_correction: cannot parse PQ phase correction file" );
+            if (log)
+                logger_timed_message( log, log_message );
+            else
+                fprintf( stderr, "%s\n", log_message );
             exit(EXIT_FAILURE);
         }
 
@@ -564,12 +571,18 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
     if (ref_ant == NO_ANTENNA_FOUND)
     {
         sprintf( log_message, "PQ-PHASE: Antenna \"%s\" not found in this observation", ref_tile_name );
-        logger_timed_message( log, log_message );
+        if (log)
+            logger_timed_message( log, log_message );
+        else
+            fprintf( stderr, "%s\n", log_message );
 
         ref_ant = 0;
         sprintf( log_message, "PQ-PHASE: Using (default) \"%s\" (antenna #0 in VCS) instead",
                 obs_metadata->antennas[ref_ant].tile_name );
-        logger_timed_message( log, log_message );
+        if (log)
+            logger_timed_message( log, log_message );
+        else
+            fprintf( stderr, "%s\n", log_message );
     }
     uintptr_t d_idx, dref_idx;
 
