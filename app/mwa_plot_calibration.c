@@ -81,7 +81,7 @@ int main(int argc, char **argv)
         // Apply the PQ phase correction, if needed/requested
         if (cal.apply_pq_correction)
         {
-            pq_phase_correction( cal_metadata->obs_id, D[Ch], cal_metadata, Ch, NULL );
+            pq_phase_correction( obs_metadata->obs_id, D[Ch], cal_metadata, Ch, NULL );
         }
     }
 

@@ -553,12 +553,6 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
     // Close the file
     fclose( f );
 
-    if (slope == 0.0 && offset == 0.0)
-    {
-        // Nothing else to do, so exit
-        return;
-    }
-
     // Variables for converting slope and offset to a complex phase
     double uv_angle; // rad
     cuDoubleComplex uv_phase; // complex phase
