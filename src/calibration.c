@@ -38,6 +38,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
     uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (X, Y)
     uintptr_t nchan   = cal_metadata->num_corr_fine_chans_per_coarse;
+    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t interp_factor = vcs_nchan / nchan;
 
     // Temporary arrays for DI Jones matrices ('Dd') and Bandpass matrices ('Db')
     cuDoubleComplex  **Dd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
@@ -46,7 +48,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // The array for the final output product (D = Dd x Db)
     // This will have the same dimensions as the final Jones matrix, so use
     // J_IDX for indexing
-    size_t Dsize = nant*nchan*nvispol;
+    size_t Dsize = nant*vcs_nchan*nvispol;
     cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
 
     uintptr_t ant, ch;
@@ -70,8 +72,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
     // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
-    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
-    uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t cal_ch, cal_ant;
     uintptr_t d_idx;
     for (ant = 0; ant < nant; ant++)
@@ -522,8 +522,8 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
 
     // Values to be read in
     uint32_t from, to;
-    double slope = 0.0; // rad/Hz
-    double offset = 0.0; // rad
+    double slope = 0.0, slope_tmp; // rad/Hz
+    double offset = 0.0, offset_tmp; // rad
     char ref_tile_name[32];
 
     // Read in the file line by line
@@ -534,7 +534,7 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
             continue;
 
         // Parse the line
-        if (sscanf( buffer, "%u %u %lf %lf %s", &from, &to, &slope, &offset, ref_tile_name ) != 5)
+        if (sscanf( buffer, "%u %u %lf %lf %s", &from, &to, &slope_tmp, &offset_tmp, ref_tile_name ) != 5)
         {
             sprintf( log_message, "ERROR: pq_phase_correction: cannot parse PQ phase correction file" );
             if (log)
@@ -547,7 +547,11 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
         // If the given gpstime is in the right range, keep the values and
         // stop looking
         if (from <= gpstime && gpstime <= to)
+        {
+            slope = slope_tmp;
+            offset = offset_tmp;
             break;
+        }
     }
 
     // Close the file
