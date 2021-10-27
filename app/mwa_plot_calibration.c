@@ -19,6 +19,7 @@
 
 struct make_plot_calibrate_opts {
     char *metafits; // filename of the metafits file
+    uintptr_t ncoarse_chans;
 };
 
 /***********************
@@ -58,7 +59,9 @@ int main(int argc, char **argv)
     uintptr_t npols          = obs_metadata->num_ant_pols;   // (X,Y)
 
     // Now, do the following for each coarse channel
-    uintptr_t ncoarse_chans = obs_metadata->num_metafits_coarse_chans;
+    uintptr_t ncoarse_chans = opts.ncoarse_chans;
+    if (ncoarse_chans <= 0 || ncoarse_chans > obs_metadata->num_metafits_coarse_chans)
+        ncoarse_chans = obs_metadata->num_metafits_coarse_chans;
     uintptr_t Ch, ch; // (Coarse channel idx, fine channel idx)
     cuDoubleComplex *D[ncoarse_chans]; // See Eqs. (27) to (29) in Ord et al. (2019)
     for (Ch = 0; Ch < ncoarse_chans; Ch++)
@@ -161,6 +164,7 @@ void usage()
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
             "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
+            "\t-N, --ncoarse_chans=NUM    NUM is the number of coarse channels to include\n"
             "\t-R, --ref-ant=ANT          Rotate the phases of the PP and QQ elements of the calibration\n"
             "\t                           Jones matrices so that the phases of tile ANT align. If ANT is\n"
             "\t                           outside the range 0-127, no phase rotation is done\n"
@@ -188,6 +192,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
         struct make_plot_calibrate_opts *opts, struct calibration *cal )
 {
     // Set defaults
+    opts->ncoarse_chans      = -1;    // Number of coarse channels to include
     opts->metafits           = NULL;  // filename of the metafits file for the target observations
     cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
     cal->caldir              = NULL;  // The path to where the calibration solutions live
@@ -208,6 +213,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"help",            no_argument,       0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
+                {"ncoarse_chans",   required_argument, 0, 'N'},
                 {"offringa",        no_argument      , 0, 'O'},
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"no-PQ-phase",     no_argument,       0, 'U'},
@@ -217,7 +223,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "c:C:hm:OR:UVX",
+                             "c:C:hm:N:OR:UVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -234,6 +240,9 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);
+                    break;
+                case 'N':
+                    opts->ncoarse_chans = atoi(optarg);
                     break;
                 case 'h':
                     usage();
