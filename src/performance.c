@@ -41,12 +41,12 @@ int get_stopwatch_idx( logger *log, const char *stopwatch_name )
     return PERFORMANCE_NO_STOPWATCH_FOUND;
 }
 
-inline double calc_stopwatch_mean( logger_stopwatch *sw )
+double calc_stopwatch_mean( logger_stopwatch *sw )
 {
     return sw->total / (double)sw->nstart_stops;
 }
 
-inline double calc_stopwatch_std( logger_stopwatch *sw )
+double calc_stopwatch_std( logger_stopwatch *sw )
 {
     double mean = calc_stopwatch_mean( sw );
     return sqrt(sw->total_sq / (double)sw->nstart_stops - mean*mean);

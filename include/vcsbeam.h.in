@@ -155,6 +155,7 @@ void logger_message( logger *log, const char *message );
 void logger_stopwatch_report_stats( logger *log, const char *stopwatch_name );
 void logger_report_all_stats( logger *log );
 
+
 #ifdef __cplusplus
 } // End extern "C"
 #endif

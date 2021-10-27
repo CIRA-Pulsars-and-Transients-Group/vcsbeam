@@ -46,7 +46,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // The array for the final output product (D = Dd x Db)
     // This will have the same dimensions as the final Jones matrix, so use
     // J_IDX for indexing
-    size_t Dsize = nant*nchan*nvispol;
+    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
+    size_t Dsize = nant*vcs_nchan*nvispol;
     cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
 
     uintptr_t ant, ch;
@@ -56,21 +57,18 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
         Db[ant] = (cuDoubleComplex **)calloc( nchan,   sizeof(cuDoubleComplex *) );
 
         for (ch = 0; ch < nchan; ch++)
-        {
             Db[ant][ch] = (cuDoubleComplex *)calloc( nvispol, sizeof(cuDoubleComplex) );
-        }
     }
 
     // Read in the DI Jones file
     read_dijones_file((double **)Dd, NULL, cal_metadata->num_ants, dijones_path);
 
     // Read in the Bandpass file
-    read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
+    //read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
 
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
     // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
-    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t cal_ch, cal_ant;
     uintptr_t d_idx;
@@ -92,7 +90,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
             mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], &(D[d_idx]) );
-            cp2x2( Dd[cal_ant], &(D[d_idx]) );
         }
     }
 
@@ -101,6 +98,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     {
         for (ch = 0; ch < nchan; ch++)
             free( Db[ant][ch] );
+
         free( Db[ant] );
         free( Dd[ant] );
     }
