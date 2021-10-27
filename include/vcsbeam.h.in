@@ -197,7 +197,7 @@ extern "C" {
 #endif
 
 cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx );
+        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx, logger *log );
 
 void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,

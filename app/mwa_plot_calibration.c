@@ -69,7 +69,7 @@ int main(int argc, char **argv)
         // Read in the calibration solution
         if (cal.cal_type == CAL_RTS)
         {
-            D[Ch] = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, Ch );
+            D[Ch] = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, Ch, NULL );
         }
         else if (cal.cal_type == CAL_OFFRINGA)
         {

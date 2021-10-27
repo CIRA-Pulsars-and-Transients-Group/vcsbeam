@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 
     if (cal.cal_type == CAL_RTS)
     {
-        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.caldir, vm->coarse_chan_idxs_to_process[0] );
+        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.caldir, vm->coarse_chan_idxs_to_process[0], log );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {

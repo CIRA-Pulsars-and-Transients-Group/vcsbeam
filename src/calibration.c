@@ -14,7 +14,7 @@
 #include "vcsbeam.h"
 
 cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx )
+        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx, logger *log )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel.
@@ -24,6 +24,14 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
 {
     // Find the "GPUBox" number for this coarse channel
     uintptr_t gpubox_number = cal_metadata->metafits_coarse_chans[coarse_chan_idx].gpubox_number;
+    if (log)
+    {
+        char log_message[256];
+        sprintf( log_message, "Receiver channel #%lu --> GPUBox #%lu",
+                cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
+                gpubox_number );
+        logger_timed_message( log, log_message );
+    }
 
     // With the gpubox number in hand, construct the filenames for the
     // DI_Jones and Bandpass files
@@ -90,6 +98,19 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
             //mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], &(D[d_idx]) );
+/*
+int pol;
+fprintf( stderr, "cal_ant = %3lu,  cal_ch = %3lu:   ", cal_ant, cal_ch );
+for (pol = 0; pol < nvispol; pol++)
+    fprintf( stderr, "%+lf%+lf*i  ", Dd[cal_ant][pol].x, Dd[cal_ant][pol].y );
+fprintf( stderr, "\n                                " );
+for (pol = 0; pol < nvispol; pol++)
+    fprintf( stderr, "%+lf%+lf*i  ", Db[cal_ant][cal_ch][pol].x, Db[cal_ant][cal_ch][pol].y );
+fprintf( stderr, "\n                                " );
+for (pol = 0; pol < nvispol; pol++)
+    fprintf( stderr, "%+lf%+lf*i  ", D[d_idx+pol].x, D[d_idx+pol].y );
+fprintf( stderr, "\n" );
+*/
             cp2x2( Dd[cal_ant], &(D[d_idx]) );
         }
     }
@@ -221,6 +242,9 @@ void read_bandpass_file(
 
         // Convert the channel frequencies (in MHz) to channel indices
         chan_idx = (int)roundf( chan_MHz*1e6 / (double)chan_width );
+//fprintf( stderr, "chan_MHz   = %lf\n", chan_MHz );
+//fprintf( stderr, "chan_width = %lf\n", (double)chan_width/1e6 );
+//fprintf( stderr, "chan_idx   = %d\n\n", chan_idx );
         chan_idxs[chan_count - 1] = chan_idx;
 
         freqline_ptr += pos;
