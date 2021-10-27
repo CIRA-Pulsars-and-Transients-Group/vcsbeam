@@ -90,7 +90,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // A pointer to the (first element of) the Jones matrix for this
             // antenna and channel (d_idx) and the Jones matrix for the first
             // antenna (our reference antenna)
-            d_idx    = J_IDX(ant,ch,0,0,nchan,nantpol);
+            d_idx    = J_IDX(ant,ch,0,0,vcs_nchan,nantpol);
 
             // D = Dd x Db
             // SM: Daniel Mitchell confirmed in an email dated 23 Mar 2017 that the
