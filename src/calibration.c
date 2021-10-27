@@ -48,7 +48,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // The array for the final output product (D = Dd x Db)
     // This will have the same dimensions as the final Jones matrix, so use
     // J_IDX for indexing
-    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
     size_t Dsize = nant*vcs_nchan*nvispol;
     cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
 
@@ -71,7 +70,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
     // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
-    uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t cal_ch, cal_ant;
     uintptr_t d_idx;
     for (ant = 0; ant < nant; ant++)
