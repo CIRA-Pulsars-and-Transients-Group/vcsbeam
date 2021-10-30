@@ -440,3 +440,14 @@ int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm )
 
     return num_not_flagged;
 }
+
+void get_mwalib_version( char *version_str )
+/* Assumes that version_str is already allocated, and is big enough
+ */
+{
+    sprintf( version_str, "%u.%u.%u",
+            mwalib_get_version_major(),
+            mwalib_get_version_minor(),
+            mwalib_get_version_patch()
+           );
+}

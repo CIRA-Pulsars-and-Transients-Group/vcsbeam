@@ -487,6 +487,8 @@ int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm );
 
 int find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name );
 
+void get_mwalib_version( char *version_str );
+
 #ifdef __cplusplus
 } // End extern "C"
 #endif

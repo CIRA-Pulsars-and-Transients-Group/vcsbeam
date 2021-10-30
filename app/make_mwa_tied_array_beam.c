@@ -86,7 +86,11 @@ int main(int argc, char **argv)
     char log_message[MAX_COMMAND_LENGTH];
 
     // Create an mwalib metafits context and associated metadata
-    logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
+    char mwalib_version[32];
+    get_mwalib_version( mwalib_version );
+    sprintf( log_message, "Creating metafits and voltage contexts via MWALIB (v%s)",
+            mwalib_version );
+    logger_timed_message( log, log_message );
 
     const int chans_per_proc = 1;
     vcsbeam_metadata *vm = init_vcsbeam_metadata(
