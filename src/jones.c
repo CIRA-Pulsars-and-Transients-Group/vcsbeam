@@ -25,12 +25,16 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, 
     // Go through the rf_inputs and construct the lookup table for the antennas
     unsigned int nant = obs_metadata->num_ants;
     unsigned int ix, iy;
-    unsigned int a, ant; // index into (a)ntennas; (ant)enna order ... THESE ARE DIFFERENT!
+    unsigned int a, ant; // index into (a)ntennas; (ant)enna order ... THESE CAN BE DIFFERENT!
     for (a = 0; a < nant; a++)
     {
         ant = obs_metadata->antennas[a].ant;
+
         ix = obs_metadata->antennas[a].rfinput_x;
         iy = obs_metadata->antennas[a].rfinput_y;
+
+        //ant = obs_metadata->rf_inputs[ix].input/2;
+
         polX_idxs[ant] = obs_metadata->rf_inputs[ix].vcs_order;
         polY_idxs[ant] = obs_metadata->rf_inputs[iy].vcs_order;
 fprintf( stderr, "ant=%u,  pol=%c,  idx=%u\n", ant, 'X', polX_idxs[ant] );
@@ -63,7 +67,7 @@ void get_jones(
 
     double Fnorm;
 
-    int j_idx;
+    int j_idx, pb_idx;
 
     for (p = 0; p < npointing; p++)
     {
@@ -74,9 +78,18 @@ void get_jones(
             {
                 // The index to the first element in the Jones matrix for this
                 // antenna and channel. Applies to both the D and J arrays.
-                j_idx = J_IDX(ant,ch,0,0,nchan,npol);
+                j_idx  = J_IDX(ant,ch,0,0,nchan,npol);
+                pb_idx = PB_IDX(p, ant, 0, nant, npol*npol);
 
-                mult2x2d(&(D[j_idx]), &(B[PB_IDX(p, ant, 0, nant, npol*npol)]), Ji); // the gain in the desired look direction
+if (ch == 0)
+{
+    fprintf( stderr, "\nD[%u] = \n", ant );
+    fprintf_complex_matrix( stderr, &(D[j_idx]) );
+    fprintf( stderr, "B = \n" );
+    fprintf_complex_matrix( stderr, &(B[pb_idx]) );
+    fprintf( stderr, "\n" );
+}
+                mult2x2d(&(D[j_idx]), &(B[pb_idx]), Ji); // the gain in the desired look direction
 
                 // Now, calculate the inverse Jones matrix
 
@@ -273,3 +286,14 @@ void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *C )
     mult2x2d( M, MH, C );
 }
 
+
+void fprintf_complex_matrix( FILE *fout, cuDoubleComplex *M )
+{
+    fprintf( fout, "[ %lf%+lf  %lf%+lf ]\n"
+                   "[ %lf%+lf  %lf%+lf ]\n",
+                   cuCreal(M[0]), cuCimag(M[0]),
+                   cuCreal(M[1]), cuCimag(M[1]),
+                   cuCreal(M[2]), cuCimag(M[2]),
+                   cuCreal(M[3]), cuCimag(M[3])
+           );
+}

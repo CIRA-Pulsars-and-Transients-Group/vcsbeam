@@ -284,6 +284,7 @@ void conj2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 double norm2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H );
 void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *c );
+void fprintf_complex_matrix( FILE *fout, cuDoubleComplex *M );
 
 #ifdef __cplusplus
 }

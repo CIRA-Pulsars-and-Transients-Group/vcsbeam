@@ -514,10 +514,11 @@ uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, Metafit
 //fprintf( stderr, "a = %u,  cal_a = %u, antennas[%u].ant = %u\n", a, cal_a, a, cal_metadata->antennas[a].ant );
 fprintf( stderr, "metadata->antennas[%3u].ant = %3u,  "
         "rx = metadata->antennas[%3u].rfinput_x = %3u,  "
-        "metadata->rf_inputs[%3u].ant = %3u\n",
+        "metadata->rf_inputs[%3u].ant = %3u,   cal_a = %3u\n",
         a, cal_metadata->antennas[a].ant,
         a, rx,
-        rx, cal_metadata->rf_inputs[rx].ant
+        rx, cal_metadata->rf_inputs[rx].ant,
+        cal_a
        );
     return cal_a;
     //return cal_metadata->antennas[a].ant;
