@@ -243,8 +243,8 @@ int main(int argc, char **argv)
     // Apply the PQ phase correction, if needed/requested
     if (cal.apply_pq_correction)
     {
-        pq_phase_correction( vm->obs_metadata->obs_id, D, vm->obs_metadata,
-                vm->coarse_chan_idxs_to_process[0], log );
+        //pq_phase_correction( vm->obs_metadata->obs_id, D, vm->obs_metadata,
+        //        vm->coarse_chan_idxs_to_process[0], log );
     }
     else
     {

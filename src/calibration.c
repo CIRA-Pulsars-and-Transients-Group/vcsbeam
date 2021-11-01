@@ -86,10 +86,15 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     {
         if (log->world_rank == 0)
         {
+            logger_message( log, "" );
+            logger_timed_message( log, "Calibration metafits info:" );
+            logger_timed_message( log, "--------------------------" );
+            logger_timed_message( log, "|Input| Ant |Tile ID| TileName |Pol|VCS order|" );
+
             uintptr_t i;
             for (i = 0; i < ninputs; i++)
             {
-                fprintf( stderr, "| %u | %u | %u | %s | %c | %u |\n",
+                sprintf( log_message, "| %3u | %3u | %5u | %8s | %c |  %3u   |",
                         cal_metadata->rf_inputs[i].input,
                         cal_metadata->rf_inputs[i].ant,
                         cal_metadata->rf_inputs[i].tile_id,
@@ -97,12 +102,10 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
                         *(cal_metadata->rf_inputs[i].pol),
                         cal_metadata->rf_inputs[i].vcs_order
                        );
+                logger_timed_message( log, log_message );
             }
 
-            logger_timed_message( log, "Antenna order in metafits:" );
-            logger_timed_message( log, "--------------------------" );
-            logger_timed_message( log, "OBS          CAL" );
-            logger_timed_message( log, "idx  name    idx  name" );
+            logger_message( log, "" );
         }
     }
 

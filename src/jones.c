@@ -23,7 +23,6 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, 
  */
 {
     // Go through the rf_inputs and construct the lookup table for the antennas
-    unsigned int nant    = obs_metadata->num_ants;
     unsigned int ninputs = obs_metadata->num_rf_inputs;
     unsigned int ant;
     unsigned int i;
@@ -83,14 +82,14 @@ void get_jones(
                 j_idx  = J_IDX(ant,ch,0,0,nchan,npol);
                 pb_idx = PB_IDX(p, ant, 0, nant, npol*npol);
 
-//if (ch == 0)
-//{
-//    fprintf( stderr, "\nD[%u] = \n", ant );
-//    fprintf_complex_matrix( stderr, &(D[j_idx]) );
-//    fprintf( stderr, "B = \n" );
-//    fprintf_complex_matrix( stderr, &(B[pb_idx]) );
-//    fprintf( stderr, "\n" );
-//}
+if (ant == 0 && ch == 0)
+{
+    fprintf( stderr, "\nD[%u] = \n", ant );
+    fprintf_complex_matrix( stderr, &(D[j_idx]) );
+    fprintf( stderr, "B = \n" );
+    fprintf_complex_matrix( stderr, &(B[pb_idx]) );
+    fprintf( stderr, "\n" );
+}
                 mult2x2d(&(D[j_idx]), &(B[pb_idx]), Ji); // the gain in the desired look direction
 
                 // Now, calculate the inverse Jones matrix
