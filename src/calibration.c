@@ -23,15 +23,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
  */
 {
     // Find the "GPUBox" number for this coarse channel
-    uintptr_t gpubox_number = cal_metadata->metafits_coarse_chans[coarse_chan_idx].gpubox_number;
-    if (log)
-    {
-        char log_message[256];
-        sprintf( log_message, "Receiver channel #%lu --> GPUBox #%lu",
-                cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
-                gpubox_number );
-        logger_timed_message( log, log_message );
-    }
+    //uintptr_t gpubox_number = cal_metadata->metafits_coarse_chans[coarse_chan_idx].gpubox_number; // <-- This is what it should be, when the mwalib bug is fixed
+    uintptr_t gpubox_number = cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1; // <-- This is the temporary hack
 
     // With the gpubox number in hand, construct the filenames for the
     // DI_Jones and Bandpass files
@@ -40,6 +33,15 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
 
     sprintf( dijones_path,  "%s/DI_JonesMatrices_node%03lu.dat", caldir, gpubox_number );
     sprintf( bandpass_path, "%s/BandpassCalibration_node%03lu.dat", caldir, gpubox_number );
+
+    if (log)
+    {
+        char log_message[256];
+        sprintf( log_message, "Receiver channel #%lu --> GPUBox #%lu",
+                cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
+                gpubox_number );
+        logger_timed_message( log, log_message );
+    }
 
     // Allocate memory for the Jones arrays
     uintptr_t nant    = cal_metadata->num_ants;
