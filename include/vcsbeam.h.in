@@ -378,6 +378,8 @@ typedef struct vcsbeam_metadata_t
     MetafitsContext  *cal_context;    // The mwalib context derived from the calibration observation's metafits file
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
 
+    MWAVersion cal_mwa_version;       // The original observation type of the calibration solution
+
     int num_coarse_chans_to_process;  // The number of coarse channels to be processed
     int *coarse_chan_idxs_to_process; // A list of the coarse chan idxs to be processed
 

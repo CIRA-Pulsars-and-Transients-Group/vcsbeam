@@ -34,15 +34,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     sprintf( dijones_path,  "%s/DI_JonesMatrices_node%03lu.dat", caldir, gpubox_number );
     sprintf( bandpass_path, "%s/BandpassCalibration_node%03lu.dat", caldir, gpubox_number );
 
-    if (log)
-    {
-        char log_message[256];
-        sprintf( log_message, "Receiver channel #%lu --> GPUBox #%lu",
-                cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
-                gpubox_number );
-        logger_timed_message( log, log_message );
-    }
-
     // Allocate memory for the Jones arrays
     uintptr_t nant    = cal_metadata->num_ants;
     uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
@@ -50,6 +41,17 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     uintptr_t nchan   = cal_metadata->num_corr_fine_chans_per_coarse;
     uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t interp_factor = vcs_nchan / nchan;
+    uintptr_t ant, ch; // For loop variables
+
+    // Write out the channel --> gpubox number mapping
+    char log_message[256];
+    if (log)
+    {
+        sprintf( log_message, "Receiver channel #%lu --> GPUBox #%lu",
+                cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
+                gpubox_number );
+        logger_timed_message( log, log_message );
+    }
 
     // Temporary arrays for DI Jones matrices ('Dd') and Bandpass matrices ('Db')
     cuDoubleComplex  **Dd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
@@ -61,7 +63,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     size_t Dsize = nant*vcs_nchan*nvispol;
     cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
 
-    uintptr_t ant, ch;
     for (ant = 0; ant < nant; ant++)
     {
         Dd[ant] = (cuDoubleComplex * )calloc( nvispol, sizeof(cuDoubleComplex  ) );
@@ -77,6 +78,20 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // Read in the Bandpass file
     //read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
 
+    // Make the master mpi thread print out the antenna names of both
+    // obs and cal metafits. "Header" printed here, actual numbers
+    // printed inside antenna for loop below
+    if (log)
+    {
+        if (log->world_rank == 0)
+        {
+            logger_timed_message( log, "Antenna order in metafits:" );
+            logger_timed_message( log, "--------------------------" );
+            logger_timed_message( log, "OBS          CAL" );
+            logger_timed_message( log, "idx  name    idx  name" );
+        }
+    }
+
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
     // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
@@ -86,6 +101,20 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     {
         // Match up antenna indices between the cal and obs metadata
         cal_ant = get_idx_for_vcs_antenna_in_cal( cal_metadata, obs_metadata, ant );
+
+        // Make the master mpi thread print out the antenna names of both
+        // obs and cal metafits
+        if (log)
+        {
+            if (log->world_rank == 0)
+            {
+                sprintf( log_message, "%3lu %8s %3lu %8s",
+                        ant, obs_metadata->antennas[ant].tile_name,
+                        cal_ant, cal_metadata->antennas[cal_ant].tile_name
+                       );
+                logger_timed_message( log, log_message );
+            }
+        }
 
         for (ch = 0; ch < vcs_nchan; ch++)
         {
@@ -100,19 +129,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
             //mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], &(D[d_idx]) );
-/*
-int pol;
-fprintf( stderr, "cal_ant = %3lu,  cal_ch = %3lu:   ", cal_ant, cal_ch );
-for (pol = 0; pol < nvispol; pol++)
-    fprintf( stderr, "%+lf%+lf*i  ", Dd[cal_ant][pol].x, Dd[cal_ant][pol].y );
-fprintf( stderr, "\n                                " );
-for (pol = 0; pol < nvispol; pol++)
-    fprintf( stderr, "%+lf%+lf*i  ", Db[cal_ant][cal_ch][pol].x, Db[cal_ant][cal_ch][pol].y );
-fprintf( stderr, "\n                                " );
-for (pol = 0; pol < nvispol; pol++)
-    fprintf( stderr, "%+lf%+lf*i  ", D[d_idx+pol].x, D[d_idx+pol].y );
-fprintf( stderr, "\n" );
-*/
             cp2x2( Dd[cal_ant], &(D[d_idx]) );
         }
     }
@@ -445,6 +461,8 @@ uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, Metafit
  * guarantee that the two observations will even use the same sets of antennas (i.e. tiles). Thus,
  * in order for this function to be robust, antennas must be matched by "tile_id", which is uniquely
  * assigned to each physical tile.
+ *
+ * NB vcs_ant is the antenna order, not the index into antennas!
  */
 {
     // Find the tile_id for this antenna number in the vcs observation ("obs")
@@ -469,12 +487,12 @@ uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, Metafit
         exit(EXIT_FAILURE);
     }
 
-    // Now find the matching idx for this tile_id in the calibration observation ("cal")
-    uint32_t idx;
+    // Now find the matching idx (a) for this tile_id in the calibration observation ("cal")
+    uint32_t a;
     found = false;
-    for (idx = 0; idx < cal_metadata->num_ants; idx++)
+    for (a = 0; a < cal_metadata->num_ants; a++)
     {
-        if (cal_metadata->antennas[idx].tile_id == tile_id)
+        if (cal_metadata->antennas[a].tile_id == tile_id)
         {
             found = true;
             break;
@@ -491,7 +509,18 @@ uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, Metafit
     }
 
     // Otherwise, all good!
-    return cal_metadata->rf_inputs[cal_metadata->antennas[idx].rfinput_x].input/2;
+    uint32_t rx = cal_metadata->antennas[a].rfinput_x;
+    uint32_t cal_a = cal_metadata->rf_inputs[rx].input/2;
+//fprintf( stderr, "a = %u,  cal_a = %u, antennas[%u].ant = %u\n", a, cal_a, a, cal_metadata->antennas[a].ant );
+fprintf( stderr, "metadata->antennas[%3u].ant = %3u,  "
+        "rx = metadata->antennas[%3u].rfinput_x = %3u,  "
+        "metadata->rf_inputs[%3u].ant = %3u\n",
+        a, cal_metadata->antennas[a].ant,
+        a, rx,
+        rx, cal_metadata->rf_inputs[rx].ant
+       );
+    return cal_a;
+    //return cal_metadata->antennas[a].ant;
 }
 
 

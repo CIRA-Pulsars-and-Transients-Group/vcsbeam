@@ -46,13 +46,51 @@ vcsbeam_metadata *init_vcsbeam_metadata(
             first_coarse_chan_idx,
             num_coarse_chans_to_process );
 
-    // Get the calibration context and metadata, if requested
+    // Get the calibration context and metadata
     if (cal_metafits_filename != NULL)
     {
+        // Get the calibration obs in the "normal" way, where it guesses what
+        // type of observation it came from
         get_mwalib_metafits_metadata(
                 cal_metafits_filename,
                 &(vm->cal_metadata),
                 &(vm->cal_context) );
+
+        // Keep track of what type of observation it is
+        vm->cal_mwa_version = vm->cal_metadata->mwa_version;
+
+        // And destroy the context and metadata
+        mwalib_metafits_metadata_free( vm->cal_metadata );
+        mwalib_metafits_context_free( vm->cal_context );
+
+        // But now force the context to "look like" a correlation obs
+        MWAVersion new_mwa_version = vm->cal_mwa_version;
+        if (vm->cal_metadata->mwa_version == VCSLegacyRecombined)
+        {
+            new_mwa_version = CorrLegacy;
+        }
+        else if (vm->cal_metadata->mwa_version == VCSMWAXv2)
+        {
+            new_mwa_version = CorrMWAXv2;
+        }
+
+        // ...and read it in again with this new interpretation
+        char error_message[ERROR_MESSAGE_LEN];
+        error_message[0] = '\0'; // <-- Just to avoid a compiler warning about uninitialised variables
+
+        // Create CAL_CONTEXT
+        if (mwalib_metafits_context_new( cal_metafits_filename, new_mwa_version, &(vm->cal_context), error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
+        {
+            fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", error_message );
+            exit(EXIT_FAILURE);
+        }
+
+        // Create CAL_METADATA
+        if (mwalib_metafits_metadata_get( vm->cal_context, NULL, NULL, &(vm->cal_metadata), error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+        {
+            fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", error_message );
+            exit(EXIT_FAILURE);
+        }
     }
     else
     {

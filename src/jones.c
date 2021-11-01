@@ -23,15 +23,18 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, 
  */
 {
     // Go through the rf_inputs and construct the lookup table for the antennas
-    unsigned int ninputs = obs_metadata->num_rf_inputs;
-    unsigned int i, ant;
-    for (i = 0; i < ninputs; i++)
+    unsigned int nant = obs_metadata->num_ants;
+    unsigned int ix, iy;
+    unsigned int a, ant; // index into (a)ntennas; (ant)enna order ... THESE ARE DIFFERENT!
+    for (a = 0; a < nant; a++)
     {
-        ant = obs_metadata->rf_inputs[i].ant;
-        if (*(obs_metadata->rf_inputs[i].pol) == 'X')
-            polX_idxs[ant] = i;
-        else // if (*(obs_metadata->rf_inputs.pol) == 'Y')
-            polY_idxs[ant] = i;
+        ant = obs_metadata->antennas[a].ant;
+        ix = obs_metadata->antennas[a].rfinput_x;
+        iy = obs_metadata->antennas[a].rfinput_y;
+        polX_idxs[ant] = obs_metadata->rf_inputs[ix].vcs_order;
+        polY_idxs[ant] = obs_metadata->rf_inputs[iy].vcs_order;
+fprintf( stderr, "ant=%u,  pol=%c,  idx=%u\n", ant, 'X', polX_idxs[ant] );
+fprintf( stderr, "ant=%u,  pol=%c,  idx=%u\n", ant, 'Y', polY_idxs[ant] );
     }
 }
 
