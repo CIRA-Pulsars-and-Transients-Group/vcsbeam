@@ -36,6 +36,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
 
     // Allocate memory for the Jones arrays
     uintptr_t nant    = cal_metadata->num_ants;
+    uintptr_t ninputs = cal_metadata->num_rf_inputs;
     uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
     uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (X, Y)
     uintptr_t nchan   = cal_metadata->num_corr_fine_chans_per_coarse;
@@ -85,6 +86,19 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     {
         if (log->world_rank == 0)
         {
+            uintptr_t i;
+            for (i = 0; i < ninputs; i++)
+            {
+                fprintf( stderr, "| %u | %u | %u | %s | %c | %u |\n",
+                        cal_metadata->rf_inputs[i].input,
+                        cal_metadata->rf_inputs[i].ant,
+                        cal_metadata->rf_inputs[i].tile_id,
+                        cal_metadata->rf_inputs[i].tile_name,
+                        *(cal_metadata->rf_inputs[i].pol),
+                        cal_metadata->rf_inputs[i].vcs_order
+                       );
+            }
+
             logger_timed_message( log, "Antenna order in metafits:" );
             logger_timed_message( log, "--------------------------" );
             logger_timed_message( log, "OBS          CAL" );
@@ -95,41 +109,40 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
     // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
-    uintptr_t cal_ch, cal_ant;
+    uintptr_t cal_ch, cal_ant, obs_ant, dd_idx;
     uintptr_t d_idx;
-    for (ant = 0; ant < nant; ant++)
+    uintptr_t i; // (i)dx into rf_inputs
+    Rfinput *obs_rfinput, *cal_rfinput;
+    for (i = 0; i < ninputs; i++)
     {
-        // Match up antenna indices between the cal and obs metadata
-        cal_ant = get_idx_for_vcs_antenna_in_cal( cal_metadata, obs_metadata, ant );
+        // Order the Jones matrices by the TARGET OBSERVATION metadata
+        // (not the calibration metadata)
+        obs_rfinput = &(obs_metadata->rf_inputs[i]);
 
-        // Make the master mpi thread print out the antenna names of both
-        // obs and cal metafits
-        if (log)
-        {
-            if (log->world_rank == 0)
-            {
-                sprintf( log_message, "%3lu %8s %3lu %8s",
-                        ant, obs_metadata->antennas[ant].tile_name,
-                        cal_ant, cal_metadata->antennas[cal_ant].tile_name
-                       );
-                logger_timed_message( log, log_message );
-            }
-        }
+        // Only have to loop once per tile, so skip the 'Y's
+        if (*(obs_rfinput->pol) == 'Y')
+            continue;
+
+        // Match up antenna indices between the cal and obs metadata
+        cal_rfinput = find_matching_rf_input( cal_metadata, obs_rfinput );
+
+        obs_ant = obs_rfinput->ant;
+        dd_idx  = cal_rfinput->input/2;
 
         for (ch = 0; ch < vcs_nchan; ch++)
         {
             // A pointer to the (first element of) the Jones matrix for this
             // antenna and channel (d_idx) and the Jones matrix for the first
             // antenna (our reference antenna)
-            d_idx    = J_IDX(ant,ch,0,0,vcs_nchan,nantpol);
+            d_idx = J_IDX(obs_ant,ch,0,0,vcs_nchan,nantpol);
 
             // D = Dd x Db
             // SM: Daniel Mitchell confirmed in an email dated 23 Mar 2017 that the
             // Bandpass matrices (Db) should be multiplied on the _right_ of the
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
-            //mult2x2d( Dd[cal_ant], Db[cal_ant][cal_ch], &(D[d_idx]) );
-            cp2x2( Dd[cal_ant], &(D[d_idx]) );
+            //mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
+            cp2x2( Dd[dd_idx], &(D[d_idx]) );
         }
     }
 
@@ -455,73 +468,24 @@ int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
 }
 
 
-uint32_t get_idx_for_vcs_antenna_in_cal( MetafitsMetadata *cal_metadata, MetafitsMetadata *obs_metadata, uint32_t vcs_ant )
-/* Get the (antenna) idx into the calibration solutions that corresponds to the supplied vcs ANTenna number.
- * Because this is attempting to match up antennas across two different observation, there is no
- * guarantee that the two observations will even use the same sets of antennas (i.e. tiles). Thus,
- * in order for this function to be robust, antennas must be matched by "tile_id", which is uniquely
- * assigned to each physical tile.
- *
- * NB vcs_ant is the antenna order, not the index into antennas!
- */
+Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput )
 {
-    // Find the tile_id for this antenna number in the vcs observation ("obs")
-    uint32_t tile_id, i;
-    bool found = false;
-    for (i = 0; i < obs_metadata->num_ants; i++)
+    // Find the input in METADATA that has the matching tile_id and polarisation
+    uintptr_t i;
+    char pol;
+    uint32_t tile_id;
+    for (i = 0; i < metadata->num_rf_inputs; i++)
     {
-        if (obs_metadata->antennas[i].ant == vcs_ant)
+        tile_id   = metadata->rf_inputs[i].tile_id;
+        pol       = *(metadata->rf_inputs[i].pol);
+
+        if (rfinput->tile_id == tile_id && *(rfinput->pol) == pol)
         {
-            tile_id = obs_metadata->antennas[i].tile_id;
-            found = true;
-            break;
+            return &(metadata->rf_inputs[i]);
         }
     }
 
-    // If they've provided a non-existent vcs_ant, then complain and exit
-    if (!found)
-    {
-        fprintf( stderr, "error: get_idx_for_vcs_antenna_in_cal: could not "
-                "find antenna %u in vcs obs %u\n",
-                vcs_ant, obs_metadata->obs_id );
-        exit(EXIT_FAILURE);
-    }
-
-    // Now find the matching idx (a) for this tile_id in the calibration observation ("cal")
-    uint32_t a;
-    found = false;
-    for (a = 0; a < cal_metadata->num_ants; a++)
-    {
-        if (cal_metadata->antennas[a].tile_id == tile_id)
-        {
-            found = true;
-            break;
-        }
-    }
-
-    // If it was not found at all, then exit with an error
-    if (!found)
-    {
-        fprintf( stderr, "error: get_idx_for_vcs_antenna_in_cal: could not "
-                "find tile_id %u in cal obs %u, required by vcs obs %u\n",
-                tile_id, cal_metadata->obs_id, obs_metadata->obs_id );
-        exit(EXIT_FAILURE);
-    }
-
-    // Otherwise, all good!
-    uint32_t rx = cal_metadata->antennas[a].rfinput_x;
-    uint32_t cal_a = cal_metadata->rf_inputs[rx].input/2;
-//fprintf( stderr, "a = %u,  cal_a = %u, antennas[%u].ant = %u\n", a, cal_a, a, cal_metadata->antennas[a].ant );
-fprintf( stderr, "metadata->antennas[%3u].ant = %3u,  "
-        "rx = metadata->antennas[%3u].rfinput_x = %3u,  "
-        "metadata->rf_inputs[%3u].ant = %3u,   cal_a = %3u\n",
-        a, cal_metadata->antennas[a].ant,
-        a, rx,
-        rx, cal_metadata->rf_inputs[rx].ant,
-        cal_a
-       );
-    return cal_a;
-    //return cal_metadata->antennas[a].ant;
+    return NULL;
 }
 
 

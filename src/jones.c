@@ -23,22 +23,24 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, 
  */
 {
     // Go through the rf_inputs and construct the lookup table for the antennas
-    unsigned int nant = obs_metadata->num_ants;
-    unsigned int ix, iy;
-    unsigned int a, ant; // index into (a)ntennas; (ant)enna order ... THESE CAN BE DIFFERENT!
-    for (a = 0; a < nant; a++)
+    unsigned int nant    = obs_metadata->num_ants;
+    unsigned int ninputs = obs_metadata->num_rf_inputs;
+    unsigned int ant;
+    unsigned int i;
+    char pol;
+    for (i = 0; i < ninputs; i++)
     {
-        ant = obs_metadata->antennas[a].ant;
+        ant = obs_metadata->rf_inputs[i].ant;
+        pol = *(obs_metadata->rf_inputs[i].pol);
 
-        ix = obs_metadata->antennas[a].rfinput_x;
-        iy = obs_metadata->antennas[a].rfinput_y;
-
-        //ant = obs_metadata->rf_inputs[ix].input/2;
-
-        polX_idxs[ant] = obs_metadata->rf_inputs[ix].vcs_order;
-        polY_idxs[ant] = obs_metadata->rf_inputs[iy].vcs_order;
-fprintf( stderr, "ant=%u,  pol=%c,  idx=%u\n", ant, 'X', polX_idxs[ant] );
-fprintf( stderr, "ant=%u,  pol=%c,  idx=%u\n", ant, 'Y', polY_idxs[ant] );
+        if (pol == 'X')
+        {
+            polX_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
+        }
+        else // if (pol == 'Y')
+        {
+            polY_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
+        }
     }
 }
 
@@ -81,14 +83,14 @@ void get_jones(
                 j_idx  = J_IDX(ant,ch,0,0,nchan,npol);
                 pb_idx = PB_IDX(p, ant, 0, nant, npol*npol);
 
-if (ch == 0)
-{
-    fprintf( stderr, "\nD[%u] = \n", ant );
-    fprintf_complex_matrix( stderr, &(D[j_idx]) );
-    fprintf( stderr, "B = \n" );
-    fprintf_complex_matrix( stderr, &(B[pb_idx]) );
-    fprintf( stderr, "\n" );
-}
+//if (ch == 0)
+//{
+//    fprintf( stderr, "\nD[%u] = \n", ant );
+//    fprintf_complex_matrix( stderr, &(D[j_idx]) );
+//    fprintf( stderr, "B = \n" );
+//    fprintf_complex_matrix( stderr, &(B[pb_idx]) );
+//    fprintf( stderr, "\n" );
+//}
                 mult2x2d(&(D[j_idx]), &(B[pb_idx]), Ji); // the gain in the desired look direction
 
                 // Now, calculate the inverse Jones matrix

@@ -39,7 +39,7 @@ void calc_primary_beam(
 
     // Set up the output array of beam matrices ("B"; see Eq. (30) in Ord et al. (2019))
     // Layout is B[pointing][antenna][pol] where 0 <= pol < npol=4
-    uintptr_t p, a;
+    uintptr_t p, ant;
 
     // Make temporary array that will hold jones matrices for specific configurations
     cuDoubleComplex *configs[NCONFIGS];
@@ -72,7 +72,7 @@ void calc_primary_beam(
         for (rf_input = 0; rf_input < nrf_input; rf_input++)
         {
             // Get the antenna from the rf_input
-            a = pb->obs_metadata->rf_inputs[rf_input].ant;
+            ant = pb->obs_metadata->rf_inputs[rf_input].ant;
 
             // Assume that the delay config for the 'Y' pol matches that of the corresponding 'X'
             if (*(pb->obs_metadata->rf_inputs[rf_input].pol) == 'Y')
@@ -101,7 +101,7 @@ void calc_primary_beam(
             }
 
             // Copy the answer into the B matrix (for this antenna)
-            cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, a, 0, nant, npol)]) );
+            cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, ant, 0, nant, npol)]) );
         }
     }
 }
