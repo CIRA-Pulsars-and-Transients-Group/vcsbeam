@@ -278,6 +278,27 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, 
     // error or warning is generated otherwise, not even if the inferred
     // number of taps (P) is 0.
 
+    // Set up the idxs for the "rf input" output order,
+    // and copy to device
+    gpuErrchk(cudaMallocHost( (void **)&(fpfb->i_output_idx),   fpfb->I*sizeof(int) ));
+    gpuErrchk(cudaMalloc(     (void **)&(fpfb->d_i_output_idx), fpfb->I*sizeof(int) ));
+
+    int i, mwax_idx, legacy_idx;
+    uint32_t ant;
+    char pol;
+    for (i = 0; i < fpfb->I; i++)
+    {
+        ant = vm->obs_metadata->rf_inputs[i].ant;
+        pol = *(vm->obs_metadata->rf_inputs[i].pol);
+
+        mwax_idx   = 2*ant + (pol - 'X');
+        legacy_idx = i;
+
+        fpfb->i_output_idx[mwax_idx] = legacy_idx;
+    }
+
+    gpuErrchk(cudaMemcpyAsync( fpfb->d_i_output_idx, fpfb->i_output_idx, fpfb->I*sizeof(int), cudaMemcpyHostToDevice ));
+
     // Work out the sizes of the various arrays
     fpfb->htr_size = (vm->vcs_metadata->num_voltage_blocks_per_second + 1) *
                       vm->vcs_metadata->voltage_block_size_bytes;
@@ -297,7 +318,6 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, 
     // casting to int
     gpuErrchk(cudaMallocHost( (void **)&(fpfb->filter_coeffs),   filter_size ));
     gpuErrchk(cudaMalloc(     (void **)&(fpfb->d_filter_coeffs), filter_size ));
-    int i;
     for (i = 0; i < filter->ncoeffs; i++)
         fpfb->filter_coeffs[i] = (int)filter->coeffs[i]; // **WARNING! Forcible typecast to int!**
     gpuErrchk(cudaMemcpyAsync( fpfb->d_filter_coeffs, fpfb->filter_coeffs, filter_size, cudaMemcpyHostToDevice ));
@@ -345,9 +365,11 @@ void free_forward_pfb( forward_pfb *fpfb )
     gpuErrchk(cudaFreeHost( fpfb->filter_coeffs ));
     gpuErrchk(cudaFreeHost( fpfb->htr_data ));
     gpuErrchk(cudaFreeHost( fpfb->vcs_data ));
+    gpuErrchk(cudaFreeHost( fpfb->i_output_idx ));
     gpuErrchk(cudaFree( fpfb->d_filter_coeffs ));
     gpuErrchk(cudaFree( fpfb->d_htr_data ));
     gpuErrchk(cudaFree( fpfb->d_vcs_data ));
+    gpuErrchk(cudaFree( fpfb->d_i_output_idx ));
     gpuErrchk(cudaFree( fpfb->d_weighted_overlap_add ));
     free( fpfb );
 }

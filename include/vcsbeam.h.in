@@ -686,6 +686,10 @@ typedef struct forward_pfb_t
     int               I;                      // The number of RF inputs
     int               P;                      // The number of taps
 
+    int              *i_output_idx;           // The idxs for where to put each RF input in the output
+    int              *d_i_output_idx;         // (The MWAX files are ordered by "Antenna", whereas the legacy
+                                              // VCS files are ordered in their own special order)
+
     cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
 
     bool              read_locked;            // For multi-threading: lock for reading
