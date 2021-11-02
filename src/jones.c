@@ -32,11 +32,13 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, 
         ant = obs_metadata->rf_inputs[i].ant;
         pol = *(obs_metadata->rf_inputs[i].pol);
 
-        if (pol == 'X')
+        // Swapping the pols assumes a legacy RF input ordering, where
+        // 'Y' comes first
+        if (pol == 'Y')
         {
             polX_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
         }
-        else // if (pol == 'Y')
+        else // if (pol == 'X')
         {
             polY_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
         }
@@ -82,14 +84,6 @@ void get_jones(
                 j_idx  = J_IDX(ant,ch,0,0,nchan,npol);
                 pb_idx = PB_IDX(p, ant, 0, nant, npol*npol);
 
-if (ant == 0 && ch == 0)
-{
-    fprintf( stderr, "\nD[%u] = \n", ant );
-    fprintf_complex_matrix( stderr, &(D[j_idx]) );
-    fprintf( stderr, "B = \n" );
-    fprintf_complex_matrix( stderr, &(B[pb_idx]) );
-    fprintf( stderr, "\n" );
-}
                 mult2x2d(&(D[j_idx]), &(B[pb_idx]), Ji); // the gain in the desired look direction
 
                 // Now, calculate the inverse Jones matrix
@@ -108,6 +102,18 @@ if (ant == 0 && ch == 0)
                         invJi[J_IDX(ant,ch,p1,p2,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
                 }
 
+if (ant == 19 && ch == 0)
+{
+    fprintf( stderr, "\nD    = " );
+    fprintf_complex_matrix( stderr, &(D[j_idx]) );
+    fprintf( stderr, "B    = " );
+    fprintf_complex_matrix( stderr, &(B[pb_idx]) );
+    fprintf( stderr, "|J*| = " );
+    fprintf_complex_matrix( stderr, Ji );
+    fprintf( stderr, "Jinv = " );
+    fprintf_complex_matrix( stderr, &(invJi[j_idx]) );
+    fprintf( stderr, "\n" );
+}
             } // end loop through antenna/pol (rf_input)
         } // end loop through fine channels (ch)
     } // end loop through pointings (p)
@@ -290,8 +296,7 @@ void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *C )
 
 void fprintf_complex_matrix( FILE *fout, cuDoubleComplex *M )
 {
-    fprintf( fout, "[ %lf%+lf  %lf%+lf ]\n"
-                   "[ %lf%+lf  %lf%+lf ]\n",
+    fprintf( fout, "[ %lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i ]\n",
                    cuCreal(M[0]), cuCimag(M[0]),
                    cuCreal(M[1]), cuCimag(M[1]),
                    cuCreal(M[2]), cuCimag(M[2]),
