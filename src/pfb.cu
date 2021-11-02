@@ -188,7 +188,7 @@ __global__ void fpga_rounding_and_demotion( void *data )
     *fy = (float)Y;
 }
 
-__global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *outdata )
+__global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *outdata, int *i_idx )
 /* This is the final step in the forward fine PFB algorithm that emulates what
    was implemented on the MWA FPGAs in Phase 1 & 2 (see above for details).
    At this point, the FFTED array contains the Fourier-transformed data that
@@ -212,6 +212,8 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     int i        = threadIdx.x;
     int I        = blockDim.x;
 
+    int i_out    = i_idx[i];
+
     int kprime   = (k + K/2) % K; // Puts the DC bin in the "middle"
 
     cuFloatComplex  *b = ffted;
@@ -219,7 +221,7 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
 
     // Calculate the idxs into b and X
     unsigned int b_idx = m*(K*I) + i*(K) + k;
-    unsigned int X_idx = v_IDX(m, kprime, i, K, I);
+    unsigned int X_idx = v_IDX(m, kprime, i_out, K, I);
 
     // Pull the values to be manipulated into register memory (because the
     // packing macro below involves a lot of repetition of the arguments)
@@ -292,7 +294,7 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, 
         pol = *(vm->obs_metadata->rf_inputs[i].pol);
 
         mwax_idx   = 2*ant + (pol - 'X');
-        legacy_idx = i;
+        legacy_idx = vm->obs_metadata->rf_inputs[i].vcs_order;
 
         fpfb->i_output_idx[mwax_idx] = legacy_idx;
     }
@@ -486,7 +488,8 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
 
     logger_start_stopwatch( log, "pack", true );
 
-    pack_into_recombined_format<<<blocks3, threads3>>>( fpfb->d_weighted_overlap_add, fpfb->d_vcs_data );
+    pack_into_recombined_format<<<blocks3, threads3>>>( fpfb->d_weighted_overlap_add,
+            fpfb->d_vcs_data, fpfb->d_i_output_idx );
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
