@@ -208,8 +208,6 @@ int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
 void zero_XY_and_YX( cuDoubleComplex *J );
 
-Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput );
-
 void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
         int coarse_chan_idx, logger *log );
 
@@ -487,6 +485,9 @@ uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_
 int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm );
 
 int find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name );
+
+Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput );
+Antenna *find_matching_antenna( MetafitsMetadata *metadata, Rfinput *rfinput );
 
 void get_mwalib_version( char *version_str );
 

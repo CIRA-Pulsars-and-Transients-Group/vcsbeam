@@ -443,6 +443,45 @@ int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm )
     return num_not_flagged;
 }
 
+Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput )
+{
+    // Find the input in METADATA that has the matching tile_id and polarisation
+    uintptr_t i;
+    char pol;
+    uint32_t tile_id;
+    for (i = 0; i < metadata->num_rf_inputs; i++)
+    {
+        tile_id   = metadata->rf_inputs[i].tile_id;
+        pol       = *(metadata->rf_inputs[i].pol);
+
+        if (rfinput->tile_id == tile_id && *(rfinput->pol) == pol)
+        {
+            return &(metadata->rf_inputs[i]);
+        }
+    }
+
+    return NULL;
+}
+
+
+Antenna *find_matching_antenna( MetafitsMetadata *metadata, Rfinput *rfinput )
+{
+    // Find the input in METADATA that has the matching tile_id and polarisation
+    uintptr_t a;
+    uint32_t tile_id;
+    for (a = 0; a < metadata->num_ants; a++)
+    {
+        tile_id   = metadata->antennas[a].tile_id;
+
+        if (rfinput->tile_id == tile_id)
+        {
+            return &(metadata->antennas[a]);
+        }
+    }
+
+    return NULL;
+}
+
 void get_mwalib_version( char *version_str )
 /* Assumes that version_str is already allocated, and is big enough
  */

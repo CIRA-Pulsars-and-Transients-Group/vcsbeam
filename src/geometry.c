@@ -40,14 +40,22 @@ void calc_geometric_delays(
     // Other various intermediate products
     double L, w, Delta_t, phase;
 
-    uintptr_t a;
-    for (a = 0; a < obs_metadata->num_ants; a++)
+    uintptr_t i;
+    Rfinput *Rf;
+    for (i = 0; i < obs_metadata->num_rf_inputs; i++)
     {
+        // Get a shortcut to this Rf input
+        Rf = &(obs_metadata->rf_inputs[i]);
+
+        // Only need to do this once per antenna, so just do it for X pols
+        if (*(Rf->pol) == 'Y')
+            continue;
+
         // Get the location and cable length for this antenna
-        E     = obs_metadata->antennas[a].east_m;
-        N     = obs_metadata->antennas[a].north_m;
-        H     = obs_metadata->antennas[a].height_m;
-        cable = obs_metadata->antennas[a].electrical_length_m;
+        E     = Rf->east_m;
+        N     = Rf->north_m;
+        H     = Rf->height_m;
+        cable = Rf->electrical_length_m;
         L     = cable - cable_ref;
 
         // Eq. (1) in Ord et al. (2019)
@@ -70,7 +78,7 @@ void calc_geometric_delays(
         // NB: Again, the sign flip (compared to the paper) is
         // unexplained.
         phase = -2.0 * M_PI * Delta_t * freq_hz;
-        phi[a] = make_cuDoubleComplex( cos( phase ), sin( phase ));
+        phi[Rf->ant] = make_cuDoubleComplex( cos( phase ), sin( phase ));
     }
 }
 

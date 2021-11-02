@@ -471,27 +471,6 @@ int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
 }
 
 
-Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput )
-{
-    // Find the input in METADATA that has the matching tile_id and polarisation
-    uintptr_t i;
-    char pol;
-    uint32_t tile_id;
-    for (i = 0; i < metadata->num_rf_inputs; i++)
-    {
-        tile_id   = metadata->rf_inputs[i].tile_id;
-        pol       = *(metadata->rf_inputs[i].pol);
-
-        if (rfinput->tile_id == tile_id && *(rfinput->pol) == pol)
-        {
-            return &(metadata->rf_inputs[i]);
-        }
-    }
-
-    return NULL;
-}
-
-
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
 {
     cuDoubleComplex XX0norm, XY0norm, YX0norm, YY0norm;
