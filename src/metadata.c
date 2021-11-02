@@ -109,7 +109,7 @@ vcsbeam_metadata *init_vcsbeam_metadata(
 }
 
 
-int find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
+Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
 /* Returns the index (to obs_metadata->antennas[]) for the antenna with the
  * specified name. If no antenna with that name exists, returns
  * NO_ANTENNA_FOUND (= -1)
@@ -119,11 +119,11 @@ int find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
     for (i = 0; i < (int)(obs_metadata->num_ants); i++)
     {
         if (strcmp( tile_name, obs_metadata->antennas[i].tile_name ) == 0)
-            return i;
+            return &(obs_metadata->antennas[i]);
     }
 
     // If we got this far, no antenna with that name was found
-    return NO_ANTENNA_FOUND;
+    return NULL;
 }
 
 

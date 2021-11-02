@@ -484,10 +484,9 @@ uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_
 
 int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm );
 
-int find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name );
-
 Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput );
 Antenna *find_matching_antenna( MetafitsMetadata *metadata, Rfinput *rfinput );
+Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name );
 
 void get_mwalib_version( char *version_str );
 

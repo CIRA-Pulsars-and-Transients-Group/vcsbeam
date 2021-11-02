@@ -566,8 +566,8 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
     int      chan_width = obs_metadata->corr_fine_chan_width_hz; // Hz
 
     // Get the reference antenna index
-    int ref_ant = find_antenna_by_name( obs_metadata, ref_tile_name );
-    if (ref_ant == NO_ANTENNA_FOUND)
+    Antenna *Aref = find_antenna_by_name( obs_metadata, ref_tile_name );
+    if (Aref == NULL)
     {
         sprintf( log_message, "PQ-PHASE: Antenna \"%s\" not found in this observation", ref_tile_name );
         if (log)
@@ -575,9 +575,9 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
         else
             fprintf( stderr, "%s\n", log_message );
 
-        ref_ant = 0;
-        sprintf( log_message, "PQ-PHASE: Using (default) \"%s\" (antenna #0 in VCS) instead",
-                obs_metadata->antennas[ref_ant].tile_name );
+        Aref = find_matching_antenna( obs_metadata, &(obs_metadata->rf_inputs[0]) );
+        sprintf( log_message, "PQ-PHASE: Using (default) \"%s\" instead",
+                Aref->tile_name );
         if (log)
             logger_timed_message( log, log_message );
         else
@@ -599,7 +599,7 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
     {
         // Make a copy of the reference Jones matrix for this channel
         // reference antenna and channel
-        dref_idx = J_IDX(ref_ant,ch,0,0,nchan,nantpol);
+        dref_idx = J_IDX(Aref->ant,ch,0,0,nchan,nantpol);
         cp2x2( &(D[dref_idx]), Dref );
 
         // Convert the slope and offset into a complex phase
