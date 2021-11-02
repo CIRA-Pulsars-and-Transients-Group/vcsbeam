@@ -102,18 +102,6 @@ void get_jones(
                         invJi[J_IDX(ant,ch,p1,p2,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
                 }
 
-if (ant == 19 && ch == 0)
-{
-    fprintf( stderr, "\nD    = " );
-    fprintf_complex_matrix( stderr, &(D[j_idx]) );
-    fprintf( stderr, "B    = " );
-    fprintf_complex_matrix( stderr, &(B[pb_idx]) );
-    fprintf( stderr, "|J*| = " );
-    fprintf_complex_matrix( stderr, Ji );
-    fprintf( stderr, "Jinv = " );
-    fprintf_complex_matrix( stderr, &(invJi[j_idx]) );
-    fprintf( stderr, "\n" );
-}
             } // end loop through antenna/pol (rf_input)
         } // end loop through fine channels (ch)
     } // end loop through pointings (p)
