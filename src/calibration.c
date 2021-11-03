@@ -634,7 +634,7 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
 
         if (apply_phase_slope)
         {
-            sprintf( log_message, "Applying phase slope %e*FREQ + %e (rad) to QQ", cal->phase_slope, cal->phase_offset );
+            sprintf( log_message, "Applying phase slope %e*FREQ + %e (rad) to PP", cal->phase_slope, cal->phase_offset );
             logger_timed_message( log, log_message );
         }
         else
@@ -697,10 +697,10 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
             if (apply_zero_PQ_and_QP)
                 zero_PQ_and_QP( &(D[d_idx]) );
 
-            // ...and apply the phase correction to the QQ element (pol 1,1)
+            // ...and apply the phase correction to the PP element (pol 0,0)
             if (apply_phase_slope)
             {
-                d_idx = J_IDX(ant,ch,1,1,nchan,nantpol);
+                d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
                 D[d_idx] = cuCmul( D[d_idx], z );
             }
         }

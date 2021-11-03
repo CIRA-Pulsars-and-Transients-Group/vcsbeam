@@ -43,8 +43,8 @@ if __name__ == "__main__":
         for c in range(ncols):
             ant = r*ncols + c
 
-            #axs_phase[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 3], c='cyan', s=s, marker='.') # PQ phase
-            #axs_phase[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 5], c='magenta', s=s, marker='.') # QP phase
+            axs_phase[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 3], c='cyan', s=s, marker='.') # PQ phase
+            axs_phase[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 5], c='magenta', s=s, marker='.') # QP phase
             axs_phase[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 1], c='b', s=s, marker='.') # PP phase
             axs_phase[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 7], c='r', s=s, marker='.') # QQ phase
 
@@ -55,7 +55,7 @@ if __name__ == "__main__":
             axs_phase[r,c].set_title(tilenames[ant], y=1.0, pad=-14)
 
     plt.subplots_adjust(wspace=0, hspace=0)
-    fig_phase.suptitle("Phases (blue=PP, red=QQ)")
+    fig_phase.suptitle("Phases\n[b c]\n[m r]")
 
     # Amps
     print("Plotting amps...")
@@ -66,8 +66,8 @@ if __name__ == "__main__":
         for c in range(ncols):
             ant = r*ncols + c
 
-            #axs_amps[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 2], c='cyan', s=s, marker='.') # PQ amps
-            #axs_amps[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 4], c='magenta', s=s, marker='.') # QP amps
+            axs_amps[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 2], c='cyan', s=s, marker='.') # PQ amps
+            axs_amps[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 4], c='magenta', s=s, marker='.') # QP amps
             axs_amps[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 0], c='b', s=s, marker='.') # PP amps
             axs_amps[r,c].scatter(np.arange(nchans), cal_data[:,ant*8 + 6], c='r', s=s, marker='.') # QQ amps
 
@@ -81,6 +81,6 @@ if __name__ == "__main__":
             axs_amps[r,c].set_title(tilenames[ant], y=1.0, pad=-14)
 
     plt.subplots_adjust(wspace=0, hspace=0)
-    fig_amps.suptitle("Amps (blue=PP, red=QQ)")
+    fig_amps.suptitle("Amps\n[b c]\n[m r]")
 
     plt.show()
