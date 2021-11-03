@@ -183,12 +183,12 @@ struct calibration
     char  *metafits;           // Filename of the metafits file
     char  *caldir;             // Location of calibration data
     int    cal_type;           // Either RTS or OFFRINGA
-    int    ref_ant;            // Reference antenna for calibration phases
-    int    cross_terms;        // Include XY and YX of calibration Jones matrices
+    char  *ref_ant;            // Reference antenna for calibration phases
+    bool   keep_cross_terms;   // Include PQ and QP of calibration Jones matrices
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where
     double phase_slope;        //   m = phase_slope (rad/Hz)
                                //   c = phase_offset (rad)
-    bool   apply_pq_correction;
+    bool   custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
 };
 
 
@@ -206,9 +206,10 @@ int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
         int coarse_chan, char *gains_file );
 
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
-void zero_XY_and_YX( cuDoubleComplex *J );
+void zero_PQ_and_QP( cuDoubleComplex *J );
 
-void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
+void parse_calibration_correction_file( uint32_t gpstime, struct calibration *cal );
+void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
         int coarse_chan_idx, logger *log );
 
 #ifdef __cplusplus

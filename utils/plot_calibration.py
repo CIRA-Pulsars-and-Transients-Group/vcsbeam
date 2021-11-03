@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # This can be run on the text files output by mwa_plot_calibration
 
 import numpy as np
@@ -16,6 +16,10 @@ def get_tilenames(filename, first_line=14, nlines=16):
     return tilenames
 
 if __name__ == "__main__":
+
+    if len(sys.argv) < 2:
+        print("usage: {} [text file output from mwa_plot_calibration]")
+        exit()
 
     cal_data = np.loadtxt(sys.argv[-1])
 

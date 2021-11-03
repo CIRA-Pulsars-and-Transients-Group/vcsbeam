@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 #include <mwalib.h>
 #include <cuComplex.h>
@@ -37,8 +38,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // Allocate memory for the Jones arrays
     uintptr_t nant    = cal_metadata->num_ants;
     uintptr_t ninputs = cal_metadata->num_rf_inputs;
-    uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
-    uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (X, Y)
+    uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+    uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (P, Q)
     uintptr_t nchan   = cal_metadata->num_corr_fine_chans_per_coarse;
     uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t interp_factor = vcs_nchan / nchan;
@@ -473,52 +474,44 @@ int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
 
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
 {
-    cuDoubleComplex XX0norm, XY0norm, YX0norm, YY0norm;
-    double XXscale = 1.0/cuCabs( Jref[0] ); // = 1/|XX|
-    double XYscale = 1.0/cuCabs( Jref[1] ); // = 1/|XY|
-    double YXscale = 1.0/cuCabs( Jref[2] ); // = 1/|YX|
-    double YYscale = 1.0/cuCabs( Jref[3] ); // = 1/|YY|
+    cuDoubleComplex PP0norm, PQ0norm, QP0norm, QQ0norm;
+    double PPscale = 1.0/cuCabs( Jref[0] ); // = 1/|PP|
+    double PQscale = 1.0/cuCabs( Jref[1] ); // = 1/|PQ|
+    double QPscale = 1.0/cuCabs( Jref[2] ); // = 1/|QP|
+    double QQscale = 1.0/cuCabs( Jref[3] ); // = 1/|QQ|
 
-    XX0norm = make_cuDoubleComplex( XXscale*cuCreal(Jref[0]), XXscale*cuCimag(Jref[0]) ); // = XX/|XX|
-    XY0norm = make_cuDoubleComplex( XYscale*cuCreal(Jref[1]), XYscale*cuCimag(Jref[1]) ); // = XY/|XY|
-    YX0norm = make_cuDoubleComplex( YXscale*cuCreal(Jref[2]), YXscale*cuCimag(Jref[2]) ); // = YX/|YX|
-    YY0norm = make_cuDoubleComplex( YYscale*cuCreal(Jref[3]), YYscale*cuCimag(Jref[3]) ); // = YY/|YY|
+    PP0norm = make_cuDoubleComplex( PPscale*cuCreal(Jref[0]), PPscale*cuCimag(Jref[0]) ); // = PP/|PP|
+    PQ0norm = make_cuDoubleComplex( PQscale*cuCreal(Jref[1]), PQscale*cuCimag(Jref[1]) ); // = PQ/|PQ|
+    QP0norm = make_cuDoubleComplex( QPscale*cuCreal(Jref[2]), QPscale*cuCimag(Jref[2]) ); // = QP/|QP|
+    QQ0norm = make_cuDoubleComplex( QQscale*cuCreal(Jref[3]), QQscale*cuCimag(Jref[3]) ); // = QQ/|QQ|
 
-    J[0] = cuCdiv( J[0], XX0norm ); // Essentially phase rotations
-    J[1] = cuCdiv( J[1], XY0norm );
-    J[2] = cuCdiv( J[2], YX0norm );
-    J[3] = cuCdiv( J[3], YY0norm );
+    J[0] = cuCdiv( J[0], PP0norm ); // Essentially phase rotations
+    J[1] = cuCdiv( J[1], PQ0norm );
+    J[2] = cuCdiv( J[2], QP0norm );
+    J[3] = cuCdiv( J[3], QQ0norm );
 }
 
-void zero_XY_and_YX( cuDoubleComplex *J )
-/* For J = [ XX, XY ], set XY and YX to 0 for all antennas
- *         [ YX, YY ]
+void zero_PQ_and_QP( cuDoubleComplex *J )
+/* For J = [ PP, PQ ], set PQ and QP to 0 for all antennas
+ *         [ QP, QQ ]
  */
 {
     J[1] = make_cuDoubleComplex( 0.0, 0.0 );
     J[2] = make_cuDoubleComplex( 0.0, 0.0 );
 }
 
-void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
-        int coarse_chan_idx, logger *log )
-/* Retrieve the XY phase correction from pq_phase_correction.txt for the given
+void parse_calibration_correction_file( uint32_t gpstime, struct calibration *cal )
+/* Retrieve the PQ phase correction from pq_phase_correction.txt for the given
  * gps time
  */
 {
-    char log_message[CAL_BUFSIZE + 100];
     char buffer[CAL_BUFSIZE];
     sprintf( buffer, "%s/pq_phase_correction.txt", RUNTIME_DIR );
     FILE *f = fopen( buffer, "r" );
     if (f == NULL)
     {
-        sprintf( log_message, "warning: Cannot find file '%s' -- will not apply any PQ correction",
-                buffer );
-        if (log)
-            logger_timed_message( log, log_message );
-        else
-            fprintf( stderr, "%s\n", log_message );
-
-        return;
+        fprintf( stderr, "error:: Cannot find file '%s'\n", buffer );
+        exit(EXIT_FAILURE);
     }
 
     // Values to be read in
@@ -526,6 +519,7 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
     double slope = 0.0, slope_tmp; // rad/Hz
     double offset = 0.0, offset_tmp; // rad
     char ref_tile_name[32];
+    bool found = false;
 
     // Read in the file line by line
     while (fgets( buffer, CAL_BUFSIZE, f ) != NULL)
@@ -537,11 +531,8 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
         // Parse the line
         if (sscanf( buffer, "%u %u %lf %lf %s", &from, &to, &slope_tmp, &offset_tmp, ref_tile_name ) != 5)
         {
-            sprintf( log_message, "ERROR: pq_phase_correction: cannot parse PQ phase correction file" );
-            if (log)
-                logger_timed_message( log, log_message );
-            else
-                fprintf( stderr, "%s\n", log_message );
+            fprintf( stderr, "error: parse_calibration_correction_file: cannot parse line \"%s\"",
+                    buffer );
             exit(EXIT_FAILURE);
         }
 
@@ -551,6 +542,7 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
         {
             slope = slope_tmp;
             offset = offset_tmp;
+            found = true;
             break;
         }
     }
@@ -558,35 +550,113 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
     // Close the file
     fclose( f );
 
+    // Install the read-in values into the calibration struct, as appropriate
+    if (cal->ref_ant == NULL) // i.e. the user hasn't opted to override using a custom reference tile
+    {
+        if (found)
+        {
+            cal->ref_ant = (char *)malloc( strlen(ref_tile_name) + 1 );
+            strcpy( cal->ref_ant, ref_tile_name );
+        }
+        else
+        {
+            cal->ref_ant = (char *)malloc( strlen("NONE") + 1 );
+            strcpy( cal->ref_ant, "NONE" );
+        }
+    }
+
+    if (cal->custom_pq_correction == false) // i.e. the user has not provided a custom phase correction
+    {
+        if (found)
+        {
+            cal->phase_slope  = slope;
+            cal->phase_offset = offset;
+        }
+    }
+}
+
+void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
+        int coarse_chan_idx, logger *log )
+/* Optionally apply certain corrections/adjustments to the calibration solutions
+ * given in D. The corrections to be applied are stored in the calibration struct CAL.
+ * Three corrections are applied here:
+ *   (1) Subtract the phases from each antenna by a reference antenna
+ *   (2) Remove the PQ and QP (i.e. off-diagonal) terms
+ *   (3) Apply a phase slope to the QQ terms
+ */
+{
+    char log_message[256];
+
+    // Three locally defined booleans for whether to do the corrections
+    bool apply_ref_ant         = true; // Whether this should be true is checked below
+    bool apply_zero_PQ_and_QP  = !(cal->keep_cross_terms);
+    bool apply_phase_slope     = (cal->phase_offset != 0.0 || cal->phase_slope != 0.0);
+
+    Antenna *Aref = NULL; // The reference antenna struct
+    if (strcmp(cal->ref_ant, "NONE") == 0) // i.e. the user explicitly wanted to NOT apply the reference antenna correction
+    {
+        apply_ref_ant = false;
+    }
+    else
+    {
+        Aref = find_antenna_by_name( obs_metadata, cal->ref_ant );
+
+        // If the lookup failed, then quit with an error
+        if (Aref == NULL)
+        {
+            fprintf( stderr, "error: apply_calibration_corrections: "
+                    "tile %s does not exist in this observation\n", cal->ref_ant );
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Quick check: if all three corrections are turned off, then abort here
+    if (!apply_ref_ant && !apply_zero_PQ_and_QP && !apply_phase_slope)
+        return;
+
+    // Report on what's being done, if requested
+    if (log)
+    {
+        if (apply_ref_ant)
+        {
+            sprintf( log_message, "Using tile %s as reference tile for rotating phases", cal->ref_ant );
+            logger_timed_message( log, log_message );
+        }
+        else
+        {
+            logger_timed_message( log, "Rotation of phases relative to reference tile is turned OFF" );
+        }
+
+        if (apply_zero_PQ_and_QP)
+            logger_timed_message( log, "Setting off-diagonal terms of calibration Jones matrix (PQ and QP) to zero" );
+        else
+            logger_timed_message( log, "Retaining off-diagonal terms of calibration Jones matrix (PQ and QP)" );
+
+        if (apply_phase_slope)
+        {
+            sprintf( log_message, "Applying phase slope %e*FREQ + %e (rad) to QQ", cal->phase_slope, cal->phase_offset );
+            logger_timed_message( log, log_message );
+        }
+        else
+            logger_timed_message( log, "Phase slope correction turned OFF" );
+    }
+
     // Variables for converting slope and offset to a complex phase
-    double uv_angle; // rad
-    cuDoubleComplex uv_phase; // complex phase
+    //     z = exp(i*phi) = cos(phi) + i*sin(phi),
+    // where
+    //     phi = slope*freq + offset
+
+    double          phi; // rad
+    cuDoubleComplex z;   // complex phase
+
     long int freq_ch; // Hz
     long int frequency  = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_start_hz; // Hz
     int      chan_width = obs_metadata->corr_fine_chan_width_hz; // Hz
 
-    // Get the reference antenna index
-    Antenna *Aref = find_antenna_by_name( obs_metadata, ref_tile_name );
-    if (Aref == NULL)
-    {
-        sprintf( log_message, "PQ-PHASE: Antenna \"%s\" not found in this observation", ref_tile_name );
-        if (log)
-            logger_timed_message( log, log_message );
-        else
-            fprintf( stderr, "%s\n", log_message );
-
-        Aref = find_matching_antenna( obs_metadata, &(obs_metadata->rf_inputs[0]) );
-        sprintf( log_message, "PQ-PHASE: Using (default) \"%s\" instead",
-                Aref->tile_name );
-        if (log)
-            logger_timed_message( log, log_message );
-        else
-            fprintf( stderr, "%s\n", log_message );
-    }
     uintptr_t d_idx, dref_idx;
 
     uintptr_t nant    = obs_metadata->num_ants;
-    uintptr_t nantpol = obs_metadata->num_ant_pols; // = 2 (X, Y)
+    uintptr_t nantpol = obs_metadata->num_ant_pols; // = 2 (P, Q)
     uintptr_t nchan   = obs_metadata->num_corr_fine_chans_per_coarse;
 
     // A temporary copy of the reference antenna matrix, so that we don't clobber it midway
@@ -597,15 +667,21 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
     uintptr_t ant, ch;
     for (ch = 0; ch < nchan; ch++)
     {
-        // Make a copy of the reference Jones matrix for this channel
-        // reference antenna and channel
-        dref_idx = J_IDX(Aref->ant,ch,0,0,nchan,nantpol);
-        cp2x2( &(D[dref_idx]), Dref );
+        if (apply_ref_ant)
+        {
+            // Make a copy of the reference Jones matrix for this channel
+            // reference antenna and channel
+            dref_idx = J_IDX(Aref->ant,ch,0,0,nchan,nantpol);
+            cp2x2( &(D[dref_idx]), Dref );
+        }
 
-        // Convert the slope and offset into a complex phase
-        freq_ch = frequency + ch*chan_width;    // The frequency of this fine channel (Hz)
-        uv_angle = slope*freq_ch + offset;      // (rad)
-        uv_phase = make_cuDoubleComplex( cos(uv_angle), sin(uv_angle) );
+        if (apply_phase_slope)
+        {
+            // Convert the slope and offset into a complex phase
+            freq_ch = frequency + ch*chan_width;                // The frequency of this fine channel (Hz)
+            phi = cal->phase_slope*freq_ch + cal->phase_offset; // (rad)
+            z = make_cuDoubleComplex( cos(phi), sin(phi) );
+        }
 
         for (ant = 0; ant < nant; ant++)
         {
@@ -614,14 +690,19 @@ void pq_phase_correction( uint32_t gpstime, cuDoubleComplex *D, MetafitsMetadata
             d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
 
             // Divide through a reference antenna...
-            remove_reference_phase( &(D[d_idx]), Dref );
+            if (apply_ref_ant)
+                remove_reference_phase( &(D[d_idx]), Dref );
 
             // ...zero the off-diagonal terms...
-            zero_XY_and_YX( &(D[d_idx]) );
+            if (apply_zero_PQ_and_QP)
+                zero_PQ_and_QP( &(D[d_idx]) );
 
-            // ...and apply the PQ phase correction
-            d_idx = J_IDX(ant,ch,1,1,nchan,nantpol);
-            D[d_idx] = cuCmul( D[d_idx], uv_phase );
+            // ...and apply the phase correction to the QQ element (pol 1,1)
+            if (apply_phase_slope)
+            {
+                d_idx = J_IDX(ant,ch,1,1,nchan,nantpol);
+                D[d_idx] = cuCmul( D[d_idx], z );
+            }
         }
     }
 }

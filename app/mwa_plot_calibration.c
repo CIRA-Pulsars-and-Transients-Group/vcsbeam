@@ -43,6 +43,9 @@ int main(int argc, char **argv)
 
     int i; // Generic counter
 
+    // Start a logger for output messages and time-keeping
+    logger *log = create_logger( stderr, 0 );
+
     // Get metadata for obs...
     MetafitsMetadata *obs_metadata;
     MetafitsContext  *obs_context;
@@ -64,6 +67,7 @@ int main(int argc, char **argv)
         ncoarse_chans = obs_metadata->num_metafits_coarse_chans;
     uintptr_t Ch, ch; // (Coarse channel idx, fine channel idx)
     cuDoubleComplex *D[ncoarse_chans]; // See Eqs. (27) to (29) in Ord et al. (2019)
+    logger *plog = log;
     for (Ch = 0; Ch < ncoarse_chans; Ch++)
     {
         // Read in the calibration solution
@@ -81,11 +85,12 @@ int main(int argc, char **argv)
             */
         }
 
-        // Apply the PQ phase correction, if needed/requested
-        if (cal.apply_pq_correction)
-        {
-            pq_phase_correction( obs_metadata->obs_id, D[Ch], cal_metadata, Ch, NULL );
-        }
+        // Apply any calibration corrections
+        parse_calibration_correction_file( cal_metadata->obs_id, &cal );
+        apply_calibration_corrections( &cal, D[Ch], cal_metadata, Ch, plog );
+
+        // After the first coarse channel, don't print out any more messages
+        plog = NULL;
     }
 
     // Print out results
@@ -152,26 +157,30 @@ int main(int argc, char **argv)
     mwalib_metafits_metadata_free( obs_metadata );
     mwalib_metafits_metadata_free( cal_metadata );
 
+    destroy_logger( log );
+
     return EXIT_SUCCESS;
 }
 
 
 void usage()
 {
-    printf( "\nusage: make_mwa_plot_calibrate [OPTIONS]\n");
+    printf( "\nusage: mwa_plot_calibration [OPTIONS]\n");
 
     printf( "\nOPTIONS (RTS)\n\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
             "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
             "\t-N, --ncoarse_chans=NUM    NUM is the number of coarse channels to include\n"
-            "\t-R, --ref-ant=ANT          Rotate the phases of the PP and QQ elements of the calibration\n"
-            "\t                           Jones matrices so that the phases of tile ANT align. If ANT is\n"
-            "\t                           outside the range 0-127, no phase rotation is done\n"
-            "\t                           [default: 0]\n"
-            "\t-X, --cross-terms          Retain the PQ and QP terms of the calibration solution\n"
-            "\t                           [default: off]\n"
-            "\t-U, --no-PQ-phase          Do not apply the PQ phase correction to the calibration solution\n"
+            "\t-R, --ref-ant=TILENAME     Override the reference tile given in pq_phase_correction.txt for rotating the phases\n"
+            "\t                           of the PP and QQ elements of the calibration solution. To turn off phase rotation\n"
+            "\t                           altogether, set TILENAME=NONE.\n"
+            "\t-U, --PQ-phase=PH,OFFS     Override the phase correction given in pq_phase_correction.txt. PH is given in rad/Hz\n"
+            "\t                           and OFFS given in rad, such that, the QQ element of the calibration Jones matrix\n"
+            "\t                           for frequency F (in Hz) is multiplied by\n"
+            "\t                                exp(PH*F + OFFS)\n"
+            "\t                           Setting PH = OFFS = 0 is equivalent to not performing any phase correction\n"
+            "\t-X, --cross-terms          Retain the PQ and QP terms of the calibration solution [default: off]\n"
           );
 
     printf( "\nCALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n\n"
@@ -197,11 +206,11 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
     cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
     cal->caldir              = NULL;  // The path to where the calibration solutions live
     cal->cal_type            = CAL_RTS;
-    cal->ref_ant             = 0;
-    cal->cross_terms         = 0;
+    cal->ref_ant             = NULL;
+    cal->keep_cross_terms    = false;
     cal->phase_offset        = 0.0;
     cal->phase_slope         = 0.0;
-    cal->apply_pq_correction = true;
+    cal->custom_pq_correction = false;
 
     if (argc > 1) {
 
@@ -216,14 +225,14 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                 {"ncoarse_chans",   required_argument, 0, 'N'},
                 {"offringa",        no_argument      , 0, 'O'},
                 {"ref-ant",         required_argument, 0, 'R'},
-                {"no-PQ-phase",     no_argument,       0, 'U'},
+                {"PQ-phase",        required_argument, 0, 'U'},
                 {"version",         required_argument, 0, 'V'},
                 {"cross-terms",     no_argument,       0, 'X'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "c:C:hm:N:OR:UVX",
+                             "c:C:hm:N:OR:U:VX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -252,17 +261,24 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                     cal->cal_type = CAL_OFFRINGA;
                     break;
                 case 'R':
-                    cal->ref_ant = atoi(optarg);
+                    cal->ref_ant = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( cal->ref_ant, optarg );
                     break;
                 case 'U':
-                    cal->apply_pq_correction = false;
+                    if (sscanf( optarg, "%lf,%lf", &(cal->phase_slope), &(cal->phase_offset) ) != 2)
+                    {
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "cannot parse -U option (\"%s\") as \"FLOAT,FLOAT\"\n", optarg );
+                        exit(EXIT_FAILURE);
+                    }
+                    cal->custom_pq_correction = true;
                     break;
                 case 'V':
                     printf( "MWA Beamformer %s\n", VCSBEAM_VERSION);
                     exit(0);
                     break;
                 case 'X':
-                    cal->cross_terms = 1;
+                    cal->keep_cross_terms = true;
                     break;
                 default:
                     fprintf( stderr, "error: make_plot_calibrate_parse_cmdline: "
