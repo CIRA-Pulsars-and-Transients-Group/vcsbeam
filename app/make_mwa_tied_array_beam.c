@@ -29,7 +29,7 @@ struct make_tied_array_beam_opts {
     char              *coarse_chan_str;  // Absolute or relative coarse channel number
 
     // Variables for MWA/VCS configuration
-    //char              *custom_flags;    // Use custom list for flagging antennas
+    char              *custom_flags;    // Use custom list for flagging antennas
 
     // Output options
     bool               out_fine;         // Output fine channelised data (PSRFITS)
@@ -411,6 +411,7 @@ int main(int argc, char **argv)
     free( opts.begin_str       );
     free( opts.coarse_chan_str );
     free( cal.caldir           );
+    free( opts.custom_flags    );
     free( opts.metafits        );
     free( opts.synth_filter    );
 
@@ -473,6 +474,10 @@ void usage()
     printf( "\nCALIBRATION OPTIONS (RTS)\n\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
             "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
+            "\t-F  --flagged-tiles=FILE   FILE is a text file including the TileNames of extra tiles to be flagged.\n"
+            "\t                           By default, only tiles flagged in the metafits file are flagged in the beamformer.\n"
+            "\t                           The utility 'rts_flag_ant_to_tilenames.py' can be used to convert the antenna numbers\n"
+            "\t                           listed in the RTS 'flagged_tiles.txt' file into human-readable tile names.\n"
             "\t-R, --ref-ant=ANT          Rotate the phases of the XX and YY elements of the calibration\n"
             "\t                           Jones matrices so that the phases of tile ANT align. If ANT is\n"
             "\t                           outside the range 0-127, no phase rotation is done\n"
@@ -513,6 +518,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->synth_filter       = NULL;
     opts->max_sec_per_file   = 200;   // Number of seconds per fits files
     opts->gpu_mem            = -1.0;
+    opts->custom_flags       = NULL;
 
     cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
     cal->caldir              = NULL;  // The path to where the calibration solutions live
@@ -543,6 +549,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
                 {"ref-ant",         required_argument, 0, 'R'},
+                {"flagged-tiles",   required_argument, 0, 'F'},
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"no-XY-phase",     required_argument, 0, 'U'},
                 {"offringa",        no_argument      , 0, 'O'},
@@ -582,6 +589,10 @@ void make_tied_array_beam_parse_cmdline(
                 case 'f':
                     opts->coarse_chan_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->coarse_chan_str, optarg );
+                    break;
+                case 'F':
+                    opts->custom_flags = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->custom_flags, optarg );
                     break;
                 case 'g':
                     opts->gpu_mem = atof(optarg);
