@@ -77,7 +77,7 @@ int main( int argc, char *argv[] )
 
     // Create and init the PFB struct
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
-    forward_pfb *fpfb = init_forward_pfb( vm, filter, M, PFB_MALLOC_ALL );
+    forward_pfb *fpfb = init_forward_pfb( vm, filter, M, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
 
     logger_stop_stopwatch( log, "init" );
 
@@ -91,7 +91,7 @@ int main( int argc, char *argv[] )
 
         // Actually do the PFB
         logger_start_stopwatch( log, "pfb", false );
-        cu_forward_pfb_fpga_version( fpfb, true, log );
+        cu_forward_pfb( fpfb, true, log );
         logger_stop_stopwatch( log, "pfb" );
 
         // Write out the answer to a file

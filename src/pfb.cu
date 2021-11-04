@@ -188,12 +188,30 @@ __global__ void fpga_rounding_and_demotion( void *data )
     *fy = (float)Y;
 }
 
-__global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *outdata, int *i_idx )
+__global__ void int2float( void *data )
+{
+    // Parse the block and thread idxs
+    // Each thread handles a single int
+    // It is assumed that floats are always the same size as ints (=32 bits)
+    int    i           = blockIdx.x*blockDim.x + threadIdx.x;
+    int   *data_as_int = (int *)data;
+    int   *pint        = &(data_as_int[i]);
+    float *pfloat      = (float *)pint;
+
+    // Put the result back into global memory as (32-bit) float
+    *pfloat = (float)(*pint);
+}
+
+__global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdata, int *i_idx, pfb_flags flags )
 /* This is the final step in the forward fine PFB algorithm that emulates what
    was implemented on the MWA FPGAs in Phase 1 & 2 (see above for details).
    At this point, the FFTED array contains the Fourier-transformed data that
    already represents the final channelisation. All that remains to be done is
    to pack it into the same format as the VCS recombined data.
+
+   The available flags for PACKING_FLAGS are:
+       PFB_COMPLEX_INT4    = pack into 4+4-bit complex signed ints
+       PFB_COMPLEX_FLOAT64 = pack into 64+64-bit complex signed floats (= cuDoubleComplex)
 
    Kernel signature:
      <<<(nspectra,K),I>>>
@@ -217,7 +235,6 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     int kprime   = (k + K/2) % K; // Puts the DC bin in the "middle"
 
     cuFloatComplex  *b = ffted;
-    uint8_t         *X = outdata;
 
     // Calculate the idxs into b and X
     unsigned int b_idx = m*(K*I) + i*(K) + k;
@@ -230,8 +247,22 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     double im = b[b_idx].y / K;
 
     // Put the packed value back into global memory at the appropriate place
-    X[X_idx] = PACK_NIBBLES(re, im);
-//if (m == 8200 && i == 0) printf( "%d: %10.5f %10.5f --> %10.5f %10.5f --> %02x\n", b_idx, b[b_idx].x, b[b_idx].y, re, im, X[X_idx] );
+    if (flags & PFB_TYPE_MASK == PFB_COMPLEX_INT4)
+    {
+        uint8_t *X = (uint8_t *)outdata;
+        if (flags & PFB_IMAG_PART_FIRST)
+            X[X_idx] = PACK_NIBBLES(re, im); // The macro actually swaps them by default (for legacy reasons)
+        else
+            X[X_idx] = PACK_NIBBLES(im, re);
+    }
+    else // Currently, default is cuDoubleComplex
+    {
+        cuDoubleComplex *X = (cuDoubleComplex *)outdata;
+        if (flags & PFB_IMAG_PART_FIRST)
+            X[X_idx] = make_cuDoubleComplex( im, re );
+        else
+            X[X_idx] = make_cuDoubleComplex( re, im );
+    }
 
     __syncthreads();
 }
@@ -265,6 +296,8 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, 
     // Set the next gps second to read to be the first one
     fpfb->current_gps_idx = 0;
     fpfb->read_locked     = false; // Allow reading to happen!
+    fpfb->flags           = flags; // It doesn't matter if there is "extra" information
+                                   // in these flag bits apart from the output format
 
     // Some of the data dimensions
     unsigned int nsamples = vm->vcs_metadata->num_samples_per_voltage_block *
@@ -307,7 +340,12 @@ forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, 
         // Add room for one more voltage block, for the spillover. ^^^
         // This choice only makes sense for MWAX data... but then again,
         // the same is true for this whole function!
-    fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
+
+    if (flags & PFB_TYPE_MASK == PFB_COMPLEX_INT4)
+        fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
+    else // Currently, default is cuDoubleComplex
+        fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(cuDoubleComplex);
+
     fpfb->char2s_per_second =
         (vm->vcs_metadata->num_voltage_blocks_per_second *
          vm->vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
@@ -417,16 +455,21 @@ pfb_result forward_pfb_read_next_second( forward_pfb *fpfb )
     return PFB_SUCCESS;
 }
 
-void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
-/* The wrapper function that performs the forward PFB algorithm as originally
-   implemented on the FPGAs for MWA Phases 1 & 2.
-   A cuFFT plan must already have been made, via make_forward_pfb_fpga_fft_plan().
+void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
+/* The wrapper function that performs a forward PFB on the GPU
  */
 {
     // Check that the input and output buffers have been set
-    if (fpfb->htr_data == NULL || fpfb->vcs_data == NULL)
+    if (fpfb->htr_data == NULL)
     {
-        fprintf( stderr, "error: cu_forward_pfb_fpga_version: Input and/or output data buffers "
+        fprintf( stderr, "error: cu_forward_pfb: Input data buffer "
+                "have not been set\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    if (copy_result_to_host && fpfb->vcs_data == NULL)
+    {
+        fprintf( stderr, "error: cu_forward_pfb: Output data buffer "
                 "have not been set\n" );
         exit(EXIT_FAILURE);
     }
@@ -446,9 +489,6 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
     dim3 blocks( fpfb->nspectra, fpfb->I, fpfb->P );
     dim3 threads( fpfb->K );
 
-    dim3 blocks2( fpfb->nspectra, fpfb->I );
-    dim3 threads2( fpfb->K );
-
     logger_start_stopwatch( log, "wola", true );
 
     // Set the d_weighted_overlap_add array to zeros
@@ -458,7 +498,20 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
-    fpga_rounding_and_demotion<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add );
+    if (fpfb->flags & PFB_EMULATE_FPGA)
+    {
+        // Perform the weird rounding and demotion described in the appendix of McSweeney et al. (2020)
+        dim3 blocks2( fpfb->nspectra, fpfb->I );
+        dim3 threads2( fpfb->K );
+        fpga_rounding_and_demotion<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add );
+    }
+    else
+    {
+        // Otherwise, just convert the ints to floats in preparation for the cuFFT
+        dim3 blocks2( (2 * fpfb->nspectra * fpfb->I * fpfb->K) / 1024 ); // The factor of 2 is because each thread will deal with a single int, not a single int2
+        dim3 threads2( 1024 );
+        int2float<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add );
+    }
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
@@ -489,7 +542,7 @@ void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, l
     logger_start_stopwatch( log, "pack", true );
 
     pack_into_recombined_format<<<blocks3, threads3>>>( fpfb->d_weighted_overlap_add,
-            fpfb->d_vcs_data, fpfb->d_i_output_idx );
+            fpfb->d_vcs_data, fpfb->d_i_output_idx, fpfb->flags );
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
 
