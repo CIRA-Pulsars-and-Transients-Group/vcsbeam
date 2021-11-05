@@ -271,8 +271,10 @@ int main(int argc, char **argv)
     {
         gps_second = vm->gps_seconds_to_process[timestep_idx];
 
-        sprintf( log_message, "---Processing GPS second %ld [%lu/%lu]---",
-                gps_second, timestep_idx+1, ntimesteps );
+        sprintf( log_message, "--- Processing GPS second %ld [%lu/%lu], Coarse channel %lu [%d/%d] ---",
+                gps_second, timestep_idx+1, ntimesteps,
+                vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number,
+                mpi_proc_id+1, world_size );
         logger_message( log, log_message );
 
         // Read in data from next file
@@ -759,11 +761,11 @@ void write_step( mpi_psrfits *mpfs, int npointing, bool out_fine, bool out_coars
 
         if (out_fine)
         {
+            // Write out the spliced channels
+            wait_splice_psrfits( &(mpfs[p]) );
+
             if (mpi_proc_id == mpfs[p].writer_id)
             {
-                // Write out the spliced channels
-                wait_splice_psrfits( &(mpfs[p]) );
-
                 if (psrfits_write_subint( &(mpfs[p].spliced_pf) ) != 0)
                 {
                     fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");

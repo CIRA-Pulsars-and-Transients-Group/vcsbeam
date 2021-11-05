@@ -111,7 +111,19 @@ __global__ void invj_the_data( uint8_t       *data,
                                            cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], Dy ) );
     JDy[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dx ),
                                            cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], Dy ) );
-
+#ifdef DEBUG
+    if (c==0 && s==0 && ant==0)
+    {
+        printf( "J = [%lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i]\n",
+                cuCreal(J[J_IDX(ant,c,0,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,0,nc,npol)]),
+                cuCreal(J[J_IDX(ant,c,0,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,1,nc,npol)]),
+                cuCreal(J[J_IDX(ant,c,1,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,0,nc,npol)]),
+                cuCreal(J[J_IDX(ant,c,1,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,1,nc,npol)]) );
+        printf( "v = [%lf%+lf*i; %lf%+lf*i]\n",
+                cuCreal( Dx ), cuCimag( Dx ),
+                cuCreal( Dy ), cuCimag( Dy ) );
+    }
+#endif
 }
 
 __global__ void beamform_kernel( cuDoubleComplex *JDx,
