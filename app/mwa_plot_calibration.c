@@ -87,7 +87,7 @@ int main(int argc, char **argv)
 
         // Apply any calibration corrections
         parse_calibration_correction_file( cal_metadata->obs_id, &cal );
-        apply_calibration_corrections( &cal, D[Ch], cal_metadata, Ch, plog );
+        apply_calibration_corrections( &cal, D[Ch], obs_metadata, Ch, plog );
 
         // After the first coarse channel, don't print out any more messages
         plog = NULL;
