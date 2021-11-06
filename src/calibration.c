@@ -706,3 +706,115 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
         }
     }
 }
+
+void parse_flagged_tilenames_file( char *filename, struct calibration *cal )
+{
+    // Open the file for reading
+    FILE *f = fopen( filename, "r" );
+    if (f == NULL)
+    {
+        fprintf( stderr, "error: parse_flagged_tilenames_file: "
+                "could not open file '%s' for reading. Exiting\n", filename );
+        exit(EXIT_FAILURE);
+    }
+
+    // Count the number of tiles in the list
+    char tilename[16]; // More than enough space for tilenames
+    cal->nflags = 0;
+    while (fscanf( f, "%s", tilename ) != EOF)
+        cal->nflags++;
+
+    // Allocate memory for the list of tilenames in the calibration struct
+    cal->flagged_tilenames = (char **)malloc( cal->nflags * sizeof(char *) );
+    int i;
+    for (i = 0; i < cal->nflags; i++)
+        cal->flagged_tilenames[i] = (char *)malloc( 16 * sizeof(char) );
+
+    // Rewind to the beginning of the file, and this time read them into
+    // the calibration struct
+    rewind( f );
+    for (i = 0; i < cal->nflags; i++)
+        fscanf( f, "%s", cal->flagged_tilenames[i] );
+
+    // Close the file
+    fclose( f );
+}
+
+bool tilename_is_flagged( char *tilename, struct calibration *cal )
+{
+    int i;
+    for (i = 0; i < cal->nflags; i++)
+    {
+        if (strcmp( tilename, cal->flagged_tilenames[i] ) == 0) // A match!
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void set_flagged_tiles_to_zero( struct calibration *cal, MetafitsMetadata *obs_metadata, cuDoubleComplex *D )
+{
+    // Create a "zero" matrix that will be copied
+    cuDoubleComplex Zero[4];
+    int i;
+    for (i = 0; i < 4; i++)
+        Zero[i] = make_cuDoubleComplex( 0.0, 0.0 );
+
+    // Loop through the tilenames listed in the calibration struct
+    char     *tilename; // The tilename in question
+    Antenna  *Ant;      // The Antenna struct for a given tilename
+    uint32_t  ant;      // The corresponding antenna number
+    uintptr_t nchan   = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nantpol = obs_metadata->num_ant_pols; // = 2 (P, Q)
+    uintptr_t ch;       // A particular fine channel
+    uintptr_t d_idx;    // Idx into the D array
+
+    for (i = 0; i < cal->nflags; i++)
+    {
+        // Pointer to the tilename in question
+        tilename = cal->flagged_tilenames[i];
+
+        // Find the corresponding antenna in the observation
+        Ant = find_antenna_by_name( obs_metadata, tilename );
+        ant = Ant->ant;
+
+        // Loop through the fine channels
+        for (ch = 0; ch < nchan; ch++)
+        {
+            if (tilename_is_flagged( tilename, cal ))
+            {
+                // Get the index into the D array
+                d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+
+                // Set it to zero
+                cp2x2( Zero, &(D[d_idx]) );
+            }
+        }
+    }
+}
+
+void init_calibration( struct calibration *cal )
+{
+    cal->caldir            = NULL;
+    cal->ref_ant           = NULL;
+    cal->nflags            = 0;
+    cal->flagged_tilenames = NULL;
+}
+
+void free_calibration( struct calibration *cal )
+{
+    if (cal->caldir != NULL)
+        free( cal->caldir );
+
+    if (cal->ref_ant != NULL)
+        free( cal->ref_ant );
+
+    int i;
+    for (i = 0; i < cal->nflags; i++)
+    {
+        free( cal->flagged_tilenames[i] );
+    }
+    free( cal->flagged_tilenames );
+}

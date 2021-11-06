@@ -189,6 +189,8 @@ struct calibration
     double phase_slope;        //   m = phase_slope (rad/Hz)
                                //   c = phase_offset (rad)
     bool   custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
+    int    nflags;             // The size of flagged_tilenames
+    char **flagged_tilenames;  // a list of tilenames to be flagged
 };
 
 
@@ -211,6 +213,13 @@ void zero_PQ_and_QP( cuDoubleComplex *J );
 void parse_calibration_correction_file( uint32_t gpstime, struct calibration *cal );
 void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
         int coarse_chan_idx, logger *log );
+
+void parse_flagged_tilenames_file( char *filename, struct calibration *cal );
+bool tilename_is_flagged( char *tilename, struct calibration *cal );
+void set_flagged_tiles_to_zero( struct calibration *cal, MetafitsMetadata *obs_metadata, cuDoubleComplex *D );
+
+void init_calibration( struct calibration *cal );
+void free_calibration( struct calibration *cal );
 
 #ifdef __cplusplus
 }

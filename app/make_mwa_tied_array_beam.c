@@ -71,6 +71,7 @@ int main(int argc, char **argv)
     // Parse command line arguments
     struct make_tied_array_beam_opts opts;
     struct calibration cal;           // Variables for calibration settings
+    init_calibration( &cal );
     make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
 
     int i; // Generic counter
@@ -240,6 +241,9 @@ int main(int argc, char **argv)
         */
     }
 
+    // Flag antennas that need flagging
+    // (TO DO)
+
     // Apply any calibration corrections
     parse_calibration_correction_file( vm->obs_metadata->obs_id, &cal );
     apply_calibration_corrections( &cal, D, vm->obs_metadata,
@@ -404,13 +408,11 @@ int main(int argc, char **argv)
     free( opts.datadir         );
     free( opts.begin_str       );
     free( opts.coarse_chan_str );
-    free( cal.caldir           );
     free( opts.custom_flags    );
     free( opts.metafits        );
     free( opts.synth_filter    );
 
-    if (cal.ref_ant != NULL)
-        free( cal.ref_ant );
+    free_calibration( &cal );
 
     free_formbeam( &gf );
     if (vm->do_inverse_pfb)

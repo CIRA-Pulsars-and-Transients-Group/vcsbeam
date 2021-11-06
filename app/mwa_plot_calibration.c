@@ -85,6 +85,9 @@ int main(int argc, char **argv)
             */
         }
 
+        // Flag antennas that need flagging
+        // (TO DO)
+
         // Apply any calibration corrections
         parse_calibration_correction_file( cal_metadata->obs_id, &cal );
         apply_calibration_corrections( &cal, D[Ch], obs_metadata, Ch, plog );
