@@ -776,6 +776,9 @@ void set_flagged_tiles_to_zero( struct calibration *cal, MetafitsMetadata *obs_m
         // Pointer to the tilename in question
         tilename = cal->flagged_tilenames[i];
 
+        if (!tilename_is_flagged( tilename, cal ))
+            continue;
+
         // Find the corresponding antenna in the observation
         Ant = find_antenna_by_name( obs_metadata, tilename );
         ant = Ant->ant;
@@ -783,14 +786,11 @@ void set_flagged_tiles_to_zero( struct calibration *cal, MetafitsMetadata *obs_m
         // Loop through the fine channels
         for (ch = 0; ch < nchan; ch++)
         {
-            if (tilename_is_flagged( tilename, cal ))
-            {
-                // Get the index into the D array
-                d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+            // Get the index into the D array
+            d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
 
-                // Set it to zero
-                cp2x2( Zero, &(D[d_idx]) );
-            }
+            // Set it to zero
+            cp2x2( Zero, &(D[d_idx]) );
         }
     }
 }

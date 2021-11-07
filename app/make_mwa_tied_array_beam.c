@@ -242,7 +242,11 @@ int main(int argc, char **argv)
     }
 
     // Flag antennas that need flagging
-    // (TO DO)
+    if (opts.custom_flags != NULL)
+    {
+        parse_flagged_tilenames_file( opts.custom_flags, &cal );
+        set_flagged_tiles_to_zero( &cal, vm->obs_metadata, D );
+    }
 
     // Apply any calibration corrections
     parse_calibration_correction_file( vm->obs_metadata->obs_id, &cal );

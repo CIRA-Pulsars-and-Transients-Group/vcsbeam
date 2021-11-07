@@ -18,8 +18,9 @@
 #include "vcsbeam.h"
 
 struct make_plot_calibrate_opts {
-    char *metafits; // filename of the metafits file
-    uintptr_t ncoarse_chans;
+    char      *metafits; // filename of the metafits file
+    uintptr_t  ncoarse_chans;
+    char      *custom_flags;
 };
 
 /***********************
@@ -37,8 +38,10 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
 int main(int argc, char **argv)
 {
     // Parse command line arguments
-    struct calibration cal;           // Variables for calibration settings
     struct make_plot_calibrate_opts opts;
+    struct calibration              cal;  // Variables for calibration settings
+    init_calibration( &cal );
+
     make_plot_calibrate_parse_cmdline( argc, argv, &opts, &cal );
 
     int i; // Generic counter
@@ -86,7 +89,11 @@ int main(int argc, char **argv)
         }
 
         // Flag antennas that need flagging
-        // (TO DO)
+        if (opts.custom_flags != NULL)
+        {
+            parse_flagged_tilenames_file( opts.custom_flags, &cal );
+            set_flagged_tiles_to_zero( &cal, obs_metadata, D[Ch] );
+        }
 
         // Apply any calibration corrections
         parse_calibration_correction_file( cal_metadata->obs_id, &cal );
@@ -154,6 +161,9 @@ int main(int argc, char **argv)
     free( cal.caldir           );
     free( opts.metafits        );
 
+    if (opts.custom_flags != NULL)
+        free( opts.custom_flags );
+
     // Free mwalib structs
     mwalib_metafits_context_free( obs_context );
     mwalib_metafits_context_free( cal_context );
@@ -174,6 +184,7 @@ void usage()
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
             "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
+            "\t-F, --flagged-tiles=FILE   FILE is a text file containing the TileNames of tiles to be flagged\n"
             "\t-N, --ncoarse_chans=NUM    NUM is the number of coarse channels to include\n"
             "\t-R, --ref-ant=TILENAME     Override the reference tile given in pq_phase_correction.txt for rotating the phases\n"
             "\t                           of the PP and QQ elements of the calibration solution. To turn off phase rotation\n"
@@ -206,6 +217,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
     // Set defaults
     opts->ncoarse_chans      = -1;    // Number of coarse channels to include
     opts->metafits           = NULL;  // filename of the metafits file for the target observations
+    opts->custom_flags       = NULL;  // filename of text file containing TileNames of tiles to be flagged
     cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
     cal->caldir              = NULL;  // The path to where the calibration solutions live
     cal->cal_type            = CAL_RTS;
@@ -223,6 +235,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
             static struct option long_options[] = {
                 {"cal-location",    required_argument, 0, 'C'},
                 {"cal-metafits",    required_argument, 0, 'c'},
+                {"flagged-tiles",   required_argument, 0, 'F'},
                 {"help",            no_argument,       0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"ncoarse_chans",   required_argument, 0, 'N'},
@@ -235,7 +248,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "c:C:hm:N:OR:U:VX",
+                             "c:C:F:hm:N:OR:U:VX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -250,15 +263,19 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                     cal->caldir = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( cal->caldir, optarg );
                     break;
+                case 'F':
+                    opts->custom_flags = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->custom_flags, optarg );
+                    break;
+                case 'h':
+                    usage();
+                    exit(EXIT_SUCCESS);
+                    break;
                 case 'm':
                     opts->metafits = strdup(optarg);
                     break;
                 case 'N':
                     opts->ncoarse_chans = atoi(optarg);
-                    break;
-                case 'h':
-                    usage();
-                    exit(EXIT_SUCCESS);
                     break;
                 case 'O':
                     cal->cal_type = CAL_OFFRINGA;
