@@ -57,6 +57,7 @@ if __name__ == "__main__":
     plt.subplots_adjust(wspace=0, hspace=0)
     fig_phase.suptitle("Phases\n[b c]\n[m r]")
 
+    '''
     # Amps
     print("Plotting amps...")
 
@@ -82,5 +83,6 @@ if __name__ == "__main__":
 
     plt.subplots_adjust(wspace=0, hspace=0)
     fig_amps.suptitle("Amps\n[b c]\n[m r]")
+    '''
 
     plt.show()

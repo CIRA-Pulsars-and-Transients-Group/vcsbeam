@@ -78,7 +78,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     read_dijones_file((double **)Dd, NULL, cal_metadata->num_ants, dijones_path);
 
     // Read in the Bandpass file
-    //read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
+    read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
 
     // Make the master mpi thread print out the antenna names of both
     // obs and cal metafits. "Header" printed here, actual numbers
@@ -145,8 +145,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // Bandpass matrices (Db) should be multiplied on the _right_ of the
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
-            //mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
-            cp2x2( Dd[dd_idx], &(D[d_idx]) );
+            mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
+            //cp2x2( Dd[dd_idx], &(D[d_idx]) );
         }
     }
 
@@ -485,10 +485,11 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
     QP0norm = make_cuDoubleComplex( QPscale*cuCreal(Jref[2]), QPscale*cuCimag(Jref[2]) ); // = QP/|QP|
     QQ0norm = make_cuDoubleComplex( QQscale*cuCreal(Jref[3]), QQscale*cuCimag(Jref[3]) ); // = QQ/|QQ|
 
-    J[0] = cuCdiv( J[0], PP0norm ); // Essentially phase rotations
-    J[1] = cuCdiv( J[1], PQ0norm );
-    J[2] = cuCdiv( J[2], QP0norm );
-    J[3] = cuCdiv( J[3], QQ0norm );
+    // Essentially phase rotations
+    if (isfinite(PPscale)) { J[0] = cuCdiv( J[0], PP0norm ); }
+    if (isfinite(PQscale)) { J[1] = cuCdiv( J[1], PQ0norm ); }
+    if (isfinite(QPscale)) { J[2] = cuCdiv( J[2], QP0norm ); }
+    if (isfinite(QQscale)) { J[3] = cuCdiv( J[3], QQ0norm ); }
 }
 
 void zero_PQ_and_QP( cuDoubleComplex *J )
@@ -657,7 +658,7 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
 
     uintptr_t nant    = obs_metadata->num_ants;
     uintptr_t nantpol = obs_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t nchan   = obs_metadata->num_corr_fine_chans_per_coarse;
+    uintptr_t nchan   = obs_metadata->num_volt_fine_chans_per_coarse;
 
     // A temporary copy of the reference antenna matrix, so that we don't clobber it midway
     // through this operation!
@@ -691,7 +692,10 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
 
             // Divide through a reference antenna...
             if (apply_ref_ant)
+            {
                 remove_reference_phase( &(D[d_idx]), Dref );
+//if (ch == 0) fprintf( stderr, "Dividing antenna %lu\n", ant );
+            }
 
             // ...zero the off-diagonal terms...
             if (apply_zero_PQ_and_QP)
