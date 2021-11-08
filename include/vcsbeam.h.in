@@ -188,6 +188,7 @@ struct calibration
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where
     double phase_slope;        //   m = phase_slope (rad/Hz)
                                //   c = phase_offset (rad)
+    bool   use_bandpass;       // Use the Bandpass solutions
     bool   custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
     int    nflags;             // The size of flagged_tilenames
     char **flagged_tilenames;  // a list of tilenames to be flagged
@@ -199,7 +200,8 @@ extern "C" {
 #endif
 
 cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx, logger *log );
+        MetafitsMetadata *obs_metadata, bool use_bandpass, const char *caldir,
+        uintptr_t coarse_chan_idx, logger *log );
 
 void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,

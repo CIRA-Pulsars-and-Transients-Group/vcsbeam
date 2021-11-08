@@ -229,7 +229,7 @@ int main(int argc, char **argv)
 
     if (cal.cal_type == CAL_RTS)
     {
-        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.caldir, vm->coarse_chan_idxs_to_process[0], log );
+        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.use_bandpass, cal.caldir, vm->coarse_chan_idxs_to_process[0], log );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
@@ -477,6 +477,7 @@ void usage()
           );
 
     printf( "\nCALIBRATION OPTIONS (RTS)\n\n"
+            "\t-B, --bandpass             Use the Bandpass calibrations (as well as the DIJones solutions) [default: off]\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
             "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
             "\t-F  --flagged-tiles=FILE   FILE is a text file including the TileNames of extra tiles to be flagged.\n"
@@ -536,6 +537,7 @@ void make_tied_array_beam_parse_cmdline(
     cal->phase_offset        = 0.0;
     cal->phase_slope         = 0.0;
     cal->custom_pq_correction = false;
+    cal->use_bandpass        = false; // use the Bandpass calibration solutions
 
     if (argc > 1) {
 
@@ -544,6 +546,7 @@ void make_tied_array_beam_parse_cmdline(
 
             static struct option long_options[] = {
                 {"begin",           required_argument, 0, 'b'},
+                {"bandpass",        no_argument,       0, 'B'},
                 {"out-fine",        no_argument,       0, 'p'},
                 {"out-coarse",      no_argument,       0, 'v'},
                 {"emulate_legacy",  no_argument,       0, 'e'},
@@ -568,7 +571,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:c:C:d:e:f:F:g:hm:OpP:R:S:t:T:U:vVX",
+                             "b:Bc:C:d:e:f:F:g:hm:OpP:R:S:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -578,6 +581,9 @@ void make_tied_array_beam_parse_cmdline(
                 case 'b':
                     opts->begin_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->begin_str, optarg );
+                    break;
+                case 'B':
+                    cal->use_bandpass = true;
                     break;
                 case 'c':
                     cal->metafits = (char *)malloc( strlen(optarg) + 1 );

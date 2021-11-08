@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         // Read in the calibration solution
         if (cal.cal_type == CAL_RTS)
         {
-            D[Ch] = get_rts_solution( cal_metadata, obs_metadata, cal.caldir, Ch, NULL );
+            D[Ch] = get_rts_solution( cal_metadata, obs_metadata, cal.use_bandpass, cal.caldir, Ch, NULL );
         }
         else if (cal.cal_type == CAL_OFFRINGA)
         {
@@ -182,6 +182,7 @@ void usage()
 
     printf( "\nOPTIONS (RTS)\n\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
+            "\t-B, --bandpass             Use the Bandpass calibrations (as well as the DIJones solutions) [default: off]\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
             "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
             "\t-F, --flagged-tiles=FILE   FILE is a text file containing the TileNames of tiles to be flagged\n"
@@ -218,6 +219,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
     opts->ncoarse_chans      = -1;    // Number of coarse channels to include
     opts->metafits           = NULL;  // filename of the metafits file for the target observations
     opts->custom_flags       = NULL;  // filename of text file containing TileNames of tiles to be flagged
+    cal->use_bandpass        = false; // use the Bandpass calibration solutions
     cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
     cal->caldir              = NULL;  // The path to where the calibration solutions live
     cal->cal_type            = CAL_RTS;
@@ -233,6 +235,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
         while (1)
         {
             static struct option long_options[] = {
+                {"bandpass",        no_argument,       0, 'B'},
                 {"cal-location",    required_argument, 0, 'C'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"flagged-tiles",   required_argument, 0, 'F'},
@@ -248,13 +251,16 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "c:C:F:hm:N:OR:U:VX",
+                             "Bc:C:F:hm:N:OR:U:VX",
                              long_options, &option_index);
             if (c == -1)
                 break;
 
             switch(c)
             {
+                case 'B':
+                    cal->use_bandpass = true;
+                    break;
                 case 'c':
                     cal->metafits = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( cal->metafits, optarg );

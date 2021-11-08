@@ -15,7 +15,8 @@
 #include "vcsbeam.h"
 
 cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx, logger *log )
+        MetafitsMetadata *obs_metadata, bool use_bandpass, const char *caldir,
+        uintptr_t coarse_chan_idx, logger *log )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel.
@@ -78,7 +79,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     read_dijones_file((double **)Dd, NULL, cal_metadata->num_ants, dijones_path);
 
     // Read in the Bandpass file
-    read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
+    if (use_bandpass)
+        read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
 
     // Make the master mpi thread print out the antenna names of both
     // obs and cal metafits. "Header" printed here, actual numbers
@@ -145,8 +147,10 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // Bandpass matrices (Db) should be multiplied on the _right_ of the
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
-            mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
-            //cp2x2( Dd[dd_idx], &(D[d_idx]) );
+            if (use_bandpass)
+                mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
+            else
+                cp2x2( Dd[dd_idx], &(D[d_idx]) );
         }
     }
 
