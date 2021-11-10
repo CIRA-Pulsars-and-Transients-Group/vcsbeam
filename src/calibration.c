@@ -115,7 +115,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
     // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
-    uintptr_t cal_ch, cal_ant, obs_ant, dd_idx;
+    uintptr_t cal_ch, obs_ant, dd_idx;
     uintptr_t d_idx;
     uintptr_t i; // (i)dx into rf_inputs
     Rfinput *obs_rfinput, *cal_rfinput;
@@ -698,17 +698,24 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
             if (apply_ref_ant)
             {
                 remove_reference_phase( &(D[d_idx]), Dref );
-//if (ch == 0) fprintf( stderr, "Dividing antenna %lu\n", ant );
             }
 
             // ...zero the off-diagonal terms...
             if (apply_zero_PQ_and_QP)
                 zero_PQ_and_QP( &(D[d_idx]) );
 
-            // ...and apply the phase correction to the PP element (pol 0,0)
+            // ...and apply the phase correction:
+            // DZ = [ d00 d01 ] [ 1 0 ]
+            //      [ d10 d11 ] [ 0 z ]
+            //
+            //    = [ d00  d01*z ]
+            //      [ d10  d11*z ]
             if (apply_phase_slope)
             {
-                d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+                d_idx = J_IDX(ant,ch,0,1,nchan,nantpol);
+                D[d_idx] = cuCmul( D[d_idx], z );
+
+                d_idx = J_IDX(ant,ch,1,1,nchan,nantpol);
                 D[d_idx] = cuCmul( D[d_idx], z );
             }
         }
