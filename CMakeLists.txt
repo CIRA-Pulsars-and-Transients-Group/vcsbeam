@@ -34,6 +34,7 @@ configure_file(include/vcsbeam.h.in vcsbeam.h)
 
 add_subdirectory(src)
 add_subdirectory(app)
+add_subdirectory(utils)
 
 if(XGPU_FOUND AND CFITSIO_FOUND)
     add_subdirectory(offline_correlator)
