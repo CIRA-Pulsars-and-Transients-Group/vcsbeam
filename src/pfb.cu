@@ -188,7 +188,7 @@ __global__ void fpga_rounding_and_demotion( void *data )
     *fy = (float)Y;
 }
 
-__global__ void int2float( void *data )
+__global__ void int2float( void *data, double scale )
 {
     // Parse the block and thread idxs
     // Each thread handles a single int
@@ -198,8 +198,8 @@ __global__ void int2float( void *data )
     int   *pint        = &(data_as_int[i]);
     float *pfloat      = (float *)pint;
 
-    // Put the result back into global memory as (32-bit) float
-    *pfloat = (float)(*pint);
+    // Put the result back into global memory as (32-bit) float, with optional scaling factor applied
+    *pfloat = (float)(*pint) * scale;
 }
 
 __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdata, int *i_idx, pfb_flags flags )
@@ -510,7 +510,8 @@ void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
         // Otherwise, just convert the ints to floats in preparation for the cuFFT
         dim3 blocks2( (2 * fpfb->nspectra * fpfb->I * fpfb->K) / 1024 ); // The factor of 2 is because each thread will deal with a single int, not a single int2
         dim3 threads2( 1024 );
-        int2float<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add );
+        double scale = 1.0/16384.0; // equivalent to the ">> 14" operation applied in fpga_rounding_and_demotion()
+        int2float<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add, scale );
     }
     cudaDeviceSynchronize();
     gpuErrchk( cudaPeekAtLastError() );
@@ -522,7 +523,6 @@ void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
 
     int batch;
     for (batch = 0; batch < fpfb->I / fpfb->ninputs_per_cufft_batch; batch++)
-    //for (batch = 0; batch < 1; batch++)
     {
         cufftExecC2C(
                 fpfb->plan,
