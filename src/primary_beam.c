@@ -327,9 +327,8 @@ void parallactic_angle_correction(
     P[3] = -sin(pa);
 }
 
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV )
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J )
 {
-    cuDoubleComplex *J; // This must be unallocated because Hyperbeam's calc_jones() does the allocation
     cuDoubleComplex JH[NCOMPLEXELEMENTS];
     cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
     cuDoubleComplex coherency[NCOMPLEXELEMENTS];
@@ -340,16 +339,16 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
 
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
-    J = (cuDoubleComplex *)calc_jones( beam, az, za, freq_hz, delays, amps, zenith_norm );
-    mult2x2d_RxC( P, J, J );
+    *J = (cuDoubleComplex *)calc_jones( beam, az, za, freq_hz, delays, amps, zenith_norm );
+    mult2x2d_RxC( P, *J, *J );
 
     // Convert this jones matrix to Stokes parameters for I, Q, U, V skies
     int stokes;
     for (stokes = 0; stokes < 4; stokes++)
     {
-        calc_hermitian( J, JH );
+        calc_hermitian( *J, JH );
         mult2x2d( (cuDoubleComplex *)sky[stokes], JH, sky_x_JH );
-        mult2x2d( J, sky_x_JH, coherency );
+        mult2x2d( *J, sky_x_JH, coherency );
 
         if (stokes == 0) // Stokes I
             IQUV[0] = 0.5*cuCreal( cuCadd( coherency[0], coherency[3] ) );
@@ -360,7 +359,5 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
         else  // if (stokes == 3) // Stokes V
             IQUV[3] = -cuCimag( coherency[1] );
     }
-
-    free( J );
 }
 

@@ -30,7 +30,6 @@ struct mwa_track_primary_beam_response_opts {
 void usage();
 void mwa_track_primary_beam_response_parse_cmdline(
         int argc, char **argv, struct mwa_track_primary_beam_response_opts *opts );
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV );
 
 int main(int argc, char **argv)
 {
@@ -115,6 +114,7 @@ int main(int argc, char **argv)
     // Loop over RA
     int X_idx, Y_idx;
     double X, Y;
+    cuDoubleComplex *J=  NULL;
     for (X_idx = 0; X_idx < opts.width_pixels; X_idx++)
     {
         X = X0 + X_idx*dX;
@@ -127,11 +127,13 @@ int main(int argc, char **argv)
             calc_beam_geom( X, Y, mjd, &arrf_bg );
             array_factor = calc_array_factor( obs_metadata, freq_hz, &arrf_bg, &bg );
 
-            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV );
+            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J );
 
             // Print out the results
             fprintf( opts.fout, "%f %f %f\n",
                     X, Y, array_factor*IQUV[0] );
+
+            free( J );
         }
 
         // Insert a blank line in the output, to delimit different rows

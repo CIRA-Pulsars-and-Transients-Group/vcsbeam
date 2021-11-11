@@ -1,11 +1,21 @@
+#!/usr/bin/env python3
+
 import sys
 from astropy.io import fits
+import numpy as np
 
-hdu = fits.open(sys.argv[1])
+if len(sys.argv) < 3:
+    print("usage: {} [columnname1, columnname2, ...] [metafits file]")
+    exit(0)
 
-rows = zip(hdu[1].data["Input"], hdu[1].data["Antenna"], hdu[1].data["Tile"], hdu[1].data["TileName"], hdu[1].data["Pol"], hdu[1].data["VCSOrder"])
+hdu = fits.open(sys.argv[-1])
 
-print("# Input | Antenna | Tile | TileName | Pol | VCSOrder")
+fields = sys.argv[1:-1]
+columns = np.array([hdu[1].data[field] for field in fields])
+
+rows = zip(*columns)
+
+print("# " + " | ".join(fields))
 for r in rows:
-    print("{:3d} {:3d} {:5d} {:8s} {:1s} {:3d}".format(*r))
+    print(" ".join(list(r)))
 

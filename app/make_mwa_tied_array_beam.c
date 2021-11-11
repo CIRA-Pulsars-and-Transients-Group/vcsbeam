@@ -71,6 +71,7 @@ int main(int argc, char **argv)
     // Parse command line arguments
     struct make_tied_array_beam_opts opts;
     struct calibration cal;           // Variables for calibration settings
+    init_calibration( &cal );
     make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
 
     int i; // Generic counter
@@ -228,7 +229,7 @@ int main(int argc, char **argv)
 
     if (cal.cal_type == CAL_RTS)
     {
-        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.caldir, vm->coarse_chan_idxs_to_process[0], log );
+        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.use_bandpass, cal.caldir, vm->coarse_chan_idxs_to_process[0], log );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
@@ -238,6 +239,13 @@ int main(int argc, char **argv)
         // Find the ordering of antennas in Offringa solutions from metafits file
         read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
         */
+    }
+
+    // Flag antennas that need flagging
+    if (opts.custom_flags != NULL)
+    {
+        parse_flagged_tilenames_file( opts.custom_flags, &cal );
+        set_flagged_tiles_to_zero( &cal, vm->obs_metadata, D );
     }
 
     // Apply any calibration corrections
@@ -271,8 +279,10 @@ int main(int argc, char **argv)
     {
         gps_second = vm->gps_seconds_to_process[timestep_idx];
 
-        sprintf( log_message, "---Processing GPS second %ld [%lu/%lu]---",
-                gps_second, timestep_idx+1, ntimesteps );
+        sprintf( log_message, "--- Processing GPS second %ld [%lu/%lu], Coarse channel %lu [%d/%d] ---",
+                gps_second, timestep_idx+1, ntimesteps,
+                vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number,
+                mpi_proc_id+1, world_size );
         logger_message( log, log_message );
 
         // Read in data from next file
@@ -402,13 +412,11 @@ int main(int argc, char **argv)
     free( opts.datadir         );
     free( opts.begin_str       );
     free( opts.coarse_chan_str );
-    free( cal.caldir           );
     free( opts.custom_flags    );
     free( opts.metafits        );
     free( opts.synth_filter    );
 
-    if (cal.ref_ant != NULL)
-        free( cal.ref_ant );
+    free_calibration( &cal );
 
     free_formbeam( &gf );
     if (vm->do_inverse_pfb)
@@ -469,6 +477,7 @@ void usage()
           );
 
     printf( "\nCALIBRATION OPTIONS (RTS)\n\n"
+            "\t-B, --bandpass             Use the Bandpass calibrations (as well as the DIJones solutions) [default: off]\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
             "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
             "\t-F  --flagged-tiles=FILE   FILE is a text file including the TileNames of extra tiles to be flagged.\n"
@@ -528,6 +537,7 @@ void make_tied_array_beam_parse_cmdline(
     cal->phase_offset        = 0.0;
     cal->phase_slope         = 0.0;
     cal->custom_pq_correction = false;
+    cal->use_bandpass        = false; // use the Bandpass calibration solutions
 
     if (argc > 1) {
 
@@ -536,6 +546,7 @@ void make_tied_array_beam_parse_cmdline(
 
             static struct option long_options[] = {
                 {"begin",           required_argument, 0, 'b'},
+                {"bandpass",        no_argument,       0, 'B'},
                 {"out-fine",        no_argument,       0, 'p'},
                 {"out-coarse",      no_argument,       0, 'v'},
                 {"emulate_legacy",  no_argument,       0, 'e'},
@@ -560,7 +571,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:c:C:d:e:f:F:g:hm:OpP:R:S:t:T:U:vVX",
+                             "b:Bc:C:d:e:f:F:g:hm:OpP:R:S:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -570,6 +581,9 @@ void make_tied_array_beam_parse_cmdline(
                 case 'b':
                     opts->begin_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->begin_str, optarg );
+                    break;
+                case 'B':
+                    cal->use_bandpass = true;
                     break;
                 case 'c':
                     cal->metafits = (char *)malloc( strlen(optarg) + 1 );
@@ -759,11 +773,11 @@ void write_step( mpi_psrfits *mpfs, int npointing, bool out_fine, bool out_coars
 
         if (out_fine)
         {
+            // Write out the spliced channels
+            wait_splice_psrfits( &(mpfs[p]) );
+
             if (mpi_proc_id == mpfs[p].writer_id)
             {
-                // Write out the spliced channels
-                wait_splice_psrfits( &(mpfs[p]) );
-
                 if (psrfits_write_subint( &(mpfs[p].spliced_pf) ) != 0)
                 {
                     fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");

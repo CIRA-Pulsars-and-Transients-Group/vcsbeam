@@ -15,7 +15,8 @@
 #include "vcsbeam.h"
 
 cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx, logger *log )
+        MetafitsMetadata *obs_metadata, bool use_bandpass, const char *caldir,
+        uintptr_t coarse_chan_idx, logger *log )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel.
@@ -78,7 +79,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     read_dijones_file((double **)Dd, NULL, cal_metadata->num_ants, dijones_path);
 
     // Read in the Bandpass file
-    //read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
+    if (use_bandpass)
+        read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
 
     // Make the master mpi thread print out the antenna names of both
     // obs and cal metafits. "Header" printed here, actual numbers
@@ -113,7 +115,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
     // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
-    uintptr_t cal_ch, cal_ant, obs_ant, dd_idx;
+    uintptr_t cal_ch, obs_ant, dd_idx;
     uintptr_t d_idx;
     uintptr_t i; // (i)dx into rf_inputs
     Rfinput *obs_rfinput, *cal_rfinput;
@@ -145,8 +147,10 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // Bandpass matrices (Db) should be multiplied on the _right_ of the
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
-            //mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
-            cp2x2( Dd[dd_idx], &(D[d_idx]) );
+            if (use_bandpass)
+                mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
+            else
+                cp2x2( Dd[dd_idx], &(D[d_idx]) );
         }
     }
 
@@ -485,10 +489,11 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
     QP0norm = make_cuDoubleComplex( QPscale*cuCreal(Jref[2]), QPscale*cuCimag(Jref[2]) ); // = QP/|QP|
     QQ0norm = make_cuDoubleComplex( QQscale*cuCreal(Jref[3]), QQscale*cuCimag(Jref[3]) ); // = QQ/|QQ|
 
-    J[0] = cuCdiv( J[0], PP0norm ); // Essentially phase rotations
-    J[1] = cuCdiv( J[1], PQ0norm );
-    J[2] = cuCdiv( J[2], QP0norm );
-    J[3] = cuCdiv( J[3], QQ0norm );
+    // Essentially phase rotations
+    if (isfinite(PPscale)) { J[0] = cuCdiv( J[0], PP0norm ); }
+    if (isfinite(PQscale)) { J[1] = cuCdiv( J[1], PQ0norm ); }
+    if (isfinite(QPscale)) { J[2] = cuCdiv( J[2], QP0norm ); }
+    if (isfinite(QQscale)) { J[3] = cuCdiv( J[3], QQ0norm ); }
 }
 
 void zero_PQ_and_QP( cuDoubleComplex *J )
@@ -657,7 +662,7 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
 
     uintptr_t nant    = obs_metadata->num_ants;
     uintptr_t nantpol = obs_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t nchan   = obs_metadata->num_corr_fine_chans_per_coarse;
+    uintptr_t nchan   = obs_metadata->num_volt_fine_chans_per_coarse;
 
     // A temporary copy of the reference antenna matrix, so that we don't clobber it midway
     // through this operation!
@@ -691,18 +696,140 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
 
             // Divide through a reference antenna...
             if (apply_ref_ant)
+            {
                 remove_reference_phase( &(D[d_idx]), Dref );
+            }
 
             // ...zero the off-diagonal terms...
             if (apply_zero_PQ_and_QP)
                 zero_PQ_and_QP( &(D[d_idx]) );
 
-            // ...and apply the phase correction to the PP element (pol 0,0)
+            // ...and apply the phase correction:
+            // DZ = [ d00 d01 ] [ 1 0 ]
+            //      [ d10 d11 ] [ 0 z ]
+            //
+            //    = [ d00  d01*z ]
+            //      [ d10  d11*z ]
             if (apply_phase_slope)
             {
-                d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+                d_idx = J_IDX(ant,ch,0,1,nchan,nantpol);
+                D[d_idx] = cuCmul( D[d_idx], z );
+
+                d_idx = J_IDX(ant,ch,1,1,nchan,nantpol);
                 D[d_idx] = cuCmul( D[d_idx], z );
             }
         }
     }
+}
+
+void parse_flagged_tilenames_file( char *filename, struct calibration *cal )
+{
+    // Open the file for reading
+    FILE *f = fopen( filename, "r" );
+    if (f == NULL)
+    {
+        fprintf( stderr, "error: parse_flagged_tilenames_file: "
+                "could not open file '%s' for reading. Exiting\n", filename );
+        exit(EXIT_FAILURE);
+    }
+
+    // Count the number of tiles in the list
+    char tilename[16]; // More than enough space for tilenames
+    cal->nflags = 0;
+    while (fscanf( f, "%s", tilename ) != EOF)
+        cal->nflags++;
+
+    // Allocate memory for the list of tilenames in the calibration struct
+    cal->flagged_tilenames = (char **)malloc( cal->nflags * sizeof(char *) );
+    int i;
+    for (i = 0; i < cal->nflags; i++)
+        cal->flagged_tilenames[i] = (char *)malloc( 16 * sizeof(char) );
+
+    // Rewind to the beginning of the file, and this time read them into
+    // the calibration struct
+    rewind( f );
+    for (i = 0; i < cal->nflags; i++)
+        fscanf( f, "%s", cal->flagged_tilenames[i] );
+
+    // Close the file
+    fclose( f );
+}
+
+bool tilename_is_flagged( char *tilename, struct calibration *cal )
+{
+    int i;
+    for (i = 0; i < cal->nflags; i++)
+    {
+        if (strcmp( tilename, cal->flagged_tilenames[i] ) == 0) // A match!
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void set_flagged_tiles_to_zero( struct calibration *cal, MetafitsMetadata *obs_metadata, cuDoubleComplex *D )
+{
+    // Create a "zero" matrix that will be copied
+    cuDoubleComplex Zero[4];
+    int i;
+    for (i = 0; i < 4; i++)
+        Zero[i] = make_cuDoubleComplex( 0.0, 0.0 );
+
+    // Loop through the tilenames listed in the calibration struct
+    char     *tilename; // The tilename in question
+    Antenna  *Ant;      // The Antenna struct for a given tilename
+    uint32_t  ant;      // The corresponding antenna number
+    uintptr_t nchan   = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nantpol = obs_metadata->num_ant_pols; // = 2 (P, Q)
+    uintptr_t ch;       // A particular fine channel
+    uintptr_t d_idx;    // Idx into the D array
+
+    for (i = 0; i < cal->nflags; i++)
+    {
+        // Pointer to the tilename in question
+        tilename = cal->flagged_tilenames[i];
+
+        if (!tilename_is_flagged( tilename, cal ))
+            continue;
+
+        // Find the corresponding antenna in the observation
+        Ant = find_antenna_by_name( obs_metadata, tilename );
+        ant = Ant->ant;
+
+        // Loop through the fine channels
+        for (ch = 0; ch < nchan; ch++)
+        {
+            // Get the index into the D array
+            d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+
+            // Set it to zero
+            cp2x2( Zero, &(D[d_idx]) );
+        }
+    }
+}
+
+void init_calibration( struct calibration *cal )
+{
+    cal->caldir            = NULL;
+    cal->ref_ant           = NULL;
+    cal->nflags            = 0;
+    cal->flagged_tilenames = NULL;
+}
+
+void free_calibration( struct calibration *cal )
+{
+    if (cal->caldir != NULL)
+        free( cal->caldir );
+
+    if (cal->ref_ant != NULL)
+        free( cal->ref_ant );
+
+    int i;
+    for (i = 0; i < cal->nflags; i++)
+    {
+        free( cal->flagged_tilenames[i] );
+    }
+    free( cal->flagged_tilenames );
 }

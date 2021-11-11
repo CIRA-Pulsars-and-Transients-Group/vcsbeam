@@ -17,6 +17,8 @@ if __name__ == '__main__':
     tilenames = hdu[1].data['TileName']
 
     flags = np.loadtxt(flagged_file)
+    if flags.ndim == 0:
+        flags = np.array([flags])
 
     for i in flags.astype(int):
         print(tilenames[i*2])

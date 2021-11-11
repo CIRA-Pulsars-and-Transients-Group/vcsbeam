@@ -188,7 +188,10 @@ struct calibration
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where
     double phase_slope;        //   m = phase_slope (rad/Hz)
                                //   c = phase_offset (rad)
+    bool   use_bandpass;       // Use the Bandpass solutions
     bool   custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
+    int    nflags;             // The size of flagged_tilenames
+    char **flagged_tilenames;  // a list of tilenames to be flagged
 };
 
 
@@ -197,7 +200,8 @@ extern "C" {
 #endif
 
 cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, const char *caldir, uintptr_t coarse_chan_idx, logger *log );
+        MetafitsMetadata *obs_metadata, bool use_bandpass, const char *caldir,
+        uintptr_t coarse_chan_idx, logger *log );
 
 void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
@@ -211,6 +215,13 @@ void zero_PQ_and_QP( cuDoubleComplex *J );
 void parse_calibration_correction_file( uint32_t gpstime, struct calibration *cal );
 void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
         int coarse_chan_idx, logger *log );
+
+void parse_flagged_tilenames_file( char *filename, struct calibration *cal );
+bool tilename_is_flagged( char *tilename, struct calibration *cal );
+void set_flagged_tiles_to_zero( struct calibration *cal, MetafitsMetadata *obs_metadata, cuDoubleComplex *D );
+
+void init_calibration( struct calibration *cal );
+void free_calibration( struct calibration *cal );
 
 #ifdef __cplusplus
 }
@@ -1061,7 +1072,7 @@ void create_primary_beam(
 
 void free_primary_beam( primary_beam *pb );
 
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV );
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J );
 
 #ifdef __cplusplus
 }
