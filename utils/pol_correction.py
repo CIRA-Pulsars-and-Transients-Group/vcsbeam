@@ -179,7 +179,7 @@ class InteractiveSlopePlot:
         self.ax.set_xlabel("Frequency (MHz)")
         self.ax.set_ylabel("Phase (deg)")
         self.ax.set_ylim(-180, 180)
-        self.ax.set_title("Slope = {} rad/Hz\nOffset = {}".format(self.slope, self.offset))
+        self.ax.set_title("Slope = {} rad/Hz\nOffset = {} rad".format(self.slope, self.offset))
 
     def plot_stokes(self, s, ax, t=None):
         if t is None:
@@ -217,7 +217,10 @@ class InteractiveSlopePlot:
                 else:
                     ax.set_ylabel("Frequency (MHz)")
 
-            ax.set_xlabel("Phase bin")
+            if orig_or_corr == "corr":
+                ax.set_xlabel("Phase bin")
+            else:
+                ax.set_title(ss[i])
 
 if __name__ == '__main__':
     pdvfile = sys.argv[1]
