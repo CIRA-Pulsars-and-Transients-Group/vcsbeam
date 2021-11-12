@@ -281,9 +281,6 @@ void read_bandpass_file(
 
         // Convert the channel frequencies (in MHz) to channel indices
         chan_idx = (int)roundf( chan_MHz*1e6 / (double)chan_width );
-//fprintf( stderr, "chan_MHz   = %lf\n", chan_MHz );
-//fprintf( stderr, "chan_width = %lf\n", (double)chan_width/1e6 );
-//fprintf( stderr, "chan_idx   = %d\n\n", chan_idx );
         chan_idxs[chan_count - 1] = chan_idx;
 
         freqline_ptr += pos;
@@ -366,88 +363,136 @@ void read_bandpass_file(
 }
 
 
-int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
+int read_offringa_gains_file( cuDoubleComplex *D, MetafitsMetadata *cal_metadata,
                               int coarse_chan, char *gains_file )
+/* Offringa's own documentation for the format of these binary files (copied from an email
+ * dated 4 May 2016 from franz.kirsten@curtin.edu.au to sammy.mcsweeney@gmail.com). This is
+ * itself copied from Andre Offringa's original C++ code, in his Anoko repository, in
+ * mwa-reduce/solutionfile.h:
+ *
+ * The solution file is used for storing calibration Jones matrices.
+ * The format is as follows:
+  *  Bytes |  Description
+  * -------+---------------
+  *  0- 7  |  string intro ; 8-byte null terminated string "MWAOCAL"
+  *  8-11  |  int fileType ; always 0, reserved for indicating something
+  *           other than complex Jones solutions
+  * 12-15  |  int structureType ; always 0, reserved for indicating
+  *           different ordering
+  * 16-19  |  int intervalCount ; Number of solution intervals in file
+  * 20-23  |  int antennaCount ; Number of antennas that were in the
+  *           measurement set (but were not necessary all solved for)
+  * 24-27  |  int channelCount ; Number of channels in the measurement set
+  * 28-31  |  int polarizationCount ; Number of polarizations solved for
+  *           -- always four.
+  * 32-39  |  double startTime ; Start time of solutions (AIPS time)
+  * 40-47  |  double endTime ; End time of solutions (AIPS time)
+  * -------+-------------------
+  * After the header follow 2 x nSolution doubles, with
+  *
+  * nSolutions = nIntervals * nAntennas * nChannels * nPols
+  *
+  * Ordered in the way as given, so:
+  * double 0 : real of interval 0, antenna 0, channel 0, pol 0
+  * double 1 : imaginary of interval 0, antenna 0, channel 0, pol 0
+  * double 2 : real of interval 0, antenna 0, channel 0, pol 1
+  * ...
+  * double 8 : real of interval 0, antenna 0, channel 1, pol 0
+  * double nChannel x 8 : real of interval 0, antenna 1, channel 0, pol 0
+  * etc.
+  *
+  * ints are here always 32 bits unsigned integers, doubles are IEEE
+  * double precision 64 bit floating points.
+  * If a solution is not available, either because its data no data were
+  * selected during calibration for this interval
+  * or because the calibration diverged, a "NaN" will be stored in the
+  * doubles belonging to that solution.
+  */
 {
-    // Assumes that memory for antenna has already been allocated
+    // Assumes that memory for antenna (D) has already been allocated
 
     // Open the calibration file for reading
     FILE *fp = NULL;
     fp = fopen(gains_file,"r");
-    if (fp == NULL) {
-        fprintf(stderr,"Failed to open %s: quitting\n",gains_file);
+    if (fp == NULL)
+    {
+        fprintf( stderr, "Failed to open %s: quitting\n", gains_file );
         exit(EXIT_FAILURE);
     }
 
     // Read in the necessary information from the header
 
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
+    uint32_t nant   = cal_metadata->num_ants;
+    uint32_t nchan  = cal_metadata->num_corr_fine_chans_per_coarse;
+    uint32_t ninput = cal_metadata->num_rf_inputs;
+    uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (P, Q)
 
     fseek(fp, 16, SEEK_SET);
     fread(&intervalCount,     sizeof(uint32_t), 1, fp);
     fread(&antennaCount,      sizeof(uint32_t), 1, fp);
     fread(&channelCount,      sizeof(uint32_t), 1, fp);
     fread(&polarizationCount, sizeof(uint32_t), 1, fp);
+    size_t HEADER_SIZE = 48;
 
     // Error-checking the info extracted from the header
-    if (intervalCount > 1) {
-        fprintf(stderr, "Warning: Only the first interval in the calibration ");
-        fprintf(stderr, "solution (%s) will be used\n", gains_file);
+    if (intervalCount > 1)s
+    {
+        fprintf( stderr, "Warning: Only the first interval in the calibration " );
+        fprintf( stderr, "solution (%s) will be used\n", gains_file );
     }
-    if ((int)antennaCount != nant) {
-        fprintf(stderr, "Error: Calibration solution (%s) ", gains_file);
-        fprintf(stderr, "contains a different number of antennas (%d) ", antennaCount);
-        fprintf(stderr, "than specified (%d)\n", nant);
-        exit(1);
+    if (antennaCount != nant)
+    {
+        fprintf( stderr, "Error: Calibration solution (%s) ", gains_file );
+        fprintf( stderr, "contains a different number of antennas (%d) ", antennaCount );
+        fprintf( stderr, "than specified (%d)\n", nant );
+        exit(EXIT_FAILURE);
     }
-    if (channelCount != 24) {
-        fprintf(stderr, "Warning: Calibration solution (%s) ", gains_file);
-        fprintf(stderr, "contains a different number (%d) ", channelCount);
-        fprintf(stderr, "than the expected (%d) channels. ", 24);
+    if (channelCount != nchan)
+    {
+        fprintf( stderr, "Warning: Calibration solution (%s) ", gains_file );
+        fprintf( stderr, "contains a different number (%d) ", channelCount );
+        fprintf( stderr, "than the expected (%d) channels. ", 24 );
     }
-    if ((int)channelCount <= coarse_chan) {
-        fprintf(stderr, "Error: Requested channel number (%d) ", coarse_chan);
-        fprintf(stderr, "is more than the number of channels (0-%d) ", channelCount-1);
-        fprintf(stderr, "available in the calibration solution (%s)\n", gains_file);
-        exit(1);
+    if (channelCount <= coarse_chan)
+    {
+        fprintf( stderr, "Error: Requested channel number (%d) ", coarse_chan );
+        fprintf( stderr, "is more than the number of channels (0-%d) ", channelCount-1 );
+        fprintf( stderr, "available in the calibration solution (%s)\n", gains_file );
+        exit(EXIT_FAILURE);
     }
-    int npols = polarizationCount; // This will always = 4
 
-    // Prepare to jump to the first solution to be read in
-    int bytes_left_in_header = 16;
-    int bytes_to_first_jones = bytes_left_in_header + (npols * coarse_chan * sizeof(cuDoubleComplex));
-         //     (See Offringa's specs for details)
-         //     Assumes coarse_chan is zero-offset
-         //     sizeof(complex double) *must* be 64-bit x 2 = 16-byte
-    int bytes_to_next_jones = npols * (channelCount-1) * sizeof(cuDoubleComplex);
+    // Iterate through antennas and channels
+    uint32_t ant; // The antenna number (as defined in metafits "Antenna")
+    uint32_t i;   // Just a dummy index into the metafits array of rf_inputs
+    uint32_t ch;  // (Fine) channel number
+    uint32_t pol, pol_rts;  // Jones element number [0 1]
+                            //                      [2 3]
+    Rfinput *rfinput
 
-    int ant, pol;           // Iterate through antennas and polarisations
-    int pol_idx, ant_idx;   // Used for "re-ordering" the antennas and pols (<-- TODO: FIX ME)
-    int count = 0;          // Keep track of how many solutions have actually been read in
-    double re, im;          // Temporary placeholders for the real and imaginary doubles read in
+    for (i = 0; i < ninput; i++)
+    {
+        // We only need information for each antenna, so skip one of the pols
+        rfinput = &(cal_metadata->rf_inputs[i]);
+        if (*(rfinput->pol) == 'Y')
+            continue;
 
-    // Loop through antennas and read in calibration solution
-    int first = 1;
-    for (ant = 0; ant < nant; ant++) {
+        // Get the antenna number
+        ant = rfinput->ant;
 
-        ant_idx = ant;
+        // Loop over channels
+        for (ch = 0; ch < nchan; ch++)
+        {
+            // Move the file pointer to the correct place
+            //fpos = HEADER_SIZE + ...;
 
-        // Jump to next Jones matrix position for this channel
-        if (first) {
-            fseek(fp, bytes_to_first_jones, SEEK_CUR);
-            first = 0;
-        }
-        else {
-            fseek(fp, bytes_to_next_jones, SEEK_CUR);
-        }
+            // Get the destination index
+            d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
 
-        // Read in the data
-        for (pol = 0; pol < npols; pol++) {
+            // WARNING! Pols are read in backwards in order to conform to the RTS solutions,
+            // which has (Metafits) 'YY' in the top left element
 
-            pol_idx = 3 - pol; // Read them in "backwards", because RTS's "x" = Offringa's "y"
-
-            fread(&re, sizeof(double), 1, fp);
-            fread(&im, sizeof(double), 1, fp);
+            fread(&re, sizeof(double), 8, fp);
 
             // Check for NaNs
             if (isnan(re) | isnan(im)) {
@@ -462,9 +507,6 @@ int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
             else {
                 antenna_gain[ant_idx][pol_idx] = make_cuDoubleComplex( re, im );
             }
-
-            count++;
-
         }
     }
 

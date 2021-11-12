@@ -257,6 +257,22 @@ double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 }
 
 
+void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
+/* [0 1]  -->  [3 2]
+ * [2 3]       [1 0]
+ */
+{
+    cuDoubleComplex m0 = M[0];
+    cuDoubleComplex m1 = M[1];
+    cuDoubleComplex m2 = M[2];
+    cuDoubleComplex m3 = M[3];
+
+    Mout[0] = m0;
+    Mout[1] = m1;
+    Mout[2] = m2;
+    Mout[3] = m3;
+}
+
 void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
 /* Calculate H = M^H, where "^H" is the hermitian operation
  */

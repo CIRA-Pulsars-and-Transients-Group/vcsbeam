@@ -8,6 +8,7 @@
 \usepackage{listings}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{natbib}
 
 \begin{document}
 
@@ -25,7 +26,28 @@ There are three coordinate systems in use throughout VCSBeam:
     \item Sky (local coordinates)
     \item Sky (celestial coordinates)
 \end{enumerate}
-They are illustrated in Fig.
+They are illustrated in Fig. \ref{fig:coords}.
+\begin{figure}[!bh]
+    \centering
+    \includegraphics[width=\textwidth]{coords.png}
+    \caption{Illustration of the three coordinate systems used in this work\dots}
+    \label{fig:coords}
+\end{figure}
+
+\subsection{Notation in other documents}
+
+See Table \ref{tbl:notations}
+\begin{table}[!hb]
+    \centering
+    \caption{Comparison of notation used elsewhere}
+    \label{tbl:notations}
+    \begin{tabular}{l|cc|cc|cc}
+        & P & Q & $\theta$ & $\phi$ & X & Y \\
+        \hline
+        MWA metafits files       & Y & X & - & - & - & - \\
+        Sokolowksi et al. (2017) & $y$ & $x$ & $\theta$ & $\phi$ & - & - \\
+    \end{tabular}
+\end{table}
 
 \chapter{PFB}
 
