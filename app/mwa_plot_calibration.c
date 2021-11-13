@@ -80,12 +80,7 @@ int main(int argc, char **argv)
         }
         else if (cal.cal_type == CAL_OFFRINGA)
         {
-            fprintf( stderr, "error: Offringa-style calibration solutions not currently supported\n" );
-            exit(EXIT_FAILURE);
-            /*
-            // Find the ordering of antennas in Offringa solutions from metafits file
-            read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
-            */
+            D[Ch] = read_offringa_gains_file( obs_metadata, cal_metadata, Ch, cal.caldir );
         }
 
         // Flag antennas that need flagging

@@ -363,8 +363,8 @@ void read_bandpass_file(
 }
 
 
-int read_offringa_gains_file( cuDoubleComplex *D, MetafitsMetadata *cal_metadata,
-                              int coarse_chan, char *gains_file )
+cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
+        MetafitsMetadata *cal_metadata, int coarse_chan, char *gains_file )
 /* Offringa's own documentation for the format of these binary files (copied from an email
  * dated 4 May 2016 from franz.kirsten@curtin.edu.au to sammy.mcsweeney@gmail.com). This is
  * itself copied from Andre Offringa's original C++ code, in his Anoko repository, in
@@ -407,6 +407,8 @@ int read_offringa_gains_file( cuDoubleComplex *D, MetafitsMetadata *cal_metadata
   * selected during calibration for this interval
   * or because the calibration diverged, a "NaN" will be stored in the
   * doubles belonging to that solution.
+  *
+  * This function allocates memory, which should be freed by the caller.
   */
 {
     // Assumes that memory for antenna (D) has already been allocated
@@ -425,18 +427,28 @@ int read_offringa_gains_file( cuDoubleComplex *D, MetafitsMetadata *cal_metadata
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
     uint32_t nant   = cal_metadata->num_ants;
     uint32_t nchan  = cal_metadata->num_corr_fine_chans_per_coarse;
+    uint32_t nChan  = nchan * cal_metadata->num_metafits_coarse_chans;
     uint32_t ninput = cal_metadata->num_rf_inputs;
     uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (P, Q)
+    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t interp_factor = vcs_nchan / nchan;
+    uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+
+    // Allocate memory for the calibration solutions
+    size_t Dsize = nant*vcs_nchan*nvispol;
+    cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
+
+    // Make another dummy matrix for reading in
+    cuDoubleComplex Dread[nvispol];
 
     fseek(fp, 16, SEEK_SET);
     fread(&intervalCount,     sizeof(uint32_t), 1, fp);
     fread(&antennaCount,      sizeof(uint32_t), 1, fp);
     fread(&channelCount,      sizeof(uint32_t), 1, fp);
     fread(&polarizationCount, sizeof(uint32_t), 1, fp);
-    size_t HEADER_SIZE = 48;
 
     // Error-checking the info extracted from the header
-    if (intervalCount > 1)s
+    if (intervalCount > 1)
     {
         fprintf( stderr, "Warning: Only the first interval in the calibration " );
         fprintf( stderr, "solution (%s) will be used\n", gains_file );
@@ -448,16 +460,16 @@ int read_offringa_gains_file( cuDoubleComplex *D, MetafitsMetadata *cal_metadata
         fprintf( stderr, "than specified (%d)\n", nant );
         exit(EXIT_FAILURE);
     }
-    if (channelCount != nchan)
+    if (channelCount != nChan)
     {
         fprintf( stderr, "Warning: Calibration solution (%s) ", gains_file );
         fprintf( stderr, "contains a different number (%d) ", channelCount );
         fprintf( stderr, "than the expected (%d) channels. ", 24 );
     }
-    if (channelCount <= coarse_chan)
+    if (coarse_chan >= (int)cal_metadata->num_metafits_coarse_chans)
     {
-        fprintf( stderr, "Error: Requested channel number (%d) ", coarse_chan );
-        fprintf( stderr, "is more than the number of channels (0-%d) ", channelCount-1 );
+        fprintf( stderr, "Error: Requested coarse channel number (%d) ", coarse_chan );
+        fprintf( stderr, "is more than the number of channels " );
         fprintf( stderr, "available in the calibration solution (%s)\n", gains_file );
         exit(EXIT_FAILURE);
     }
@@ -465,10 +477,13 @@ int read_offringa_gains_file( cuDoubleComplex *D, MetafitsMetadata *cal_metadata
     // Iterate through antennas and channels
     uint32_t ant; // The antenna number (as defined in metafits "Antenna")
     uint32_t i;   // Just a dummy index into the metafits array of rf_inputs
-    uint32_t ch;  // (Fine) channel number
-    uint32_t pol, pol_rts;  // Jones element number [0 1]
-                            //                      [2 3]
-    Rfinput *rfinput
+    uint32_t ch;  // (Fine) channel number (within given coarse channel)
+    uint32_t Ch;  // (Fine) channel number (within total set of channels)
+    uint32_t vch; // (Fine) channel number (within coarse channel in voltage obs)
+    uint32_t Interval = 0;  // Only use the first interval
+    long fpos; // Position within the gains file
+    uintptr_t d_idx; // Idx into the D array
+    Rfinput *rfinput = NULL;
 
     for (i = 0; i < ninput; i++)
     {
@@ -483,38 +498,48 @@ int read_offringa_gains_file( cuDoubleComplex *D, MetafitsMetadata *cal_metadata
         // Loop over channels
         for (ch = 0; ch < nchan; ch++)
         {
-            // Move the file pointer to the correct place
-            //fpos = HEADER_SIZE + ...;
+            // Translate from "fine channel number within coarse channel"
+            // to "fine channel number within whole observation"
+            Ch = ch + coarse_chan*nchan;
 
-            // Get the destination index
-            d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+            // Move the file pointer to the correct place
+            fpos = OFFRINGA_HEADER_SIZE_BYTES +
+                Interval * (nant * nChan * JONES_SIZE_BYTES) +
+                ant      *        (nChan * JONES_SIZE_BYTES) +
+                Ch       *                (JONES_SIZE_BYTES);
+            fseek( fp, fpos, SEEK_SET );
+
+            // Read in one Jones matrix
+            fread( Dread, sizeof(double), JONES_SIZE_BYTES, fp );
 
             // WARNING! Pols are read in backwards in order to conform to the RTS solutions,
             // which has (Metafits) 'YY' in the top left element
+            reverse2x2( Dread, Dread );
 
-            fread(&re, sizeof(double), 8, fp);
+            // If there are any nans, set them to zero instead
+            // Assume that if there are any nans in the Jones matrix, then
+            // EVERY element in the Jones matrix is a nan. Therefore, only need
+            // to check one element.
+            if (isnan(Dread[0].x))
+                memset( Dread, 0, JONES_SIZE_BYTES );
 
-            // Check for NaNs
-            if (isnan(re) | isnan(im)) {
+            // Copy this matrix into every corresponding "voltage" fine channel
+            for (vch = ch*interp_factor; vch < (ch + 1)*interp_factor; vch++)
+            {
+                // Get the destination index
+                d_idx = J_IDX(ant,vch,0,0,vcs_nchan,nantpol);
 
-                // If NaN, set to identity matrix
-                if (pol_idx == 0 || pol_idx == 3)
-                    antenna_gain[ant_idx][pol_idx] = make_cuDoubleComplex( 1.0, 0.0 );
-                else
-                    antenna_gain[ant_idx][pol_idx] = make_cuDoubleComplex( 0.0, 0.0 );
-
-            }
-            else {
-                antenna_gain[ant_idx][pol_idx] = make_cuDoubleComplex( re, im );
+                // Copy it across
+                cp2x2( Dread, &(D[d_idx]) );
             }
         }
     }
 
-    // Close the file, print a summary, and return
+    // Close the file
     fclose(fp);
-    fprintf(stdout, "Read %d inputs from %s\n", count, gains_file);
 
-    return count/npols; // should equal the number of antennas
+    // Return a pointer to the newly allocated memory
+    return D;
 }
 
 

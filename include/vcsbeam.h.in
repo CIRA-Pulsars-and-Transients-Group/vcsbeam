@@ -172,6 +172,9 @@ void logger_report_all_stats( logger *log );
 #define CAL_RTS       1
 #define CAL_OFFRINGA  2
 
+#define OFFRINGA_HEADER_SIZE_BYTES 48
+#define JONES_SIZE_BYTES           64  /* (4 elements) * (2 re/im) * (8 bytes per double) */
+
 #define NDBL_PER_JONES  8
 #define BANDPASS_ROWS_PER_ANT  8
 
@@ -206,8 +209,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
 void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
         MetafitsMetadata *cal_metadata, char *filename );
-int read_offringa_gains_file( cuDoubleComplex **antenna_gain, int nant,
-        int coarse_chan, char *gains_file );
+cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
+        MetafitsMetadata *cal_metadata, int coarse_chan, char *gains_file );
 
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
 void zero_PQ_and_QP( cuDoubleComplex *J );
