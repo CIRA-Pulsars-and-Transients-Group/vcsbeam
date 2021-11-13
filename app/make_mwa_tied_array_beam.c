@@ -229,16 +229,13 @@ int main(int argc, char **argv)
 
     if (cal.cal_type == CAL_RTS)
     {
-        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata, cal.use_bandpass, cal.caldir, vm->coarse_chan_idxs_to_process[0], log );
+        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata,
+                cal.use_bandpass, cal.caldir,
+                vm->coarse_chan_idxs_to_process[0], log );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
-        fprintf( stderr, "error: Offringa-style calibration solutions not currently supported\n" );
-        exit(EXIT_FAILURE);
-        /*
-        // Find the ordering of antennas in Offringa solutions from metafits file
-        read_offringa_gains_file( D, nants, cal.offr_chan_num, cal.filename );
-        */
+        D = read_offringa_gains_file( vm->obs_metadata, vm->cal_metadata, mpi_proc_id, cal.caldir );
     }
 
     // Flag antennas that need flagging
@@ -496,7 +493,7 @@ void usage()
             "\t-X, --cross-terms          Retain the PQ and QP terms of the calibration solution [default: off]\n"
           );
 
-    printf( "\nCALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n\n"
+    printf( "\nCALIBRATION OPTIONS (OFFRINGA)\n\n"
             "\t-O, --offringa             The calibration solution is in the Offringa format instead of\n"
             "\t                           the default RTS format. In this case, the argument to -C should\n" 
             "\t                           be the full path to the binary solution file.\n"

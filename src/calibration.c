@@ -447,7 +447,8 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
     fread(&channelCount,      sizeof(uint32_t), 1, fp);
     fread(&polarizationCount, sizeof(uint32_t), 1, fp);
 
-    // Error-checking the info extracted from the header
+    // Error-checking the info extracted from the header,
+    // making sure it matches the metadata
     if (intervalCount > 1)
     {
         fprintf( stderr, "Warning: Only the first interval in the calibration " );
@@ -464,7 +465,12 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
     {
         fprintf( stderr, "Warning: Calibration solution (%s) ", gains_file );
         fprintf( stderr, "contains a different number (%d) ", channelCount );
-        fprintf( stderr, "than the expected (%d) channels. ", 24 );
+        fprintf( stderr, "than the expected (%d) channels.\n", nChan );
+        nChan = channelCount;
+        nchan = nChan / cal_metadata->num_metafits_coarse_chans;
+        interp_factor = vcs_nchan / nchan;
+        fprintf( stderr, "Assuming calibration channels are "
+                "%d kHz\n", cal_metadata->coarse_chan_width_hz / nchan / 1000 );
     }
     if (coarse_chan >= (int)cal_metadata->num_metafits_coarse_chans)
     {
@@ -510,7 +516,7 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
             fseek( fp, fpos, SEEK_SET );
 
             // Read in one Jones matrix
-            fread( Dread, sizeof(double), JONES_SIZE_BYTES, fp );
+            fread( Dread, 1, JONES_SIZE_BYTES, fp );
 
             // WARNING! Pols are read in backwards in order to conform to the RTS solutions,
             // which has (Metafits) 'YY' in the top left element

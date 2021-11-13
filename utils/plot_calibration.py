@@ -18,7 +18,7 @@ def get_tilenames(filename, first_line=14, nlines=16):
 if __name__ == "__main__":
 
     if len(sys.argv) < 2:
-        print("usage: {} [text file output from mwa_plot_calibration]")
+        print("usage: {} [text file output from mwa_plot_calibration]".format(sys.argv[0]))
         exit()
 
     cal_data = np.loadtxt(sys.argv[-1])

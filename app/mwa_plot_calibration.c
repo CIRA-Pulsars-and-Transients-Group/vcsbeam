@@ -193,7 +193,7 @@ void usage()
             "\t-X, --cross-terms          Retain the PQ and QP terms of the calibration solution [default: off]\n"
           );
 
-    printf( "\nCALIBRATION OPTIONS (OFFRINGA) -- NOT YET SUPPORTED\n\n"
+    printf( "\nCALIBRATION OPTIONS (OFFRINGA)\n\n"
             "\t-O, --offringa             The calibration solution is in the Offringa format instead of\n"
             "\t                           the default RTS format. In this case, the argument to -C should\n" 
             "\t                           be the full path to the binary solution file.\n"
