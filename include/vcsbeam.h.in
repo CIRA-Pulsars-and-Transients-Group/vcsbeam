@@ -274,7 +274,7 @@ void free_calibration( struct calibration *cal );
 extern "C" {
 #endif
 
-void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs );
+void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polQ_idxs, uint32_t *polP_idxs );
 
 void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
@@ -808,8 +808,8 @@ struct gpu_formbeam_arrays
     cuDoubleComplex *JDy, *d_JDy;
     uint8_t *d_data;
     float   *d_coh;
-    uint32_t *polX_idxs, *d_polX_idxs;
-    uint32_t *polY_idxs, *d_polY_idxs;
+    uint32_t *polQ_idxs, *d_polQ_idxs;
+    uint32_t *polP_idxs, *d_polP_idxs;
 };
 
 #ifdef __cplusplus

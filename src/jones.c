@@ -16,9 +16,9 @@
 
 #include "vcsbeam.h"
 
-void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, uint32_t *polY_idxs )
+void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polQ_idxs, uint32_t *polP_idxs )
 /* Creates a list of indexes into the data for the X and Y polarisations,
- * ordered by antenna number. Assumption: polX_idxs and polY_idxs have
+ * ordered by antenna number. Assumption: polQ_idxs and polP_idxs have
  * sufficient allocated memory.
  */
 {
@@ -36,11 +36,11 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polX_idxs, 
         // 'Y' comes first
         if (pol == 'Y')
         {
-            polX_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
+            polQ_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
         }
         else // if (pol == 'X')
         {
-            polY_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
+            polP_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
         }
     }
 }

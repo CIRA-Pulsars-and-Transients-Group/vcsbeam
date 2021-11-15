@@ -176,7 +176,7 @@ int main(int argc, char **argv)
                      NSTOKES, npointing, log );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
-    create_antenna_lists( vm->obs_metadata, gf.polX_idxs, gf.polY_idxs );
+    create_antenna_lists( vm->obs_metadata, gf.polQ_idxs, gf.polP_idxs );
 
     // ... and upload them to the gpu, ready for use!
     cu_upload_pol_idx_lists( &gf );

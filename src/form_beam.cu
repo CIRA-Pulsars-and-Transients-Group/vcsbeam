@@ -70,8 +70,8 @@ __global__ void invj_the_data( uint8_t       *data,
                                cuDoubleComplex *phi,
                                cuDoubleComplex *JDx,
                                cuDoubleComplex *JDy,
-                               uint32_t      *polX_idxs,
-                               uint32_t      *polY_idxs,
+                               uint32_t      *polQ_idxs,
+                               uint32_t      *polP_idxs,
                                int npol )
 /* Layout for input arrays:
 *   data [nsamples] [nchan] [ninputs]            -- see docs
@@ -92,8 +92,8 @@ __global__ void invj_the_data( uint8_t       *data,
 
     int ni   = nant*npol;   /* The (n)umber of RF (i)nputs */
 
-    int iX   = polX_idxs[ant]; /* The input index for the X pol for this antenna */
-    int iY   = polY_idxs[ant]; /* The input index for the Y pol for this antenna */
+    int iX   = polQ_idxs[ant]; /* The input index for the X pol for this antenna */
+    int iY   = polP_idxs[ant]; /* The input index for the Y pol for this antenna */
 
     cuDoubleComplex Dx, Dy;
     // Convert input data to complex float
@@ -409,7 +409,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
         // convert the data and multiply it by J
         invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, d_phi, g->d_JDx, g->d_JDy,
-                                               g->d_polX_idxs, g->d_polY_idxs,
+                                               g->d_polQ_idxs, g->d_polP_idxs,
                                                npol );
 
         // Send off a parallel CUDA stream for each pointing
@@ -596,16 +596,16 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
 
     // Allocate memory on both host and device for polX and polY idx arrays
     g->pol_idxs_size = nants * sizeof(uint32_t);
-    cudaMallocHost( &g->polX_idxs, g->pol_idxs_size );
-    cudaMallocHost( &g->polY_idxs, g->pol_idxs_size );
-    gpuErrchk(cudaMalloc( (void **)&g->d_polX_idxs, g->pol_idxs_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_polY_idxs, g->pol_idxs_size ));
+    cudaMallocHost( &g->polQ_idxs, g->pol_idxs_size );
+    cudaMallocHost( &g->polP_idxs, g->pol_idxs_size );
+    gpuErrchk(cudaMalloc( (void **)&g->d_polQ_idxs, g->pol_idxs_size ));
+    gpuErrchk(cudaMalloc( (void **)&g->d_polP_idxs, g->pol_idxs_size ));
 }
 
 void cu_upload_pol_idx_lists( struct gpu_formbeam_arrays *g )
 {
-    gpuErrchk(cudaMemcpy( g->d_polX_idxs, g->polX_idxs, g->pol_idxs_size, cudaMemcpyHostToDevice ));
-    gpuErrchk(cudaMemcpy( g->d_polY_idxs, g->polY_idxs, g->pol_idxs_size, cudaMemcpyHostToDevice ));
+    gpuErrchk(cudaMemcpy( g->d_polQ_idxs, g->polQ_idxs, g->pol_idxs_size, cudaMemcpyHostToDevice ));
+    gpuErrchk(cudaMemcpy( g->d_polP_idxs, g->polP_idxs, g->pol_idxs_size, cudaMemcpyHostToDevice ));
 }
 
 void free_formbeam( struct gpu_formbeam_arrays *g )
@@ -613,14 +613,14 @@ void free_formbeam( struct gpu_formbeam_arrays *g )
     // Free memory on host and device
     cudaFreeHost( g->J );
     cudaFreeHost( g->Bd );
-    cudaFreeHost( g->polX_idxs );
-    cudaFreeHost( g->polY_idxs );
+    cudaFreeHost( g->polQ_idxs );
+    cudaFreeHost( g->polP_idxs );
     cudaFree( g->d_J );
     cudaFree( g->d_Bd );
     cudaFree( g->d_data );
     cudaFree( g->d_coh );
-    cudaFree( g->d_polX_idxs );
-    cudaFree( g->d_polY_idxs );
+    cudaFree( g->d_polQ_idxs );
+    cudaFree( g->d_polP_idxs );
 }
 
 float *create_pinned_data_buffer( size_t size )
