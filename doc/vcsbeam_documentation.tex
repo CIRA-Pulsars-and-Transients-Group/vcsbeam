@@ -113,7 +113,7 @@ The parallactic angle itself, $\chi$, is defined as the position angle of local 
 The transformation $(x,y)\rightarrow(\theta,\phi)$ is therefore a clockwise rotation\footnote{A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
 This is the rotation
 \begin{equation}
-    \transmat{\theta}{\phi}{x}{y}
+    \transmat{x}{y}{\theta}{\phi}
         = \begin{bmatrix}
              \cos\left(\pi - \chi\right) & \sin\left(\pi - \chi\right) \\
             -\sin\left(\pi - \chi\right) & \cos\left(\pi - \chi\right)
@@ -132,7 +132,7 @@ This is the rotation
 The actual parallactic angle correction that is implemented is for historical reasons the matrix
 \begin{equation}
     \pamat \equiv
-    \transmat{\theta}{\phi}{y}{x}
+    \transmat{y}{x}{\theta}{\phi}
         = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix} \transmat{\theta}{\phi}{x}{y}
         = \begin{bmatrix}
              \sin\chi & -\cos\chi \\

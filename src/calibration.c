@@ -151,6 +151,10 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
                 mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
             else
                 cp2x2( Dd[dd_idx], &(D[d_idx]) );
+
+            // Ord's original comment for the following line is:
+            // "The RTS conjugates the sky so beware"
+            conj2x2( &(D[d_idx]), &(D[d_idx]) );
         }
     }
 
