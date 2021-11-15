@@ -198,6 +198,7 @@ void calc_beam_geom(
     /* now HA/Dec to Az/El */
 
     palDe2h( ha, dec_ap, MWA_LATITUDE_RADIANS, &az, &el );
+    // ^-- Returns "geographic azimuth" and "elevation" (see documentation)
 
     /* now we need the direction cosines */
 

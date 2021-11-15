@@ -300,31 +300,42 @@ int hash_dipole_config( double *amps )
 
 
 void parallactic_angle_correction(
-    double *P,    // output rotation matrix
+    double *Ppa,  // output rotation matrix
     double lat,   // observing latitude (radians)
     double az,    // azimuth angle (radians)
     double za)    // zenith angle (radians)
 {
-    // The FEE beam Jones matrix is
-    //   [ Qθ  Pθ ]
-    //   [ Qφ  Pφ ]
-    // RTS calibration solution is
-    //   [ PP  PQ ]
-    //   [ QP  QQ ]
-    // Therefore, the parallactic rotation must be
-    //   [  0   1 ] [ cos(χ)  -sin(χ) ]  =  [  sin(χ)  cos(χ) ]
-    //   [  1   0 ] [ sin(χ)   cos(χ) ]     [  cos(χ) -sin(χ) ]
+    /* This parallactic angle correction is intended to be applied to the
+     * primary beam matrices delivered by the FEE beam code
+     * The FEE beam Jones matrix is
+     *   [q] = [ qθ  qφ ] [θ]
+     *   [p]   [ pθ  pφ ] [φ]
+     * However, we would like a matrix that goes from (x,y) coordinates to
+     * (p,q) coordinates. That is, we want
+     *   [p] = [ px  py ] [x]
+     *   [q]   [ qx  qy ] [y]
+     * This means we will have to multiply the FEE matrix on the left by a swap
+     * matrix and on the right by an extra transformation matrix:
+     *   [p] = [ pq  pp ] [ qθ  qφ ] [ θx θy ] [x]
+     *   [q]   [ qq  qp ] [ pθ  pφ ] [ φx φy ] [y]
+     * The third matrix on the RHS above is the parallactic angle correction:
+     *   [ θx θy ] = [ -cos(χ)  -sin(χ) ]  (see docs for sign conventions used here)
+     *   [ φx φy ]   [  sin(χ)  -cos(χ) ]
+     * Therefore, the parallactic rotation must be
+     *   [  0   1 ] [ cos(χ)  -sin(χ) ]  =  [  sin(χ)  cos(χ) ]
+     *   [  1   0 ] [ sin(χ)   cos(χ) ]     [  cos(χ) -sin(χ) ]
+     */
 
     double el = PIBY2 - za;
 
     double ha, dec;
     palDh2e(az, el, lat, &ha, &dec);
-    double pa = palPa( ha, dec, lat );
+    double chi = palPa( ha, dec, lat );
 
-    P[0] = sin(pa);
-    P[1] = cos(pa);
-    P[2] = cos(pa);
-    P[3] = -sin(pa);
+    Ppa[0] = sin(chi);
+    Ppa[1] = cos(chi);
+    Ppa[2] = cos(chi);
+    Ppa[3] = -sin(chi);
 }
 
 void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J )
