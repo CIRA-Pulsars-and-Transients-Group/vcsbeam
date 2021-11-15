@@ -97,7 +97,12 @@ void calc_primary_beam(
                         pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
 
                 // Apply the parallactic angle correction
-                mult2x2d_RxC( P, configs[config_idx], configs[config_idx] );
+//fprintf( stderr, "before pa correction: B = " );
+//fprintf_complex_matrix( stderr, configs[config_idx] );
+                //mult2x2d_RxC( P, configs[config_idx], configs[config_idx] );
+                mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );
+//fprintf( stderr, "after  pa correction: B = " );
+//fprintf_complex_matrix( stderr, configs[config_idx] );
             }
 
             // Copy the answer into the B matrix (for this antenna)
@@ -310,20 +315,19 @@ void parallactic_angle_correction(
      * The FEE beam Jones matrix is
      *   [q] = [ qθ  qφ ] [θ]
      *   [p]   [ pθ  pφ ] [φ]
-     * However, we would like a matrix that goes from (x,y) coordinates to
-     * (p,q) coordinates. That is, we want
-     *   [p] = [ px  py ] [x]
-     *   [q]   [ qx  qy ] [y]
-     * This means we will have to multiply the FEE matrix on the left by a swap
-     * matrix and on the right by an extra transformation matrix:
-     *   [p] = [ pq  pp ] [ qθ  qφ ] [ θx θy ] [x]
-     *   [q]   [ qq  qp ] [ pθ  pφ ] [ φx φy ] [y]
-     * The third matrix on the RHS above is the parallactic angle correction:
-     *   [ θx θy ] = [ -cos(χ)  -sin(χ) ]  (see docs for sign conventions used here)
-     *   [ φx φy ]   [  sin(χ)  -cos(χ) ]
-     * Therefore, the parallactic rotation must be
-     *   [  0   1 ] [ cos(χ)  -sin(χ) ]  =  [  sin(χ)  cos(χ) ]
-     *   [  1   0 ] [ sin(χ)   cos(χ) ]     [  cos(χ) -sin(χ) ]
+     * However, for historical reasons, we would like a matrix that goes from
+     * (x,y) --> (-q,-p). That is, we want
+     *   [q] = [ qy  qx ] [y]
+     *   [p]   [ py  px ] [x]
+     * This means we will have to multiply the FEE matrix on the right by
+     *   [q] = [ qθ  qφ ] [ θy θx ] [y]
+     *   [p]   [ pθ  pφ ] [ φy φx ] [x]
+     * The second matrix on the RHS above is the parallactic angle correction.
+     * For these specific coordinate systems,
+     *   [ θy θx ] = [ -sin(χ)  -cos(χ) ]  (see docs for sign conventions used here)
+     *   [ φy φx ]   [ -cos(χ)   sin(χ) ]
+     * Thus, the parallactic angle correction computed here is the transformation
+     * from (y,x) to (θ,φ)
      */
 
     double el = PIBY2 - za;
@@ -332,10 +336,13 @@ void parallactic_angle_correction(
     palDh2e(az, el, lat, &ha, &dec);
     double chi = palPa( ha, dec, lat );
 
-    Ppa[0] = sin(chi);
-    Ppa[1] = cos(chi);
-    Ppa[2] = cos(chi);
-    Ppa[3] = -sin(chi);
+    double schi = sin(chi);
+    double cchi = cos(chi);
+
+    Ppa[0] = -schi;
+    Ppa[1] = -cchi;
+    Ppa[2] = -cchi;
+    Ppa[3] =  schi;
 }
 
 void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J )

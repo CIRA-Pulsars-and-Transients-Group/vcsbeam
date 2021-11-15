@@ -65,13 +65,7 @@ The ``$P$ polarisation'' refers to the physical set of dipoles parallel to the N
 
 This is a spherical coordinate system defined with respect to a local observer.
 $\theta$ is the \textit{zenith angle}\index{zenith angle}, i.e. a \textit{colatitude}, with zenith itself therefore defined as $\theta = 0$ and the horizon as $\theta = \pi/2$.
-$\phi$ is the \textit{azimuth}\index{azimuth}, and we define $\phi = 0$ in the East direction, with positive azimuth moving clockwise as viewed from above (i.e. E$\rightarrow$S$\rightarrow$W$\rightarrow$N$\rightarrow$E).
-Note that this differs from the usual meaning of ``azimuth'' as a compass bearing from North towards East.
-In this work, we will refer to this as \textit{geographic azimuth}\index{azimuth!geographic}, and denote it by the symbol $\tilde{\phi}$.
-Therefore,
-\begin{equation}
-    \phi = \tilde{\phi} + \frac{\pi}{2}.
-\end{equation}
+$\phi$ is the \textit{azimuth}\index{azimuth}, and we define $\phi = 0$ in the North direction, with positive azimuth moving clockwise as viewed from above (i.e. N$\rightarrow$E$\rightarrow$S$\rightarrow$W$\rightarrow$N).
 Moreover, the \textit{elevation}\index{elevation} is denoted by the symbol $\tilde{\theta}$, and is related to the zenith angle by
 \begin{equation}
     \tilde{\theta} = \frac{\pi}{2} - \theta.
@@ -90,18 +84,18 @@ See Table \ref{tbl:notations}
     \centering
     \caption{Comparison of notation used elsewhere}
     \label{tbl:notations}
-    \begin{tabular}{l|cc|cc|cc|cc}
-        & $p$ & $q$ & $\theta$ & $\phi$ & $\tilde{\theta}$ & $\tilde{\phi}$ & $x$ & $y$ \\
+    \begin{tabular}{l|cc|cc|cc}
+        & $p$ & $q$ & $\theta$ & $\phi$ & $x$ & $y$ \\
         \hline
-        MWA metafits files       & Y & X & - & - & - & - & - & - \\
-        Sokolowksi et al. (2017) & $y$ & $x$ & $\theta$ & $\phi$ & - & - & - & - \\
+        MWA metafits files       & Y & X & - & - & - & - \\
+        Sokolowksi et al. (2017) & $y$ & $x$ & $\theta$ & $\phi$ & - & - \\
     \end{tabular}
 \end{table}
 
 \subsection{Coordinate transformations}
 
 All coordinate transformations can be effected by applying the appropriate Jacobian matrix for the desired transformation.
-In this work, a boldface ${\bf P}$ will always be used\footnote{${\bf J}$ is reserved for (other) Jones matrices.} to denote such transformation matrices.
+In this work, a boldface ${\bf P}$ will always be used\footnote{``${\bf J}$'' is reserved for (other) Jones matrices.} to denote such transformation matrices.
 For general coordinates $(a,b)$ and $(c,d)$,
 \begin{equation}
     \transmat{a}{b}{c}{d} =
@@ -115,18 +109,18 @@ The specific transformations relevant to this work are specified in the followin
 \subsubsection{Parallactic angle correction}
 
 The parallactic angle correction is a transformation between local sky coordinates and celestial sky coordinates.
-Since the parallactic angle,\index{parallactic angle}  $\chi$, is defined as the position angle of local zenith with respect to the North Celestial Pole as subtended at a given source (see Fig. \ref{fig:skyangles}), the required rotation $(\theta,\phi)\rightarrow(x,y)$ is a counterclockwise rotation\footnote{A counterclockwise rotation of theposition is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
+The parallactic angle itself, $\chi$, is defined as the position angle of local zenith with respect to the North Celestial Pole as subtended at a given source (see Fig. \ref{fig:skyangles}).
+The transformation $(x,y)\rightarrow(\theta,\phi)$ is therefore a clockwise rotation\footnote{A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
 This is the rotation
 \begin{equation}
-    \pamat \equiv
     \transmat{\theta}{\phi}{x}{y}
         = \begin{bmatrix}
-            \cos\left(\pi - \chi\right) & -\sin\left(\pi - \chi\right) \\
-            \sin\left(\pi - \chi\right) &  \cos\left(\pi - \chi\right)
-        \end{bmatrix},
+             \cos\left(\pi - \chi\right) & \sin\left(\pi - \chi\right) \\
+            -\sin\left(\pi - \chi\right) & \cos\left(\pi - \chi\right)
+        \end{bmatrix}
         = \begin{bmatrix}
-            -\cos\chi & -\sin\chi \\
-             \sin\chi & -\cos\chi
+            -\cos\chi &  \sin\chi \\
+            -\sin\chi & -\cos\chi
         \end{bmatrix}.
 \end{equation}
 \begin{figure}[!th]
@@ -135,6 +129,16 @@ This is the rotation
     \caption{Definition of the parallactic angle, $\chi$, in the sky plane.}
     \label{fig:skyangles}
 \end{figure}
+The actual parallactic angle correction that is implemented is for historical reasons the matrix
+\begin{equation}
+    \pamat \equiv
+    \transmat{\theta}{\phi}{y}{x}
+        = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix} \transmat{\theta}{\phi}{x}{y}
+        = \begin{bmatrix}
+             \sin\chi & -\cos\chi \\
+            -\cos\chi & -\sin\chi
+        \end{bmatrix}.
+\end{equation}
 In \vcsbeam{}, the parallactic angle is calculated (via the function \texttt{palPa} in the \href{https://github.com/Starlink/pal}{Starlink/pal} library) via the spherical triangle identity
 \begin{equation}
     \tan \chi = \frac{\cos \lambda \sin H}{\sin\lambda \cos x - \cos \lambda \sin x \cos H},
@@ -164,12 +168,21 @@ where $\lambda$ is the latitude of the observer\footnote{The latitude of the MWA
 \subsection{\texttt{az}}
 \begin{description}
     \item[Name:] \hyperlink{sec:coordslocalsky}{Geographic azimuth}\index{azimuth!geographic}
+    \item[Units:] radians
     \item[Functions:] \hyperlink{cn:calc_beam_geom}{\texttt{calc\_beam\_geom}}
 \end{description}
 
 \subsection{\texttt{el}}
 \begin{description}
     \item[Name:] \hyperlink{sec:coordslocalsky}{Elevation}\index{elevation}
+    \item[Units:] radians
+    \item[Functions:] \hyperlink{cn:calc_beam_geom}{\texttt{calc\_beam\_geom}}
+\end{description}
+
+\subsection{\texttt{za}}
+\begin{description}
+    \item[Name:] \hyperlink{sec:coordslocalsky}{Zenith angle}\index{zenith angle}
+    \item[Units:] radians
     \item[Functions:] \hyperlink{cn:calc_beam_geom}{\texttt{calc\_beam\_geom}}
 \end{description}
 

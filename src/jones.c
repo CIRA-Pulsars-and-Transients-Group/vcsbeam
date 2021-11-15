@@ -220,6 +220,24 @@ void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
     Mout[3] = cuCadd( m21, m33 );
 }
 
+void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout )
+/* Mout = M1 x M2
+ */
+{
+    cuDoubleComplex m00 = make_cuDoubleComplex( cuCreal(M1[0])*M2[0], cuCimag(M1[0])*M2[0] );
+    cuDoubleComplex m12 = make_cuDoubleComplex( cuCreal(M1[1])*M2[2], cuCimag(M1[1])*M2[2] );
+    cuDoubleComplex m01 = make_cuDoubleComplex( cuCreal(M1[0])*M2[1], cuCimag(M1[0])*M2[1] );
+    cuDoubleComplex m13 = make_cuDoubleComplex( cuCreal(M1[1])*M2[3], cuCimag(M1[1])*M2[3] );
+    cuDoubleComplex m20 = make_cuDoubleComplex( cuCreal(M1[2])*M2[0], cuCimag(M1[2])*M2[0] );
+    cuDoubleComplex m32 = make_cuDoubleComplex( cuCreal(M1[3])*M2[2], cuCimag(M1[3])*M2[2] );
+    cuDoubleComplex m21 = make_cuDoubleComplex( cuCreal(M1[2])*M2[1], cuCimag(M1[2])*M2[1] );
+    cuDoubleComplex m33 = make_cuDoubleComplex( cuCreal(M1[3])*M2[3], cuCimag(M1[3])*M2[3] );
+    Mout[0] = cuCadd( m00, m12 );
+    Mout[1] = cuCadd( m01, m13 );
+    Mout[2] = cuCadd( m20, m32 );
+    Mout[3] = cuCadd( m21, m33 );
+}
+
 void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 /* Calculate the conjugate of a matrix
  * It is safe for M and Mout to point to the same matrix
