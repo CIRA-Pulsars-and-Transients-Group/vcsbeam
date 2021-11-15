@@ -99,7 +99,6 @@ void calc_primary_beam(
                 // Apply the parallactic angle correction
 //fprintf( stderr, "before pa correction: B = " );
 //fprintf_complex_matrix( stderr, configs[config_idx] );
-                //mult2x2d_RxC( P, configs[config_idx], configs[config_idx] );
                 mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );
 //fprintf( stderr, "after  pa correction: B = " );
 //fprintf_complex_matrix( stderr, configs[config_idx] );
@@ -312,11 +311,10 @@ void parallactic_angle_correction(
 {
     /* This parallactic angle correction is intended to be applied to the
      * primary beam matrices delivered by the FEE beam code
-     * The FEE beam Jones matrix is
+     * The FEE beam Jones matrix (according to Sokolowski et al. 2017) is
      *   [q] = [ qθ  qφ ] [θ]
      *   [p]   [ pθ  pφ ] [φ]
-     * However, for historical reasons, we would like a matrix that goes from
-     * (x,y) --> (-q,-p). That is, we want
+     * However, we would like a matrix that goes from (x,y) to (-q,-p):
      *   [q] = [ qy  qx ] [y]
      *   [p]   [ py  px ] [x]
      * This means we will have to multiply the FEE matrix on the right by
@@ -339,10 +337,10 @@ void parallactic_angle_correction(
     double schi = sin(chi);
     double cchi = cos(chi);
 
-    Ppa[0] =  schi;
+    Ppa[0] = -schi;
     Ppa[1] = -cchi;
     Ppa[2] = -cchi;
-    Ppa[3] = -schi;
+    Ppa[3] =  schi;
 }
 
 void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J )
