@@ -92,25 +92,21 @@ __global__ void invj_the_data( uint8_t       *data,
 
     int ni   = nant*npol;   /* The (n)umber of RF (i)nputs */
 
-    int iX   = polQ_idxs[ant]; /* The input index for the X pol for this antenna */
-    int iY   = polP_idxs[ant]; /* The input index for the Y pol for this antenna */
+    int iQ   = polQ_idxs[ant]; /* The input index for the X pol for this antenna */
+    int iP   = polP_idxs[ant]; /* The input index for the Y pol for this antenna */
 
     cuDoubleComplex Dx, Dy;
     // Convert input data to complex float
-    Dx  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iX,nc,ni)]);
-    Dy  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iY,nc,ni)]);
+    Dq  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iQ,nc,ni)]);
+    Dp  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iP,nc,ni)]);
 
     // Calculate the first step (J*D) of the coherent beam (B = J*phi*D)
-    // Nick: by my math the order should be:
-    // JDx = Jxx*Dx + Jxy*Dy
-    // JDy = Jyx*Dx + Jyy*Dy
-    // This is what I have implemented (as it produces higher signal-to-noise
-    // ratio detections). The original code (the single-pixel beamformer)
-    // switched the yx and xy terms but we get similar SNs
-    JDx[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], Dx ),
-                                           cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], Dy ) );
-    JDy[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dx ),
-                                           cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], Dy ) );
+    // JDq = Jqq*Dq + Jqp*Dp
+    // JDp = Jpq*Dq + Jpy*Dp
+    JDx[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], Dq ),
+                                           cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], Dp ) );
+    JDy[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dq ),
+                                           cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], Dp ) );
 #ifdef DEBUG
     if (c==0 && s==0 && ant==0)
     {
@@ -120,8 +116,8 @@ __global__ void invj_the_data( uint8_t       *data,
                 cuCreal(J[J_IDX(ant,c,1,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,0,nc,npol)]),
                 cuCreal(J[J_IDX(ant,c,1,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,1,nc,npol)]) );
         printf( "v = [%lf%+lf*i; %lf%+lf*i]\n",
-                cuCreal( Dx ), cuCimag( Dx ),
-                cuCreal( Dy ), cuCimag( Dy ) );
+                cuCreal( Dq ), cuCimag( Dq ),
+                cuCreal( Dp ), cuCimag( Dp ) );
     }
 #endif
 }

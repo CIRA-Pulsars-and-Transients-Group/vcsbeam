@@ -32,8 +32,6 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polQ_idxs, 
         ant = obs_metadata->rf_inputs[i].ant;
         pol = *(obs_metadata->rf_inputs[i].pol);
 
-        // Swapping the pols assumes a legacy RF input ordering, where
-        // 'Y' comes first
         if (pol == 'Y')
         {
             polQ_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;

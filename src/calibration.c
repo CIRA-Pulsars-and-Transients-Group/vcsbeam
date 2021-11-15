@@ -21,6 +21,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel.
  *
+ * The Jones matrices (D) are output in the (Q,P) basis.
+ *
  * This function allocates memory, which should be freed by the caller (free())
  */
 {
@@ -155,6 +157,10 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // Ord's original comment for the following line is:
             // "The RTS conjugates the sky so beware"
             conj2x2( &(D[d_idx]), &(D[d_idx]) );
+
+            // The RTS matrices are in the (P,Q) basis, so convert to (Q,P)
+            // by reversing the Jones matrix
+            //reverse2x2( &(D[d_idx]), &(D[d_idx]) );
         }
     }
 
