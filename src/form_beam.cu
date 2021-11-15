@@ -68,8 +68,8 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 __global__ void invj_the_data( uint8_t       *data,
                                cuDoubleComplex *J,
                                cuDoubleComplex *phi,
-                               cuDoubleComplex *JDx,
-                               cuDoubleComplex *JDy,
+                               cuDoubleComplex *JDq,
+                               cuDoubleComplex *JDp,
                                uint32_t      *polQ_idxs,
                                uint32_t      *polP_idxs,
                                int npol )
@@ -95,7 +95,7 @@ __global__ void invj_the_data( uint8_t       *data,
     int iQ   = polQ_idxs[ant]; /* The input index for the X pol for this antenna */
     int iP   = polP_idxs[ant]; /* The input index for the Y pol for this antenna */
 
-    cuDoubleComplex Dx, Dy;
+    cuDoubleComplex Dq, Dp;
     // Convert input data to complex float
     Dq  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iQ,nc,ni)]);
     Dp  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iP,nc,ni)]);
@@ -103,9 +103,9 @@ __global__ void invj_the_data( uint8_t       *data,
     // Calculate the first step (J*D) of the coherent beam (B = J*phi*D)
     // JDq = Jqq*Dq + Jqp*Dp
     // JDp = Jpq*Dq + Jpy*Dp
-    JDx[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], Dq ),
+    JDq[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], Dq ),
                                            cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], Dp ) );
-    JDy[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dq ),
+    JDp[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dq ),
                                            cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], Dp ) );
 #ifdef DEBUG
     if (c==0 && s==0 && ant==0)
