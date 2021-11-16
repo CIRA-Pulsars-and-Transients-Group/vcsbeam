@@ -1065,7 +1065,7 @@ void create_primary_beam(
 
 void free_primary_beam( primary_beam *pb );
 
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J );
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction );
 
 #ifdef __cplusplus
 }

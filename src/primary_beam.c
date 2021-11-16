@@ -97,8 +97,11 @@ void calc_primary_beam(
                         pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
 
                 // Apply the parallactic angle correction
-//fprintf( stderr, "before pa correction: B = " );
-//fprintf_complex_matrix( stderr, configs[config_idx] );
+if (config_idx == 0)
+{
+    fprintf( stderr, "before pa correction (%.2f MHz): B = ", pb->freq_hz/1e6 );
+    fprintf_complex_matrix( stderr, configs[config_idx] );
+}
                 mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );
 //fprintf( stderr, "after  pa correction: B = " );
 //fprintf_complex_matrix( stderr, configs[config_idx] );
@@ -314,7 +317,7 @@ void parallactic_angle_correction(
      * The FEE beam Jones matrix (according to Sokolowski et al. 2017) is
      *   [q] = [ qθ  qφ ] [θ]
      *   [p]   [ pθ  pφ ] [φ]
-     * However, we would like a matrix that goes from (x,y) to (-q,-p):
+     * However, we would like a matrix that goes from (y,x) to (q,p):
      *   [q] = [ qy  qx ] [y]
      *   [p]   [ py  px ] [x]
      * This means we will have to multiply the FEE matrix on the right by
@@ -343,20 +346,25 @@ void parallactic_angle_correction(
     Ppa[3] =  schi;
 }
 
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J )
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction )
 {
     cuDoubleComplex JH[NCOMPLEXELEMENTS];
     cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
     cuDoubleComplex coherency[NCOMPLEXELEMENTS];
-    double P[NCOMPLEXELEMENTS]; // (Real-valued) parallactic angle correction matrix
-
-    // Calculate the parallactic angle correction
-    parallactic_angle_correction( P, MWA_LATITUDE_RADIANS, az, za );
 
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
     *J = (cuDoubleComplex *)calc_jones( beam, az, za, freq_hz, delays, amps, zenith_norm );
-    mult2x2d_RxC( P, *J, *J );
+
+    // Optionally apply the parallactic angle correction
+    double P[NCOMPLEXELEMENTS]; // (Real-valued) parallactic angle correction matrix
+    if (apply_pa_correction)
+    {
+        // Calculate the parallactic angle correction
+        parallactic_angle_correction( P, MWA_LATITUDE_RADIANS, az, za );
+
+        mult2x2d_RxC( P, *J, *J );
+    }
 
     // Convert this jones matrix to Stokes parameters for I, Q, U, V skies
     int stokes;
