@@ -127,7 +127,7 @@ int main(int argc, char **argv)
             calc_beam_geom( X, Y, mjd, &arrf_bg );
             array_factor = calc_array_factor( obs_metadata, freq_hz, &arrf_bg, &bg );
 
-            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J );
+            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, true );
 
             // Print out the results
             fprintf( opts.fout, "%f %f %f\n",

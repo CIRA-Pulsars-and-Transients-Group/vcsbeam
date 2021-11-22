@@ -26,6 +26,7 @@ struct mwa_track_primary_beam_response_opts {
     int   time_stride;     // Output one measurement per TIME_STRIDE seconds
     bool  empty_lines;     // Insert empty lines between channels in output
     int   nchans;          // The number of frequencies to be used in calculation
+    bool  apply_pa_correction; // Apply the parallactic angle correction
 };
 
 void usage();
@@ -67,6 +68,18 @@ int main(int argc, char **argv)
     double IQUV[4];
     double array_factor;
 
+    char coord1[8], coord2[8];
+    if (opts.apply_pa_correction)
+    {
+        sprintf( coord1, "Y" );
+        sprintf( coord2, "X" );
+    }
+    else
+    {
+        sprintf( coord1, "θ" );
+        sprintf( coord2, "ϕ" );
+    }
+
     primary_beam pb;
     cuDoubleComplex *J = NULL; // For the FEE beam
     uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
@@ -106,21 +119,19 @@ int main(int argc, char **argv)
             "# 7  Q                         (Power, a.u.)\n"
             "# 8  U                         (Power, a.u.)\n"
             "# 9  V                         (Power, a.u.)\n"
-            "# 10 Array factor\n"
-            "# 11 FEE beam (PX) real\n"
-            "# 12 FEE beam (PX) imag\n"
-            "# 13 FEE beam (PY) real\n"
-            "# 14 FEE beam (PY) imag\n"
-            "# 15 FEE beam (QX) real\n"
-            "# 16 FEE beam (QX) imag\n"
-            "# 17 FEE beam (QY) real\n"
-            "# 18 FEE beam (QY) imag\n"
-            "#\n",
+            "# 10 Array factor\n",
             obs_metadata->sched_start_mjd,
             obs_metadata->az_deg, obs_metadata->za_deg,
             obs_metadata->ra_tile_pointing_deg, obs_metadata->dec_tile_pointing_deg,
             ra_hours * PAL__DH2R * PAL__DR2D, dec_degs
            );
+
+    for (i = 0; i < 8; i++)
+        fprintf( opts.fout,
+            "# %d FEE beam (%c%s) %s\n",
+            i+11, (i/4 ? 'P' : 'Q'), (i%4 < 2 ? coord1 : coord2), (i%2 ? "real" : "imag") );
+
+    fprintf( opts.fout, "#\n" );
 
     // Loop over the coarse channels
     uintptr_t c, t;
@@ -145,7 +156,7 @@ int main(int argc, char **argv)
                 array_factor = calc_array_factor( obs_metadata, freq_hz, &bg, &arrf_bg );
             }
 
-            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J );
+            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, opts.apply_pa_correction );
 
             // Print out the results
             fprintf( opts.fout, "%lu %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n",
@@ -197,6 +208,7 @@ void usage()
             "\t-c, --num-chans=NCHANS     The number of frequency channels to use in calculation [default: number of coarse channels in obs]\n"
             "\t-t, --time-stride=NSECONDS Output one measurement every NSECONDS seconds [default: 1]\n"
             "\t-e, --empty-lines          Insert empty lines between channels in output [default: off]\n"
+            "\t-P, --apply-pa             Apply the parallactic angle correction [default: off]\n"
             "\t-o, --outfile=FILENAME     Write the results to FILENAME [default is to write to STDOUT\n"
             "\t-h, --help                 Write this help message and exit\n\n"
           );
@@ -215,6 +227,7 @@ void mwa_track_primary_beam_response_parse_cmdline(
     opts->do_array_factor = false;
     opts->time_stride     = 1;
     opts->empty_lines     = false;
+    opts->apply_pa_correction = false;
     opts->nchans          = -1; // "Default" value to indicate (later) to use number of coarse channels
 
     if (argc > 1)
@@ -230,13 +243,14 @@ void mwa_track_primary_beam_response_parse_cmdline(
                 {"help",            no_argument,       0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"outfile",         required_argument, 0, 'o'},
+                {"apply-pa",        no_argument,       0, 'P'},
                 {"RA",              required_argument, 0, 'r'},
                 {"RA-tied",         required_argument, 0, 'R'},
                 {"time-stride",     required_argument, 0, 't'}
             };
 
             int option_index = 0;
-            c = getopt_long( argc, argv, "c:d:D:ehm:o:r:R:t:", long_options, &option_index);
+            c = getopt_long( argc, argv, "c:d:D:ehm:o:Pr:R:t:", long_options, &option_index);
 
             if (c == -1)
                 break;
@@ -272,6 +286,9 @@ void mwa_track_primary_beam_response_parse_cmdline(
                         fprintf( stderr, "error: could not open file '%s' for writing\n", optarg );
                         exit(EXIT_FAILURE);
                     }
+                    break;
+                case 'P':
+                    opts->apply_pa_correction = true;
                     break;
                 case 'r':
                     opts->ra_str = (char *)malloc( strlen(optarg) + 1 );

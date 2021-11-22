@@ -48,7 +48,7 @@ They are illustrated in Fig. \ref{fig:coords}.
 \begin{figure}[!bh]
     \centering
     \includegraphics[width=\textwidth]{coords.png}
-    \caption{Illustration of the three coordinate systems used in this work\dots}
+    \caption{Illustration of the three coordinate systems used in this documentation.}
     \label{fig:coords}
 \end{figure}
 
@@ -114,7 +114,7 @@ See Table \ref{tbl:notations}
 %\end{equation}
 
 All coordinate transformations can be effected by applying the appropriate Jacobian matrix for the desired transformation.
-In this work, a boldface ${\bf P}$ will always be used\footnote{``${\bf J}$'' is reserved for (other) Jones matrices.} to denote such transformation matrices.
+In this documentation, a boldface ${\bf P}$ will always be used\footnote{``${\bf J}$'' is reserved for (other) Jones matrices.} to denote such transformation matrices.
 For general coordinates $(a,b)$ and $(c,d)$,
 \begin{equation}
     \transmat{a}{b}{c}{d} =
@@ -129,17 +129,17 @@ Among these, the only transformation that is explicitly used in \vcsbeam{} is th
 
 The parallactic angle correction is a transformation between local sky coordinates and celestial sky coordinates.
 The parallactic angle itself, $\chi$, is defined as the position angle of local zenith with respect to the North Celestial Pole as subtended at a given source (see Fig. \ref{fig:skyangles}).
-The transformation $(x,y)\rightarrow(\theta,\phi)$ is therefore a clockwise rotation\footnote{A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
+The transformation $(x,y)\rightarrow(\theta,\phi)$ is therefore a counterclockwise rotation\footnote{A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
 This is the rotation
 \begin{equation}
     \transmat{x}{y}{\theta}{\phi}
         = \begin{bmatrix}
-             \cos\left(\pi - \chi\right) & \sin\left(\pi - \chi\right) \\
-            -\sin\left(\pi - \chi\right) & \cos\left(\pi - \chi\right)
+            \cos\left(\pi - \chi\right) & -\sin\left(\pi - \chi\right) \\
+            \sin\left(\pi - \chi\right) &  \cos\left(\pi - \chi\right)
         \end{bmatrix}
         = \begin{bmatrix}
-            -\cos\chi &  \sin\chi \\
-            -\sin\chi & -\cos\chi
+            -\cos\chi & -\sin\chi \\
+             \sin\chi & -\cos\chi
         \end{bmatrix}.
 \end{equation}
 \begin{figure}[!th]
@@ -152,13 +152,12 @@ The actual parallactic angle correction that is implemented is for historical re
 \begin{equation}
     \pamat \equiv
     \transmat{y}{x}{\theta}{\phi}
-        = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix} \transmat{\theta}{\phi}{x}{y}
         = \begin{bmatrix}
-             \sin\chi & -\cos\chi \\
-            -\cos\chi & -\sin\chi
+            -\sin\chi & -\cos\chi \\
+            -\cos\chi &  \sin\chi
         \end{bmatrix}.
 \end{equation}
-In \vcsbeam{}, the parallactic angle is calculated (via the function \texttt{palPa} in the \href{https://github.com/Starlink/pal}{Starlink/pal} library) via the spherical triangle identity
+In \vcsbeam{}, the parallactic angle is calculated (via the function \texttt{palPa} in the \href{https://github.com/Starlink/pal}{Starlink/pal} library) by the spherical triangle identity
 \begin{equation}
     \tan \chi = \frac{\cos \lambda \sin H}{\sin\lambda \cos x - \cos \lambda \sin x \cos H},
 \end{equation}
