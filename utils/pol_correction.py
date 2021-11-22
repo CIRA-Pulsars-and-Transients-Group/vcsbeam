@@ -9,7 +9,7 @@ def phase_correction(f_MHz, slope, offset):
 
 
 def load_pdv(filename):
-    pdv = np.loadtxt('vela.pdv')
+    pdv = np.loadtxt(filename)
 
     ntime = int(pdv[-1, 0] + 1)
     nchan = int(pdv[-1, 1] + 1)
@@ -23,7 +23,7 @@ def load_pdv(filename):
     return S, ntime, nchan, nbins
 
 def load_beam(filename, ntime, nchan):
-    beam = np.loadtxt('beam.txt')
+    beam = np.loadtxt(filename)
 
     J = np.array([[[beam[i,10] + beam[i,11]*1j, beam[i,12] + beam[i,13]*1j], [beam[i,14] + beam[i,15]*1j, beam[i,16] + beam[i,17]*1j]] for i in range(beam.shape[0])])
     J = J.reshape((nchan, ntime, 2, 2))
