@@ -94,6 +94,25 @@ See Table \ref{tbl:notations}
 
 \subsection{Coordinate transformations}
 
+%The three sets of coordinates described above span two-dimensional subspaces of the ambient three-dimensional space in which the celestial sphere and the telescope reside.
+%Consequently, transformations between them generally require $3\times3$ matrices.
+%If we define
+%\begin{equation}
+%    \begin{aligned}
+%        \hat{s} \equiv \hat{p} \times \hat{q}, \\
+%        \hat{r} \equiv \hat{\theta} \times \hat{\phi}, \\
+%        \hat{z} \equiv \hat{x} \times \hat{y},
+%    \end{aligned}
+%\end{equation}
+%then $(p,q,s)$, $(\theta,\phi,r)$, and $(x,y,z)$ are all three-dimensional, right-handed coordinate systems which are related by the following coordinate transformations:
+%\begin{equation}
+%    \begin{aligned}
+%        \theta &= \arctan\left(-\frac{\sqrt{p^2 + q^2}}{s}\right) \\
+%        \phi &= \arctan\left(\frac{q}{p}\right) \\
+%        r &= -\sqrt{p^2 + q^2 + s^2}
+%    \end{aligned}
+%\end{equation}
+
 All coordinate transformations can be effected by applying the appropriate Jacobian matrix for the desired transformation.
 In this work, a boldface ${\bf P}$ will always be used\footnote{``${\bf J}$'' is reserved for (other) Jones matrices.} to denote such transformation matrices.
 For general coordinates $(a,b)$ and $(c,d)$,
@@ -104,7 +123,7 @@ For general coordinates $(a,b)$ and $(c,d)$,
         \pd{d}{a} & \pd{d}{b}
     \end{bmatrix}
 \end{equation}
-The specific transformations relevant to this work are specified in the following sections.
+Among these, the only transformation that is explicitly used in \vcsbeam{} is the transformation between local sky coordinates and celestial sky coordinates, which is a single rotation within the sky plane by the parallactic angle.
 
 \subsubsection{Parallactic angle correction}
 
