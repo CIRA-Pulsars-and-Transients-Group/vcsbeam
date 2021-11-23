@@ -96,8 +96,9 @@ int main(int argc, char **argv)
             "# Tied array position:  RA      = %f°; Dec = %f°\n"
             "# Frequency:            %f MHz\n"
             "#\n"
-            "# 1            2            3\n"
-            "# RA (hours) | Dec (degs) | Array_factor\n",
+            "# 1            2            3   4   5   6 |\n"
+            "# RA (hours) | Dec (degs) | Array_factor  |\n",
+            "#                         | I | Q | U | V |\n",
             obs_metadata->sched_start_mjd,
             obs_metadata->az_deg, obs_metadata->za_deg,
             obs_metadata->ra_tile_pointing_deg, obs_metadata->dec_tile_pointing_deg,
@@ -130,8 +131,13 @@ int main(int argc, char **argv)
             calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, true );
 
             // Print out the results
-            fprintf( opts.fout, "%f %f %f\n",
-                    X, Y, array_factor*IQUV[0] );
+            fprintf( opts.fout, "%f %f %f %f %f %f\n",
+                    X, Y,
+                    array_factor*IQUV[0],
+                    array_factor*IQUV[1],
+                    array_factor*IQUV[2],
+                    array_factor*IQUV[3]
+                   );
 
             free( J );
         }
