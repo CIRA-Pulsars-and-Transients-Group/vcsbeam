@@ -15,7 +15,7 @@
 // Local includes
 #include "vcsbeam.h"
 
-struct mwa_track_primary_beam_response_opts {
+struct mwa_tied_array_beam_psf_opts {
     char *metafits;        // filename of the metafits file
     char *ra_str;          // String representing the RA
     char *dec_str;         // String representing the Dec
@@ -28,14 +28,14 @@ struct mwa_track_primary_beam_response_opts {
 };
 
 void usage();
-void mwa_track_primary_beam_response_parse_cmdline(
-        int argc, char **argv, struct mwa_track_primary_beam_response_opts *opts );
+void mwa_tied_array_beam_psf_parse_cmdline(
+        int argc, char **argv, struct mwa_tied_array_beam_psf_opts *opts );
 
 int main(int argc, char **argv)
 {
     // Parse command line arguments
-    struct mwa_track_primary_beam_response_opts opts;
-    mwa_track_primary_beam_response_parse_cmdline( argc, argv, &opts );
+    struct mwa_tied_array_beam_psf_opts opts;
+    mwa_tied_array_beam_psf_parse_cmdline( argc, argv, &opts );
 
     // Parse the RA and Dec
     double ra_hours = parse_ra( opts.ra_str );
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 
 void usage()
 {
-    printf( "\nusage: mwa_track_primary_beam_response [OPTIONS]\n");
+    printf( "\nusage: mwa_tied_array_beam_psf [OPTIONS]\n");
 
     printf( "\nOPTIONS\n\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation (required)\n"
@@ -176,8 +176,8 @@ void usage()
           );
 }
 
-void mwa_track_primary_beam_response_parse_cmdline(
-        int argc, char **argv, struct mwa_track_primary_beam_response_opts *opts )
+void mwa_tied_array_beam_psf_parse_cmdline(
+        int argc, char **argv, struct mwa_tied_array_beam_psf_opts *opts )
 {
     // Set defaults
     opts->metafits        = NULL;

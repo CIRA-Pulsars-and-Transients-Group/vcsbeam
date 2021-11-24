@@ -24,6 +24,8 @@ struct mwa_track_primary_beam_response_opts {
     FILE *fout;            // Where to put the output (default STDOUT)
     bool  do_array_factor; // Whether to calculate the array factor or not
     int   time_stride;     // Output one measurement per TIME_STRIDE seconds
+    int   start_time;      // Only go up to START_TIME seconds
+    int   end_time;        // Only go up to (but not including) END_TIME seconds
     bool  empty_lines;     // Insert empty lines between channels in output
     int   nchans;          // The number of frequencies to be used in calculation
     bool  apply_pa_correction; // Apply the parallactic angle correction
@@ -54,6 +56,11 @@ int main(int argc, char **argv)
     // Set the channels to use in calculation
     if (opts.nchans <= 0)
         opts.nchans = obs_metadata->num_metafits_coarse_chans;
+
+    // Set start and end times, if not explicitly given on command line, or if
+    // invalid start/end times are given
+    if (opts.start_time < 0)              opts.start_time = 0;
+    if (opts.end_time < opts.start_time)  opts.end_time   = obs_metadata->num_metafits_timesteps;
 
     uint32_t freq_hz; // Used for loop iterator
     double BW_hz = (double)(obs_metadata->obs_bandwidth_hz); // Total bandwidth
@@ -141,7 +148,7 @@ int main(int argc, char **argv)
         freq_hz = (uint32_t)round(freq_hz_start + c*bw_hz);
 
         // Loop over the gps seconds
-        for (t = opts.time_stride/2; t < obs_metadata->num_metafits_timesteps; t += opts.time_stride)
+        for (t = opts.start_time; t < opts.end_time; t += opts.time_stride)
         {
             // Calculate the beam geometry for the requested pointing
             mjd = obs_metadata->sched_start_mjd + (double)t/86400.0;
@@ -207,6 +214,9 @@ void usage()
             "\t-D, --Dec-tied=DD:MM:SS    Direction for array factor calculation, declination\n"
             "\t-c, --num-chans=NCHANS     The number of frequency channels to use in calculation [default: number of coarse channels in obs]\n"
             "\t-t, --time-stride=NSECONDS Output one measurement every NSECONDS seconds [default: 1]\n"
+            "\t-S, --start-time=NSECONDS  Start at NSECONDS (from start of observation) [default: start at beginning of observation]\n"
+            "\t-T, --end-time=NSECONDS    Only go up to (but not including) NSECONDS (from start of observation) "
+                                         "[default: go till end of observation]\n"
             "\t-e, --empty-lines          Insert empty lines between channels in output [default: off]\n"
             "\t-P, --apply-pa             Apply the parallactic angle correction [default: off]\n"
             "\t-o, --outfile=FILENAME     Write the results to FILENAME [default is to write to STDOUT\n"
@@ -226,6 +236,8 @@ void mwa_track_primary_beam_response_parse_cmdline(
     opts->fout            = stdout;
     opts->do_array_factor = false;
     opts->time_stride     = 1;
+    opts->start_time      = -1;
+    opts->end_time        = -1;
     opts->empty_lines     = false;
     opts->apply_pa_correction = false;
     opts->nchans          = -1; // "Default" value to indicate (later) to use number of coarse channels
@@ -246,11 +258,13 @@ void mwa_track_primary_beam_response_parse_cmdline(
                 {"apply-pa",        no_argument,       0, 'P'},
                 {"RA",              required_argument, 0, 'r'},
                 {"RA-tied",         required_argument, 0, 'R'},
-                {"time-stride",     required_argument, 0, 't'}
+                {"time-stride",     required_argument, 0, 't'},
+                {"start-time",      required_argument, 0, 'S'},
+                {"end-time",        required_argument, 0, 'T'}
             };
 
             int option_index = 0;
-            c = getopt_long( argc, argv, "c:d:D:ehm:o:Pr:R:t:", long_options, &option_index);
+            c = getopt_long( argc, argv, "c:d:D:ehm:o:Pr:R:S:t:T:", long_options, &option_index);
 
             if (c == -1)
                 break;
@@ -298,8 +312,14 @@ void mwa_track_primary_beam_response_parse_cmdline(
                     opts->arrf_ra_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->arrf_ra_str, optarg );
                     break;
+                case 'S':
+                    opts->start_time = atoi(optarg);
+                    break;
                 case 't':
                     opts->time_stride = atoi(optarg);
+                    break;
+                case 'T':
+                    opts->end_time = atoi(optarg);
                     break;
                 default:
                     fprintf( stderr, "error: unrecognised option '%s'\n", optarg );
