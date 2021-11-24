@@ -170,8 +170,31 @@ where $\lambda$ is the latitude of the observer\footnote{The latitude of the MWA
 \subsection{Fine channelisation}
 
 \section{Calibration}
+\index{calibration}
+
+Calibration is the process by which the temporal variations in the instrumental and/or ionospheric response to an incoming signal are characterised, in order to account for them when processing observational data.
+A \textit{calibration solution} is a mathematical operation that can be applied either to measured visibilities or raw voltages to correct for these variations, and recover the visibilities (or raw voltages) that would have been measured under ideal conditions.
+
+For the MWA, calibration solutions are modelled as a tile-dependent, linear transformation of two orthogonal polarisations.
+Mathematically, this means that the calibration solution for each tile is a $2\times2$ Jones matrix, which in the $(p,q)$ basis is
+\begin{equation}
+    \begin{aligned}
+        \tilde{\bf v} &= {\bf J}{\bf v}_\text{measured} \\
+        \begin{bmatrix} \tilde{v}_p \\ \tilde{v}_q \end{bmatrix}
+            &= \begin{bmatrix}
+                J_{pp} & J_{pq} \\
+                J_{qp} & J_{qq}
+            \end{bmatrix}
+            \begin{bmatrix} v_p \\ v_q \end{bmatrix}
+    \end{aligned}
+\end{equation}
+where $\tilde{\bf v}$ is the set of corrected voltages produced by applying the calibration solution, ${\bf J}$ to the measured voltages, ${\bf v}$.
 
 \subsection{RTS}
+
+The Real Time System is one of the pieces of software that can be used to generate calibration solutions for a VCS observation.
+
+\subsection{Hyperdrive}
 
 \section{Beamforming}
 
