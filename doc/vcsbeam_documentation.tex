@@ -12,6 +12,40 @@
 \usepackage{hyperref}
 \usepackage{natbib}
 \usepackage{makeidx}
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+\lstset{
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
+  basicstyle=\footnotesize\ttfamily, % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Octave,                 % the language of the code
+  morekeywords={*,...},            % if you want to add more keywords to the set
+  numbers=none,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
 
 \setcounter{secnumdepth}{4}
 \setcounter{tocdepth}{4}
@@ -76,21 +110,6 @@ Moreover, the \textit{elevation}\index{elevation} is denoted by the symbol $\til
 
 This is a spherical coordinate system defined with respect to the celestial sphere.
 $x$ is the \textit{declination}\index{declination} (Dec) and $y$ is the \textit{right ascension}\index{right ascension} (RA).
-
-\subsection{Comparison of notation in other documents}
-
-See Table \ref{tbl:notations}
-\begin{table}[!hb]
-    \centering
-    \caption{Comparison of notation used elsewhere}
-    \label{tbl:notations}
-    \begin{tabular}{l|cc|cc|cc}
-        & $p$ & $q$ & $\theta$ & $\phi$ & $x$ & $y$ \\
-        \hline
-        MWA metafits files       & Y & X & - & - & - & - \\
-        Sokolowksi et al. (2017) & $y$ & $x$ & $\theta$ & $\phi$ & - & - \\
-    \end{tabular}
-\end{table}
 
 \subsection{Coordinate transformations}
 
@@ -176,23 +195,46 @@ Calibration is the process by which the temporal variations in the instrumental 
 A \textit{calibration solution} is a mathematical operation that can be applied either to measured visibilities or raw voltages to correct for these variations, and recover the visibilities (or raw voltages) that would have been measured under ideal conditions.
 
 For the MWA, calibration solutions are modelled as a tile-dependent, linear transformation of two orthogonal polarisations.
-Mathematically, this means that the calibration solution for each tile is a $2\times2$ Jones matrix, which in the $(p,q)$ basis is
+Thus, the calibration solution for each tile is represented by a $2\times2$ Jones matrix, ${\bf D}$, which is left-multiplied (along with the primary beam correction, ${\bf B}$) to the incident electric field, ${\bf e}$, to predict the measured voltages, ${\bf v}$.
 \begin{equation}
-    \begin{aligned}
-        \tilde{\bf v} &= {\bf J}{\bf v}_\text{measured} \\
-        \begin{bmatrix} \tilde{v}_p \\ \tilde{v}_q \end{bmatrix}
-            &= \begin{bmatrix}
-                J_{pp} & J_{pq} \\
-                J_{qp} & J_{qq}
-            \end{bmatrix}
-            \begin{bmatrix} v_p \\ v_q \end{bmatrix}
-    \end{aligned}
+    {\bf v} = {\bf D}{\bf B}{\bf e}.
 \end{equation}
-where $\tilde{\bf v}$ is the set of corrected voltages produced by applying the calibration solution, ${\bf J}$ to the measured voltages, ${\bf v}$.
+Writing these matrices out in full, and using the canonical choice of bases\footnote{Different calibration software packages may use different coordinate bases.},
+\begin{equation}
+    \begin{bmatrix} v_p \\ v_q \end{bmatrix}
+        = \begin{bmatrix}
+            D_{pp} & D_{pq} \\
+            D_{qp} & D_{qq}
+        \end{bmatrix}
+        \begin{bmatrix}
+            B_{px} & B_{py} \\
+            B_{qx} & B_{qy}
+        \end{bmatrix}
+        \begin{bmatrix} e_x \\ e_y \end{bmatrix},
+\end{equation}
+In practise, of course, the inverse opeations are used to reconstruct the electric field from the measured voltages:
+\begin{equation}
+    {\bf e} = {\bf B}^{-1}{\bf D}^{-1}{\bf v}.
+\end{equation}
+Generally, calibration is performed independently on individual frequency channels.
 
-\subsection{RTS}
+\subsection{Real Time Solution (RTS)}
 
-The Real Time System is one of the pieces of software that can be used to generate calibration solutions for a VCS observation.
+The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation.
+The solutions are given in two sets of files, called ``DI\_JonesMatrices\_nodeCCC.dat'' and ``BandpassCalibration\_nodeCCC.dat'' (CCC represents a coarse channel index).
+These files contain the information needed to reconstruct the Jones matrices in the $(p,q)$ basis, which is required in order to take calibration solutions derived from one observation and apply (or ``transfer'') them to other observations.
+
+The solutions are factored in the following way\footnote{It is as yet unclear if this gives a better result than ${\bf J} = ({\bf D}_d {\bf D}_b {\bf A}^{-1})^*$.},
+\begin{equation}
+    {\bf J} = ({\bf D}_d {\bf D}_b)^* {\bf A}^{-1},
+\end{equation}
+where
+\begin{description}
+    \item[${\bf D}_d$] is the ``coarse channel tile gain'' (one Jones matrix per tile, per coarse channel);
+    \item[${\bf A}$]   is the ``alignment matrix'' (one Jones matrix per coarse channel); and
+    \item[${\bf D}_b$] is the ``bandpass gain'' (one Jones matrix per tile, per fine channel).
+\end{description}
+Although the resulting ${\bf J}$ matrix is
 
 \subsection{Hyperdrive}
 
@@ -231,6 +273,125 @@ The Real Time System is one of the pieces of software that can be used to genera
 
 \subsection{\texttt{calc\_beam\_geom}}
 \label{fcn:calc_beam_geom}
+
+\appendix
+
+\chapter{Description of RTS DI\_JonesMatrix file format}
+
+\begin{lstlisting}
+Franz Kirsten <franz.kirsten@curtin.edu.au>	17 June 2016 at 17:42
+To: Sammy McSweeney <sammy.mcsweeney@gmail.com>, Steven Tremblay <Steven.Tremblay@curtin.edu.au>, Dr Stephen ORD <steve.ord@gmail.com>
+Hi Sam,
+
+Mitch finally got back to me on my questions about the individual entries in the DI_Jones matrices as output by the RTS. If you have a chance, could you go through those and try to get Andre's solutions to work once more? Are Mitch's answers enough or do you need more details?
+
+It would be great if you could tell people next week that the beamformer also works with those tools now -- no pressure ;)
+
+Cheers,
+Franz
+
+
+
+
+Hi Franz,
+
+Sorry for the delay. Once you have this working I will let you know how to include the bandpass data.
+
+Mitch
+
+In an effort to automate calibrating the MWA for the tied-array beam, we
+are currently trying to compare the the DI-Jones matrices from the RTS
+with those produced by Andre Offringa's 'calibrate'. We know exactly
+what is in Andre's solutions but are unsure about the
+structur/formatting of the RTS solutions. Could you give a detailed
+breakdown, please? In particular we were wondering about the following:
+
+1) What is the number in the very first line?
+
+This is the flux density of the calibrator that was used. You can ignore it.
+
+The second line contains the model primary beam Jones matrix (in the direction of the calibrator).
+
+2) Which column contains real/imaginary xx/yy/xy/yx?
+
+XX_re XX_im XY_re XY_im YX_re YX_im YY_re YY_im
+
+3) Are the numbers normalised in some way?
+
+By the model primary beam Jones matrix (from the second line). If that is called B, and the direction-independent gain for tile i is G_i, then the numbers printed are G_i.B (call this J_i). So to get the direction-independent gain to compare with Andre's: G_i = J_i.inv(B).
+
+4) Is there some conjugation going on?
+
+No.
+\end{lstlisting}
+
+\chapter{Description of RTS BandpassCalibration file format}
+
+\begin{lstlisting}
+Sammy McSweeney <sammy.mcsweeney@gmail.com>	21 March 2017 at 12:09
+To: Daniel.Mitchell@csiro.au, Franz Kirsten <franz.kirsten@curtin.edu.au>, Steven Tremblay <Steven.Tremblay@curtin.edu.au>
+Hi Mitch,
+
+Thanks for your explanation (via Franz, last year) of how the DIJones RTS output files are organised. If I could trouble you now for a similar explanation for how the Bandpass files are organised...
+As far as I can make out, the format is something like:
+
+freq00 freq01 freq02 ... (minus any flagged channels)
+tilenum amp,phase, amp,phase, amp,phase, ...
+tilenum amp,phase, amp,phase, amp,phase, ...
+etc ...
+
+I see that there are 8 rows per tile, but I'm not how those 8 break down (into polarisation combinations, for example). Incidentally, what do the "P" and "Q" mean in "PX", etc? (I see it cropping up in some of Steve Ord's plotting scripts.)
+
+And, calling in your promised favour, anything you can tell me about "how to include the bandpass data" would be much appreciated.
+
+Cheers,
+~/Sam
+\end{lstlisting}
+
+\begin{lstlisting}
+Daniel.Mitchell@csiro.au <Daniel.Mitchell@csiro.au>	23 March 2017 at 06:55
+To: sammy.mcsweeney@gmail.com
+Cc: franz.kirsten@curtin.edu.au, Steven.Tremblay@curtin.edu.au
+Hi Sammy,
+
+There are 8 lines for each antenna: Jm[0],Jf[0],Jm[1],Jf[1],Jm[2],Jf[2],Jm[3],Jf[3], where Jm contains the measured Jones matrices (measured separately for each frequency channel), and Jf contains low-order fits to these data, which are used in the RTS as the bandpass solutions (polynomials are fitted separately to the real and imaginary components of each Jones matrix element).
+
+P and Q are the labels that we use for the two instrument polarisations (North-South and East-West respectively). X and Y are the standard sky polarisation coordinates, with X aligned with declination and Y aligned with RA.
+
+The overall Jones matrix for a given channel of a given antenna will be the full-band matrix from the DIJones file multiplied by the bandpass matrix on the righthand side.
+
+Cheers,
+Mitch
+\end{lstlisting}
+
+\chapter{Comparison of notation in other documents}
+
+\section{Coordinate systems}
+
+\begin{table}[!hb]
+    \centering
+    \caption{Comparison of coordinate notations}
+    \label{tbl:notations}
+    \begin{tabular}{l|cc|cc|cc}
+        This document & $p$ & $q$ & $\theta$ & $\phi$ & $x$ & $y$ \\
+        \hline
+        MWA metafits files       & Y & X & - & - & - & - \\
+        Sokolowksi et al. (2017) & $y$ & $x$ & $\theta$ & $\phi$ & - & - \\
+    \end{tabular}
+\end{table}
+
+\section{Jones matrices}
+
+\begin{table}[!hb]
+    \centering
+    \caption{Comparison of coordinate notations}
+    \label{tbl:notations}
+    \begin{tabular}{l|ccc}
+        This document & ${\bf J}$ & ${\bf D}$ & ${\bf B}$ \\
+        \hline
+        Sokolowksi et al. (2017) & ${\bf J}$ & ${\bf G}$ & ${\bf E}$ \\
+    \end{tabular}
+\end{table}
 
 \printindex
 

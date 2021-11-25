@@ -206,7 +206,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
         MetafitsMetadata *obs_metadata, bool use_bandpass, const char *caldir,
         uintptr_t coarse_chan_idx, logger *log );
 
-void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname );
+void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
         MetafitsMetadata *cal_metadata, char *filename );
 cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,

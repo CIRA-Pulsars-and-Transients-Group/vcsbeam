@@ -67,6 +67,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // J_IDX for indexing
     size_t Dsize = nant*vcs_nchan*nvispol;
     cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
+    cuDoubleComplex A[nvispol];
 
     for (ant = 0; ant < nant; ant++)
     {
@@ -78,7 +79,12 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     }
 
     // Read in the DI Jones file
-    read_dijones_file((double **)Dd, NULL, cal_metadata->num_ants, dijones_path);
+    read_dijones_file(Dd, A, NULL, cal_metadata->num_ants, dijones_path);
+
+    // Invert the alignment matrix and multiply it to the gains matrix
+    // Eq. (29) in Ord et al. (2019)
+    cuDoubleComplex Ainv[nvispol];
+    inv2x2( A, Ainv );
 
     // Read in the Bandpass file
     if (use_bandpass)
@@ -158,9 +164,16 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // "The RTS conjugates the sky so beware"
             conj2x2( &(D[d_idx]), &(D[d_idx]) );
 
+            // Multiply in (the inverse of) the alignment matrix
+            mult2x2d( &(D[d_idx]), Ainv, &(D[d_idx]) );
+
             // The RTS matrices are in the (P,Q) basis, so convert to (Q,P)
             // by reversing the Jones matrix
             //reverse2x2( &(D[d_idx]), &(D[d_idx]) );
+//if (ch == 0)
+//{
+//    fprintf_complex_matrix( stderr, &(D[d_idx]) );
+//}
         }
     }
 
@@ -180,7 +193,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     return D;
 }
 
-void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname )
+void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname )
 /* Read in an RTS file and return the direction independent Jones matrix
  * for each antenna. This implements Eq. (29) in Ord et al. (2019).
  *
@@ -199,7 +212,7 @@ void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname )
 
     // Set up some variables for reading in
     double val;
-    double invA[NDBL_PER_JONES]; // The alignment matrix
+    double *Adbl = (double *)A; // The alignment matrix, cast as a double array for easy reading
     double J[NDBL_PER_JONES]; // "Raw" Jones matrix
 
     // Read in the amplitude (SM: I have no idea what this value represents)
@@ -207,28 +220,19 @@ void read_dijones_file( double **Dd, double *amp, uintptr_t nant, char *fname )
     if (amp != NULL)
         *amp = val;
 
-    // Read in the alignment ("A") matrix and invert it ("invA")
-    // (Just use the "invA" array for both reading and inverting)
-
-    // Reading:
+    // Read in the alignment ("A")
     int i;
     for (i = 0; i < NDBL_PER_JONES; i++)
-        fscanf( fp, "%lf,", &invA[i] );
+        fscanf( fp, "%lf,", &Adbl[i] );
 
-    // Inverting (inv2x2() expects cuDoubleComplex arrays):
-    inv2x2( (cuDoubleComplex *)invA, (cuDoubleComplex *)invA );
-
-    // Finally, read in the Jones ("J") matrices and multiply them each by the
-    // inverted alignment matrix ("invA")
-    // Eq. (29) in Ord et al. (2019)
+    // Finally, read in the Jones ("J") matrices
     uintptr_t ant;
     for (ant = 0; ant < nant; ant++)
     {
         for (i = 0; i < NDBL_PER_JONES; i++)
             fscanf( fp, "%lf,", &J[i] );
 
-        mult2x2d( (cuDoubleComplex *)J, (cuDoubleComplex *)invA,
-                (cuDoubleComplex *)(Dd[ant]) );
+        cp2x2( (cuDoubleComplex *)J, Dd[ant] );
     }
 
     fclose(fp);
