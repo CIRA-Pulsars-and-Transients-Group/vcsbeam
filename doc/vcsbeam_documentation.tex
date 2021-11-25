@@ -224,9 +224,9 @@ The RTS is one of the pieces of software that can be used to generate calibratio
 The solutions are given in two sets of files, called ``DI\_JonesMatrices\_nodeCCC.dat'' and ``BandpassCalibration\_nodeCCC.dat'' (CCC represents a coarse channel index).
 These files contain the information needed to reconstruct the Jones matrices in the $(p,q)$ basis, which is required in order to take calibration solutions derived from one observation and apply (or ``transfer'') them to other observations.
 
-The solutions are factored in the following way\footnote{It is as yet unclear if this gives a better result than ${\bf J} = ({\bf D}_d {\bf D}_b {\bf A}^{-1})^*$.},
+The solutions are factored in the following way\footnote{It is as yet unclear if this gives a better result than ${\bf D} = ({\bf D}_d {\bf D}_b {\bf A}^{-1})^*$.},
 \begin{equation}
-    {\bf J} = ({\bf D}_d {\bf D}_b)^* {\bf A}^{-1},
+    {\bf D} = ({\bf D}_d {\bf D}_b)^* {\bf A}^{-1},
 \end{equation}
 where
 \begin{description}
@@ -384,7 +384,7 @@ Mitch
 
 \begin{table}[!hb]
     \centering
-    \caption{Comparison of coordinate notations}
+    \caption{Comparison of matrix names}
     \label{tbl:notations}
     \begin{tabular}{l|ccc}
         This document & ${\bf J}$ & ${\bf D}$ & ${\bf B}$ \\
