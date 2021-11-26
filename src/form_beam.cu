@@ -110,12 +110,13 @@ __global__ void invj_the_data( uint8_t       *data,
 #ifdef DEBUG
     if (c==0 && s==0 && ant==0)
     {
-        printf( "Jinv = [%lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i]\n",
+        printf( "Jinv = [jyq, jyp; jxq; jxp]\n"
+                "     = [%lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i]\n",
                 cuCreal(J[J_IDX(ant,c,0,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,0,nc,npol)]),
                 cuCreal(J[J_IDX(ant,c,0,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,1,nc,npol)]),
                 cuCreal(J[J_IDX(ant,c,1,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,0,nc,npol)]),
                 cuCreal(J[J_IDX(ant,c,1,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,1,nc,npol)]) );
-        printf( "v    = [%.1lf%+.1lf*i; %.1lf%+.1lf*i]\n",
+        printf( "v    = [vq; vp] = [%.1lf%+.1lf*i; %.1lf%+.1lf*i]\n",
                 cuCreal( Dq ), cuCimag( Dq ),
                 cuCreal( Dp ), cuCimag( Dp ) );
     }
