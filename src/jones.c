@@ -32,11 +32,11 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polQ_idxs, 
         ant = obs_metadata->rf_inputs[i].ant;
         pol = *(obs_metadata->rf_inputs[i].pol);
 
-        if (pol == 'Y')
+        if (pol == 'X')
         {
             polQ_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
         }
-        else // if (pol == 'X')
+        else // if (pol == 'Y')
         {
             polP_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
         }
@@ -279,10 +279,26 @@ void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
     cuDoubleComplex m2 = M[2];
     cuDoubleComplex m3 = M[3];
 
-    Mout[0] = m0;
-    Mout[1] = m1;
-    Mout[2] = m2;
-    Mout[3] = m3;
+    Mout[0] = m3;
+    Mout[1] = m2;
+    Mout[2] = m1;
+    Mout[3] = m0;
+}
+
+void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
+/* [0 1]  -->  [2 3]
+ * [2 3]       [0 1]
+ */
+{
+    cuDoubleComplex m0 = M[0];
+    cuDoubleComplex m1 = M[1];
+    cuDoubleComplex m2 = M[2];
+    cuDoubleComplex m3 = M[3];
+
+    Mout[0] = m2;
+    Mout[1] = m3;
+    Mout[2] = m0;
+    Mout[3] = m1;
 }
 
 void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )

@@ -78,8 +78,8 @@ __global__ void invj_the_data( uint8_t       *data,
 *   J    [nants] [nchan] [npol] [npol]        -- jones matrix
 *   incoh --true if outputing an incoherent beam
 * Layout for output arrays:
-*   JDx  [nsamples] [nchan] [nant]
-*   JDy  [nsamples] [nchan] [nant]
+*   JDq  [nsamples] [nchan] [nant]
+*   JDp  [nsamples] [nchan] [nant]
 */
 {
     // Translate GPU block/thread numbers into meaning->l names
@@ -110,20 +110,20 @@ __global__ void invj_the_data( uint8_t       *data,
 #ifdef DEBUG
     if (c==0 && s==0 && ant==0)
     {
-        printf( "J = [%lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i]\n",
+        printf( "Jinv = [%lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i]\n",
                 cuCreal(J[J_IDX(ant,c,0,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,0,nc,npol)]),
                 cuCreal(J[J_IDX(ant,c,0,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,1,nc,npol)]),
                 cuCreal(J[J_IDX(ant,c,1,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,0,nc,npol)]),
                 cuCreal(J[J_IDX(ant,c,1,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,1,nc,npol)]) );
-        printf( "v = [%lf%+lf*i; %lf%+lf*i]\n",
+        printf( "v    = [%.1lf%+.1lf*i; %.1lf%+.1lf*i]\n",
                 cuCreal( Dq ), cuCimag( Dq ),
                 cuCreal( Dp ), cuCimag( Dp ) );
     }
 #endif
 }
 
-__global__ void beamform_kernel( cuDoubleComplex *JDx,
-                                 cuDoubleComplex *JDy,
+__global__ void beamform_kernel( cuDoubleComplex *JDq,
+                                 cuDoubleComplex *JDp,
                                  cuDoubleComplex *phi,
                                  double invw,
                                  int p,
@@ -133,8 +133,8 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
                                  float *C,
                                  int npol )
 /* Layout for input arrays:
-*   JDx  [nsamples] [nchan] [nant]               -- calibrated voltages
-*   JDy  [nsamples] [nchan] [nant]
+*   JDq  [nsamples] [nchan] [nant]               -- calibrated voltages
+*   JDp  [nsamples] [nchan] [nant]
 *   phi  [nant    ] [nchan]                      -- weights array
 *   invw                                         -- inverse atrix
 * Layout of input options
@@ -185,8 +185,8 @@ __global__ void beamform_kernel( cuDoubleComplex *JDx,
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
-    Bx[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDx[JD_IDX(s,c,ant,nc,nant)] );
-    By[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDy[JD_IDX(s,c,ant,nc,nant)] );
+    Bx[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDq[JD_IDX(s,c,ant,nc,nant)] );
+    By[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDp[JD_IDX(s,c,ant,nc,nant)] );
 
     Nxx[ant] = cuCmul( Bx[ant], cuConj(Bx[ant]) );
     Nxy[ant] = cuCmul( Bx[ant], cuConj(By[ant]) );
@@ -404,7 +404,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
         dim3 stat( nants );
 
         // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, d_phi, g->d_JDx, g->d_JDy,
+        invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, d_phi, g->d_JDq, g->d_JDp,
                                                g->d_polQ_idxs, g->d_polP_idxs,
                                                npol );
 
@@ -413,7 +413,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
         {
             // Call the beamformer kernel
             // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
-            beamform_kernel<<<chan_samples, stat, 11*nants*sizeof(double), streams[p]>>>( g->d_JDx, g->d_JDy,
+            beamform_kernel<<<chan_samples, stat, 11*nants*sizeof(double), streams[p]>>>( g->d_JDq, g->d_JDp,
                             d_phi, invw,
                             p, ichunk*sample_rate/nchunk, nchunk,
                             g->d_Bd, g->d_coh, npol );
@@ -584,8 +584,8 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
 
     // Allocate device memory
     gpuErrchk(cudaMalloc( (void **)&g->d_J,     g->J_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_JDx,   g->JD_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_JDy,   g->JD_size ));
+    gpuErrchk(cudaMalloc( (void **)&g->d_JDq,   g->JD_size ));
+    gpuErrchk(cudaMalloc( (void **)&g->d_JDp,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_Bd,    g->Bd_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_data,  g->data_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_coh,   g->coh_size ));

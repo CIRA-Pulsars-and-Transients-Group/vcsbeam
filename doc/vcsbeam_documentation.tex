@@ -19,6 +19,8 @@
 \definecolor{mygray}{rgb}{0.5,0.5,0.5}
 \definecolor{mymauve}{rgb}{0.58,0,0.82}
 
+\bibliographystyle{chicago}
+
 \lstset{
   backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
   basicstyle=\footnotesize\ttfamily, % the size of the fonts that are used for the code
@@ -54,6 +56,7 @@
     colorlinks=true,
     linkcolor=blue,
     filecolor=blue,
+    citecolor=blue,
 }
 
 \makeindex
@@ -219,22 +222,59 @@ In practise, of course, the inverse opeations are used to reconstruct the electr
 Generally, calibration is performed independently on individual frequency channels.
 
 \subsection{Real Time Solution (RTS)}
+\index{RTS}
 
 The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation.
 The solutions are given in two sets of files, called ``DI\_JonesMatrices\_nodeCCC.dat'' and ``BandpassCalibration\_nodeCCC.dat'' (CCC represents a coarse channel index).
 These files contain the information needed to reconstruct the Jones matrices in the $(p,q)$ basis, which is required in order to take calibration solutions derived from one observation and apply (or ``transfer'') them to other observations.
 
-The solutions are factored in the following way\footnote{It is as yet unclear if this gives a better result than ${\bf D} = ({\bf D}_d {\bf D}_b {\bf A}^{-1})^*$.},
+The solutions are factored in the following way\footnote{It is as yet unclear if this gives a better result than ${\bf D} = ({\bf D}_d {\bf D}_b {\bf B}_\text{cal}^{-1})^*$.},
 \begin{equation}
-    {\bf D} = ({\bf D}_d {\bf D}_b)^* {\bf A}^{-1},
+    {\bf D} = ({\bf D}_d {\bf D}_b)^* {\bf B}_\text{cal}^{-1},
+    \label{eqn:rts_factorisation}
 \end{equation}
 where
-\begin{description}
-    \item[${\bf D}_d$] is the ``coarse channel tile gain'' (one Jones matrix per tile, per coarse channel);
-    \item[${\bf A}$]   is the ``alignment matrix'' (one Jones matrix per coarse channel); and
-    \item[${\bf D}_b$] is the ``bandpass gain'' (one Jones matrix per tile, per fine channel).
-\end{description}
-Although the resulting ${\bf J}$ matrix is
+\begin{itemize}
+    \item ${\bf D}_d$ is the ``coarse channel tile gain''\index{gain} (one Jones matrix per tile, per coarse channel);
+    \item ${\bf B}_\text{cal}$ is the ``alignment matrix''\index{alignment matrix}, or the primary beam model\index{primary beam} towards the calibrator source (one Jones matrix per coarse channel); and
+    \item ${\bf D}_b$ is the ``bandpass gain'' (one Jones matrix per tile, per fine channel).
+\end{itemize}
+
+\subsubsection{Coordinate bases}
+
+The coordinate bases for the various RTS matrices described in this section are not well-documented elsewhere, and are mainly assumed to be correct based on empirical tests performed on actual observations of pulsars.
+Having said that, one of the early plotting scripts designed to visualise the RTS calibration solutions matrices is suggestive that
+\begin{enumerate}
+    \item ${\bf D}_d$ is in the basis $(x,y)\rightarrow(p,q)$,
+    \item ${\bf D}_b$ is in the basis $(x,y)\rightarrow(x,y)$,
+    \item ${\bf B}_\text{cal}$ is in the basis $(p,q)\rightarrow(x,y)$.
+\end{enumerate}
+This would put the resulting ${\bf D}$ matrix in the basis:
+\begin{equation}
+    {\bf D} = \begin{bmatrix}
+        D_{pp} & D_{pq} \\
+        D_{qp} & D_{qq}
+    \end{bmatrix}.
+\end{equation}
+However, the current implementation in the beamformer does the following sequence of operations.
+After obtaining ${\bf D}$ from the RTS output files according to Eq.~\eqref{eqn:rts_factorisation}, it is multiplied to the primary beam to produce the final Jones matrix:
+\begin{equation}
+    {\bf J} = {\bf D}{\bf B}\pamat.
+\end{equation}
+The primary beam is obtained using \href{https://github.com/MWATelescope/mwa_hyperbeam}{Hyperbeam}, which is based on the FEE beam model\index{primary beam!full embedded element (FEE)} \citep{Sokolowski2017}.
+According to the documentation, this gives the ${\bf B}$ matrix in the $(\theta,\phi)\rightarrow(q,p)$ basis.
+Since, by inspection of actual calibration solutions, the ${\bf D}$ matrices have the elements with the largest moduli along the main diagonal, we infer that the ${\bf D}$ matrices maintain the same basis, and that, despite what the plotting scripts suggest, the ${\bf D}$ is in fact
+\begin{equation}
+    {\bf D} = \begin{bmatrix}
+        D_{qq} & D_{qp} \\
+        D_{pq} & D_{pp}
+    \end{bmatrix}.
+\end{equation}
+This agrees with the code in the \texttt{invj\_the\_data()} GPU kernel, which applies
+
+
+As argued above, the $\pamat$ matrix embodies the transformation $(y,x)\rightarrow(\theta,\phi)$.
+Taken together, 
 
 \subsection{Hyperdrive}
 
@@ -376,7 +416,7 @@ Mitch
         This document & $p$ & $q$ & $\theta$ & $\phi$ & $x$ & $y$ \\
         \hline
         MWA metafits files       & Y & X & - & - & - & - \\
-        Sokolowksi et al. (2017) & $y$ & $x$ & $\theta$ & $\phi$ & - & - \\
+        \citet{Sokolowski2017} & $y$ & $x$ & $\theta$ & $\phi$ & - & - \\
     \end{tabular}
 \end{table}
 
@@ -389,10 +429,12 @@ Mitch
     \begin{tabular}{l|ccc}
         This document & ${\bf J}$ & ${\bf D}$ & ${\bf B}$ \\
         \hline
-        Sokolowksi et al. (2017) & ${\bf J}$ & ${\bf G}$ & ${\bf E}$ \\
+        \citet{Sokolowski2017} & ${\bf J}$ & ${\bf G}$ & ${\bf E}$ \\
     \end{tabular}
 \end{table}
 
 \printindex
+
+\bibliography{vcsbeam_documentation}
 
 \end{document}

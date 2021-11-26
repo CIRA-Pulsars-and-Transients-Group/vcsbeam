@@ -297,6 +297,7 @@ void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout );
 void conj2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 double norm2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
+void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H );
 void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *c );
 void fprintf_complex_matrix( FILE *fout, cuDoubleComplex *M );
@@ -804,8 +805,8 @@ struct gpu_formbeam_arrays
     size_t pol_idxs_size;
     cuDoubleComplex *J, *d_J;
     cuDoubleComplex *Bd, *d_Bd;
-    cuDoubleComplex *JDx, *d_JDx;
-    cuDoubleComplex *JDy, *d_JDy;
+    cuDoubleComplex *JDq, *d_JDq;
+    cuDoubleComplex *JDp, *d_JDp;
     uint8_t *d_data;
     float   *d_coh;
     uint32_t *polQ_idxs, *d_polQ_idxs;

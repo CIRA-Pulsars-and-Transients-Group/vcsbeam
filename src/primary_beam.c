@@ -97,11 +97,13 @@ void calc_primary_beam(
                         pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
 
                 // Apply the parallactic angle correction
+#ifdef DEBUG
 if (config_idx == 0)
 {
     fprintf( stderr, "before pa correction (%.2f MHz): B = ", pb->freq_hz/1e6 );
     fprintf_complex_matrix( stderr, configs[config_idx] );
 }
+#endif
                 mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );
 //fprintf( stderr, "after  pa correction: B = " );
 //fprintf_complex_matrix( stderr, configs[config_idx] );
