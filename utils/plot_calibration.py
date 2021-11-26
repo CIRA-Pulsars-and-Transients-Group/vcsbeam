@@ -3,17 +3,26 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
+import argparse
 
-def get_tilenames(filename, first_line=14, nlines=16):
-    tilenames = []
+def get_header_info(filename, header_nlines=30):
+
+    tilenames_first_line = 14
+    tilenames_nlines     = 16
+    tilenames            = []
+
+    mwa_plot_calibration_line = 4
+
     with open(filename, 'r') as reader:
-        for i in range(first_line-1):
-            reader.readline() # Consume the first several uninteresting lines
-        for i in range(nlines):
-            tilenames.extend(reader.readline().split()[1:])
+        for i in range(header_nlines):
+            line = reader.readline() # Consume the next line
 
-    return tilenames
+            if i+1 == mwa_plot_calibration_line:
+                mwa_plot_calibration_cmd = line.strip(' #')
+            elif i+1 >= tilenames_first_line and i+1 < tilenames_first_line + tilenames_nlines:
+                tilenames.extend(line.split()[1:])
+
+    return tilenames, mwa_plot_calibration_cmd
 
 def plot_tile(ax, PP, PQ, QP, QQ, phases_or_amps='phases', show_yticks=False, **kwargs):
     ax.scatter(np.arange(len(PP)), PQ, c='cyan', **kwargs)
@@ -36,9 +45,7 @@ def plot_tile(ax, PP, PQ, QP, QQ, phases_or_amps='phases', show_yticks=False, **
         else:
             ax.set_yticklabels([])
 
-def plot_all_tiles(cal_data, phases_or_amps='phases', tilenames=None, ncols=16, **kwargs):
-
-    print("Plotting {}...".format(phases_or_amps))
+def plot_all_tiles(cal_data, mwa_plot_calibration_cmd, phases_or_amps='phases', tilenames=None, ncols=16, figsize=None, **kwargs):
 
     if phases_or_amps == 'phases':
         column_offset = 1
@@ -48,7 +55,7 @@ def plot_all_tiles(cal_data, phases_or_amps='phases', tilenames=None, ncols=16, 
     nants = cal_data.shape[1]//8
     nrows = nants // ncols
 
-    fig, axs = plt.subplots(nrows, ncols, sharex=True, sharey=True);
+    fig, axs = plt.subplots(nrows, ncols, sharex=True, sharey=True, figsize=figsize);
 
     for r in range(nrows):
         for c in range(ncols):
@@ -66,25 +73,33 @@ def plot_all_tiles(cal_data, phases_or_amps='phases', tilenames=None, ncols=16, 
             axs[r,c].set_title(tilenames[ant], y=1.0, pad=-14)
 
     plt.subplots_adjust(wspace=0, hspace=0)
-    fig.suptitle("{}\n[b c]\n[m r]".format(phases_or_amps))
+    fig.suptitle("{}\n[b c]\n[m r]\n{}".format(phases_or_amps, mwa_plot_calibration_cmd))
 
     return fig, axs
 
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
-        print("usage: {} [text file output from mwa_plot_calibration]".format(sys.argv[0]))
-        exit()
+    parser = argparse.ArgumentParser(description="Make phase and amplitude plots of calibration solutions")
+    parser.add_argument("calibration_solution", help="file for plotting (output of mwa_plot_calibration)")
+    parser.add_argument("--phases_png", help="output plot of phases", default=None)
+    parser.add_argument("--amps_png", help="output plot of amps", default=None)
+    args = parser.parse_args()
 
-    cal_data = np.loadtxt(sys.argv[-1])
+    cal_data = np.loadtxt(args.calibration_solution)
 
     # Get tilenames
-    tilenames = get_tilenames(sys.argv[-1])
+    tilenames, mwa_plot_calibration_cmd = get_header_info(args.calibration_solution)
 
     s = 0.1
+    figsize = [12.8, 9.6]
 
-    plot_all_tiles(cal_data, phases_or_amps='phases', tilenames=tilenames, s=s, marker='.')
-    plot_all_tiles(cal_data, phases_or_amps='amps', tilenames=tilenames, s=s, marker='.')
+    if args.phases_png is not None:
+        print("Plotting phases...")
+        fig, axs = plot_all_tiles(cal_data, mwa_plot_calibration_cmd, phases_or_amps='phases', tilenames=tilenames, s=s, marker='.', figsize=figsize)
+        plt.savefig(args.phases_png)
 
-    plt.show()
+    if args.amps_png is not None:
+        print("Plotting amps...")
+        fig, axs = plot_all_tiles(cal_data, mwa_plot_calibration_cmd, phases_or_amps='amps', tilenames=tilenames, s=s, marker='.', figsize=figsize)
+        plt.savefig(args.amps_png)
