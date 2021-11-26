@@ -167,12 +167,13 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // Multiply in (the inverse of) the alignment matrix
             mult2x2d( &(D[d_idx]), Ainv, &(D[d_idx]) );
 
-            // The RTS matrices are in the (q,p)->(q,p) basis, so this converts to (q,p)->(p,q)
+            // The RTS matrices are apparently in the (q,p)->(p,q) basis, so this converts to (q,p)->(q,p)
             // by swapping the rows of the Jones matrix
-            swaprows2x2( &(D[d_idx]), &(D[d_idx]) );
+            //swaprows2x2( &(D[d_idx]), &(D[d_idx]) );
 //if (ch == 0)
 //{
-//    fprintf_complex_matrix( stderr, &(D[d_idx]) );
+//    fprintf( stderr, "Dd = "); fprintf_complex_matrix( stderr, Dd[dd_idx] );
+//    fprintf( stderr, "D  = "); fprintf_complex_matrix( stderr, &(D[d_idx]) );
 //}
         }
     }

@@ -415,10 +415,15 @@ Mitch
     \begin{tabular}{l|cc|cc|cc}
         This document & $p$ & $q$ & $\theta$ & $\phi$ & $x$ & $y$ \\
         \hline
-        MWA metafits files       & Y & X & - & - & - & - \\
+        MWA metafits files       & X & Y & - & - & - & - \\
         \citet{Sokolowski2017} & $y$ & $x$ & $\theta$ & $\phi$ & - & - \\
     \end{tabular}
 \end{table}
+
+The apparent reversal of the metafits files polarisations compared to the \citet{Sokolowski2017} notation is put here only very reluctantly.
+This is also at odds with verbal confirmation by various MWA Operations team members, who insist that `X' aligns E-W and `Y' alignes N-S.
+Nevertheless, \vcsbeam{} appears to only produce sensible results when I treat the voltages listed under `X' in the metafits file as if they were those measured with the N-S dipole, and `Y' with the E-W dipole.
+It remains to be seen whether this holds true for MWAX data.
 
 \section{Jones matrices}
 
