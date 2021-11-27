@@ -579,9 +579,9 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
 
     // Essentially phase rotations
     if (isfinite(PPscale)) { J[0] = cuCdiv( J[0], PP0norm ); }
-    if (isfinite(PQscale)) { J[1] = cuCdiv( J[1], PQ0norm ); }
-    if (isfinite(QPscale)) { J[2] = cuCdiv( J[2], QP0norm ); }
-    if (isfinite(QQscale)) { J[3] = cuCdiv( J[3], QQ0norm ); }
+    if (isfinite(PQscale)) { J[1] = cuCdiv( J[1], PP0norm ); }
+    if (isfinite(QPscale)) { J[2] = cuCdiv( J[2], PP0norm ); }
+    if (isfinite(QQscale)) { J[3] = cuCdiv( J[3], PP0norm ); }
 }
 
 void zero_PQ_and_QP( cuDoubleComplex *J )
