@@ -588,8 +588,8 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
 }
 
 void zero_PQ_and_QP( cuDoubleComplex *J )
-/* For J = [ PP, PQ ], set PQ and QP to 0 for all antennas
- *         [ QP, QQ ]
+/* For J = [ QQ, QP ], set PQ and QP to 0 for all antennas
+ *         [ PQ, PP ]
  */
 {
     J[1] = make_cuDoubleComplex( 0.0, 0.0 );
