@@ -21,6 +21,7 @@ struct make_plot_calibrate_opts {
     char      *metafits; // filename of the metafits file
     uintptr_t  ncoarse_chans;
     char      *custom_flags;
+    char      *zero_string;
 };
 
 /***********************
@@ -124,21 +125,32 @@ int main(int argc, char **argv)
 
     int didx; // idx of element in D array
     int pol1, pol2;
+
     for (Ch = 0; Ch < ncoarse_chans; Ch++)
     {
         for (ch = 0; ch < nchans; ch++)
         {
             for (ant = 0; ant < obs_metadata->num_ants; ant++)
             {
-                for (pol1 = 0; pol1 < npols; pol1++)
-                for (pol2 = 0; pol2 < npols; pol2++)
+                // Special output if all elements are zero (if user requested)
+                didx = J_IDX(ant,ch,0,0,nchans,npols);
+                if (opts.zero_string != NULL && is2x2zero( &(D[Ch][didx]) ))
                 {
-                    didx = J_IDX(ant,ch,pol1,pol2,nchans,npols);
-                    // The jones matrix element to be printed is D[Ch][didx]
-                    fprintf( fout, "%e %e ",
-                            cuCabs(D[Ch][didx]),                                // magnitude
-                            atan2( cuCimag(D[Ch][didx]), cuCreal(D[Ch][didx]) ) // phase
-                           );
+                    for (i = 0; i < npols*npols*2; i++)
+                        fprintf( fout, "%s ", opts.zero_string );
+                }
+                else
+                {
+                    for (pol1 = 0; pol1 < npols; pol1++)
+                        for (pol2 = 0; pol2 < npols; pol2++)
+                        {
+                            didx = J_IDX(ant,ch,pol1,pol2,nchans,npols);
+                            // The jones matrix element to be printed is D[Ch][didx]
+                            fprintf( fout, "%e %e ",
+                                    cuCabs(D[Ch][didx]),                                // magnitude
+                                    atan2( cuCimag(D[Ch][didx]), cuCreal(D[Ch][didx]) ) // phase
+                                   );
+                        }
                 }
             }
 
@@ -214,6 +226,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
     opts->ncoarse_chans      = -1;    // Number of coarse channels to include
     opts->metafits           = NULL;  // filename of the metafits file for the target observations
     opts->custom_flags       = NULL;  // filename of text file containing TileNames of tiles to be flagged
+    opts->zero_string        = NULL;  // string to output if all matrix elements are identically zero
     cal->use_bandpass        = false; // use the Bandpass calibration solutions
     cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
     cal->caldir              = NULL;  // The path to where the calibration solutions live
@@ -241,12 +254,13 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"PQ-phase",        required_argument, 0, 'U'},
                 {"version",         required_argument, 0, 'V'},
-                {"cross-terms",     no_argument,       0, 'X'}
+                {"cross-terms",     no_argument,       0, 'X'},
+                {"zero-string",     required_argument, 0, 'z'},
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "Bc:C:F:hm:N:OR:U:VX",
+                             "Bc:C:F:hm:N:OR:U:VXz:",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -300,6 +314,9 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                     break;
                 case 'X':
                     cal->keep_cross_terms = true;
+                    break;
+                case 'z':
+                    opts->zero_string = optarg;
                     break;
                 default:
                     fprintf( stderr, "error: make_plot_calibrate_parse_cmdline: "

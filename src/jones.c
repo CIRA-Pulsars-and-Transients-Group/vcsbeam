@@ -304,6 +304,20 @@ void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
     Mout[3] = m1;
 }
 
+bool is2x2zero( cuDoubleComplex *M )
+/* Returns true iff all elements of M are identically zero
+ */
+{
+    return (cuCreal(M[0]) == 0.0 &&
+            cuCimag(M[0]) == 0.0 &&
+            cuCreal(M[1]) == 0.0 &&
+            cuCimag(M[1]) == 0.0 &&
+            cuCreal(M[2]) == 0.0 &&
+            cuCimag(M[2]) == 0.0 &&
+            cuCreal(M[3]) == 0.0 &&
+            cuCimag(M[3]) == 0.0);
+}
+
 void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
 /* Calculate H = M^H, where "^H" is the hermitian operation
  */
