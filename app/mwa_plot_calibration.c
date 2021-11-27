@@ -109,10 +109,10 @@ int main(int argc, char **argv)
     fprintf( fout, "\n# Column description:\n"
                    "#   Eight columns per antenna, where the eight columns are the magnitudes and phases of\n"
                    "#   the four Jones matrix elements:\n"
-                   "#     [ j0 j1 ]\n"
-                   "#     [ j2 j3 ]\n"
+                   "#     [ Dqq Dqp ]\n"
+                   "#     [ Dpq Dpp ]\n"
                    "# e.g.\n"
-                   "#   Tile1_abs(j0), Tile1_arg(j0), Tile1_abs(j1), Tile1_arg(j1), ..., Tile2_abs(j0), ...\n"
+                   "#   Tile1_abs(Dqq), Tile1_arg(Dqq), Tile1_abs(Dqp), Tile1_arg(Dqp), ..., Tile2_abs(Dqq), ...\n"
                    "#\n# The ordered tile names are (reading rows first):" );
     uintptr_t ant;
     for (ant = 0; ant < obs_metadata->num_ants; ant++)

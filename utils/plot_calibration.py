@@ -3,6 +3,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import argparse
 
 def get_header_info(filename, header_nlines=30):
@@ -72,8 +73,24 @@ def plot_all_tiles(cal_data, mwa_plot_calibration_cmd, phases_or_amps='phases', 
 
             axs[r,c].set_title(tilenames[ant], y=1.0, pad=-14)
 
-    plt.subplots_adjust(wspace=0, hspace=0)
-    fig.suptitle("{}\n[b c]\n[m r]\n{}".format(phases_or_amps, mwa_plot_calibration_cmd))
+    # Put a legend on the top right
+    custom_lines = [Line2D([0], [0], color='w', markerfacecolor="blue",    marker='o', label="Dqq"),
+                    Line2D([0], [0], color='w', markerfacecolor="magenta", marker='o', label="Dpq"),
+                    Line2D([0], [0], color='w', markerfacecolor="cyan",    marker='o', label="Dqp"),
+                    Line2D([0], [0], color='w', markerfacecolor="red",     marker='o', label="Dpp")]
+    axs[0,-1].legend(handles=custom_lines,
+                     loc='upper center',
+                     bbox_to_anchor=(0.5, 0.95),
+                     bbox_transform=fig.transFigure,
+                     ncol=2,
+                     labelspacing=0.5,
+                     columnspacing=0.0)
+
+    # Squish the plots together
+    plt.subplots_adjust(wspace=0, hspace=0, left=0.01, right=0.99, top=0.89, bottom=0.01)
+
+    # Add a global title
+    fig.suptitle("{}\n{}".format(phases_or_amps, mwa_plot_calibration_cmd))
 
     return fig, axs
 

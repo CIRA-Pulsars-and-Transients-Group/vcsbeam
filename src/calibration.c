@@ -566,22 +566,25 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
 
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
 {
-    cuDoubleComplex PP0norm, PQ0norm, QP0norm, QQ0norm;
+    cuDoubleComplex PP0norm; //, PQ0norm, QP0norm, QQ0norm;
     double PPscale = 1.0/cuCabs( Jref[0] ); // = 1/|PP|
-    double PQscale = 1.0/cuCabs( Jref[1] ); // = 1/|PQ|
-    double QPscale = 1.0/cuCabs( Jref[2] ); // = 1/|QP|
-    double QQscale = 1.0/cuCabs( Jref[3] ); // = 1/|QQ|
+    //double PQscale = 1.0/cuCabs( Jref[1] ); // = 1/|PQ|
+    //double QPscale = 1.0/cuCabs( Jref[2] ); // = 1/|QP|
+    //double QQscale = 1.0/cuCabs( Jref[3] ); // = 1/|QQ|
 
     PP0norm = make_cuDoubleComplex( PPscale*cuCreal(Jref[0]), PPscale*cuCimag(Jref[0]) ); // = PP/|PP|
-    PQ0norm = make_cuDoubleComplex( PQscale*cuCreal(Jref[1]), PQscale*cuCimag(Jref[1]) ); // = PQ/|PQ|
-    QP0norm = make_cuDoubleComplex( QPscale*cuCreal(Jref[2]), QPscale*cuCimag(Jref[2]) ); // = QP/|QP|
-    QQ0norm = make_cuDoubleComplex( QQscale*cuCreal(Jref[3]), QQscale*cuCimag(Jref[3]) ); // = QQ/|QQ|
+    //PQ0norm = make_cuDoubleComplex( PQscale*cuCreal(Jref[1]), PQscale*cuCimag(Jref[1]) ); // = PQ/|PQ|
+    //QP0norm = make_cuDoubleComplex( QPscale*cuCreal(Jref[2]), QPscale*cuCimag(Jref[2]) ); // = QP/|QP|
+    //QQ0norm = make_cuDoubleComplex( QQscale*cuCreal(Jref[3]), QQscale*cuCimag(Jref[3]) ); // = QQ/|QQ|
 
     // Essentially phase rotations
-    if (isfinite(PPscale)) { J[0] = cuCdiv( J[0], PP0norm ); }
-    if (isfinite(PQscale)) { J[1] = cuCdiv( J[1], PP0norm ); }
-    if (isfinite(QPscale)) { J[2] = cuCdiv( J[2], PP0norm ); }
-    if (isfinite(QQscale)) { J[3] = cuCdiv( J[3], PP0norm ); }
+    if (isfinite(PPscale))
+    {
+        J[0] = cuCdiv( J[0], PP0norm );
+        J[1] = cuCdiv( J[1], PP0norm ); 
+        J[2] = cuCdiv( J[2], PP0norm ); 
+        J[3] = cuCdiv( J[3], PP0norm );
+    }
 }
 
 void zero_PQ_and_QP( cuDoubleComplex *J )
