@@ -87,6 +87,10 @@ void get_jones(
 
                 mult2x2d(&(D[j_idx]), &(B[pb_idx]), Ji); // the gain in the desired look direction
 
+                // Ord's original comment for the following line is:
+                // "The RTS conjugates the sky so beware"
+                conj2x2( Ji, Ji );
+
                 // Now, calculate the inverse Jones matrix
 
                 Fnorm = norm2x2( Ji, Ji );

@@ -160,10 +160,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             else
                 cp2x2( Dd[dd_idx], &(D[d_idx]) );
 
-            // Ord's original comment for the following line is:
-            // "The RTS conjugates the sky so beware"
-            conj2x2( &(D[d_idx]), &(D[d_idx]) );
-
             // Multiply in (the inverse of) the alignment matrix
             mult2x2d( &(D[d_idx]), Ainv, &(D[d_idx]) );
 
