@@ -259,7 +259,7 @@ This would put the resulting ${\bf D}$ matrix in the basis:
 However, the current implementation in the beamformer does the following sequence of operations.
 After obtaining ${\bf D}$ from the RTS output files according to Eq.~\eqref{eqn:rts_factorisation}, it is multiplied to the primary beam to produce the final Jones matrix:
 \begin{equation}
-    {\bf J} = ({\bf D}{\bf B}\pamat)^*.
+    {\bf J} = {\bf D}{\bf B}\pamat.
 \end{equation}
 The primary beam is obtained using \href{https://github.com/MWATelescope/mwa_hyperbeam}{Hyperbeam}, which is based on the FEE beam model\index{primary beam!full embedded element (FEE)} \citep{Sokolowski2017}.
 According to the documentation, this gives the ${\bf B}$ matrix in the $(\theta,\phi)\rightarrow(q,p)$ basis.
