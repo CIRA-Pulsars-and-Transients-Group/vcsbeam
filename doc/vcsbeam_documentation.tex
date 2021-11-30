@@ -170,15 +170,6 @@ This is the rotation
     \caption{Definition of the parallactic angle, $\chi$, in the sky plane.}
     \label{fig:skyangles}
 \end{figure}
-The actual parallactic angle correction that is implemented is for historical reasons the matrix
-\begin{equation}
-    \pamat \equiv
-    \transmat{y}{x}{\theta}{\phi}
-        = \begin{bmatrix}
-            -\sin\chi & -\cos\chi \\
-            -\cos\chi &  \sin\chi
-        \end{bmatrix}.
-\end{equation}
 In \vcsbeam{}, the parallactic angle is calculated (via the function \texttt{palPa} in the \href{https://github.com/Starlink/pal}{Starlink/pal} library) by the spherical triangle identity
 \begin{equation}
     \tan \chi = \frac{\cos \lambda \sin H}{\sin\lambda \cos x - \cos \lambda \sin x \cos H},

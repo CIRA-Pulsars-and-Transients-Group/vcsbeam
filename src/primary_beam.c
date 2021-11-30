@@ -342,10 +342,10 @@ void parallactic_angle_correction(
     double schi = sin(chi);
     double cchi = cos(chi);
 
-    Ppa[0] = -schi;
-    Ppa[1] = -cchi;
-    Ppa[2] = -cchi;
-    Ppa[3] =  schi;
+    Ppa[0] = -cchi;
+    Ppa[1] = -schi;
+    Ppa[2] =  schi;
+    Ppa[3] = -cchi;
 }
 
 void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction )
