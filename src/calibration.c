@@ -531,9 +531,8 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
             // Read in one Jones matrix
             fread( Dread, 1, JONES_SIZE_BYTES, fp );
 
-            // WARNING! Pols are read in backwards in order to conform to the RTS solutions,
-            // which has (Metafits) 'YY' in the top left element
-            //reverse2x2( Dread, Dread );
+            // WARNING! This permutation is not yet understood!!
+            swapcols2x2( Dread, Dread );
 
             // If there are any nans, set them to zero instead
             // Assume that if there are any nans in the Jones matrix, then
