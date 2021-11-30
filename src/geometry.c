@@ -77,7 +77,7 @@ void calc_geometric_delays(
         // Eq. (3) in Ord et al. (2019)
         // NB: Again, the sign flip (compared to the paper) is
         // unexplained.
-        phase = -2.0 * M_PI * Delta_t * freq_hz;
+        phase =  2.0 * M_PI * Delta_t * freq_hz;
         phi[Rf->ant] = make_cuDoubleComplex( cos( phase ), sin( phase ));
     }
 }

@@ -89,7 +89,7 @@ void get_jones(
 
                 // Ord's original comment for the following line is:
                 // "The RTS conjugates the sky so beware"
-                conj2x2( Ji, Ji );
+                //conj2x2( Ji, Ji );
 
                 // Now, calculate the inverse Jones matrix
 

@@ -655,7 +655,7 @@ typedef struct mpi_psrfits_t
                             (x) >  (max)-1 ?  (max)-1 : (x))
 #define INT_TO_UINT8(x)    ((x) < 0 ? CLIP(x,8) + 0x10 : CLIP(x,8))
 #define DEMOTE(x)  (INT_TO_UINT8((int)round(x)))
-#define PACK_NIBBLES(r,i)  ((DEMOTE(i) << 4) + DEMOTE(r))
+#define PACK_NIBBLES(r,i)  ((DEMOTE(r) << 4) + DEMOTE(i))
 
 typedef enum pfb_result_t
 {
@@ -785,8 +785,8 @@ void free_ipfb( struct gpu_ipfb_arrays *g );
 
 /* Converting from 4+4 complex to full-blown complex doubles */
 
-#define REAL_NIBBLE_TO_UINT8(X)  ((X) & 0xf)
-#define IMAG_NIBBLE_TO_UINT8(X)  (((X) >> 4) & 0xf)
+#define REAL_NIBBLE_TO_UINT8(X)  (((X) >> 4) & 0xf)
+#define IMAG_NIBBLE_TO_UINT8(X)  ((X) & 0xf)
 #define UINT8_TO_INT(X)          ((X) >= 0x8 ? (signed int)(X) - 0x10 : (signed int)(X))
 #define RE_UCMPLX4_TO_FLT(X)  ((float)(UINT8_TO_INT(REAL_NIBBLE_TO_UINT8(X))))
 #define IM_UCMPLX4_TO_FLT(X)  ((float)(UINT8_TO_INT(IMAG_NIBBLE_TO_UINT8(X))))
