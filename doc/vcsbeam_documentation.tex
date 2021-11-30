@@ -62,7 +62,7 @@
 \makeindex
 
 \newcommand{\pd}[2]{\ensuremath{\frac{\partial #1}{\partial #2}}}
-\newcommand{\transmat}[4]{\ensuremath{{\bf P}_{(#1,#2)\rightarrow(#3,#4)}}}
+\newcommand{\transmat}[4]{\ensuremath{{\bf P}_{(#3,#4)\leftarrow(#1,#2)}}}
 \newcommand{\pamat}{\ensuremath{{\bf P}_\text{pa}}}
 
 \begin{document}
@@ -151,7 +151,7 @@ Among these, the only transformation that is explicitly used in \vcsbeam{} is th
 
 The parallactic angle correction is a transformation between local sky coordinates and celestial sky coordinates.
 The parallactic angle itself, $\chi$, is defined as the position angle of local zenith with respect to the North Celestial Pole as subtended at a given source (see Fig. \ref{fig:skyangles}).
-The transformation $(x,y)\rightarrow(\theta,\phi)$ is therefore a counterclockwise rotation\footnote{A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
+The transformation $(\theta,\phi)\leftarrow(x,y)$ is therefore a counterclockwise rotation\footnote{A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
 This is the rotation
 \begin{equation}
     \transmat{x}{y}{\theta}{\phi}
@@ -245,9 +245,9 @@ where
 The coordinate bases for the various RTS matrices described in this section are not well-documented elsewhere, and are mainly assumed to be correct based on empirical tests performed on actual observations of pulsars.
 Having said that, one of the early plotting scripts designed to visualise the RTS calibration solutions matrices is suggestive that
 \begin{enumerate}
-    \item ${\bf D}_d$ is in the basis $(x,y)\rightarrow(p,q)$,
-    \item ${\bf D}_b$ is in the basis $(x,y)\rightarrow(x,y)$,
-    \item ${\bf B}_\text{cal}$ is in the basis $(p,q)\rightarrow(x,y)$.
+    \item ${\bf D}_d$ is in the basis $(p,q)\leftarrow(x,y)$,
+    \item ${\bf D}_b$ is in the basis $(x,y)\leftarrow(x,y)$,
+    \item ${\bf B}_\text{cal}$ is in the basis $(x,y)\leftarrow(p,q)$.
 \end{enumerate}
 This would put the resulting ${\bf D}$ matrix in the basis:
 \begin{equation}
@@ -262,7 +262,7 @@ After obtaining ${\bf D}$ from the RTS output files according to Eq.~\eqref{eqn:
     {\bf J} = {\bf D}{\bf B}\pamat.
 \end{equation}
 The primary beam is obtained using \href{https://github.com/MWATelescope/mwa_hyperbeam}{Hyperbeam}, which is based on the FEE beam model\index{primary beam!full embedded element (FEE)} \citep{Sokolowski2017}.
-According to the documentation, this gives the ${\bf B}$ matrix in the $(\theta,\phi)\rightarrow(q,p)$ basis.
+According to the documentation, this gives the ${\bf B}$ matrix in the $(q,p)\leftarrow(\theta,\phi)$ basis.
 Since, by inspection of actual calibration solutions, the ${\bf D}$ matrices have the elements with the largest moduli along the main diagonal, we infer that the ${\bf D}$ matrices maintain the same basis, and that, despite what the plotting scripts suggest, the ${\bf D}$ is in fact
 \begin{equation}
     {\bf D} = \begin{bmatrix}
@@ -273,7 +273,7 @@ Since, by inspection of actual calibration solutions, the ${\bf D}$ matrices hav
 This agrees with the code in the \texttt{invj\_the\_data()} GPU kernel, which applies
 
 
-As argued above, the $\pamat$ matrix embodies the transformation $(y,x)\rightarrow(\theta,\phi)$.
+As argued above, the $\pamat$ matrix embodies the transformation $(\theta,\phi)\leftarrow(y,x)$.
 Taken together, 
 
 \subsection{Hyperdrive}
