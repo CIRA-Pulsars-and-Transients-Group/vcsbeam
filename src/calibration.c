@@ -164,8 +164,9 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             mult2x2d( &(D[d_idx]), Ainv, &(D[d_idx]) );
 
             // The RTS matrices are apparently in some other (mystery) basis. The
-            // following converts to (q,p)->(q,p)
+            // following converts to (q,p)<-(q,p)
             swaprows2x2( &(D[d_idx]), &(D[d_idx]) );
+            //reverse2x2( &(D[d_idx]), &(D[d_idx]) );
             
 //if (ch == 0)
 //{

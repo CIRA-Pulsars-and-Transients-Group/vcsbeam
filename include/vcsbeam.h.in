@@ -298,6 +298,7 @@ void conj2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 double norm2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
+void swapcols2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
 bool is2x2zero( cuDoubleComplex *M );
 void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H );
 void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *c );
