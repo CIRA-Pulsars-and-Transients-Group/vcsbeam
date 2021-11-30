@@ -35,11 +35,11 @@ void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polQ_idxs, 
         // As written in the documentation, it appears that (at least for legacy data)
         // the polarisation identified with 'Y' in the metafits file is associated with
         // the E-W-aligned dipole, or the Q polarisation.
-        if (pol == 'Y')
+        if (pol == 'X')
         {
             polQ_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
         }
-        else // if (pol == 'X')
+        else // if (pol == 'Y')
         {
             polP_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
         }

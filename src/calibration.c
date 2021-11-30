@@ -165,7 +165,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
 
             // The RTS matrices are apparently in the (q,p)->(p,q) basis, so this converts to (q,p)->(q,p)
             // by swapping the rows of the Jones matrix
-            //swaprows2x2( &(D[d_idx]), &(D[d_idx]) );
+            swaprows2x2( &(D[d_idx]), &(D[d_idx]) );
 //if (ch == 0)
 //{
 //    fprintf( stderr, "Dd = "); fprintf_complex_matrix( stderr, Dd[dd_idx] );
@@ -531,7 +531,7 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
 
             // WARNING! Pols are read in backwards in order to conform to the RTS solutions,
             // which has (Metafits) 'YY' in the top left element
-            reverse2x2( Dread, Dread );
+            //reverse2x2( Dread, Dread );
 
             // If there are any nans, set them to zero instead
             // Assume that if there are any nans in the Jones matrix, then
