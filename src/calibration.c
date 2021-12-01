@@ -163,9 +163,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // Multiply in (the inverse of) the alignment matrix
             mult2x2d( &(D[d_idx]), Ainv, &(D[d_idx]) );
 
-            // The RTS matrices are apparently in some other (mystery) basis. The
+            // The RTS matrices are apparently in (p,q)<-(p,q) basis. The
             // following converts to (q,p)<-(q,p)
-            //swapcols2x2( &(D[d_idx]), &(D[d_idx]) );
             reverse2x2( &(D[d_idx]), &(D[d_idx]) );
         }
     }
@@ -524,9 +523,6 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
 
             // Read in one Jones matrix
             fread( Dread, 1, JONES_SIZE_BYTES, fp );
-
-            // WARNING! This permutation is not yet understood!!
-            //swapcols2x2( Dread, Dread );
 
             // If there are any nans, set them to zero instead
             // Assume that if there are any nans in the Jones matrix, then
