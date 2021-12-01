@@ -189,93 +189,98 @@ Calibration is the process by which the temporal variations in the instrumental 
 A \textit{calibration solution} is a mathematical operation that can be applied either to measured visibilities or raw voltages to correct for these variations, and recover the visibilities (or raw voltages) that would have been measured under ideal conditions.
 
 For the MWA, calibration solutions are modelled as a tile-dependent, linear transformation of two orthogonal polarisations.
-Thus, the calibration solution for each tile is represented by a $2\times2$ Jones matrix, ${\bf D}$, which is left-multiplied (along with the primary beam correction, ${\bf B}$) to the incident electric field, ${\bf e}$, to predict the measured voltages, ${\bf v}$.
+Thus, the full calibration solution for each tile is represented by a $2\times2$ Jones matrix, ${\bf J}$, which is multiplied to the incident electric field, ${\bf e}$, to predict the measured voltages, ${\bf v}$.
 \begin{equation}
-    {\bf v} = {\bf D}{\bf B}{\bf e}.
+    {\bf v} = {\bf J}{\bf e}.
 \end{equation}
-Writing these matrices out in full, and using the canonical choice of bases\footnote{Different calibration software packages may use different coordinate bases.},
+The form of ${\bf J}$ depends on the coordinate bases used for ${\bf v}$ and ${\bf e}$.
+For example,
 \begin{equation}
-    \begin{bmatrix} v_p \\ v_q \end{bmatrix}
+    \begin{bmatrix} v_q \\ v_p \end{bmatrix}
         = \begin{bmatrix}
-            D_{pp} & D_{pq} \\
-            D_{qp} & D_{qq}
-        \end{bmatrix}
-        \begin{bmatrix}
-            B_{px} & B_{py} \\
-            B_{qx} & B_{qy}
+            J_{qx} & J_{qy} \\
+            J_{px} & J_{py}
         \end{bmatrix}
         \begin{bmatrix} e_x \\ e_y \end{bmatrix},
 \end{equation}
-In practise, of course, the inverse opeations are used to reconstruct the electric field from the measured voltages:
+In practise, of course, the inverse operations are used to reconstruct the electric field from the measured voltages:
 \begin{equation}
-    {\bf e} = {\bf B}^{-1}{\bf D}^{-1}{\bf v}.
+    {\bf e} = {\bf J}^{-1}{\bf v}.
 \end{equation}
-Generally, calibration is performed independently on individual frequency channels.
 
-\subsection{Real Time Solution (RTS)}
+Following \citep{Sokolowski2017}, ${\bf J}$ is calculated as the matrix product of two different matrices,
+\begin{equation}
+    {\bf J} = {\bf D}{\bf B},
+\end{equation}
+where
+
+    ${\bf D}$ represents the (direction independent) instrumental gains, and
+
+    ${\bf B}$ represents the (direction dependent) tile beam response.
+
+\noindent (See Appendix \ref{sec:jones_matrices} for the notation translation table.) ${\bf D}$ is obtained either from the Real Time System (\S\ref{sec:RTS}), or Hyperdrive (\S\ref{sec:hyperdrive}). {\bf B} is obtained from Hyperbeam (\S\ref{sec:hyperbeam}).
+
+\subsection{Real Time System (RTS) -- [deprecated]}
+\label{sec:RTS}
 \index{RTS}
 
 The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation.
-The solutions are given in two sets of files, called ``DI\_JonesMatrices\_nodeCCC.dat'' and ``BandpassCalibration\_nodeCCC.dat'' (CCC represents a coarse channel index).
-These files contain the information needed to reconstruct the Jones matrices in the $(p,q)$ basis, which is required in order to take calibration solutions derived from one observation and apply (or ``transfer'') them to other observations.
+The solutions are given in two sets of files, called ``DI\_JonesMatrices\_nodeCCC.dat'' (hereafter, DIJones) and ``BandpassCalibration\_nodeCCC.dat'' (hereafter, Bandpass), where CCC represents a coarse channel index.
+The DIJones files contain both the Jones matrices for each tile for the given coarse channel, ${\bf J}_d$, as well as the beam response matrix that was used by the RTS during calibration, ${\bf B}_\text{cal}$.
+To get the calibration solutions for the fine channels, one must multiply ${\bf J}_d$ on the right by the matrices in the Bandpass files, ${\bf J}_b$.
 
-The solutions are factored in the following way\footnote{It is as yet unclear if this gives a better result than ${\bf D} = ({\bf D}_d {\bf D}_b {\bf B}_\text{cal}^{-1})^*$.},
+The bases of these matrices are as follows:
+\begin{align}
+    {\bf J}_d &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, &
+    {\bf J}_b &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, &
+    {\bf B}_\text{cal} &= \begin{bmatrix} B_{px} & B_{py} \\ B_{qx} & B_{qy} \end{bmatrix}.
+\end{align}
+If you want to apply these calibration solutions to the same observation, then you can set
 \begin{equation}
-    {\bf D} = {\bf D}_d {\bf D}_b {\bf B}_\text{cal}^{-1},
-    \label{eqn:rts_factorisation}
+    {\bf J} = {\bf J}_d
 \end{equation}
-where
-\begin{itemize}
-    \item ${\bf D}_d$ is the ``coarse channel tile gain''\index{gain} (one Jones matrix per tile, per coarse channel);
-    \item ${\bf B}_\text{cal}$ is the ``alignment matrix''\index{alignment matrix}, or the primary beam model\index{primary beam} towards the calibrator source (one Jones matrix per coarse channel); and
-    \item ${\bf D}_b$ is the ``bandpass gain'' (one Jones matrix per tile, per fine channel).
-\end{itemize}
-
-\subsubsection{Coordinate bases}
-
-The coordinate bases for the various RTS matrices described in this section are not well-documented elsewhere, and are mainly assumed to be correct based on empirical tests performed on actual observations of pulsars.
-Having said that, one of the early plotting scripts designed to visualise the RTS calibration solutions matrices is suggestive that
-\begin{enumerate}
-    \item ${\bf D}_d$ is in the basis $(p,q)\leftarrow(x,y)$,
-    \item ${\bf D}_b$ is in the basis $(x,y)\leftarrow(x,y)$,
-    \item ${\bf B}_\text{cal}$ is in the basis $(x,y)\leftarrow(p,q)$.
-\end{enumerate}
-if true, this would put the resulting ${\bf D}$ matrix in the basis:
+for coarse channel approximations, or, for the fine channel solutions,
 \begin{equation}
-    {\bf D} = \begin{bmatrix}
-        D_{pp} & D_{pq} \\
-        D_{qp} & D_{qq}
-    \end{bmatrix}.
+    {\bf J} = {\bf J}_d {\bf J}_b
 \end{equation}
-However, the current implementation in the beamformer does the following sequence of operations.
-After obtaining ${\bf D}$ from the RTS output files according to Eq.~\eqref{eqn:rts_factorisation}, it is multiplied to the primary beam to produce the final Jones matrix:
+If the calibration solution is to be applied to a different observation (in a different part of the sky), or even to a separate different direction in the same observation, then the instrumental gains must be reconstructed by factoring out the beam response:
 \begin{equation}
-    {\bf J} = {\bf D}{\bf B}\pamat.
+    {\bf D} = {\bf J}{\bf B}_\text{cal}.
 \end{equation}
-The primary beam is obtained using \href{https://github.com/MWATelescope/mwa_hyperbeam}{Hyperbeam}, which is based on the FEE beam model\index{primary beam!full embedded element (FEE)} \citep{Sokolowski2017}.
-According to the documentation, this gives the ${\bf B}$ matrix in the $(q,p)\leftarrow(\theta,\phi)$ basis.
-Since, by inspection of actual calibration solutions, the ${\bf D}$ matrices have the elements with the largest moduli along the main diagonal, we infer that the ${\bf D}$ matrices maintain the same basis, and that, despite what the plotting scripts suggest, the ${\bf D}$ is in fact
+The resulting instrumental gains matrix is in the basis
 \begin{equation}
-    {\bf D} = \begin{bmatrix}
-        D_{qq} & D_{qp} \\
-        D_{pq} & D_{pp}
-    \end{bmatrix}.
+    {\bf D} = \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}.
 \end{equation}
-
-As argued above, the $\pamat$ matrix embodies the transformation $(\theta,\phi)\leftarrow(y,x)$.
-Taken together, 
 
 \subsection{Hyperdrive}
+\label{sec:hyperdrive}
+\index{hyperdrive}
 
-Hyperdrive outputs the calibration solutions in the ``Offringa'' format, described in Appendix \ref{app:offringa}.
-The calibration solutions themselves are in the basis:
+Hyperdrive outputs the instrumental gains matrices (per tile per fine channel) in the ``Offringa'' format, described in Appendix \ref{app:offringa}.
+The matrices are in the basis:
 \begin{equation}
     {\bf D} = \begin{bmatrix}
         D_{qq} & D_{qp} \\
         D_{pq} & D_{pp}
     \end{bmatrix}.
 \end{equation}
-BUT\dots
+
+\subsection{Hyperbeam}
+\label{sec:hyperbeam}
+\index{hyperbeam}
+
+The primary beam is obtained using \href{https://github.com/MWATelescope/mwa_hyperbeam}{Hyperbeam}, which is based on the FEE beam model\index{primary beam!full embedded element (FEE)} \citep{Sokolowski2017}.
+This gives the ${\bf B}$ matrix in the basis
+\begin{equation}
+    {\bf B}_\text{hb} = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}.
+\end{equation}
+To obtain the beam matrix that converts from the $(x,y)$ basis to the $(q,p)$ basis, one must multiply ${\bf B}_\text{hb}$ on the right by the parallactic angle correction matrix:
+\begin{equation}
+    {\bf B} = {\bf B}_\text{hb}\pamat
+            = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}
+              \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix}
+            = \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix}
+\end{equation}
 
 \section{Beamforming}
 
@@ -469,6 +474,9 @@ Nevertheless, \vcsbeam{} appears to only produce sensible results when I treat t
 It remains to be seen whether this holds true for MWAX data, since it may turn out, for example, that the role of the polarisations is inadvertently swapped during the recombine process.
 
 \section{Jones matrices}
+\label{sec:jones_matrices}
+
+The notation used in this documentation most closely follows \citet{Ord2019}.
 
 \begin{table}[!hb]
     \centering
