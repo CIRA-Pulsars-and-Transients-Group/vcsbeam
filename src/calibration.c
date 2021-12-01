@@ -165,8 +165,8 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
 
             // The RTS matrices are apparently in some other (mystery) basis. The
             // following converts to (q,p)<-(q,p)
-            swaprows2x2( &(D[d_idx]), &(D[d_idx]) );
-            //reverse2x2( &(D[d_idx]), &(D[d_idx]) );
+            //swapcols2x2( &(D[d_idx]), &(D[d_idx]) );
+            reverse2x2( &(D[d_idx]), &(D[d_idx]) );
         }
     }
 
@@ -526,7 +526,7 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
             fread( Dread, 1, JONES_SIZE_BYTES, fp );
 
             // WARNING! This permutation is not yet understood!!
-            swapcols2x2( Dread, Dread );
+            //swapcols2x2( Dread, Dread );
 
             // If there are any nans, set them to zero instead
             // Assume that if there are any nans in the Jones matrix, then
