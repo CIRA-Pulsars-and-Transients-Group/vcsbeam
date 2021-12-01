@@ -167,14 +167,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // following converts to (q,p)<-(q,p)
             swaprows2x2( &(D[d_idx]), &(D[d_idx]) );
             //reverse2x2( &(D[d_idx]), &(D[d_idx]) );
-            
-#ifdef DEBUG
-if (ch == 0)
-{
-    //fprintf( stderr, "Dd = "); fprintf_complex_matrix( stderr, Dd[dd_idx] );
-    fprintf( stderr, "D  = "); fprintf_complex_matrix( stderr, &(D[d_idx]) );
-}
-#endif
         }
     }
 

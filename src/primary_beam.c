@@ -100,8 +100,8 @@ void calc_primary_beam(
 #ifdef DEBUG
 if (config_idx == 0)
 {
-    fprintf( stderr, "before pa correction (%.2f MHz): B = ", pb->freq_hz/1e6 );
-    fprintf_complex_matrix( stderr, configs[config_idx] );
+    fprintf( stderr, "B       = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
+    fprintf( stderr, "P       = " ); fprintf( stderr, "[ %lf, %lf; %lf, %lf ]\n", P[0], P[1], P[2], P[3]  );
 }
 #endif
                 mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );

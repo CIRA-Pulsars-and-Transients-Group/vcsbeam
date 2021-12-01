@@ -87,8 +87,16 @@ void get_jones(
 
                 mult2x2d(&(D[j_idx]), &(B[pb_idx]), Ji); // the gain in the desired look direction
 
+#ifdef DEBUG
+if (ch == 10 && ant == 0)
+{
+    //fprintf( stderr, "Dd = "); fprintf_complex_matrix( stderr, Dd[dd_idx] );
+    fprintf( stderr, "D       = "); fprintf_complex_matrix( stderr, &(D[j_idx]) );
+    fprintf( stderr, "BP      = "); fprintf_complex_matrix( stderr, &(B[pb_idx]) );
+    fprintf( stderr, "J = DBP = "); fprintf_complex_matrix( stderr, Ji );
+}
+#endif
                 // Now, calculate the inverse Jones matrix
-
                 Fnorm = norm2x2( Ji, Ji );
 
                 if (Fnorm != 0.0)
