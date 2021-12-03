@@ -151,10 +151,10 @@ Among these, the only transformation that is explicitly used in \vcsbeam{} is th
 
 The parallactic angle correction is a transformation between local sky coordinates and celestial sky coordinates.
 The parallactic angle itself, $\chi$, is defined as the position angle of local zenith with respect to the North Celestial Pole as subtended at a given source (see Fig. \ref{fig:skyangles}).
-The transformation $(\theta,\phi)\leftarrow(x,y)$ is therefore a counterclockwise rotation\footnote{A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
+The transformation $(x,y)\rightarrow(\theta,\phi)$ is therefore a counterclockwise rotation\footnote{A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.} by $\pi - \chi$.
 This is the rotation
 \begin{equation}
-    \transmat{x}{y}{\theta}{\phi}
+    \pamat
         = \begin{bmatrix}
             \cos\left(\pi - \chi\right) & -\sin\left(\pi - \chi\right) \\
             \sin\left(\pi - \chi\right) &  \cos\left(\pi - \chi\right)
@@ -290,10 +290,52 @@ Beamforming consists of three steps:
     \item Shifting the signals from each tile in time to account for the signal delay from the look-direction to each tile, due to the geometric layout of the MWA tiles (``phasing up''),
     \item Summing the voltages from all the tiles together.
 \end{enumerate}
-These steps are described more fully in \citet{Ord2019}.
+These steps are described more fully in \citet{Ord2019}, but are discussed further in the following subsections.
+
+\subsection{Applying the calibration solutions}
+
+In \vcsbeam{}, the following basis is used:
+\begin{equation}
+    \begin{aligned}
+        {\bf e} &= {\bf J}{\bf v} \\
+        {\bf e} &= {\bf D} {\bf B}_\text{hb} \pamat {\bf v} \\
+        \begin{bmatrix} v_q \\ v_p \end{bmatrix}
+            &= \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}
+               \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}
+               \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix}
+               \begin{bmatrix} e_x \\ e_y \end{bmatrix}
+    \end{aligned}
+\end{equation}
+
+The ${\bf D}$ matrix, if obtained using Hyperdrive, is already in the correct basis, and can be used as is.
+However, if the RTS is used, the matrix must be permuted first.
+In memory, matrices are represented as an array of \texttt{cuDoubleComplex}s (from the CUDA library), in the following order:
+\begin{equation}
+    \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}.
+\end{equation}
+Therefore, the required permutation to get the {\bf D} matrix in the correct order is a ``reversal'' of the matrix elements in memory:
+\begin{equation}
+    \begin{aligned}
+        \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}
+            &\rightarrow
+            \begin{bmatrix} 4 & 3 \\ 2 & 1 \end{bmatrix} \\
+        \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}
+            &\rightarrow
+            \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}
+    \end{aligned}
+\end{equation}
+
+Currently, only Hyperbeam is used for the FEE beam model, and so the ${\bf B}_{hp}$ is already given in the correct basis, $(\theta\phi)\rightarrow(q,p)$.
+
+Finally, the parallactic angle correction matrix is calculated by \vcsbeam{} in the $(x,y)\rightarrow(\theta\phi)$ basis, as desired.
+
+\subsection{Phasing up}
 
 If the channelisation is fine enough, and if the tile separations (baselines) are not too long, then a time shift can be accurately effected by applying a phase ramp across frequency.
-If we use subscripts $a$ and $f$ to represent tiles (``antennas'') and frequencies respectively, then the beamforming operation is
+
+\subsection{Summing the voltages}
+
+If we use subscripts $a$ and $f$ to represent tiles (``antennas'') and frequencies respectively, then the complete beamforming operation is
 \begin{equation}
     {\bf e}_f = \sum_a e^{i\varphi_f} {\bf J}_{a,f}^{-1} {\bf v}_{a,f},
 \end{equation}
