@@ -780,17 +780,17 @@ void apply_calibration_corrections( struct calibration *cal, cuDoubleComplex *D,
                 zero_PQ_and_QP( &(D[d_idx]) );
 
             // ...and apply the phase correction:
-            // DZ = [ d00 d01 ] [ 1 0 ]
-            //      [ d10 d11 ] [ 0 z ]
+            // DZ = [ d00 d01 ] [ z 0 ]
+            //      [ d10 d11 ] [ 0 1 ]
             //
-            //    = [ d00  d01*z ]
-            //      [ d10  d11*z ]
+            //    = [ d00*z  d01 ]
+            //      [ d10*z  d11 ]
             if (apply_phase_slope)
             {
-                d_idx = J_IDX(ant,ch,0,1,nchan,nantpol);
+                d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
                 D[d_idx] = cuCmul( D[d_idx], z );
 
-                d_idx = J_IDX(ant,ch,1,1,nchan,nantpol);
+                d_idx = J_IDX(ant,ch,1,0,nchan,nantpol);
                 D[d_idx] = cuCmul( D[d_idx], z );
             }
         }
