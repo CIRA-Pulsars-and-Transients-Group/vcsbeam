@@ -245,7 +245,7 @@ for coarse channel approximations, or, for the fine channel solutions,
 \end{equation}
 If the calibration solution is to be applied to a different observation (in a different part of the sky), or even to a separate different direction in the same observation, then the instrumental gains must be reconstructed by factoring out the beam response:
 \begin{equation}
-    {\bf D} = {\bf J}{\bf B}_\text{cal}.
+    {\bf D} = {\bf J}{\bf B}_\text{cal}^{-1}.
 \end{equation}
 The resulting instrumental gains matrix is in the basis
 \begin{equation}
@@ -294,11 +294,11 @@ These steps are described more fully in \citet{Ord2019}, but are discussed furth
 
 \subsection{Applying the calibration solutions}
 
-In \vcsbeam{}, the following basis is used:
+In \vcsbeam{}, the following bases are used:
 \begin{equation}
     \begin{aligned}
-        {\bf e} &= {\bf J}{\bf v} \\
-        {\bf e} &= {\bf D} {\bf B}_\text{hb} \pamat {\bf v} \\
+        {\bf v} &= {\bf J}{\bf e} \\
+        {\bf v} &= {\bf D} {\bf B}_\text{hb} \pamat {\bf e} \\
         \begin{bmatrix} v_q \\ v_p \end{bmatrix}
             &= \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}
                \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}
@@ -325,9 +325,9 @@ Therefore, the required permutation to get the {\bf D} matrix in the correct ord
     \end{aligned}
 \end{equation}
 
-Currently, only Hyperbeam is used for the FEE beam model, and so the ${\bf B}_{hp}$ is already given in the correct basis, $(\theta\phi)\rightarrow(q,p)$.
+Currently, only Hyperbeam is used for the FEE beam model, and so the ${\bf B}_{hp}$ is already given in the correct basis, $(\theta,\phi)\rightarrow(q,p)$.
 
-Finally, the parallactic angle correction matrix is calculated by \vcsbeam{} in the $(x,y)\rightarrow(\theta\phi)$ basis, as desired.
+Finally, the parallactic angle correction matrix is calculated by \vcsbeam{} in the $(x,y)\rightarrow(\theta,\phi)$ basis, as desired.
 
 \subsection{Phasing up}
 
@@ -337,7 +337,7 @@ If the channelisation is fine enough, and if the tile separations (baselines) ar
 
 If we use subscripts $a$ and $f$ to represent tiles (``antennas'') and frequencies respectively, then the complete beamforming operation is
 \begin{equation}
-    {\bf e}_f = \sum_a e^{i\varphi_f} {\bf J}_{a,f}^{-1} {\bf v}_{a,f},
+    {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f},
 \end{equation}
 where $\varphi_f$ is the frequency-dependent phase difference between the arrival of a signal at a given tile relative to an arbitrary reference point, or ``array phase centre''.
 
