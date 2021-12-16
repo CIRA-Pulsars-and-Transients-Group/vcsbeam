@@ -169,9 +169,9 @@ int main(int argc, char **argv)
 
     struct gpu_ipfb_arrays gi;
     int nchunk;
+    vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
     malloc_formbeam( &gf, vm, &nchunk, (opts.gpu_mem_GB > 0 ? opts.gpu_mem_GB : -1.0),
                      NSTOKES, npointing, log );
-    vmSetMaxGPUMem( vm, (uintptr_t)opts.gpu_mem_GB * (1024*1024*1024) );
     vmMallocDataDevice( vm );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
@@ -338,7 +338,7 @@ int main(int argc, char **argv)
         cu_form_beam( (uint8_t *)vm->data, nsamples, gdelays.d_phi, timestep_idx,
                 npointing, nants, nchans, npols, invw, &gf,
                 detected_beam, data_buffer_coh,
-                streams, nchunk, mpfs, vm );
+                streams, mpfs, vm );
 
         logger_stop_stopwatch( log, "calc" );
 

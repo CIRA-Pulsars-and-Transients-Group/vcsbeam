@@ -360,7 +360,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
                    int npol, double invw,
                    struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
-                   cudaStream_t *streams, int nchunk,
+                   cudaStream_t *streams,
                    mpi_psrfits *mpfs, vcsbeam_metadata *vm )
 /* Inputs:
 *   data    = array of 4bit+4bit complex numbers. For data order, refer to the
@@ -392,7 +392,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
     {
         //int dataoffset = ichunk * g->data_size / sizeof(uint8_t);
         gpuErrchk(cudaMemcpyAsync( vm->d_data,
-                                   (unsigned char *)vm->data + ichunk * vm->d_data_size_bytes,
+                                   (char *)vm->data + ichunk * vm->d_data_size_bytes,
                                    vm->d_data_size_bytes, cudaMemcpyHostToDevice ));
 
         // Call the kernels
@@ -416,7 +416,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
             // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
             beamform_kernel<<<chan_samples, stat, 11*nants*sizeof(double), streams[p]>>>( g->d_JDq, g->d_JDp,
                             d_phi, invw,
-                            p, ichunk*sample_rate/nchunk, nchunk,
+                            p, ichunk*sample_rate/vm->chunks_per_second, vm->chunks_per_second,
                             g->d_Bd, g->d_coh, npol );
 
             gpuErrchk( cudaPeekAtLastError() );
@@ -499,6 +499,8 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
     size_t data_base_size;
     size_t JD_base_size;
 
+    int nchunks = vm->chunks_per_second;
+
     int sample_rate = vm->sample_rate;
     int nants       = vm->obs_metadata->num_ants;
     int nchan       = vm->obs_metadata->num_volt_fine_chans_per_coarse;
@@ -528,6 +530,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
 
 
     // Work out how many chunks to split a second into so there is enough memory on the gpu
+    /*
     *nchunk = 0;
     size_t gpu_mem_used = pow(10, 15); // 1 PB
     while ( gpu_mem_used > gpu_mem ) 
@@ -541,19 +544,22 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
         gpu_mem_used = (phi_size + g->J_size + g->Bd_size + data_base_size / *nchunk +
                         g->coh_size + 3*JD_base_size / *nchunk);
     }
+    */
+    size_t gpu_mem_used = (phi_size + g->J_size + g->Bd_size + data_base_size / nchunks +
+                    g->coh_size + 3*JD_base_size / nchunks);
     float gpu_mem_used_gb = (float)gpu_mem_used / (float)(1024*1024*1024);
 
     char log_message[128];
 
-    sprintf( log_message, "Splitting each second into %d chunks", *nchunk );
+    sprintf( log_message, "Splitting each second into %d chunks", nchunks );
     logger_timed_message( log, log_message );
 
     sprintf( log_message, "%6.3f GB out of the total %6.3f GPU memory allocated",
                      gpu_mem_used_gb, gpu_mem_gb );
     logger_timed_message( log, log_message );
 
-    g->data_size = data_base_size / *nchunk;
-    g->JD_size   = JD_base_size / *nchunk;
+    g->data_size = data_base_size / nchunks;
+    g->JD_size   = JD_base_size / nchunks;
 
 
     // Allocate host memory

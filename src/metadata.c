@@ -196,6 +196,7 @@ void vmMallocDataDevice( vcsbeam_metadata *vm )
 {
     cudaMalloc( (void **)&vm->d_data,  vm->d_data_size_bytes );
     cudaCheckErrors( "vmMallocDataDevice: cudaMalloc(d_data) failed" );
+fprintf( stderr, "vmMallocDataDevice: Allocated %lu bytes on device\n", vm->d_data_size_bytes );
 }
 
 void vmFreeDataDevice( vcsbeam_metadata *vm )
@@ -233,6 +234,11 @@ void vmSetMaxGPUMem( vcsbeam_metadata *vm, uintptr_t max_gpu_mem_bytes )
 
     // Calculate the amount of gpu memory needed
     vm->d_data_size_bytes = vm->data_size_bytes / vm->chunks_per_second;
+
+fprintf( stderr, "chunks_per_second = %d\n", vm->chunks_per_second );
+fprintf( stderr, "data_size_bytes = %lu\n", vm->data_size_bytes );
+fprintf( stderr, "max_gpu_mem_bytes = %lu\n", vm->max_gpu_mem_bytes );
+fprintf( stderr, "d_data_size_bytes = %lu\n", vm->d_data_size_bytes );
 }
 
 
