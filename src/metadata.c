@@ -104,6 +104,11 @@ vcsbeam_metadata *init_vcsbeam_metadata(
     vm->bytes_per_second = vm->vcs_metadata->num_voltage_blocks_per_second *
                            vm->vcs_metadata->voltage_block_size_bytes;
 
+    // Assume that one whole second will be processed on the device at once
+    vm->data_size_bytes    = vm->bytes_per_second;
+    vm->g_data_size_bytes  = vm->bytes_per_second;
+    vm->chunks_per_second  = 1;
+
     // Return the new struct pointer
     return vm;
 }
@@ -168,6 +173,19 @@ void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on )
     if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
         vm->do_inverse_pfb = switch_on;
 }
+
+void vmMallocHost( vcsbeam_metadata *vm )
+{
+    cudaMallocHost( &(vm->data), vm->data_size_bytes );
+    cudaCheckErrors( "vmMallocHost: cudaMallocHost(data) failed" );
+}
+
+void vmFreeHost( vcsbeam_metadata *vm )
+{
+    cudaFreeHost( vm->data );
+    cudaCheckErrors( "vmFreeHost: cudaFreeHost(data) failed" );
+}
+
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,

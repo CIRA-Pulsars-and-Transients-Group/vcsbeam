@@ -108,7 +108,6 @@ int main(int argc, char **argv)
     uintptr_t nchans         = vm->obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t npols          = vm->obs_metadata->num_ant_pols;   // (X,Y)
     unsigned int nsamples    = vm->sample_rate;
-    uintptr_t data_size      = vm->bytes_per_second;
 
 
     uintptr_t timestep_idx;
@@ -162,9 +161,7 @@ int main(int argc, char **argv)
      * Memory Allocation *
      *********************/
 
-    uint8_t *data;
-    cudaMallocHost( (void **)&data, data_size );
-    cudaCheckErrors( "cudaMallocHost(data) failed" );
+    vmMallocHost( vm );
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
@@ -290,8 +287,8 @@ int main(int argc, char **argv)
                     gps_second,
                     1,
                     vm->coarse_chan_idxs_to_process[0],
-                    data,
-                    data_size,
+                    vm->data,
+                    vm->data_size_bytes,
                     error_message,
                     ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
         {
@@ -336,7 +333,7 @@ int main(int argc, char **argv)
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
 
-        cu_form_beam( data, nsamples, gdelays.d_phi, timestep_idx,
+        cu_form_beam( (uint8_t *)vm->data, nsamples, gdelays.d_phi, timestep_idx,
                 npointing, nants, nchans, npols, invw, &gf,
                 detected_beam, data_buffer_coh,
                 streams, nchunk, mpfs );
@@ -402,8 +399,8 @@ int main(int argc, char **argv)
     cudaCheckErrors( "cudaFreeHost(data_buffer_coh) failed" );
     cudaFreeHost( data_buffer_vdif  );
     cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
-    cudaFreeHost( data );
-    cudaCheckErrors( "cudaFreeHost(data) failed" );
+
+    vmFreeHost( vm );
 
     free( opts.pointings_file  );
     free( opts.datadir         );
