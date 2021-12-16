@@ -361,7 +361,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
                    struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
                    cudaStream_t *streams,
-                   mpi_psrfits *mpfs, vcsbeam_metadata *vm )
+                   mpi_psrfits *mpfs, vcsbeam_context *vm )
 /* Inputs:
 *   data    = array of 4bit+4bit complex numbers. For data order, refer to the
 *             documentation.
@@ -492,8 +492,8 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
     }
 }
 
-void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
-                      int *nchunk, float gpu_mem_gb, int outpol_coh,
+void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
+                      float gpu_mem_gb, int outpol_coh,
                       int npointing, logger *log )
 {
     size_t data_base_size;
@@ -509,12 +509,10 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
     // Calculate array sizes for host and device
     g->coh_size    = npointing * sample_rate * outpol_coh * nchan * sizeof(float);
     data_base_size = sample_rate * nants * nchan * npol * sizeof(uint8_t);
-    //g->data_size  = sample_rate * nants * nchan * npol / nchunk * sizeof(uint8_t);
     g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
     size_t phi_size = npointing * nants * nchan * sizeof(cuDoubleComplex);
     g->J_size      = nants * nchan * npol * npol * sizeof(cuDoubleComplex);
     JD_base_size   = sample_rate * nants * nchan * sizeof(cuDoubleComplex);
-    //g->JD_size    = sample_rate * nants * nchan / nchunk * sizeof(cuDoubleComplex);
     
     size_t gpu_mem;
     if ( gpu_mem_gb == -1.0f ) {
@@ -529,22 +527,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
     }
 
 
-    // Work out how many chunks to split a second into so there is enough memory on the gpu
-    /*
-    *nchunk = 0;
-    size_t gpu_mem_used = pow(10, 15); // 1 PB
-    while ( gpu_mem_used > gpu_mem ) 
-    {
-        *nchunk += 1;
-        // Make sure the nchunk is divisable by the samples
-        while ( sample_rate%*nchunk != 0 )
-        {
-            *nchunk += 1;
-        }
-        gpu_mem_used = (phi_size + g->J_size + g->Bd_size + data_base_size / *nchunk +
-                        g->coh_size + 3*JD_base_size / *nchunk);
-    }
-    */
     size_t gpu_mem_used = (phi_size + g->J_size + g->Bd_size + data_base_size / nchunks +
                     g->coh_size + 3*JD_base_size / nchunks);
     float gpu_mem_used_gb = (float)gpu_mem_used / (float)(1024*1024*1024);
@@ -585,7 +567,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
     sprintf( log_message, "J_size     %9.3f MB GPU mem", (float)g->J_size    / (float)(1024*1024) );
     logger_timed_message( log, log_message );
 
-    sprintf( log_message, "JD_size    %9.3f MB GPU mem", (float)g->JD_size*3 / (float)(1024*1024) );
+    sprintf( log_message, "JD_size    %9.3f MB GPU mem", (float)g->JD_size*2 / (float)(1024*1024) );
     logger_timed_message( log, log_message );
 
 

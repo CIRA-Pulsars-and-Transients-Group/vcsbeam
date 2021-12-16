@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     // Create an mwalib metafits context and associated metadata
     logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
 
-    vcsbeam_metadata *vm = init_vcsbeam_metadata(
+    vcsbeam_context *vm = init_vcsbeam_context(
         opts.metafits, NULL,
         opts.coarse_chan_str, chans_per_proc, mpi_proc_id,
         opts.begin_str, opts.nseconds, 0,
@@ -216,7 +216,7 @@ int main(int argc, char **argv)
     cudaCheckErrors( "cudaFree(d_Iscaled) failed" );
 
     // Clean up memory associated with mwalib
-    destroy_vcsbeam_metadata( vm );
+    destroy_vcsbeam_context( vm );
 
     // Free the logger
     logger_timed_message( log, "Exiting successfully" );

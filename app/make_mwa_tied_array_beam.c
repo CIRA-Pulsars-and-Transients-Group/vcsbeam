@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     logger_timed_message( log, log_message );
 
     const int chans_per_proc = 1;
-    vcsbeam_metadata *vm = init_vcsbeam_metadata(
+    vcsbeam_context *vm = init_vcsbeam_context(
         opts.metafits, cal.metafits,
         opts.coarse_chan_str, chans_per_proc, mpi_proc_id,
         opts.begin_str, opts.nseconds, 0,
@@ -168,9 +168,8 @@ int main(int argc, char **argv)
     struct gpu_formbeam_arrays gf;
 
     struct gpu_ipfb_arrays gi;
-    int nchunk;
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
-    malloc_formbeam( &gf, vm, &nchunk, (opts.gpu_mem_GB > 0 ? opts.gpu_mem_GB : -1.0),
+    malloc_formbeam( &gf, vm, (opts.gpu_mem_GB > 0 ? opts.gpu_mem_GB : -1.0),
                      NSTOKES, npointing, log );
     vmMallocDataDevice( vm );
 
@@ -428,7 +427,7 @@ int main(int argc, char **argv)
     free_primary_beam( &pb );
     free_geometric_delays( &gdelays );
 
-    destroy_vcsbeam_metadata( vm );
+    destroy_vcsbeam_context( vm );
 
     // Finalise MPI
     MPI_Finalize();

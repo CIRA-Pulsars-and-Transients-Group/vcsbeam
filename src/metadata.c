@@ -12,14 +12,14 @@
 
 #include "vcsbeam.h"
 
-vcsbeam_metadata *init_vcsbeam_metadata(
+vcsbeam_context *init_vcsbeam_context(
         char *obs_metafits_filename, char *cal_metafits_filename,
         char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir )
 {
     // Allocate memory for the VCSBEAM_METADATA struct
-    vcsbeam_metadata *vm = (vcsbeam_metadata *)malloc( sizeof(vcsbeam_metadata) );
+    vcsbeam_context *vm = (vcsbeam_context *)malloc( sizeof(vcsbeam_context) );
 
     // Get the observation context and metadata
     get_mwalib_metafits_metadata(
@@ -91,7 +91,7 @@ vcsbeam_metadata *init_vcsbeam_metadata(
             vm->output_coarse_channels = true;
             break;
         default:
-            fprintf( stderr, "init_vcsbeam_metadata: error: "
+            fprintf( stderr, "init_vcsbeam_context: error: "
                     "this observation does not appear to be a VCS observation\n" );
             exit(EXIT_FAILURE);
             break;
@@ -137,7 +137,7 @@ Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
 }
 
 
-void destroy_vcsbeam_metadata( vcsbeam_metadata *vm )
+void destroy_vcsbeam_context( vcsbeam_context *vm )
 /* Frees the memory allocated in INIT_VCSBEAM_METADATA
  */
 {
@@ -161,7 +161,7 @@ void destroy_vcsbeam_metadata( vcsbeam_metadata *vm )
     free( vm );
 }
 
-void set_vcsbeam_fine_output( vcsbeam_metadata *vm, bool switch_on )
+void set_vcsbeam_fine_output( vcsbeam_context *vm, bool switch_on )
 /* Turns on/off fine channelised output
  */
 {
@@ -170,7 +170,7 @@ void set_vcsbeam_fine_output( vcsbeam_metadata *vm, bool switch_on )
         vm->do_forward_pfb = switch_on;
 }
 
-void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on )
+void set_vcsbeam_coarse_output( vcsbeam_context *vm, bool switch_on )
 /* Turns on/off coarse channelised output
  */
 {
@@ -179,33 +179,33 @@ void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on )
         vm->do_inverse_pfb = switch_on;
 }
 
-void vmMallocDataHost( vcsbeam_metadata *vm )
+void vmMallocDataHost( vcsbeam_context *vm )
 {
     cudaMallocHost( &(vm->data), vm->data_size_bytes );
     cudaCheckErrors( "vmMallocDataHost: cudaMallocHost(data) failed" );
 }
 
-void vmFreeDataHost( vcsbeam_metadata *vm )
+void vmFreeDataHost( vcsbeam_context *vm )
 {
     cudaFreeHost( vm->data );
     cudaCheckErrors( "vmFreeDataHost: cudaFreeHost(data) failed" );
     vm->data = NULL;
 }
 
-void vmMallocDataDevice( vcsbeam_metadata *vm )
+void vmMallocDataDevice( vcsbeam_context *vm )
 {
     cudaMalloc( (void **)&vm->d_data,  vm->d_data_size_bytes );
     cudaCheckErrors( "vmMallocDataDevice: cudaMalloc(d_data) failed" );
 fprintf( stderr, "vmMallocDataDevice: Allocated %lu bytes on device\n", vm->d_data_size_bytes );
 }
 
-void vmFreeDataDevice( vcsbeam_metadata *vm )
+void vmFreeDataDevice( vcsbeam_context *vm )
 {
     cudaFree( vm->d_data );
     cudaCheckErrors( "vmFreeDataDevice: cudaFree(d_data) failed" );
 }
 
-void vmSetMaxGPUMem( vcsbeam_metadata *vm, uintptr_t max_gpu_mem_bytes )
+void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 {
     vm->max_gpu_mem_bytes = max_gpu_mem_bytes;
 
@@ -505,7 +505,7 @@ uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_
 }
 
 
-int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm )
+int get_num_not_flagged_rf_inputs( vcsbeam_context *vm )
 {
     int num_not_flagged = 0;
     uintptr_t i;

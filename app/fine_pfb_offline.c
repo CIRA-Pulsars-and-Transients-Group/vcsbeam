@@ -56,7 +56,7 @@ int main( int argc, char *argv[] )
     logger_start_stopwatch( log, "init", true );
 
     // Set up the VCS metadata struct
-    vcsbeam_metadata *vm = init_vcsbeam_metadata(
+    vcsbeam_context *vm = init_vcsbeam_context(
         opts.metafits, NULL,
         opts.coarse_chan_str, 1, 0,
         opts.begin_str, opts.nseconds, 0,
@@ -119,7 +119,7 @@ int main( int argc, char *argv[] )
 
     free_forward_pfb( fpfb );
     free_pfb_filter( filter );
-    destroy_vcsbeam_metadata( vm );
+    destroy_vcsbeam_context( vm );
 
     // Exit gracefully
     return EXIT_SUCCESS;

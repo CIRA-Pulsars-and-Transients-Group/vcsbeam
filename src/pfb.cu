@@ -236,7 +236,7 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, uint8_t *out
     __syncthreads();
 }
 
-forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, pfb_flags flags )
+forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, pfb_flags flags )
 /* Create and initialise a forward_pfb struct.
 
    Inputs:

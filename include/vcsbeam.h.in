@@ -386,7 +386,7 @@ void free_pfb_filter( pfb_filter *filter );
  *******************/
 
 
-typedef struct vcsbeam_metadata_t
+typedef struct vcsbeam_context_t
 {
     MetafitsContext  *obs_context;    // The mwalib context derived from the target observation's metafits file
     MetafitsMetadata *obs_metadata;   // The mwalib metadata   "      "   "     "         "          "      "
@@ -424,7 +424,7 @@ typedef struct vcsbeam_metadata_t
     // for convenience.
     int sample_rate;                  // Number of samples per second
     int bytes_per_second;             // Bytes per second of data
-} vcsbeam_metadata;
+} vcsbeam_context;
 
 #define NO_ANTENNA_FOUND  -1
 
@@ -453,7 +453,7 @@ extern "C" {
  * Returns:
  *   A pointer to a newly allocated VCSBEAM_METADATA struct
  */
-vcsbeam_metadata *init_vcsbeam_metadata(
+vcsbeam_context *init_vcsbeam_context(
         char *obs_metafits_filename, char *cal_metafits_filename,
         char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
@@ -465,25 +465,25 @@ vcsbeam_metadata *init_vcsbeam_metadata(
  *
  * Frees the memory allocated in INIT_VCSBEAM_METADATA
  */
-void destroy_vcsbeam_metadata( vcsbeam_metadata *vm );
+void destroy_vcsbeam_context( vcsbeam_context *vm );
 
 /* SET_VCSBEAM_FINE_OUTPUT & SET_VCSBEAM_COARSE_OUTPUT
  * =======================   =========================
  *
  * Turns on/off fine/coarse channelised output
  */
-void set_vcsbeam_fine_output( vcsbeam_metadata *vm, bool switch_on );
-void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on );
+void set_vcsbeam_fine_output( vcsbeam_context *vm, bool switch_on );
+void set_vcsbeam_coarse_output( vcsbeam_context *vm, bool switch_on );
 
 // OTHER AUXILIARY FUNCTIONS
 
-void vmMallocDataHost( vcsbeam_metadata *vm );
-void vmFreeDataHost( vcsbeam_metadata *vm );
+void vmMallocDataHost( vcsbeam_context *vm );
+void vmFreeDataHost( vcsbeam_context *vm );
 
-void vmMallocDataDevice( vcsbeam_metadata *vm );
-void vmFreeDataDevice( vcsbeam_metadata *vm );
+void vmMallocDataDevice( vcsbeam_context *vm );
+void vmFreeDataDevice( vcsbeam_context *vm );
 
-void vmSetMaxGPUMem( vcsbeam_metadata *vm, uintptr_t max_gpu_mem_bytes );
+void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
@@ -520,7 +520,7 @@ long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int rel
 long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str );
 uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_coarse_chan_str );
 
-int get_num_not_flagged_rf_inputs( vcsbeam_metadata *vm );
+int get_num_not_flagged_rf_inputs( vcsbeam_context *vm );
 
 Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput );
 Antenna *find_matching_antenna( MetafitsMetadata *metadata, Rfinput *rfinput );
@@ -693,7 +693,7 @@ typedef enum pfb_flags_t
 
 typedef struct forward_pfb_t
 {
-    vcsbeam_metadata *vm;                     // All the necessary metadata
+    vcsbeam_context *vm;                     // All the necessary metadata
 
     char2            *htr_data;               // The input data, as obtained via mwalib from coarse channelised data
     char2            *d_htr_data;             // Same as above, on device
@@ -738,7 +738,7 @@ typedef struct forward_pfb_t
 extern "C" {
 #endif
 
-forward_pfb *init_forward_pfb( vcsbeam_metadata *vm, pfb_filter *filter, int M, pfb_flags flags );
+forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, pfb_flags flags );
 
 void free_forward_pfb( forward_pfb *fpfb );
 
@@ -837,8 +837,8 @@ struct gpu_formbeam_arrays
 extern "C" {
 #endif
 
-void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
-                      int *nchunk, float gpu_mem_gb, int outpol_coh,
+void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
+                      float gpu_mem_gb, int outpol_coh,
                       int npointing, logger *log );
 void free_formbeam( struct gpu_formbeam_arrays *g );
 
@@ -860,7 +860,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex *d_p
                    int npol, double invw, struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
                    cudaStream_t *streams,
-                   mpi_psrfits *mpfs, vcsbeam_metadata *vm );
+                   mpi_psrfits *mpfs, vcsbeam_context *vm );
 
 float *create_pinned_data_buffer( size_t size );
 
