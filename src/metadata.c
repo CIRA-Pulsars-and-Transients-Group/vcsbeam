@@ -104,11 +104,12 @@ vcsbeam_context *init_vcsbeam_context(
     vm->bytes_per_second = vm->vcs_metadata->num_voltage_blocks_per_second *
                            vm->vcs_metadata->voltage_block_size_bytes;
 
-    // Assume that one whole second will be processed on the device at once
-    vm->data_size_bytes    = vm->bytes_per_second;
-    vm->d_data_size_bytes  = vm->bytes_per_second;
-
+    // Assume that the whole GPU is available
+    vm->data_size_bytes = vm->bytes_per_second;
     vmSetMaxGPUMem( vm, 0 ); // "0" = Use all available GPU memory
+
+    // Start with the first chunk
+    vm->chunk_to_load = 0;
 
     // Initialise data pointers to NULL
     vm->data = NULL;
@@ -234,11 +235,18 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 
     // Calculate the amount of gpu memory needed
     vm->d_data_size_bytes = vm->data_size_bytes / vm->chunks_per_second;
+}
 
-fprintf( stderr, "chunks_per_second = %d\n", vm->chunks_per_second );
-fprintf( stderr, "data_size_bytes = %lu\n", vm->data_size_bytes );
-fprintf( stderr, "max_gpu_mem_bytes = %lu\n", vm->max_gpu_mem_bytes );
-fprintf( stderr, "d_data_size_bytes = %lu\n", vm->d_data_size_bytes );
+void vmMemcpyNextChunk( vcsbeam_context *vm )
+{
+    // Loads the next chunk of data onto the GPU
+    cudaMemcpy( vm->d_data,
+            (char *)vm->data + vm->chunk_to_load * vm->d_data_size_bytes,
+            vm->d_data_size_bytes, cudaMemcpyHostToDevice );
+    cudaCheckErrors( "vmMemcpyChunk: cudaMemcpyAsync failed" );
+
+    // Increment the (internal) chunk counter
+    vm->chunk_to_load = (vm->chunk_to_load + 1) % vm->chunks_per_second;
 }
 
 

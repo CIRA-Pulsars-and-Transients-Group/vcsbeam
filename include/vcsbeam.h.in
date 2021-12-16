@@ -424,6 +424,9 @@ typedef struct vcsbeam_context_t
     // for convenience.
     int sample_rate;                  // Number of samples per second
     int bytes_per_second;             // Bytes per second of data
+
+    // *** FOR INTERNAL USE ONLY ***
+    int chunk_to_load;                // Which chunk number to load to gpu next
 } vcsbeam_context;
 
 #define NO_ANTENNA_FOUND  -1
@@ -484,6 +487,7 @@ void vmMallocDataDevice( vcsbeam_context *vm );
 void vmFreeDataDevice( vcsbeam_context *vm );
 
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
+void vmMemcpyNextChunk( vcsbeam_context *vm );
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
@@ -854,7 +858,7 @@ void cu_form_incoh_beam(
         );
 
 
-void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex *d_phi,
+void cu_form_beam( cuDoubleComplex *d_phi,
                    int file_no,
                    int npointing, int nstation, int nchan,
                    int npol, double invw, struct gpu_formbeam_arrays *g,

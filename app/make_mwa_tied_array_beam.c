@@ -334,7 +334,7 @@ int main(int argc, char **argv)
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
 
-        cu_form_beam( (uint8_t *)vm->data, nsamples, gdelays.d_phi, timestep_idx,
+        cu_form_beam( gdelays.d_phi, timestep_idx,
                 npointing, nants, nchans, npols, invw, &gf,
                 detected_beam, data_buffer_coh,
                 streams, mpfs, vm );
