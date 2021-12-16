@@ -403,6 +403,7 @@ typedef struct vcsbeam_metadata_t
     uintptr_t data_size_bytes;        // The size of data in bytes (currently always = bytes_per_second)
     uintptr_t g_data_size_bytes;      // The size of g_data in bytes (depends on number of "chunks")
 
+    uintptr_t max_gpu_mem_bytes;      // The maximum allowed GPU memory to use (in bytes)
     uint32_t chunks_per_second;       // The number of chunks to process on device per second of data
                                       // (data_size_bytes = g_data_size_bytes * chunks_per_second)
 
@@ -478,6 +479,7 @@ void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on );
 
 void vmMallocHost( vcsbeam_metadata *vm );
 void vmFreeHost( vcsbeam_metadata *vm );
+void vmSetMaxGPUMem( vcsbeam_metadata *vm, uintptr_t max_gpu_mem_bytes );
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,

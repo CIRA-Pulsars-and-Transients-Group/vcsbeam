@@ -107,7 +107,10 @@ vcsbeam_metadata *init_vcsbeam_metadata(
     // Assume that one whole second will be processed on the device at once
     vm->data_size_bytes    = vm->bytes_per_second;
     vm->g_data_size_bytes  = vm->bytes_per_second;
-    vm->chunks_per_second  = 1;
+
+    struct cudaDeviceProp gpu_properties;
+    cudaGetDeviceProperties( &gpu_properties, 0 );
+    vmSetMaxGPUMem( vm, gpu_properties.totalGlobalMem );
 
     // Return the new struct pointer
     return vm;
@@ -184,6 +187,26 @@ void vmFreeHost( vcsbeam_metadata *vm )
 {
     cudaFreeHost( vm->data );
     cudaCheckErrors( "vmFreeHost: cudaFreeHost(data) failed" );
+}
+
+void vmSetMaxGPUMem( vcsbeam_metadata *vm, uintptr_t max_gpu_mem_bytes )
+{
+    vm->max_gpu_mem_bytes = max_gpu_mem_bytes;
+
+    // Requested maximum can't be more that available memory
+    struct cudaDeviceProp gpu_properties;
+    cudaGetDeviceProperties( &gpu_properties, 0 );
+    if (max_gpu_mem_bytes > gpu_properties.totalGlobalMem )
+    {
+        fprintf( stderr, "warning: vmSetMaxGPUMem(): requested maximum (%lu) "
+                "exceeds available memory (%lu). Ignoring request\n",
+                max_gpu_mem_bytes, gpu_properties.totalGlobalMem );
+        return;
+    }
+
+    // This only accounts for the memory needed for the raw data
+    vm->chunks_per_second = 1;
+
 }
 
 
