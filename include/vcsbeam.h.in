@@ -387,8 +387,32 @@ void free_pfb_filter( pfb_filter *filter );
 
 typedef enum vcsbeam_datatype_t
 {
-    VB_INT4
+    VB_INT4,
+    VB_DBL
 } vcsbeam_datatype;
+
+typedef struct geometric_delays_t {
+    cuDoubleComplex   *phi;
+    cuDoubleComplex   *d_phi;
+    uintptr_t          npointings;
+    uintptr_t          nant;
+    uintptr_t          nchan;
+    double            *chan_freqs_hz;
+    MetafitsMetadata  *obs_metadata;
+} geometric_delays;
+
+typedef struct primary_beam_t
+{
+    cuDoubleComplex  *B;
+    FEEBeam          *beam;
+    uint32_t        **delays;
+    double          **amps;
+    uintptr_t         npointings;
+    uintptr_t         nant;
+    uintptr_t         npol;
+    uint32_t          freq_hz;
+    MetafitsMetadata *obs_metadata;
+} primary_beam;
 
 typedef struct vcsbeam_context_t
 {
@@ -406,6 +430,11 @@ typedef struct vcsbeam_context_t
 
     uintptr_t data_size_bytes;        // The size of data in bytes (currently always = bytes_per_second)
     uintptr_t d_data_size_bytes;      // The size of d_data in bytes (depends on number of "chunks")
+
+    geometric_delays gdelays;         // Geometric delays due to tile layout
+    primary_beam pb;                  // Primary beam calculations
+
+    unsigned int npointing;           // Number of requested tied array beam pointings
 
     uintptr_t max_gpu_mem_bytes;      // The maximum allowed GPU memory to use (in bytes)
     uint32_t chunks_per_second;       // The number of chunks to process on device per second of data
@@ -431,6 +460,7 @@ typedef struct vcsbeam_context_t
 
     // *** FOR INTERNAL USE ONLY ***
     int chunk_to_load;                // Which chunk number to load to gpu next
+    vcsbeam_datatype datatype;        // What format the input data samples are in
 } vcsbeam_context;
 
 #define NO_ANTENNA_FOUND  -1
@@ -492,6 +522,9 @@ void vmFreeDataDevice( vcsbeam_context *vm );
 
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
 void vmMemcpyNextChunk( vcsbeam_context *vm );
+
+void vmCreatePrimaryBeam( vcsbeam_context *vm );
+void vmCreateGeometricDelays( vcsbeam_context *vm );
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
@@ -573,16 +606,6 @@ struct beam_geom {
     double unit_H;
 };
 
-
-typedef struct geometric_delays_t {
-    cuDoubleComplex   *phi;
-    cuDoubleComplex   *d_phi;
-    uintptr_t          npointings;
-    uintptr_t          nant;
-    uintptr_t          nchan;
-    double            *chan_freqs_hz;
-    MetafitsMetadata  *obs_metadata;
-} geometric_delays;
 
 #ifdef __cplusplus
 extern "C" {
@@ -1049,19 +1072,6 @@ float *create_data_buffer_vdif( size_t size );
 #define MANY_DEAD_DIPOLES  -1
 
 #define PB_IDX(p,a,pol,na,npol) ((p)*(na)*(npol) + (a)*(npol) + (pol))
-
-typedef struct primary_beam_t
-{
-    cuDoubleComplex  *B;
-    FEEBeam          *beam;
-    uint32_t        **delays;
-    double          **amps;
-    uintptr_t         npointings;
-    uintptr_t         nant;
-    uintptr_t         npol;
-    uint32_t          freq_hz;
-    MetafitsMetadata *obs_metadata;
-} primary_beam;
 
 
 #ifdef __cplusplus

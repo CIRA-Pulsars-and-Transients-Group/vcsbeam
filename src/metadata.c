@@ -115,6 +115,9 @@ vcsbeam_context *init_vcsbeam_context(
     vm->data = NULL;
     vm->d_data = NULL;
 
+    // Default: data is legacy VCS format (VB_INT4)
+    vm->datatype = VB_INT4;
+
     // Return the new struct pointer
     return vm;
 }
@@ -249,6 +252,16 @@ void vmMemcpyNextChunk( vcsbeam_context *vm )
     vm->chunk_to_load = (vm->chunk_to_load + 1) % vm->chunks_per_second;
 }
 
+
+void vmCreatePrimaryBeam( vcsbeam_context *vm )
+{
+    create_primary_beam( &vm->pb, vm->obs_metadata, vm->coarse_chan_idxs_to_process[0], vm->npointing );
+}
+
+void vmCreateGeometricDelays( vcsbeam_context *vm )
+{
+    create_geometric_delays( &vm->gdelays, vm->obs_metadata, vm->vcs_metadata, vm->coarse_chan_idxs_to_process[0], vm->npointing );
+}
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,

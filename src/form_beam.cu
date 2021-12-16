@@ -101,8 +101,14 @@ __global__ void invj_the_data( void            *data,
     if (datatype == VB_INT4)
     {
         uint8_t *v = (uint8_t *)data;
-        Dq  = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iQ,nc,ni)]);
-        Dp  = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iP,nc,ni)]);
+        Dq = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iQ,nc,ni)]);
+        Dp = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iP,nc,ni)]);
+    }
+    else if (datatype == VB_DBL)
+    {
+        cuDoubleComplex *v = (cuDoubleComplex *)data;
+        Dq = v[v_IDX(s,c,iQ,nc,ni)];
+        Dp = v[v_IDX(s,c,iP,nc,ni)];
     }
     // else send an error message... yet to do
 
@@ -407,9 +413,9 @@ void cu_form_beam( cuDoubleComplex *d_phi,
         dim3 stat( nants );
 
         // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( (uint8_t *)vm->d_data, g->d_J, d_phi, g->d_JDq, g->d_JDp,
+        invj_the_data<<<chan_samples, stat>>>( vm->d_data, g->d_J, d_phi, g->d_JDq, g->d_JDp,
                                                g->d_polQ_idxs, g->d_polP_idxs,
-                                               npol, VB_INT4 );
+                                               npol, vm->datatype );
 
         // Send off a parallel CUDA stream for each pointing
         for (p = 0; p < npointing; p++ )

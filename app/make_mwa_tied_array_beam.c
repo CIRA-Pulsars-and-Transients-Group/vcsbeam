@@ -113,30 +113,26 @@ int main(int argc, char **argv)
     uintptr_t timestep_idx;
     uint64_t  gps_second;
 
-    primary_beam pb;
-    geometric_delays gdelays;
-
     // Start counting time from here (i.e. after parsing the command line)
     sprintf( log_message, "Reading pointings file %s", opts.pointings_file );
     logger_timed_message( log, log_message );
 
     // Parse input pointings
     double *ras_hours, *decs_degs;
-    unsigned int npointing;
     unsigned int p;
-    parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &npointing );
+    parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &vm->npointing );
 
     // Allocate memory for various data products
-    cuDoubleComplex  ****detected_beam = create_detected_beam( npointing, 2*nsamples, nchans, npols );
+    cuDoubleComplex  ****detected_beam = create_detected_beam( vm->npointing, 2*nsamples, nchans, npols );
 
     double invw = 1.0/get_num_not_flagged_rf_inputs( vm );
 
     // Get pointing geometry information
-    struct beam_geom beam_geom_vals[npointing];
+    struct beam_geom beam_geom_vals[vm->npointing];
 
     double mjd, sec_offset;
     mjd = vm->obs_metadata->sched_start_mjd;
-    for (p = 0; p < npointing; p++)
+    for (p = 0; p < vm->npointing; p++)
         calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
     // Create a structure for the PFB filter coefficients
@@ -170,7 +166,7 @@ int main(int argc, char **argv)
     struct gpu_ipfb_arrays gi;
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
     malloc_formbeam( &gf, vm, (opts.gpu_mem_GB > 0 ? opts.gpu_mem_GB : -1.0),
-                     NSTOKES, npointing, log );
+                     NSTOKES, vm->npointing, log );
     vmMallocDataDevice( vm );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
@@ -183,23 +179,23 @@ int main(int argc, char **argv)
     float *data_buffer_coh    = NULL;
     float *data_buffer_vdif   = NULL;
 
-    data_buffer_coh   = create_pinned_data_buffer( npointing * nchans * NSTOKES * nsamples * sizeof(float) );
-    data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * npointing * 2 * sizeof(float) );
+    data_buffer_coh   = create_pinned_data_buffer( vm->npointing * nchans * NSTOKES * nsamples * sizeof(float) );
+    data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * vm->npointing * 2 * sizeof(float) );
 
     if (vm->do_inverse_pfb)
     {
-        malloc_ipfb( &gi, filter, nsamples, npols, npointing );
+        malloc_ipfb( &gi, filter, nsamples, npols, vm->npointing );
         cu_load_ipfb_filter( filter, &gi );
     }
 
     // Set up parallel streams
-    cudaStream_t streams[npointing];
-    for (p = 0; p < npointing; p++)
+    cudaStream_t streams[vm->npointing];
+    for (p = 0; p < vm->npointing; p++)
         cudaStreamCreate(&(streams[p])) ;
 
     // Create structures for holding header information
-    mpi_psrfits mpfs[npointing];
-    for (p = 0; p < npointing; p++)
+    mpi_psrfits mpfs[vm->npointing];
+    for (p = 0; p < vm->npointing; p++)
     {
         init_mpi_psrfits(
                 &(mpfs[p]),
@@ -217,7 +213,7 @@ int main(int argc, char **argv)
 
     vdif_header     vhdr;
     struct vdifinfo *vf;
-    vf = (struct vdifinfo *)malloc(npointing * sizeof(struct vdifinfo));
+    vf = (struct vdifinfo *)malloc(vm->npointing * sizeof(struct vdifinfo));
 
     /****************************
      * GET CALIBRATION SOLUTION *
@@ -251,8 +247,8 @@ int main(int argc, char **argv)
     // ------------------
     // Prepare primary beam and geometric delay arrays
     // ------------------
-    create_primary_beam( &pb, vm->obs_metadata, vm->coarse_chan_idxs_to_process[0], npointing );
-    create_geometric_delays( &gdelays, vm->obs_metadata, vm->vcs_metadata, vm->coarse_chan_idxs_to_process[0], npointing );
+    vmCreatePrimaryBeam( vm );
+    vmCreateGeometricDelays( vm );
 
     // ------------------
 
@@ -262,7 +258,7 @@ int main(int argc, char **argv)
 
     // Populate the relevant header structs
     populate_vdif_header( vf, &vhdr, vm->obs_metadata, vm->vcs_metadata, vm->coarse_chan_idxs_to_process[0],
-            beam_geom_vals, npointing );
+            beam_geom_vals, vm->npointing );
 
     // Begin the main loop: go through data one second at a time
 
@@ -303,21 +299,21 @@ int main(int argc, char **argv)
 
         sec_offset = (double)(timestep_idx + vm->gps_seconds_to_process[0] - vm->obs_metadata->obs_id);
         mjd = vm->obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
-        for (p = 0; p < npointing; p++)
+        for (p = 0; p < vm->npointing; p++)
             calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
         // Calculate the primary beam
-        calc_primary_beam( &pb, beam_geom_vals );
+        calc_primary_beam( &vm->pb, beam_geom_vals );
 
         // Calculate the geometric delays
-        calc_all_geometric_delays( &gdelays, beam_geom_vals );
-        push_geometric_delays_to_device( &gdelays );
+        calc_all_geometric_delays( &vm->gdelays, beam_geom_vals );
+        push_geometric_delays_to_device( &vm->gdelays );
 
         get_jones(
-                npointing,              // number of pointings
+                vm->npointing,              // number of pointings
                 vm->obs_metadata,
                 D,                      // Calibration Jones matrices
-                pb.B,                   // Primary beam jones matrices
+                vm->pb.B,                   // Primary beam jones matrices
                 gf.J );                 // inverse Jones array (output)
 
         logger_stop_stopwatch( log, "delay" );
@@ -328,14 +324,14 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( mpfs, npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, log );
+            write_step( mpfs, vm->npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, log );
         }
 
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
 
-        cu_form_beam( gdelays.d_phi, timestep_idx,
-                npointing, nants, nchans, npols, invw, &gf,
+        cu_form_beam( vm->gdelays.d_phi, timestep_idx,
+                vm->npointing, nants, nchans, npols, invw, &gf,
                 detected_beam, data_buffer_coh,
                 streams, mpfs, vm );
 
@@ -346,7 +342,7 @@ int main(int argc, char **argv)
 
         if (vm->do_inverse_pfb)
         {
-            cu_invert_pfb( detected_beam, timestep_idx, npointing,
+            cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
         }
@@ -358,7 +354,7 @@ int main(int argc, char **argv)
         {
             logger_start_stopwatch( log, "splice", true );
 
-            for (p = 0; p < npointing; p++)
+            for (p = 0; p < vm->npointing; p++)
             {
                 gather_splice_psrfits( &(mpfs[p]) );
             }
@@ -368,12 +364,12 @@ int main(int argc, char **argv)
     }
 
     // Write out the last second's worth of data
-    write_step( mpfs, npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, log );
+    write_step( mpfs, vm->npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, log );
 
     logger_message( log, "\n*****END BEAMFORMING*****\n" );
 
     // Clean up channel-dependent memory
-    for (p = 0; p < npointing; p++)
+    for (p = 0; p < vm->npointing; p++)
     {
         free_mpi_psrfits( &(mpfs[p]) );
 
@@ -390,7 +386,7 @@ int main(int argc, char **argv)
     // Free up memory
     logger_timed_message( log, "Starting clean-up" );
 
-    destroy_detected_beam( detected_beam, npointing, 2*nsamples, nchans );
+    destroy_detected_beam( detected_beam, vm->npointing, 2*nsamples, nchans );
 
     free_pfb_filter( filter );
 
@@ -424,8 +420,8 @@ int main(int argc, char **argv)
     destroy_logger( log );
 
     // Clean up memory associated with the Jones matrices
-    free_primary_beam( &pb );
-    free_geometric_delays( &gdelays );
+    free_primary_beam( &vm->pb );
+    free_geometric_delays( &vm->gdelays );
 
     destroy_vcsbeam_context( vm );
 
