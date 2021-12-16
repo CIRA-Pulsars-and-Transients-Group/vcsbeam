@@ -65,14 +65,15 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 }
 
 
-__global__ void invj_the_data( uint8_t       *data,
+__global__ void invj_the_data( void            *data,
                                cuDoubleComplex *J,
                                cuDoubleComplex *phi,
                                cuDoubleComplex *JDq,
                                cuDoubleComplex *JDp,
                                uint32_t      *polQ_idxs,
                                uint32_t      *polP_idxs,
-                               int npol )
+                               int npol,
+                               vcsbeam_datatype datatype )
 /* Layout for input arrays:
 *   data [nsamples] [nchan] [ninputs]            -- see docs
 *   J    [nants] [nchan] [npol] [npol]        -- jones matrix
@@ -92,13 +93,18 @@ __global__ void invj_the_data( uint8_t       *data,
 
     int ni   = nant*npol;   /* The (n)umber of RF (i)nputs */
 
-    int iQ   = polQ_idxs[ant]; /* The input index for the X pol for this antenna */
-    int iP   = polP_idxs[ant]; /* The input index for the Y pol for this antenna */
+    int iQ   = polQ_idxs[ant]; /* The input index for the Q pol for this antenna */
+    int iP   = polP_idxs[ant]; /* The input index for the P pol for this antenna */
 
     cuDoubleComplex Dq, Dp;
     // Convert input data to complex float
-    Dq  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iQ,nc,ni)]);
-    Dp  = UCMPLX4_TO_CMPLX_FLT(data[v_IDX(s,c,iP,nc,ni)]);
+    if (datatype == VB_INT4)
+    {
+        uint8_t *v = (uint8_t *)data;
+        Dq  = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iQ,nc,ni)]);
+        Dp  = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iP,nc,ni)]);
+    }
+    // else send an error message... yet to do
 
     // Calculate the first step (J*D) of the coherent beam (B = J*phi*D)
     // JDq = Jqq*Dq + Jqp*Dp
@@ -385,7 +391,7 @@ void cu_form_beam( cuDoubleComplex *d_phi,
     // Copy the data to the device
     gpuErrchk(cudaMemcpyAsync( g->d_J,    g->J, g->J_size,    cudaMemcpyHostToDevice ));
 
-    // Divide the gpu calculation into multiple time chunks so there is enough room on the GPU
+    // Processing happens in "chunks" (due to limited memory on GPU)
     int p;
     for (int ichunk = 0; ichunk < vm->chunks_per_second; ichunk++)
     {
@@ -403,7 +409,7 @@ void cu_form_beam( cuDoubleComplex *d_phi,
         // convert the data and multiply it by J
         invj_the_data<<<chan_samples, stat>>>( (uint8_t *)vm->d_data, g->d_J, d_phi, g->d_JDq, g->d_JDp,
                                                g->d_polQ_idxs, g->d_polP_idxs,
-                                               npol );
+                                               npol, VB_INT4 );
 
         // Send off a parallel CUDA stream for each pointing
         for (p = 0; p < npointing; p++ )

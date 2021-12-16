@@ -221,7 +221,7 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
     else if (max_gpu_mem_bytes > gpu_properties.totalGlobalMem )
     {
         fprintf( stderr, "warning: vmSetMaxGPUMem(): requested maximum (%lu) "
-                "exceeds available memory (%lu). Ignoring request\n",
+                "exceeds available memory (%lu). Setting to max available.\n",
                 vm->max_gpu_mem_bytes, gpu_properties.totalGlobalMem );
         vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
     }
