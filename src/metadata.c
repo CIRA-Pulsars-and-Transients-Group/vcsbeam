@@ -106,11 +106,13 @@ vcsbeam_metadata *init_vcsbeam_metadata(
 
     // Assume that one whole second will be processed on the device at once
     vm->data_size_bytes    = vm->bytes_per_second;
-    vm->g_data_size_bytes  = vm->bytes_per_second;
+    vm->d_data_size_bytes  = vm->bytes_per_second;
 
-    struct cudaDeviceProp gpu_properties;
-    cudaGetDeviceProperties( &gpu_properties, 0 );
-    vmSetMaxGPUMem( vm, gpu_properties.totalGlobalMem );
+    vmSetMaxGPUMem( vm, 0 ); // "0" = Use all available GPU memory
+
+    // Initialise data pointers to NULL
+    vm->data = NULL;
+    vm->d_data = NULL;
 
     // Return the new struct pointer
     return vm;
@@ -177,16 +179,29 @@ void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on )
         vm->do_inverse_pfb = switch_on;
 }
 
-void vmMallocHost( vcsbeam_metadata *vm )
+void vmMallocDataHost( vcsbeam_metadata *vm )
 {
     cudaMallocHost( &(vm->data), vm->data_size_bytes );
-    cudaCheckErrors( "vmMallocHost: cudaMallocHost(data) failed" );
+    cudaCheckErrors( "vmMallocDataHost: cudaMallocHost(data) failed" );
 }
 
-void vmFreeHost( vcsbeam_metadata *vm )
+void vmFreeDataHost( vcsbeam_metadata *vm )
 {
     cudaFreeHost( vm->data );
-    cudaCheckErrors( "vmFreeHost: cudaFreeHost(data) failed" );
+    cudaCheckErrors( "vmFreeDataHost: cudaFreeHost(data) failed" );
+    vm->data = NULL;
+}
+
+void vmMallocDataDevice( vcsbeam_metadata *vm )
+{
+    cudaMalloc( (void **)&vm->d_data,  vm->d_data_size_bytes );
+    cudaCheckErrors( "vmMallocDataDevice: cudaMalloc(d_data) failed" );
+}
+
+void vmFreeDataDevice( vcsbeam_metadata *vm )
+{
+    cudaFree( vm->d_data );
+    cudaCheckErrors( "vmFreeDataDevice: cudaFree(d_data) failed" );
 }
 
 void vmSetMaxGPUMem( vcsbeam_metadata *vm, uintptr_t max_gpu_mem_bytes )
@@ -196,17 +211,28 @@ void vmSetMaxGPUMem( vcsbeam_metadata *vm, uintptr_t max_gpu_mem_bytes )
     // Requested maximum can't be more that available memory
     struct cudaDeviceProp gpu_properties;
     cudaGetDeviceProperties( &gpu_properties, 0 );
-    if (max_gpu_mem_bytes > gpu_properties.totalGlobalMem )
+
+    if (max_gpu_mem_bytes == 0) // Default behaviour: "0" = just use maximum available
+    {
+        vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
+    }
+    else if (max_gpu_mem_bytes > gpu_properties.totalGlobalMem )
     {
         fprintf( stderr, "warning: vmSetMaxGPUMem(): requested maximum (%lu) "
                 "exceeds available memory (%lu). Ignoring request\n",
-                max_gpu_mem_bytes, gpu_properties.totalGlobalMem );
-        return;
+                vm->max_gpu_mem_bytes, gpu_properties.totalGlobalMem );
+        vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
     }
 
-    // This only accounts for the memory needed for the raw data
-    vm->chunks_per_second = 1;
+    // (This only accounts for the memory needed for the raw data)
+    vm->chunks_per_second = vm->data_size_bytes / vm->max_gpu_mem_bytes + 1;
 
+    // Make sure the number of chunks is divisible by the number of samples (per second)
+    while ( vm->sample_rate % vm->chunks_per_second != 0 )
+        vm->chunks_per_second++;
+
+    // Calculate the amount of gpu memory needed
+    vm->d_data_size_bytes = vm->data_size_bytes / vm->chunks_per_second;
 }
 
 

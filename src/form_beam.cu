@@ -361,7 +361,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
                    struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
                    cudaStream_t *streams, int nchunk,
-                   mpi_psrfits *mpfs )
+                   mpi_psrfits *mpfs, vcsbeam_metadata *vm )
 /* Inputs:
 *   data    = array of 4bit+4bit complex numbers. For data order, refer to the
 *             documentation.
@@ -388,12 +388,12 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
 
     // Divide the gpu calculation into multiple time chunks so there is enough room on the GPU
     int p;
-    for (int ichunk = 0; ichunk < nchunk; ichunk++)
+    for (int ichunk = 0; ichunk < vm->chunks_per_second; ichunk++)
     {
         //int dataoffset = ichunk * g->data_size / sizeof(uint8_t);
-        gpuErrchk(cudaMemcpyAsync( g->d_data,
-                                   data + ichunk * g->data_size / sizeof(uint8_t),
-                                   g->data_size, cudaMemcpyHostToDevice ));
+        gpuErrchk(cudaMemcpyAsync( vm->d_data,
+                                   (unsigned char *)vm->data + ichunk * vm->d_data_size_bytes,
+                                   vm->d_data_size_bytes, cudaMemcpyHostToDevice ));
 
         // Call the kernels
         // samples_chan(index=blockIdx.x  size=gridDim.x,
@@ -401,11 +401,11 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate,
         // stat_point  (index=threadIdx.x size=blockDim.x,
         //              index=threadIdx.y size=blockDim.y)
         //dim3 samples_chan(sample_rate, nchan);
-        dim3 chan_samples( nchan, sample_rate / nchunk );
+        dim3 chan_samples( nchan, vm->sample_rate / vm->chunks_per_second );
         dim3 stat( nants );
 
         // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( g->d_data, g->d_J, d_phi, g->d_JDq, g->d_JDp,
+        invj_the_data<<<chan_samples, stat>>>( (uint8_t *)vm->d_data, g->d_J, d_phi, g->d_JDq, g->d_JDp,
                                                g->d_polQ_idxs, g->d_polP_idxs,
                                                npol );
 
@@ -588,7 +588,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_metadata *vm,
     gpuErrchk(cudaMalloc( (void **)&g->d_JDq,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDp,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_Bd,    g->Bd_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_data,  g->data_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_coh,   g->coh_size ));
 
     // Allocate memory on both host and device for polX and polY idx arrays
@@ -614,7 +613,6 @@ void free_formbeam( struct gpu_formbeam_arrays *g )
     cudaFreeHost( g->polP_idxs );
     cudaFree( g->d_J );
     cudaFree( g->d_Bd );
-    cudaFree( g->d_data );
     cudaFree( g->d_coh );
     cudaFree( g->d_polQ_idxs );
     cudaFree( g->d_polP_idxs );

@@ -398,14 +398,14 @@ typedef struct vcsbeam_metadata_t
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
 
     void *data;                       // The buffer for the data on host
-    void *g_data;                     // The buffer for the data on device
+    void *d_data;                     // The buffer for the data on device
 
     uintptr_t data_size_bytes;        // The size of data in bytes (currently always = bytes_per_second)
-    uintptr_t g_data_size_bytes;      // The size of g_data in bytes (depends on number of "chunks")
+    uintptr_t d_data_size_bytes;      // The size of d_data in bytes (depends on number of "chunks")
 
     uintptr_t max_gpu_mem_bytes;      // The maximum allowed GPU memory to use (in bytes)
     uint32_t chunks_per_second;       // The number of chunks to process on device per second of data
-                                      // (data_size_bytes = g_data_size_bytes * chunks_per_second)
+                                      // (data_size_bytes = d_data_size_bytes * chunks_per_second)
 
     int num_coarse_chans_to_process;  // The number of coarse channels to be processed
     int *coarse_chan_idxs_to_process; // A list of the coarse chan idxs to be processed
@@ -477,8 +477,12 @@ void set_vcsbeam_coarse_output( vcsbeam_metadata *vm, bool switch_on );
 
 // OTHER AUXILIARY FUNCTIONS
 
-void vmMallocHost( vcsbeam_metadata *vm );
-void vmFreeHost( vcsbeam_metadata *vm );
+void vmMallocDataHost( vcsbeam_metadata *vm );
+void vmFreeDataHost( vcsbeam_metadata *vm );
+
+void vmMallocDataDevice( vcsbeam_metadata *vm );
+void vmFreeDataDevice( vcsbeam_metadata *vm );
+
 void vmSetMaxGPUMem( vcsbeam_metadata *vm, uintptr_t max_gpu_mem_bytes );
 
 char **create_filenames(
@@ -856,7 +860,7 @@ void cu_form_beam( uint8_t *data, unsigned int sample_rate, cuDoubleComplex *d_p
                    int npol, double invw, struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
                    cudaStream_t *streams, int nchunk,
-                   mpi_psrfits *mpfs );
+                   mpi_psrfits *mpfs, vcsbeam_metadata *vm );
 
 float *create_pinned_data_buffer( size_t size );
 

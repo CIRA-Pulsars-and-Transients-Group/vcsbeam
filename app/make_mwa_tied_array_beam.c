@@ -39,7 +39,7 @@ struct make_tied_array_beam_opts {
     // Other options
     char              *synth_filter;     // Which synthesis filter to use
     int                max_sec_per_file; // Number of seconds per fits files
-    float              gpu_mem;          // Default = -1.0. If -1.0 use all GPU mem
+    float              gpu_mem_GB;       // Default = 0.0. If 0.0 use all GPU mem
 };
 
 /***********************
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
      * Memory Allocation *
      *********************/
 
-    vmMallocHost( vm );
+    vmMallocDataHost( vm );
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
@@ -169,8 +169,10 @@ int main(int argc, char **argv)
 
     struct gpu_ipfb_arrays gi;
     int nchunk;
-    malloc_formbeam( &gf, vm, &nchunk, opts.gpu_mem,
+    malloc_formbeam( &gf, vm, &nchunk, (opts.gpu_mem_GB > 0 ? opts.gpu_mem_GB : -1.0),
                      NSTOKES, npointing, log );
+    vmSetMaxGPUMem( vm, (uintptr_t)opts.gpu_mem_GB * (1024*1024*1024) );
+    vmMallocDataDevice( vm );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
     create_antenna_lists( vm->obs_metadata, gf.polQ_idxs, gf.polP_idxs );
@@ -336,7 +338,7 @@ int main(int argc, char **argv)
         cu_form_beam( (uint8_t *)vm->data, nsamples, gdelays.d_phi, timestep_idx,
                 npointing, nants, nchans, npols, invw, &gf,
                 detected_beam, data_buffer_coh,
-                streams, nchunk, mpfs );
+                streams, nchunk, mpfs, vm );
 
         logger_stop_stopwatch( log, "calc" );
 
@@ -400,7 +402,7 @@ int main(int argc, char **argv)
     cudaFreeHost( data_buffer_vdif  );
     cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
 
-    vmFreeHost( vm );
+    vmFreeDataHost( vm );
 
     free( opts.pointings_file  );
     free( opts.datadir         );
@@ -413,6 +415,8 @@ int main(int argc, char **argv)
     free_calibration( &cal );
 
     free_formbeam( &gf );
+    vmFreeDataDevice( vm );
+
     if (vm->do_inverse_pfb)
     {
         free_ipfb( &gi );
@@ -520,7 +524,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->emulate_legacy     = false; // Emulate the legacy VCS system using the offline fine PFB
     opts->synth_filter       = NULL;
     opts->max_sec_per_file   = 200;   // Number of seconds per fits files
-    opts->gpu_mem            = -1.0;
+    opts->gpu_mem_GB         = 0.0;
     opts->custom_flags       = NULL;
 
     cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
@@ -603,7 +607,7 @@ void make_tied_array_beam_parse_cmdline(
                     strcpy( opts->custom_flags, optarg );
                     break;
                 case 'g':
-                    opts->gpu_mem = atof(optarg);
+                    opts->gpu_mem_GB = atof(optarg);
                     break;
                 case 'h':
                     usage();
