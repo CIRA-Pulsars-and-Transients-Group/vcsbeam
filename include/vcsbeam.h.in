@@ -437,9 +437,9 @@ typedef struct vcsbeam_context_t
     MetafitsContext  *cal_context;    // The mwalib context derived from the calibration observation's metafits file
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
 
-    void *data, *d_data;              // The buffers for the data on host/device
-    uintptr_t data_size_bytes;        // The size of data in bytes (currently always = bytes_per_second)
-    uintptr_t d_data_size_bytes;      // The size of d_data in bytes (depends on number of "chunks")
+    void *v, *d_v;                    // The buffers for the input data on host/device
+    uintptr_t v_size_bytes;           // The size of data in bytes (currently always = bytes_per_second)
+    uintptr_t d_v_size_bytes;         // The size of d_data in bytes (depends on number of "chunks")
 
     void *S, *d_S;                    // The buffers for the detected (full Stokes) coherent beam on host/device
     uintptr_t S_size_bytes;           // The size of S in bytes

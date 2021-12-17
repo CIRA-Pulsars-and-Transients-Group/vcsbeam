@@ -109,8 +109,8 @@ vcsbeam_context *init_vcsbeam_context(
     // Assume that the whole GPU is available
     uintptr_t nant      = vm->obs_metadata->num_ants;
     uintptr_t nvispol   = vm->obs_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
-    vm->data_size_bytes = vm->bytes_per_second;
-    vm->d_data_size_bytes = vm->bytes_per_second;
+    vm->v_size_bytes    = vm->bytes_per_second;
+    vm->d_v_size_bytes  = vm->bytes_per_second;
     vm->pol_idxs_size_bytes   = nant * sizeof(uint32_t);
     vm->d_pol_idxs_size_bytes = nant * sizeof(uint32_t);
     vm->D_size_bytes    = nant * vm->nchan * nvispol * sizeof(cuDoubleComplex);
@@ -124,8 +124,8 @@ vcsbeam_context *init_vcsbeam_context(
     vm->chunk_to_load = 0;
 
     // Initialise data pointers to NULL
-    vm->data = NULL;
-    vm->d_data = NULL;
+    vm->v = NULL;
+    vm->d_v = NULL;
 
     // Default: data is legacy VCS format (VB_INT4)
     vm->datatype = VB_INT4;
@@ -197,25 +197,25 @@ void set_vcsbeam_coarse_output( vcsbeam_context *vm, bool switch_on )
 
 void vmMallocDataHost( vcsbeam_context *vm )
 {
-    cudaMallocHost( &(vm->data), vm->data_size_bytes );
+    cudaMallocHost( &(vm->v), vm->v_size_bytes );
     cudaCheckErrors( "vmMallocDataHost: cudaMallocHost(data) failed" );
 }
 
 void vmFreeDataHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->data );
+    cudaFreeHost( vm->v );
     cudaCheckErrors( "vmFreeDataHost: cudaFreeHost(data) failed" );
 }
 
 void vmMallocDataDevice( vcsbeam_context *vm )
 {
-    cudaMalloc( (void **)&vm->d_data,  vm->d_data_size_bytes );
+    cudaMalloc( (void **)&vm->d_v,  vm->d_v_size_bytes );
     cudaCheckErrors( "vmMallocDataDevice: cudaMalloc(d_data) failed" );
 }
 
 void vmFreeDataDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_data );
+    cudaFree( vm->d_v );
     cudaCheckErrors( "vmFreeDataDevice: cudaFree(d_data) failed" );
 }
 
@@ -356,21 +356,21 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
     }
 
     // (This only accounts for the memory needed for the raw data)
-    vm->chunks_per_second = vm->data_size_bytes / vm->max_gpu_mem_bytes + 1;
+    vm->chunks_per_second = vm->v_size_bytes / vm->max_gpu_mem_bytes + 1;
 
     // Make sure the number of chunks is divisible by the number of samples (per second)
     while ( vm->sample_rate % vm->chunks_per_second != 0 )
         vm->chunks_per_second++;
 
     // Calculate the amount of gpu memory needed
-    vm->d_data_size_bytes = vm->data_size_bytes / vm->chunks_per_second;
+    vm->d_v_size_bytes = vm->v_size_bytes / vm->chunks_per_second;
 }
 
 void vmMemcpyNextChunk( vcsbeam_context *vm )
 {
     // Loads the next chunk of data onto the GPU
-    char *ptrHost = (char *)vm->data + vm->chunk_to_load * vm->d_data_size_bytes;
-    cudaMemcpy( vm->d_data, ptrHost, vm->d_data_size_bytes, cudaMemcpyHostToDevice );
+    char *ptrHost = (char *)vm->v + vm->chunk_to_load * vm->d_v_size_bytes;
+    cudaMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyNextChunk: cudaMemcpy failed" );
 
     // Increment the (internal) chunk counter

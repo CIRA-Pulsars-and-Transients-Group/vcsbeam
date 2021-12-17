@@ -284,8 +284,8 @@ int main(int argc, char **argv)
                     gps_second,
                     1,
                     vm->coarse_chan_idxs_to_process[0],
-                    vm->data,
-                    vm->data_size_bytes,
+                    vm->v,
+                    vm->v_size_bytes,
                     error_message,
                     ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
         {

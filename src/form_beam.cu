@@ -385,7 +385,7 @@ void cu_form_beam( int file_no,
         dim3 stat( nant );
 
         // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( vm->d_data, (cuDoubleComplex *)vm->d_J, vm->gdelays.d_phi, g->d_JDq, g->d_JDp,
+        invj_the_data<<<chan_samples, stat>>>( vm->d_v, (cuDoubleComplex *)vm->d_J, vm->gdelays.d_phi, g->d_JDq, g->d_JDp,
                                                vm->d_polQ_idxs, vm->d_polP_idxs,
                                                npol, vm->datatype );
         cudaCheckErrors( "cu_form_beam: invj_the_data failed" );
