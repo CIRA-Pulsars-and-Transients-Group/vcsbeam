@@ -379,14 +379,6 @@ void cu_form_beam( int file_no,
     for (int ichunk = 0; ichunk < vm->chunks_per_second; ichunk++)
     {
         vmMemcpyNextChunk( vm );
-fprintf( stderr, "d_data= %p\n", vm->d_data );
-fprintf( stderr, "d_J   = %p\n", vm->d_J );
-fprintf( stderr, "d_phi = %p\n", vm->gdelays.d_phi );
-fprintf( stderr, "d_JDq = %p\n", g->d_JDq );
-fprintf( stderr, "d_JDp = %p\n", g->d_JDp );
-fprintf( stderr, "d_polQ_idxs = %p\n", vm->d_polQ_idxs );
-fprintf( stderr, "d_polP_idxs = %p\n", vm->d_polP_idxs );
-fprintf( stderr, "d_Bd  = %p\n", g->d_Bd );
 
         // Call the kernels
         dim3 chan_samples( nchan, vm->sample_rate / vm->chunks_per_second );

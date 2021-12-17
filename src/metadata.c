@@ -199,7 +199,6 @@ void vmMallocDataHost( vcsbeam_context *vm )
 {
     cudaMallocHost( &(vm->data), vm->data_size_bytes );
     cudaCheckErrors( "vmMallocDataHost: cudaMallocHost(data) failed" );
-fprintf( stderr, "Allocated %lu bytes on host (data) @ %p\n", vm->data_size_bytes, vm->data );
 }
 
 void vmFreeDataHost( vcsbeam_context *vm )
@@ -212,7 +211,6 @@ void vmMallocDataDevice( vcsbeam_context *vm )
 {
     cudaMalloc( (void **)&vm->d_data,  vm->d_data_size_bytes );
     cudaCheckErrors( "vmMallocDataDevice: cudaMalloc(d_data) failed" );
-fprintf( stderr, "Allocated %lu bytes on device (data) @ %p\n", vm->d_data_size_bytes, vm->d_data );
 }
 
 void vmFreeDataDevice( vcsbeam_context *vm )
@@ -366,7 +364,6 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 
     // Calculate the amount of gpu memory needed
     vm->d_data_size_bytes = vm->data_size_bytes / vm->chunks_per_second;
-fprintf( stderr, "d_data_size_bytes = %lu, data_size_bytes = %lu\n", vm->d_data_size_bytes, vm->data_size_bytes );
 }
 
 void vmMemcpyNextChunk( vcsbeam_context *vm )
@@ -374,7 +371,6 @@ void vmMemcpyNextChunk( vcsbeam_context *vm )
     // Loads the next chunk of data onto the GPU
     char *ptrHost = (char *)vm->data + vm->chunk_to_load * vm->d_data_size_bytes;
     cudaMemcpy( vm->d_data, ptrHost, vm->d_data_size_bytes, cudaMemcpyHostToDevice );
-fprintf( stderr, "d_data = %p, nchunk = %u, ptrHost = %p, nbytes = %lu\n", vm->d_data, vm->chunk_to_load, ptrHost, vm->d_data_size_bytes );
     cudaCheckErrors( "vmMemcpyNextChunk: cudaMemcpy failed" );
 
     // Increment the (internal) chunk counter
@@ -454,6 +450,13 @@ void vmDestroyStatistics( vcsbeam_context *vm )
     cudaCheckErrors( "vmDestroyStatistics: cudaFree(scales) failed" );
     cudaFree( vm->d_Cscaled );
     cudaCheckErrors( "vmDestroyStatistics: cudaFree(Cscaled) failed" );
+}
+
+void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
+{
+    vm->npointing       = npointings;
+    vm->S_size_bytes    = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
+    vm->d_S_size_bytes  = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
 }
 
 char **create_filenames(

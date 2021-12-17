@@ -602,6 +602,8 @@ void vmDestroyStatistics( vcsbeam_context *vm );
 
 void vmSetPolIdxLists( vcsbeam_context *vm ); // (defined in jones.c)
 
+void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings );
+
 // (defined in calibration.c:)
 void vmLoadRTSSolution( vcsbeam_context *vm,
         bool use_bandpass, const char *caldir, int coarse_chan_idx, logger *log );

@@ -120,7 +120,9 @@ int main(int argc, char **argv)
     // Parse input pointings
     double *ras_hours, *decs_degs;
     unsigned int p;
-    parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &vm->npointing );
+    unsigned int npointings;
+    parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &npointings );
+    vmSetNumPointings( vm, npointings );
 
     // Allocate memory for various data products
     cuDoubleComplex  ****detected_beam = create_detected_beam( vm->npointing, 2*nsamples, nchans, npols );
@@ -171,6 +173,7 @@ int main(int argc, char **argv)
     vmMallocJHost( vm );
     vmMallocJDevice( vm );
     vmMallocDHost( vm );
+    vmMallocDDevice( vm );
     vmMallocPQIdxsHost( vm );
     vmMallocPQIdxsDevice( vm );
 
@@ -408,6 +411,7 @@ int main(int argc, char **argv)
     vmFreeJDevice( vm );
     vmFreeJHost( vm );
     vmFreeDHost( vm );
+    vmFreeDDevice( vm );
     vmFreePQIdxsDevice( vm );
     vmFreePQIdxsHost( vm );
 
