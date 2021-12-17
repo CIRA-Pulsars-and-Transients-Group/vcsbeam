@@ -155,7 +155,6 @@ int main(int argc, char **argv)
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
     vmMallocVHost( vm );
     vmMallocVDevice( vm );
-    vmMallocJVHost( vm );
     vmMallocJVDevice( vm );
     vmMallocEHost( vm );
     vmMallocEDevice( vm );
@@ -358,7 +357,6 @@ int main(int argc, char **argv)
 
     vmFreeVHost( vm );
     vmFreeVDevice( vm );
-    vmFreeJVHost( vm );
     vmFreeJVDevice( vm );
     vmFreeEHost( vm );
     vmFreeEDevice( vm );
