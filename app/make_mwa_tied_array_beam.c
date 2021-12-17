@@ -47,8 +47,7 @@ struct make_tied_array_beam_opts {
  ***********************/
 
 void usage();
-void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal );
-void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings );
+void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts, calibration *cal );
 
 void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif );
@@ -61,7 +60,7 @@ int main(int argc, char **argv)
 {
     // Parse command line arguments
     struct make_tied_array_beam_opts opts;
-    struct calibration cal;           // Variables for calibration settings
+    calibration cal;           // Variables for calibration settings
     init_calibration( &cal );
     make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
 
@@ -99,30 +98,20 @@ int main(int argc, char **argv)
     uintptr_t npols          = vm->obs_metadata->num_ant_pols;   // (X,Y)
     unsigned int nsamples    = vm->sample_rate;
 
-
-    // Start counting time from here (i.e. after parsing the command line)
-    sprintf( vm->log_message, "Reading pointings file %s", opts.pointings_file );
-    logger_timed_message( vm->log, vm->log_message );
-
     // Parse input pointings
-    double *ras_hours, *decs_degs;
-    unsigned int p;
-    unsigned int npointings;
-    parse_pointing_file( opts.pointings_file, &ras_hours, &decs_degs, &npointings );
-    vmSetNumPointings( vm, npointings );
+    vmParsePointingFile( vm, opts.pointings_file );
 
     // Allocate memory for various data products
     cuDoubleComplex  ****detected_beam = create_detected_beam( vm->npointing, 2*nsamples, nchans, npols );
 
-    vmSetNumNotFlaggedRFInputs( vm );
-
     // Get pointing geometry information
     beam_geom beam_geom_vals[vm->npointing];
 
+    unsigned int p;
     double mjd, sec_offset;
     mjd = vm->obs_metadata->sched_start_mjd;
     for (p = 0; p < vm->npointing; p++)
-        calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
+        calc_beam_geom( vm->ras_hours[p], vm->decs_degs[p], mjd, &beam_geom_vals[p] );
 
     // Create a structure for the PFB filter coefficients
 
@@ -148,7 +137,6 @@ int main(int argc, char **argv)
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
-    struct gpu_ipfb_arrays gi;
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
     vmMallocVHost( vm );
     vmMallocVDevice( vm );
@@ -171,17 +159,15 @@ int main(int argc, char **argv)
     vmPushPolIdxLists( vm );
 
     // Create output buffer arrays
-    float *data_buffer_vdif   = NULL;
-    data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * vm->npointing * 2 * sizeof(float) );
 
+    struct gpu_ipfb_arrays gi;
+    float *data_buffer_vdif   = NULL;
     if (vm->do_inverse_pfb)
     {
+        data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * vm->npointing * 2 * sizeof(float) );
         malloc_ipfb( &gi, filter, nsamples, npols, vm->npointing );
         cu_load_ipfb_filter( filter, &gi );
     }
-
-    // Set up parallel streams
-    vmCreateCudaStreams( vm );
 
     // Create structures for holding header information
     mpi_psrfits mpfs[vm->npointing];
@@ -219,11 +205,7 @@ int main(int argc, char **argv)
     }
 
     // Flag antennas that need flagging
-    if (opts.custom_flags != NULL)
-    {
-        parse_flagged_tilenames_file( opts.custom_flags, &cal );
-        set_flagged_tiles_to_zero( &cal, vm->obs_metadata, vm->D );
-    }
+    vmSetCustomTileFlags( vm, opts.custom_flags, &cal );
 
     // Apply any calibration corrections
     parse_calibration_correction_file( vm->obs_metadata->obs_id, &cal );
@@ -260,7 +242,7 @@ int main(int argc, char **argv)
         vmReadNextSecond( vm );
 
         // Calculate J (inverse) and Phi (geometric delays)
-        vmCalcJonesAndDelays( vm, ras_hours, decs_degs, beam_geom_vals );
+        vmCalcJonesAndDelays( vm, vm->ras_hours, vm->decs_degs, beam_geom_vals );
 
         // Move the needed (just calculated) quantities to the GPU
         vmPushPhi( vm );
@@ -339,8 +321,11 @@ int main(int argc, char **argv)
 
     free_pfb_filter( filter );
 
-    cudaFreeHost( data_buffer_vdif  );
-    cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
+    if (vm->do_inverse_pfb)
+    {
+        cudaFreeHost( data_buffer_vdif  );
+        cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
+    }
 
     vmDestroyStatistics( vm );
 
@@ -464,7 +449,7 @@ void usage()
 
 
 void make_tied_array_beam_parse_cmdline(
-        int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal )
+        int argc, char **argv, struct make_tied_array_beam_opts *opts, calibration *cal )
 {
     // Set defaults
     opts->begin_str          = NULL;  // Absolute or relative GPS time -- when to start beamforming
@@ -659,57 +644,6 @@ void make_tied_array_beam_parse_cmdline(
     }
 }
 
-
-void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings )
-/* Parse the given file in FILENAME and create arrays of RAs and DECs.
- * This function allocates memory for ras_hours and decs_degs arrays.
- * Caller can destroy with free().
- */
-{
-    // Open the file for reading
-    FILE *f = fopen( filename, "r" );
-    if (f == NULL)
-    {
-        fprintf( stderr, "error: cannot open pointings file %s\n", filename );
-        exit(EXIT_FAILURE);
-    }
-
-    // Do one pass through the file to count "words"
-    // The RAs and Decs are expected to be whitespace-delimited
-    int nwords = 0;
-    char word[64];
-    while (fscanf( f, "%s", word ) != EOF)
-        nwords++;
-
-    // Check that we have an even number of words (they should be in RA/Dec pairs)
-    if (nwords % 2 != 0)
-    {
-        fprintf( stderr, "error: cannot parse pointings file %s\n", filename );
-        exit(EXIT_FAILURE);
-    }
-    *npointings = nwords/2;
-
-    // Allocate memory
-    *ras_hours = (double *)malloc( *npointings * sizeof(double) );
-    *decs_degs = (double *)malloc( *npointings * sizeof(double) );
-
-    // Rewind to beginning of file, read the words in again, and parse them
-    rewind( f );
-    char ra_str[64], dec_str[64];
-    unsigned int p;
-    for (p = 0; p < *npointings; p++)
-    {
-        // Read in the next Ra/Dec pair
-        fscanf( f, "%s %s", ra_str, dec_str );
-
-        // Parse them and make them decimal
-        (*ras_hours)[p] = parse_ra( ra_str );
-        (*decs_degs)[p] = parse_dec( dec_str );
-    }
-
-    // Close the file
-    fclose( f );
-}
 
 
 void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,

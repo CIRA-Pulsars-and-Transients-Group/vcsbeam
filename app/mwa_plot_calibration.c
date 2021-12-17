@@ -30,7 +30,7 @@ struct make_plot_calibrate_opts {
 
 void usage();
 void make_plot_calibrate_parse_cmdline( int argc, char **argv,
-        struct make_plot_calibrate_opts *opts, struct calibration *cal );
+        struct make_plot_calibrate_opts *opts, calibration *cal );
 
 /********
  * MAIN *
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 {
     // Parse command line arguments
     struct make_plot_calibrate_opts opts;
-    struct calibration              cal;  // Variables for calibration settings
+    calibration cal;  // Variables for calibration settings
     init_calibration( &cal );
 
     make_plot_calibrate_parse_cmdline( argc, argv, &opts, &cal );
@@ -96,11 +96,7 @@ int main(int argc, char **argv)
         memcpy( D[Ch], vm.D, vm.D_size_bytes );
 
         // Flag antennas that need flagging
-        if (opts.custom_flags != NULL)
-        {
-            parse_flagged_tilenames_file( opts.custom_flags, &cal );
-            set_flagged_tiles_to_zero( &cal, obs_metadata, D[Ch] );
-        }
+        vmSetCustomTileFlags( &vm, opts.custom_flags, &cal );
 
         // Apply any calibration corrections
         parse_calibration_correction_file( cal_metadata->obs_id, &cal );
@@ -233,7 +229,7 @@ void usage()
 
 
 void make_plot_calibrate_parse_cmdline( int argc, char **argv,
-        struct make_plot_calibrate_opts *opts, struct calibration *cal )
+        struct make_plot_calibrate_opts *opts, calibration *cal )
 {
     // Set defaults
     opts->ncoarse_chans      = -1;    // Number of coarse channels to include
