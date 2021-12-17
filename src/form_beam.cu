@@ -453,9 +453,8 @@ void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm )
 }
 
 void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
-                      float gpu_mem_gb, int npointing, logger *log )
+                      int npointing )
 {
-    size_t data_base_size;
     size_t JD_base_size;
 
     int nchunks = vm->chunks_per_second;
@@ -467,40 +466,9 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
 
     // Calculate array sizes for host and device
     g->coh_size    = npointing * sample_rate * NSTOKES * nchan * sizeof(float);
-    data_base_size = sample_rate * nants * nchan * npol * sizeof(uint8_t);
     g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
-    size_t phi_size = npointing * nants * nchan * sizeof(cuDoubleComplex);
     JD_base_size   = sample_rate * nants * nchan * sizeof(cuDoubleComplex);
-    
-    size_t gpu_mem;
-    if ( gpu_mem_gb == -1.0f ) {
-        // Find total GPU memory
-        struct cudaDeviceProp gpu_properties;
-        cudaGetDeviceProperties( &gpu_properties, 0 );
-        gpu_mem = gpu_properties.totalGlobalMem;
-        gpu_mem_gb = (float)gpu_mem / (float)(1024*1024*1024);
-    }
-    else {
-        gpu_mem = (size_t)(gpu_mem_gb * (float)(1024*1024*1024));
-    }
-
-
-    size_t gpu_mem_used = (phi_size + vm->J_size_bytes + g->Bd_size + data_base_size / nchunks +
-                    g->coh_size + 3*JD_base_size / nchunks);
-    float gpu_mem_used_gb = (float)gpu_mem_used / (float)(1024*1024*1024);
-
-    char log_message[128];
-
-    sprintf( log_message, "Splitting each second into %d chunks", nchunks );
-    logger_timed_message( log, log_message );
-
-    sprintf( log_message, "%6.3f GB out of the total %6.3f GPU memory allocated",
-                     gpu_mem_used_gb, gpu_mem_gb );
-    logger_timed_message( log, log_message );
-
-    g->data_size = data_base_size / nchunks;
     g->JD_size   = JD_base_size / nchunks;
-
 
     // Allocate host memory
     cudaMallocHost( &g->Bd, g->Bd_size );

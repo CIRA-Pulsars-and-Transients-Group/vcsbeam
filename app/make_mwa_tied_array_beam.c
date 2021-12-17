@@ -165,8 +165,7 @@ int main(int argc, char **argv)
 
     struct gpu_ipfb_arrays gi;
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
-    malloc_formbeam( &gf, vm, (opts.gpu_mem_GB > 0 ? opts.gpu_mem_GB : -1.0),
-                     vm->npointing, log );
+    malloc_formbeam( &gf, vm, vm->npointing );
     vmMallocDataDevice( vm );
     vmMallocCohBeamDevice( vm );
     vmMallocJHost( vm );

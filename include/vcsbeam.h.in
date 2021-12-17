@@ -911,7 +911,7 @@ extern "C" {
 #endif
 
 void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
-                      float gpu_mem_gb, int npointing, logger *log );
+                      int npointing );
 void free_formbeam( struct gpu_formbeam_arrays *g );
 
 
