@@ -449,14 +449,18 @@ typedef struct vcsbeam_context_t
     uintptr_t J_size_bytes;           // The size of J in bytes
     uintptr_t d_J_size_bytes;         // The size of d_J in bytes
 
+    void *Jv, *d_Jv;                    // The buffers for Jones-corrected voltages on host/device
+    uintptr_t Jv_size_bytes;           // The size of Jv in bytes
+    uintptr_t d_Jv_size_bytes;         // The size of d_Jv in bytes
+
     cuDoubleComplex *D, *d_D;         // The buffers for calibration solutions on host/device
     uintptr_t D_size_bytes;           // The size of D in bytes
     uintptr_t d_D_size_bytes;         // The size of d_D in bytes
 
     uint32_t *polP_idxs, *d_polP_idxs; // List of indices for VCS-ordered data
     uint32_t *polQ_idxs, *d_polQ_idxs;
-    uintptr_t pol_idxs_size;           // The size of (each of) the P/Q idxs (host) arrays
-    uintptr_t d_pol_idxs_size;         // The size of (each of) the P/Q idxs (device) arrays
+    uintptr_t pol_idxs_size_bytes;     // The size of (each of) the P/Q idxs (host) arrays
+    uintptr_t d_pol_idxs_size_bytes;   // The size of (each of) the P/Q idxs (device) arrays
 
     geometric_delays gdelays;         // Geometric delays due to tile layout
     primary_beam pb;                  // Primary beam calculations

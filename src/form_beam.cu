@@ -464,7 +464,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm )
     int npol        = vm->obs_metadata->num_ant_pols; // (X,Y)
 
     // Calculate array sizes for host and device
-    g->coh_size    = vm->npointing * sample_rate * NSTOKES * nchan * sizeof(float);
     g->Bd_size     = vm->npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
     JD_base_size   = sample_rate * nants * nchan * sizeof(cuDoubleComplex);
     g->JD_size   = JD_base_size / nchunks;
@@ -481,8 +480,8 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm )
 
 void vmMemcpyPolIdxLists( vcsbeam_context *vm )
 {
-    gpuErrchk(cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size, cudaMemcpyHostToDevice ));
-    gpuErrchk(cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size, cudaMemcpyHostToDevice ));
+    gpuErrchk(cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice ));
+    gpuErrchk(cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice ));
 }
 
 void free_formbeam( struct gpu_formbeam_arrays *g )

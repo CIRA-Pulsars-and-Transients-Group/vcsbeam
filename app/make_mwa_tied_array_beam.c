@@ -157,8 +157,6 @@ int main(int argc, char **argv)
      * Memory Allocation *
      *********************/
 
-    vmMallocDataHost( vm );
-
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
     struct gpu_formbeam_arrays gf;
@@ -166,6 +164,7 @@ int main(int argc, char **argv)
     struct gpu_ipfb_arrays gi;
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
     malloc_formbeam( &gf, vm );
+    vmMallocDataHost( vm );
     vmMallocDataDevice( vm );
     vmMallocSDevice( vm );
     vmMallocJHost( vm );
@@ -221,7 +220,6 @@ int main(int argc, char **argv)
      ****************************/
 
     vmMallocDHost( vm );
-    vmMallocDDevice( vm );
 
     if (cal.cal_type == CAL_RTS)
     {
@@ -412,7 +410,6 @@ int main(int argc, char **argv)
     vmFreeJDevice( vm );
     vmFreeJHost( vm );
     vmFreeDHost( vm );
-    vmFreeDDevice( vm );
     vmFreePQIdxsDevice( vm );
     vmFreePQIdxsHost( vm );
 
