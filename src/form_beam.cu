@@ -68,8 +68,8 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 __global__ void invj_the_data( void            *data,
                                cuDoubleComplex *J,
                                cuDoubleComplex *phi,
-                               cuDoubleComplex *JDq,
-                               cuDoubleComplex *JDp,
+                               cuDoubleComplex *Jv_Q,
+                               cuDoubleComplex *Jv_P,
                                uint32_t      *polQ_idxs,
                                uint32_t      *polP_idxs,
                                int npol,
@@ -79,11 +79,11 @@ __global__ void invj_the_data( void            *data,
 *   J    [nants] [nchan] [npol] [npol]        -- jones matrix
 *   incoh --true if outputing an incoherent beam
 * Layout for output arrays:
-*   JDq  [nsamples] [nchan] [nant]
-*   JDp  [nsamples] [nchan] [nant]
+*   Jv_Q  [nsamples] [nchan] [nant]
+*   Jv_P  [nsamples] [nchan] [nant]
 */
 {
-    // Translate GPU block/thread numbers into meaning->l names
+    // Translate GPU block/thread numbers into meaningful names
     int c    = blockIdx.x;  /* The (c)hannel number */
     int nc   = gridDim.x;   /* The (n)umber of (c)hannels */
     int s    = blockIdx.y;  /* The (s)ample number */
@@ -113,11 +113,11 @@ __global__ void invj_the_data( void            *data,
     // else send an error message... yet to do
 
     // Calculate the first step (J*D) of the coherent beam (B = J*phi*D)
-    // JDq = Jqq*Dq + Jqp*Dp
-    // JDp = Jpq*Dq + Jpy*Dp
-    JDq[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], Dq ),
+    // Jv_Q = Jqq*Dq + Jqp*Dp
+    // Jv_P = Jpq*Dq + Jpy*Dp
+    Jv_Q[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], Dq ),
                                            cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], Dp ) );
-    JDp[JD_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dq ),
+    Jv_P[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dq ),
                                            cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], Dp ) );
 #ifdef DEBUG
     if (c==0 && s==0 && ant==0)
@@ -135,19 +135,19 @@ __global__ void invj_the_data( void            *data,
 #endif
 }
 
-__global__ void beamform_kernel( cuDoubleComplex *JDq,
-                                 cuDoubleComplex *JDp,
+__global__ void beamform_kernel( cuDoubleComplex *Jv_Q,
+                                 cuDoubleComplex *Jv_P,
                                  cuDoubleComplex *phi,
                                  double invw,
                                  int p,
                                  int soffset,
                                  int nchunk,
-                                 cuDoubleComplex *Bd,
+                                 cuDoubleComplex *e,
                                  float *C,
                                  int npol )
 /* Layout for input arrays:
-*   JDq  [nsamples] [nchan] [nant]               -- calibrated voltages
-*   JDp  [nsamples] [nchan] [nant]
+*   Jv_Q  [nsamples] [nchan] [nant]               -- calibrated voltages
+*   Jv_P  [nsamples] [nchan] [nant]
 *   phi  [nant    ] [nchan]                      -- weights array
 *   invw                                         -- inverse atrix
 * Layout of input options
@@ -155,11 +155,11 @@ __global__ void beamform_kernel( cuDoubleComplex *JDq,
 *   soffset                                      -- sample offset (10000/nchunk)
 *   nchunk                                       -- number of chunks each second is split into
 * Layout for output arrays:
-*   Bd   [nsamples] [nchan]   [npol]             -- detected beam
+*   e    [nsamples] [nchan]   [npol]             -- detected beam
 *   C    [nsamples] [nstokes] [nchan]            -- coherent full stokes
 */
 {
-    // Translate GPU block/thread numbers into meaning->l names
+    // Translate GPU block/thread numbers into meaningful names
     int c    = blockIdx.x;  /* The (c)hannel number */
     int nc   = gridDim.x;   /* The (n)umber of (c)hannels (=128) */
     int s    = blockIdx.y;  /* The (s)ample number */
@@ -198,8 +198,8 @@ __global__ void beamform_kernel( cuDoubleComplex *JDq,
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
-    Bx[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDq[JD_IDX(s,c,ant,nc,nant)] );
-    By[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], JDp[JD_IDX(s,c,ant,nc,nant)] );
+    Bx[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(s,c,ant,nc,nant)] );
+    By[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(s,c,ant,nc,nant)] );
 
     Nxx[ant] = cuCmul( Bx[ant], cuConj(Bx[ant]) );
     Nxy[ant] = cuCmul( Bx[ant], cuConj(By[ant]) );
@@ -243,8 +243,8 @@ __global__ void beamform_kernel( cuDoubleComplex *JDq,
         C[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
 
         // The beamformed products
-        Bd[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = Bx[0];
-        Bd[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = By[0];
+        e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = Bx[0];
+        e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = By[0];
     }
 }
 
@@ -347,7 +347,6 @@ void cu_form_incoh_beam(
 }
 
 void cu_form_beam( int file_no,
-                   struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm )
 /* Inputs:
@@ -385,7 +384,7 @@ void cu_form_beam( int file_no,
         dim3 stat( nant );
 
         // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( vm->d_v, (cuDoubleComplex *)vm->d_J, vm->gdelays.d_phi, g->d_JDq, g->d_JDp,
+        invj_the_data<<<chan_samples, stat>>>( vm->d_v, (cuDoubleComplex *)vm->d_J, vm->gdelays.d_phi, vm->d_Jv_Q, vm->d_Jv_P,
                                                vm->d_polQ_idxs, vm->d_polP_idxs,
                                                npol, vm->datatype );
         cudaCheckErrors( "cu_form_beam: invj_the_data failed" );
@@ -395,10 +394,10 @@ void cu_form_beam( int file_no,
         {
             // Call the beamformer kernel
             // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
-            beamform_kernel<<<chan_samples, stat, 11*nant*sizeof(double), vm->streams[p]>>>( g->d_JDq, g->d_JDp,
+            beamform_kernel<<<chan_samples, stat, 11*nant*sizeof(double), vm->streams[p]>>>( vm->d_Jv_Q, vm->d_Jv_P,
                             vm->gdelays.d_phi, 1.0/(double)vm->num_not_flagged,
                             p, ichunk*vm->sample_rate/vm->chunks_per_second, vm->chunks_per_second,
-                            g->d_Bd, (float *)vm->d_S, npol );
+                            vm->d_e, (float *)vm->d_S, npol );
 
             gpuErrchk( cudaPeekAtLastError() );
         }
@@ -408,10 +407,10 @@ void cu_form_beam( int file_no,
 
 
     // Copy the results back into host memory
-    gpuErrchk(cudaMemcpyAsync( g->Bd,   g->d_Bd,    g->Bd_size,    cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( vm->S, vm->d_S,   vm->S_size_bytes,   cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, cudaMemcpyDeviceToHost ));
 
-    // Copy the data back from Bd back into the detected_beam array
+    // Copy the data back from e back into the detected_beam array
     // Make sure we put it back into the correct half of the array, depending
     // on whether this is an even or odd second.
     int offset, i;
@@ -429,7 +428,7 @@ void cu_form_beam( int file_no,
             ch * (npol)                         +
             pol;
 
-        detected_beam[p][s+offset][ch][pol] = g->Bd[i];
+        detected_beam[p][s+offset][ch][pol] = vm->e[i];
     }
 }
 
@@ -455,45 +454,12 @@ void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm )
 
 }
 
-void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm )
-{
-    size_t JD_base_size;
-
-    int nchunks = vm->chunks_per_second;
-
-    int sample_rate = vm->sample_rate;
-    int nants       = vm->obs_metadata->num_ants;
-    int nchan       = vm->obs_metadata->num_volt_fine_chans_per_coarse;
-    int npol        = vm->obs_metadata->num_ant_pols; // (X,Y)
-
-    // Calculate array sizes for host and device
-    g->Bd_size     = vm->npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
-    JD_base_size   = sample_rate * nants * nchan * sizeof(cuDoubleComplex);
-    g->JD_size   = JD_base_size / nchunks;
-
-    // Allocate host memory
-    cudaMallocHost( &g->Bd, g->Bd_size );
-    cudaCheckErrors("cudaMallocHost Bd fail");
-
-    // Allocate device memory
-    gpuErrchk(cudaMalloc( (void **)&g->d_JDq,   g->JD_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_JDp,   g->JD_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_Bd,    g->Bd_size ));
-}
-
 void vmMemcpyPolIdxLists( vcsbeam_context *vm )
 {
     cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polQ_idxs) failed" );
     cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polP_idxs) failed" );
-}
-
-void free_formbeam( struct gpu_formbeam_arrays *g )
-{
-    // Free memory on host and device
-    cudaFreeHost( g->Bd );
-    cudaFree( g->d_Bd );
 }
 
 float *create_pinned_data_buffer( size_t size )

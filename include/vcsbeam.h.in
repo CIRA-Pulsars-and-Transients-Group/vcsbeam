@@ -249,7 +249,7 @@ void free_calibration( struct calibration *cal );
                                     (p1) * (npol)                + \
                                     (p2))
 
-#define JD_IDX(s,c,a,nc,na)  ((s) * (na)*(nc) + \
+#define Jv_IDX(s,c,a,nc,na)  ((s) * (na)*(nc) + \
                               (c) * (na)      + \
                               (a))
 
@@ -445,11 +445,16 @@ typedef struct vcsbeam_context_t
     uintptr_t S_size_bytes;           // The size of S in bytes
     uintptr_t d_S_size_bytes;         // The size of d_S in bytes
 
+    cuDoubleComplex *e, *d_e;         // The buffers for the beamformed voltages on host/device
+    uintptr_t e_size_bytes;           // The size of S in bytes
+    uintptr_t d_e_size_bytes;         // The size of d_S in bytes
+
     void *J, *d_J;                    // The buffers for Jones matrices on host/device
     uintptr_t J_size_bytes;           // The size of J in bytes
     uintptr_t d_J_size_bytes;         // The size of d_J in bytes
 
-    void *Jv, *d_Jv;                  // The buffers for Jones-corrected voltages on host/device
+    cuDoubleComplex *Jv_P, *d_Jv_P;   // The buffers for Jones-corrected voltages on host/device
+    cuDoubleComplex *Jv_Q, *d_Jv_Q;   // The buffers for Jones-corrected voltages on host/device
     uintptr_t Jv_size_bytes;          // The size of Jv in bytes
     uintptr_t d_Jv_size_bytes;        // The size of d_Jv in bytes
 
@@ -558,33 +563,39 @@ void set_vcsbeam_coarse_output( vcsbeam_context *vm, bool switch_on );
 
 // OTHER AUXILIARY FUNCTIONS
 
-void vmMallocDataHost( vcsbeam_context *vm );
-void vmFreeDataHost( vcsbeam_context *vm );
+void vmMallocVHost( vcsbeam_context *vm );
+void vmMallocVDevice( vcsbeam_context *vm );
+void vmFreeVHost( vcsbeam_context *vm );
+void vmFreeVDevice( vcsbeam_context *vm );
 
-void vmMallocDataDevice( vcsbeam_context *vm );
-void vmFreeDataDevice( vcsbeam_context *vm );
+void vmMallocJVHost( vcsbeam_context *vm );
+void vmMallocJVDevice( vcsbeam_context *vm );
+void vmFreeJVHost( vcsbeam_context *vm );
+void vmFreeJVDevice( vcsbeam_context *vm );
+
+void vmMallocEHost( vcsbeam_context *vm );
+void vmMallocEDevice( vcsbeam_context *vm );
+void vmFreeEHost( vcsbeam_context *vm );
+void vmFreeEDevice( vcsbeam_context *vm );
 
 void vmMallocSHost( vcsbeam_context *vm );
-void vmFreeSHost( vcsbeam_context *vm );
-
 void vmMallocSDevice( vcsbeam_context *vm );
+void vmFreeSHost( vcsbeam_context *vm );
 void vmFreeSDevice( vcsbeam_context *vm );
 
 void vmMallocJHost( vcsbeam_context *vm );
-void vmFreeJHost( vcsbeam_context *vm );
-
 void vmMallocJDevice( vcsbeam_context *vm );
+void vmFreeJHost( vcsbeam_context *vm );
 void vmFreeJDevice( vcsbeam_context *vm );
 
 void vmMallocDHost( vcsbeam_context *vm );
-void vmFreeDHost( vcsbeam_context *vm );
-
 void vmMallocDDevice( vcsbeam_context *vm );
+void vmFreeDHost( vcsbeam_context *vm );
 void vmFreeDDevice( vcsbeam_context *vm );
 
 void vmMallocPQIdxsHost( vcsbeam_context *vm );
-void vmFreePQIdxsHost( vcsbeam_context *vm );
 void vmMallocPQIdxsDevice( vcsbeam_context *vm );
+void vmFreePQIdxsHost( vcsbeam_context *vm );
 void vmFreePQIdxsDevice( vcsbeam_context *vm );
 
 
@@ -903,32 +914,9 @@ void free_ipfb( struct gpu_ipfb_arrays *g );
 #define DETECT(X)                (cuCreal(cuCmul(X,cuConj(X))))
 
 
-/* structure for managing data arrays to be allocated on both host and device */
-struct gpu_formbeam_arrays
-{
-    size_t coh_size;
-    size_t data_size;
-    size_t Bd_size;
-    size_t J_size;
-    size_t JD_size;
-    size_t pol_idxs_size;
-    cuDoubleComplex *J, *d_J;
-    cuDoubleComplex *Bd, *d_Bd;
-    cuDoubleComplex *JDq, *d_JDq;
-    cuDoubleComplex *JDp, *d_JDp;
-    uint8_t *d_data;
-    float   *d_coh;
-    uint32_t *polQ_idxs, *d_polQ_idxs;
-    uint32_t *polP_idxs, *d_polP_idxs;
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm );
-void free_formbeam( struct gpu_formbeam_arrays *g );
-
 
 
 void cu_form_incoh_beam(
@@ -942,7 +930,6 @@ void cu_form_incoh_beam(
 
 
 void cu_form_beam( int file_no,
-                   struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm );
 void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm );

@@ -161,13 +161,14 @@ int main(int argc, char **argv)
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
-    struct gpu_formbeam_arrays gf;
-
     struct gpu_ipfb_arrays gi;
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
-    malloc_formbeam( &gf, vm );
-    vmMallocDataHost( vm );
-    vmMallocDataDevice( vm );
+    vmMallocVHost( vm );
+    vmMallocVDevice( vm );
+    vmMallocJVHost( vm );
+    vmMallocJVDevice( vm );
+    vmMallocEHost( vm );
+    vmMallocEDevice( vm );
     vmMallocSHost( vm );
     vmMallocSDevice( vm );
     vmMallocJHost( vm );
@@ -330,7 +331,7 @@ int main(int argc, char **argv)
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
 
-        cu_form_beam( timestep_idx, &gf, detected_beam, mpfs, vm );
+        cu_form_beam( timestep_idx, detected_beam, mpfs, vm );
         cu_flatten_bandpass( mpfs, vm );
 
         logger_stop_stopwatch( log, "calc" );
@@ -388,7 +389,6 @@ int main(int argc, char **argv)
 
     free_pfb_filter( filter );
 
-    vmFreeSHost( vm );
     cudaFreeHost( data_buffer_vdif  );
     cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
 
@@ -404,9 +404,13 @@ int main(int argc, char **argv)
 
     free_calibration( &cal );
 
-    free_formbeam( &gf );
-    vmFreeDataHost( vm );
-    vmFreeDataDevice( vm );
+    vmFreeVHost( vm );
+    vmFreeVDevice( vm );
+    vmFreeJVHost( vm );
+    vmFreeJVDevice( vm );
+    vmFreeEHost( vm );
+    vmFreeEDevice( vm );
+    vmFreeSHost( vm );
     vmFreeSDevice( vm );
     vmFreeJDevice( vm );
     vmFreeJHost( vm );

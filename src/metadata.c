@@ -109,16 +109,22 @@ vcsbeam_context *init_vcsbeam_context(
     // Assume that the whole GPU is available
     uintptr_t nant      = vm->obs_metadata->num_ants;
     uintptr_t nvispol   = vm->obs_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+    uintptr_t npol      = vm->obs_metadata->num_ant_pols; // = 2
+
     vm->v_size_bytes    = vm->bytes_per_second;
-    vm->d_v_size_bytes  = vm->bytes_per_second;
+    vm->d_v_size_bytes  = vm->v_size_bytes;
     vm->pol_idxs_size_bytes   = nant * sizeof(uint32_t);
-    vm->d_pol_idxs_size_bytes = nant * sizeof(uint32_t);
+    vm->d_pol_idxs_size_bytes = vm->pol_idxs_size_bytes;
     vm->D_size_bytes    = nant * vm->nchan * nvispol * sizeof(cuDoubleComplex);
-    vm->d_D_size_bytes  = nant * vm->nchan * nvispol * sizeof(cuDoubleComplex);
+    vm->d_D_size_bytes  = vm->D_size_bytes;
     vm->J_size_bytes    = nant * vm->nchan * nvispol * sizeof(cuDoubleComplex);
-    vm->d_J_size_bytes  = nant * vm->nchan * nvispol * sizeof(cuDoubleComplex);
+    vm->d_J_size_bytes  = vm->J_size_bytes;
+    vm->e_size_bytes    = vm->npointing * vm->sample_rate * vm->nchan * npol * sizeof(cuDoubleComplex);
+    vm->d_e_size_bytes  = vm->e_size_bytes;
     vm->S_size_bytes    = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
-    vm->d_S_size_bytes  = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
+    vm->d_S_size_bytes  = vm->S_size_bytes;
+    vm->Jv_size_bytes   = nant * vm->nchan * vm->sample_rate * sizeof(cuDoubleComplex);
+    vm->d_Jv_size_bytes = vm->Jv_size_bytes;
 
     // Start with the first chunk
     vm->chunk_to_load = 0;
@@ -195,34 +201,92 @@ void set_vcsbeam_coarse_output( vcsbeam_context *vm, bool switch_on )
         vm->do_inverse_pfb = switch_on;
 }
 
-void vmMallocDataHost( vcsbeam_context *vm )
+void vmMallocVHost( vcsbeam_context *vm )
 {
-    cudaMallocHost( &(vm->v), vm->v_size_bytes );
-    cudaCheckErrors( "vmMallocDataHost: cudaMallocHost(data) failed" );
+    cudaMallocHost( (void **)&(vm->v), vm->v_size_bytes );
+    cudaCheckErrors( "vmMallocVHost: cudaMallocHost failed" );
 }
 
-void vmFreeDataHost( vcsbeam_context *vm )
+void vmFreeVHost( vcsbeam_context *vm )
 {
     cudaFreeHost( vm->v );
-    cudaCheckErrors( "vmFreeDataHost: cudaFreeHost(data) failed" );
+    cudaCheckErrors( "vmFreeVHost: cudaFreeHost failed" );
 }
 
-void vmMallocDataDevice( vcsbeam_context *vm )
+void vmMallocVDevice( vcsbeam_context *vm )
 {
     cudaMalloc( (void **)&vm->d_v,  vm->d_v_size_bytes );
-    cudaCheckErrors( "vmMallocDataDevice: cudaMalloc(d_data) failed" );
+    cudaCheckErrors( "vmMallocVDevice: cudaMalloc failed" );
 }
 
-void vmFreeDataDevice( vcsbeam_context *vm )
+void vmFreeVDevice( vcsbeam_context *vm )
 {
     cudaFree( vm->d_v );
-    cudaCheckErrors( "vmFreeDataDevice: cudaFree(d_data) failed" );
+    cudaCheckErrors( "vmFreeVDevice: cudaFree failed" );
+}
+
+void vmMallocJVHost( vcsbeam_context *vm )
+{
+    cudaMallocHost( (void **)&(vm->Jv_P), vm->Jv_size_bytes );
+    cudaCheckErrors( "vmMallocJVHost: cudaMallocHost(Jv_P) failed" );
+    cudaMallocHost( (void **)&(vm->Jv_Q), vm->Jv_size_bytes );
+    cudaCheckErrors( "vmMallocJVHost: cudaMallocHost(Jv_Q) failed" );
+}
+
+void vmFreeJVHost( vcsbeam_context *vm )
+{
+    cudaFreeHost( vm->Jv_P );
+    cudaCheckErrors( "vmFreeJVHost: cudaFreeHost(Jv_P) failed" );
+    cudaFreeHost( vm->Jv_Q );
+    cudaCheckErrors( "vmFreeJVHost: cudaFreeHost(Jv_Q) failed" );
+}
+
+void vmMallocJVDevice( vcsbeam_context *vm )
+{
+    cudaMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
+    cudaCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_P) failed" );
+    cudaMalloc( (void **)&vm->d_Jv_Q,  vm->d_Jv_size_bytes );
+    cudaCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_Q) failed" );
+}
+
+void vmFreeJVDevice( vcsbeam_context *vm )
+{
+    cudaFree( vm->d_Jv_P );
+    cudaCheckErrors( "vmFreeJVDevice: cudaFree(d_Jv_P) failed" );
+    cudaFree( vm->d_Jv_Q );
+    cudaCheckErrors( "vmFreeJVDevice: cudaFree(d_Jv_Q) failed" );
+}
+
+void vmMallocEHost( vcsbeam_context *vm )
+{
+    // Allocate memory on host
+    cudaMallocHost( (void **)&(vm->e), vm->e_size_bytes );
+    cudaCheckErrors( "vmMallocEHost: cudaMallocHost failed" );
+}
+
+void vmFreeEHost( vcsbeam_context *vm )
+{
+    cudaFreeHost( vm->e );
+    cudaCheckErrors( "vmFreeEHost: cudaFreeHost failed" );
+}
+
+void vmMallocEDevice( vcsbeam_context *vm )
+{
+    // Allocate memory on device
+    cudaMalloc( (void **)&(vm->d_e), vm->d_e_size_bytes );
+    cudaCheckErrors( "vmMallocEDevice: cudaMalloc failed" );
+}
+
+void vmFreeEDevice( vcsbeam_context *vm )
+{
+    cudaFree( vm->d_e );
+    cudaCheckErrors( "vmFreeEDevice: cudaFree failed" );
 }
 
 void vmMallocSHost( vcsbeam_context *vm )
 {
     // Allocate memory on host
-    cudaMallocHost( &(vm->S), vm->S_size_bytes );
+    cudaMallocHost( (void **)&(vm->S), vm->S_size_bytes );
     cudaCheckErrors( "vmMallocSHost: cudaMallocHost failed" );
 }
 
@@ -235,7 +299,7 @@ void vmFreeSHost( vcsbeam_context *vm )
 void vmMallocSDevice( vcsbeam_context *vm )
 {
     // Allocate memory on device
-    cudaMalloc( &(vm->d_S), vm->d_S_size_bytes );
+    cudaMalloc( (void **)&(vm->d_S), vm->d_S_size_bytes );
     cudaCheckErrors( "vmMallocSDevice: cudaMalloc failed" );
 }
 
@@ -355,8 +419,9 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
         vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
     }
 
-    // (This only accounts for the memory needed for the raw data)
-    vm->chunks_per_second = vm->v_size_bytes / vm->max_gpu_mem_bytes + 1;
+    // (This currently only accounts for some of the memory needed)
+    vm->chunks_per_second = (vm->v_size_bytes + vm->Jv_size_bytes) /
+        vm->max_gpu_mem_bytes + 1;
 
     // Make sure the number of chunks is divisible by the number of samples (per second)
     while ( vm->sample_rate % vm->chunks_per_second != 0 )
@@ -364,6 +429,7 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 
     // Calculate the amount of gpu memory needed
     vm->d_v_size_bytes = vm->v_size_bytes / vm->chunks_per_second;
+    vm->d_Jv_size_bytes = vm->Jv_size_bytes / vm->chunks_per_second;
 }
 
 void vmMemcpyNextChunk( vcsbeam_context *vm )
@@ -454,9 +520,12 @@ void vmDestroyStatistics( vcsbeam_context *vm )
 
 void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
 {
+    uintptr_t npol      = vm->obs_metadata->num_ant_pols; // = 2
     vm->npointing       = npointings;
     vm->S_size_bytes    = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
-    vm->d_S_size_bytes  = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
+    vm->d_S_size_bytes  = vm->S_size_bytes;
+    vm->e_size_bytes    = vm->npointing * vm->sample_rate * vm->nchan * npol * sizeof(cuDoubleComplex);
+    vm->d_e_size_bytes  = vm->e_size_bytes;
 }
 
 char **create_filenames(
