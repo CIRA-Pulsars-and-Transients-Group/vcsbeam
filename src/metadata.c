@@ -278,6 +278,49 @@ void vmFreeJDevice( vcsbeam_context *vm )
     cudaCheckErrors( "vmFreeJDevice: cudaFree failed" );
 }
 
+
+void vmMallocPQIdxsHost( vcsbeam_context *vm )
+{
+    uintptr_t nant = vm->obs_metadata->num_ants;
+
+    // Calculate and store the size of this array
+    vm->pol_idxs_size = nants * sizeof(uint32_t);
+
+    // Allocate memory on device
+    cudaMallocHost( &(vm->polP_idxs, vm->pol_idxs_size );
+    cudaCheckErrors( "vmMallocPQIdxsHost: cudaMallocHost(polP_idxs) failed" );
+    cudaMallocHost( &(vm->polQ_idxs, vm->pol_idxs_size );
+    cudaCheckErrors( "vmMallocPQIdxsHost: cudaMallocHost(polQ_idxs) failed" );
+}
+
+void vmFreePQIdxsHost( vcsbeam_context *vm )
+{
+    cudaFreeHost( vm->polP_idxs );
+    cudaCheckErrors( "vmFreePQIdxsHost: cudaFreeHost failed" );
+}
+
+
+void vmMallocPQIdxsDevice( vcsbeam_context *vm )
+{
+    uintptr_t nant = vm->obs_metadata->num_ants;
+
+    // Calculate and store the size of this array
+    vm->pol_idxs_size = nants * sizeof(uint32_t);
+
+    // Allocate memory on device
+    cudaMalloc( &(vm->polP_idxs, vm->pol_idxs_size );
+    cudaCheckErrors( "vmMallocPQIdxsDevice: cudaMalloc(polP_idxs) failed" );
+    cudaMalloc( &(vm->polQ_idxs, vm->pol_idxs_size );
+    cudaCheckErrors( "vmMallocPQIdxsDevice: cudaMalloc(polQ_idxs) failed" );
+}
+
+void vmFreePQIdxsDevice( vcsbeam_context *vm )
+{
+    cudaFree( vm->polP_idxs );
+    cudaCheckErrors( "vmFreePQIdxsDevice: cudaFree failed" );
+}
+
+
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 {
     vm->max_gpu_mem_bytes = max_gpu_mem_bytes;

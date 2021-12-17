@@ -385,7 +385,7 @@ void cu_form_beam( int file_no,
 
         // convert the data and multiply it by J
         invj_the_data<<<chan_samples, stat>>>( vm->d_data, (cuDoubleComplex *)vm->d_J, vm->gdelays.d_phi, g->d_JDq, g->d_JDp,
-                                               g->d_polQ_idxs, g->d_polP_idxs,
+                                               vm->d_polQ_idxs, vm->d_polP_idxs,
                                                npol, vm->datatype );
 
         // Send off a parallel CUDA stream for each pointing
@@ -519,10 +519,10 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
     gpuErrchk(cudaMalloc( (void **)&g->d_polP_idxs, g->pol_idxs_size ));
 }
 
-void cu_upload_pol_idx_lists( struct gpu_formbeam_arrays *g )
+void cu_upload_pol_idx_lists( vcsbeam_context *vm )
 {
-    gpuErrchk(cudaMemcpy( g->d_polQ_idxs, g->polQ_idxs, g->pol_idxs_size, cudaMemcpyHostToDevice ));
-    gpuErrchk(cudaMemcpy( g->d_polP_idxs, g->polP_idxs, g->pol_idxs_size, cudaMemcpyHostToDevice ));
+    gpuErrchk(cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size, cudaMemcpyHostToDevice ));
+    gpuErrchk(cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size, cudaMemcpyHostToDevice ));
 }
 
 void free_formbeam( struct gpu_formbeam_arrays *g )

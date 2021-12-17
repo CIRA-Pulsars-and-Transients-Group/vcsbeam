@@ -171,9 +171,11 @@ int main(int argc, char **argv)
     vmMallocCohBeamDevice( vm );
     vmMallocJHost( vm );
     vmMallocJDevice( vm );
+    vmMallocPQIdxsHost( vm );
+    vmMallocPQIdxsDevice( vm );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
-    create_antenna_lists( vm->obs_metadata, gf.polQ_idxs, gf.polP_idxs );
+    create_antenna_lists( vm->obs_metadata, vm->polQ_idxs, vm->polP_idxs );
 
     // ... and upload them to the gpu, ready for use!
     cu_upload_pol_idx_lists( &gf );
@@ -413,6 +415,9 @@ int main(int argc, char **argv)
     vmFreeCohBeamDevice( vm );
     vmFreeJDevice( vm );
     vmFreeJHost( vm );
+    vmFreePQIdxsDevice( vm );
+    vmFreePQIdxsHost( vm );
+
 
     if (vm->do_inverse_pfb)
     {

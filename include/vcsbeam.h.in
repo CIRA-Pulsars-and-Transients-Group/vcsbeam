@@ -456,6 +456,11 @@ typedef struct vcsbeam_context_t
     uintptr_t J_size_bytes;           // The size of J in bytes
     uintptr_t d_J_size_bytes;         // The size of d_J in bytes
 
+    uint32_t *polP_idxs, *d_polP_idxs; // List of indices for VCS-ordered data
+    uint32_t *polQ_idxs, *d_polQ_idxs;
+    uintptr_t pol_idxs_size;           // The size of (each of) the P/Q idxs (host) arrays
+    uintptr_t d_pol_idxs_size;         // The size of (each of) the P/Q idxs (device) arrays
+
     geometric_delays gdelays;         // Geometric delays due to tile layout
     primary_beam pb;                  // Primary beam calculations
 
@@ -569,6 +574,12 @@ void vmFreeJHost( vcsbeam_context *vm );
 
 void vmMallocJDevice( vcsbeam_context *vm );
 void vmFreeJDevice( vcsbeam_context *vm );
+
+void vmMallocPQIdxsHost( vcsbeam_context *vm );
+void vmFreePQIdxsHost( vcsbeam_context *vm );
+void vmMallocPQIdxsDevice( vcsbeam_context *vm );
+void vmFreePQIdxsDevice( vcsbeam_context *vm );
+
 
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
 void vmMemcpyNextChunk( vcsbeam_context *vm );
@@ -923,7 +934,7 @@ void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm );
 
 float *create_pinned_data_buffer( size_t size );
 
-void cu_upload_pol_idx_lists( struct gpu_formbeam_arrays *g );
+void cu_upload_pol_idx_lists( vcsbeam_context *vm );
 
 cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
 void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );
