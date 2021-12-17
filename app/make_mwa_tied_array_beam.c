@@ -169,6 +169,8 @@ int main(int argc, char **argv)
                      vm->npointing, log );
     vmMallocDataDevice( vm );
     vmMallocCohBeamDevice( vm );
+    vmMallocJHost( vm );
+    vmMallocJDevice( vm );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
     create_antenna_lists( vm->obs_metadata, gf.polQ_idxs, gf.polP_idxs );
@@ -313,7 +315,7 @@ int main(int argc, char **argv)
                 vm->obs_metadata,
                 D,                      // Calibration Jones matrices
                 vm->pb.B,                   // Primary beam jones matrices
-                gf.J );                 // inverse Jones array (output)
+                vm->J );                 // inverse Jones array (output)
 
         logger_stop_stopwatch( log, "delay" );
 
@@ -330,7 +332,7 @@ int main(int argc, char **argv)
         logger_start_stopwatch( log, "calc", true );
 
         cu_form_beam( timestep_idx, &gf, detected_beam, mpfs, vm );
-        cu_flatten_bandpass( &gf, mpfs, vm );
+        cu_flatten_bandpass( mpfs, vm );
 
         logger_stop_stopwatch( log, "calc" );
 
@@ -409,6 +411,8 @@ int main(int argc, char **argv)
     free_formbeam( &gf );
     vmFreeDataDevice( vm );
     vmFreeCohBeamDevice( vm );
+    vmFreeJDevice( vm );
+    vmFreeJHost( vm );
 
     if (vm->do_inverse_pfb)
     {

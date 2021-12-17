@@ -444,17 +444,17 @@ typedef struct vcsbeam_context_t
     MetafitsContext  *cal_context;    // The mwalib context derived from the calibration observation's metafits file
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
 
-    void *data;                       // The buffer for the data on host
-    void *d_data;                     // The buffer for the data on device
-
+    void *data, *d_data;              // The buffers for the data on host/device
     uintptr_t data_size_bytes;        // The size of data in bytes (currently always = bytes_per_second)
     uintptr_t d_data_size_bytes;      // The size of d_data in bytes (depends on number of "chunks")
 
-    void *coh;                        // The buffer for the coherent beam on host
-    void *d_coh;                      // The buffer for the coherent beam on device
-
+    void *coh, *d_coh;                // The buffers for the coherent beam on host/device
     uintptr_t coh_size_bytes;         // The size of coh in bytes
     uintptr_t d_coh_size_bytes;       // The size of d_coh in bytes
+
+    void *J, *d_J;                    // The buffers for Jones matrices on host/device
+    uintptr_t J_size_bytes;           // The size of J in bytes
+    uintptr_t d_J_size_bytes;         // The size of d_J in bytes
 
     geometric_delays gdelays;         // Geometric delays due to tile layout
     primary_beam pb;                  // Primary beam calculations
@@ -563,6 +563,12 @@ void vmFreeCohBeamHost( vcsbeam_context *vm );
 
 void vmMallocCohBeamDevice( vcsbeam_context *vm );
 void vmFreeCohBeamDevice( vcsbeam_context *vm );
+
+void vmMallocJHost( vcsbeam_context *vm );
+void vmFreeJHost( vcsbeam_context *vm );
+
+void vmMallocJDevice( vcsbeam_context *vm );
+void vmFreeJDevice( vcsbeam_context *vm );
 
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
 void vmMemcpyNextChunk( vcsbeam_context *vm );
@@ -913,8 +919,7 @@ void cu_form_beam( int file_no,
                    struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm );
-void cu_flatten_bandpass( struct gpu_formbeam_arrays *g,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm );
+void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm );
 
 float *create_pinned_data_buffer( size_t size );
 

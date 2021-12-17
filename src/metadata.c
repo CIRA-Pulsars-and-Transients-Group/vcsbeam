@@ -242,6 +242,42 @@ void vmFreeCohBeamDevice( vcsbeam_context *vm )
     cudaCheckErrors( "vmFreeCohBeamDevice: cudaFree failed" );
 }
 
+void vmMallocJHost( vcsbeam_context *vm )
+{
+    uintptr_t npol = vm->obs_metadata->num_ant_pols; // = 2
+
+    // Calculate and store the size of this array
+    vm->J_size_bytes = vm->obs_metadata->num_ants * vm->nchan * npol * npol * sizeof(cuDoubleComplex);
+
+    // Allocate memory on device
+    cudaMallocHost( &(vm->J), vm->J_size_bytes );
+    cudaCheckErrors( "vmMallocJHost: cudaMallocHost failed" );
+}
+
+void vmFreeJHost( vcsbeam_context *vm )
+{
+    cudaFreeHost( vm->J );
+    cudaCheckErrors( "vmFreeJHost: cudaFreeHost failed" );
+}
+
+void vmMallocJDevice( vcsbeam_context *vm )
+{
+    uintptr_t npol = vm->obs_metadata->num_ant_pols; // = 2
+
+    // Calculate and store the size of this array
+    vm->d_J_size_bytes = vm->obs_metadata->num_ants * vm->nchan * npol * npol * sizeof(cuDoubleComplex);
+
+    // Allocate memory on device
+    cudaMalloc( &(vm->d_J), vm->d_J_size_bytes );
+    cudaCheckErrors( "vmMallocJDevice: cudaMalloc failed" );
+}
+
+void vmFreeJDevice( vcsbeam_context *vm )
+{
+    cudaFree( vm->d_J );
+    cudaCheckErrors( "vmFreeJDevice: cudaFree failed" );
+}
+
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 {
     vm->max_gpu_mem_bytes = max_gpu_mem_bytes;

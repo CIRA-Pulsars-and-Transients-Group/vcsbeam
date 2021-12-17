@@ -371,7 +371,7 @@ void cu_form_beam( int file_no,
     uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
 
     // Copy the data to the device
-    gpuErrchk(cudaMemcpyAsync( g->d_J,    g->J, g->J_size,    cudaMemcpyHostToDevice ));
+    gpuErrchk(cudaMemcpyAsync( vm->d_J, vm->J, vm->J_size_bytes, cudaMemcpyHostToDevice ));
 
     // Processing happens in "chunks" (due to limited memory on GPU)
     int p;
@@ -384,7 +384,7 @@ void cu_form_beam( int file_no,
         dim3 stat( nant );
 
         // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( vm->d_data, g->d_J, vm->gdelays.d_phi, g->d_JDq, g->d_JDp,
+        invj_the_data<<<chan_samples, stat>>>( vm->d_data, (cuDoubleComplex *)vm->d_J, vm->gdelays.d_phi, g->d_JDq, g->d_JDp,
                                                g->d_polQ_idxs, g->d_polP_idxs,
                                                npol, vm->datatype );
 
@@ -406,7 +406,7 @@ void cu_form_beam( int file_no,
 
     // Copy the results back into host memory
     gpuErrchk(cudaMemcpyAsync( g->Bd,   g->d_Bd,    g->Bd_size,    cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( vm->coh, vm->d_coh,   g->coh_size,   cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( vm->coh, vm->d_coh,   vm->coh_size_bytes,   cudaMemcpyDeviceToHost ));
 
     // Copy the data back from Bd back into the detected_beam array
     // Make sure we put it back into the correct half of the array, depending
@@ -430,8 +430,7 @@ void cu_form_beam( int file_no,
     }
 }
 
-void cu_flatten_bandpass( struct gpu_formbeam_arrays *g,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm )
+void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm )
 {
     // Flatten the bandpass
     dim3 chan_stokes(vm->nchan, NSTOKES);
@@ -471,7 +470,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
     data_base_size = sample_rate * nants * nchan * npol * sizeof(uint8_t);
     g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
     size_t phi_size = npointing * nants * nchan * sizeof(cuDoubleComplex);
-    g->J_size      = nants * nchan * npol * npol * sizeof(cuDoubleComplex);
     JD_base_size   = sample_rate * nants * nchan * sizeof(cuDoubleComplex);
     
     size_t gpu_mem;
@@ -487,7 +485,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
     }
 
 
-    size_t gpu_mem_used = (phi_size + g->J_size + g->Bd_size + data_base_size / nchunks +
+    size_t gpu_mem_used = (phi_size + vm->J_size_bytes + g->Bd_size + data_base_size / nchunks +
                     g->coh_size + 3*JD_base_size / nchunks);
     float gpu_mem_used_gb = (float)gpu_mem_used / (float)(1024*1024*1024);
 
@@ -505,34 +503,10 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
 
 
     // Allocate host memory
-    //g->J  = (cuDoubleComplex *)malloc( g->J_size );
-    //g->Bd = (cuDoubleComplex *)malloc( g->Bd_size );
-    cudaMallocHost( &g->J, g->J_size );
-    cudaCheckErrors("cudaMallocHost J fail");
     cudaMallocHost( &g->Bd, g->Bd_size );
     cudaCheckErrors("cudaMallocHost Bd fail");
 
-    sprintf( log_message, "coh_size   %9.3f MB GPU mem", (float)g->coh_size  / (float)(1024*1024) );
-    logger_timed_message( log, log_message );
-
-    sprintf( log_message, "data_size  %9.3f MB GPU mem", (float)g->data_size / (float)(1024*1024) );
-    logger_timed_message( log, log_message );
-
-    sprintf( log_message, "Bd_size    %9.3f MB GPU mem", (float)g->Bd_size   / (float)(1024*1024) );
-    logger_timed_message( log, log_message );
-
-    sprintf( log_message, "phi_size   %9.3f MB GPU mem", (float)phi_size     / (float)(1024*1024) );
-    logger_timed_message( log, log_message );
-
-    sprintf( log_message, "J_size     %9.3f MB GPU mem", (float)g->J_size    / (float)(1024*1024) );
-    logger_timed_message( log, log_message );
-
-    sprintf( log_message, "JD_size    %9.3f MB GPU mem", (float)g->JD_size*2 / (float)(1024*1024) );
-    logger_timed_message( log, log_message );
-
-
     // Allocate device memory
-    gpuErrchk(cudaMalloc( (void **)&g->d_J,     g->J_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDq,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDp,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_Bd,    g->Bd_size ));
@@ -554,11 +528,9 @@ void cu_upload_pol_idx_lists( struct gpu_formbeam_arrays *g )
 void free_formbeam( struct gpu_formbeam_arrays *g )
 {
     // Free memory on host and device
-    cudaFreeHost( g->J );
     cudaFreeHost( g->Bd );
     cudaFreeHost( g->polQ_idxs );
     cudaFreeHost( g->polP_idxs );
-    cudaFree( g->d_J );
     cudaFree( g->d_Bd );
     cudaFree( g->d_polQ_idxs );
     cudaFree( g->d_polP_idxs );
