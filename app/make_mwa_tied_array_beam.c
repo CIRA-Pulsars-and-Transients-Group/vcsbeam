@@ -95,13 +95,10 @@ int main(int argc, char **argv)
     if (opts.out_coarse)  set_vcsbeam_coarse_output( vm, true );
 
     // Create some "shorthand" variables for code brevity
-    uintptr_t nants          = vm->obs_metadata->num_ants;
     uintptr_t nchans         = vm->obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t npols          = vm->obs_metadata->num_ant_pols;   // (X,Y)
     unsigned int nsamples    = vm->sample_rate;
 
-
-    uintptr_t timestep_idx;
 
     // Start counting time from here (i.e. after parsing the command line)
     sprintf( vm->log_message, "Reading pointings file %s", opts.pointings_file );
@@ -255,6 +252,8 @@ int main(int argc, char **argv)
     logger_message( vm->log, "\n*****BEGIN BEAMFORMING*****" );
 
     uintptr_t ntimesteps = vm->num_gps_seconds_to_process;
+    uintptr_t timestep_idx;
+
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
         // Read in data from next file
