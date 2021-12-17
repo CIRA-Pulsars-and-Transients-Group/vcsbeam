@@ -375,6 +375,12 @@ typedef enum vcsbeam_datatype_t
     VB_DBL
 } vcsbeam_datatype;
 
+typedef enum vcsbeam_error_t
+{
+    VB_SUCCESS,
+    VB_EOD       // End Of Data
+} vcsbeam_error;
+
 typedef struct geometric_delays_t {
     cuDoubleComplex   *phi;
     cuDoubleComplex   *d_phi;
@@ -397,6 +403,20 @@ typedef struct primary_beam_t
     uint32_t          freq_hz;
     MetafitsMetadata *obs_metadata;
 } primary_beam;
+
+typedef struct beam_geom_t {
+    double mean_ra;
+    double mean_dec;
+    double az;
+    double el;
+    double lmst;
+    double fracmjd;
+    double intmjd;
+    double unit_N;
+    double unit_E;
+    double unit_H;
+} beam_geom;
+
 
 typedef struct mpi_psrfits_t
 {
@@ -610,6 +630,7 @@ void vmDestroyStatistics( vcsbeam_context *vm );
 
 void vmSetPolIdxLists( vcsbeam_context *vm ); // (defined in jones.c)
 void vmCalcJ( vcsbeam_context *vm ); // (defined in jones.c)
+void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals );
 
 void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings );
 
@@ -685,20 +706,6 @@ void get_mwalib_version( char *version_str );
                                 (a) * (nc)       + \
                                 (c))
 
-struct beam_geom {
-    double mean_ra;
-    double mean_dec;
-    double az;
-    double el;
-    double lmst;
-    double fracmjd;
-    double intmjd;
-    double unit_N;
-    double unit_E;
-    double unit_H;
-};
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -707,10 +714,10 @@ extern "C" {
  */
 void vmCalcPhi(
         vcsbeam_context   *vm,
-        struct beam_geom  *beam_geom_vals );
+        beam_geom         *beam_geom_vals );
 
 void calc_geometric_delays(
-        struct beam_geom  *beam_geom_vals,
+        beam_geom         *beam_geom_vals,
         uint32_t           freq_hz,
         MetafitsMetadata  *obs_metadata,
         cuDoubleComplex   *phi );
@@ -736,14 +743,14 @@ void vmPushPhi( vcsbeam_context *vm );
 double calc_array_factor(
         MetafitsMetadata *obs_metadata,
         uint32_t          freq_hz,
-        struct beam_geom *bg1,
-        struct beam_geom *bg2 );
+        beam_geom        *bg1,
+        beam_geom        *bg2 );
 
 void calc_beam_geom(
         double            ras_hours,
         double            decs_degs,
         double            mjd,
-        struct beam_geom  *bg );
+        beam_geom        *bg );
 
 void dec2hms( char *out, double in, int sflag );
 void utc2mjd( char *, double *, double * ); // "2000-01-01T00:00:00" --> MJD_int + MJD_fraction
@@ -940,7 +947,7 @@ float *create_pinned_data_buffer( size_t size );
 
 void vmPushPolIdxLists( vcsbeam_context *vm );
 
-void vmReadNextSecond( vcsbeam_context *vm );
+vcsbeam_error vmReadNextSecond( vcsbeam_context *vm );
 
 cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
 void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );
@@ -975,7 +982,7 @@ void populate_psrfits_header(
         int               coarse_chan_idx,
         int               max_sec_per_file,
         int               outpol,
-        struct beam_geom *beam_geom_vals,
+        beam_geom        *beam_geom_vals,
         char             *incoh_basename,
         bool              is_coherent );
 
@@ -987,7 +994,7 @@ void populate_spliced_psrfits_header(
         int               ncoarse_chans,
         int               max_sec_per_file,
         int               outpol,
-        struct beam_geom *beam_geom_vals,
+        beam_geom        *beam_geom_vals,
         char             *incoh_basename,
         bool              is_coherent );
 
@@ -1003,7 +1010,7 @@ void init_mpi_psrfits(
         int world_rank,
         int max_sec_per_file,
         int nstokes,
-        struct beam_geom *bg,
+        beam_geom *bg,
         char *outfile,
         int writer_id,
         bool is_coherent );
@@ -1080,7 +1087,7 @@ void populate_vdif_header(
         MetafitsMetadata *obs_metadata,
         VoltageMetadata  *vcs_metadata,
         int               coarse_chan_idx,
-        struct beam_geom *beam_geom_vals,
+        beam_geom        *beam_geom_vals,
         int               npointing );
 
 cuFloatComplex get_std_dev_complex( cuFloatComplex *input, int nsamples );
@@ -1137,7 +1144,7 @@ int hash_dipole_config( double * );
 
 void vmCalcB(
         vcsbeam_context   *vm,
-        struct beam_geom  *beam_geom_vals );
+        beam_geom         *beam_geom_vals );
 
 void create_primary_beam(
         primary_beam      *pb,

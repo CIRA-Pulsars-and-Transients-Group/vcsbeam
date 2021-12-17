@@ -118,7 +118,7 @@ int main(int argc, char **argv)
     cudaCheckErrors( "cudaMalloc(Iscaled) failed" );
 
     // Get pointing geometry information
-    struct beam_geom beam_geom_vals;
+    beam_geom beam_geom_vals;
 
     double mjd = vm->obs_metadata->sched_start_mjd;
     calc_beam_geom( ra_hours, dec_degs, mjd, &beam_geom_vals );

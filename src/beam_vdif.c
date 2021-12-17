@@ -102,9 +102,9 @@ void populate_vdif_header(
         struct vdifinfo  *vf,
         vdif_header      *vhdr,
         MetafitsMetadata *obs_metadata,
-        VoltageMetadata *vcs_metadata,
+        VoltageMetadata  *vcs_metadata,
         int               coarse_chan_idx,
-        struct beam_geom *beam_geom_vals,
+        beam_geom        *beam_geom_vals,
         int               npointing )
 {
     // Convert the UTC obs time into a string

@@ -61,7 +61,7 @@ int main(int argc, char **argv)
         freq_hz = (uint32_t)(opts.freq_MHz * 1e6);
 
     // Get a "beam geometry" struct (and other variables) ready
-    struct beam_geom bg, arrf_bg;
+    beam_geom bg, arrf_bg;
     double mjd;
     double az, za; // Shorthand for azimuth and zenith angle
     double IQUV[4];

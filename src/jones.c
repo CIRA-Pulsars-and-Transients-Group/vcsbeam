@@ -110,6 +110,27 @@ if (ch == 0 && ant == 0)
 }
 
 
+void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals )
+{
+    logger_start_stopwatch( vm->log, "delay", true );
+
+    uintptr_t timestep_idx = vm->chunk_to_load / vm->chunks_per_second;
+    double sec_offset = (double)(timestep_idx + vm->gps_seconds_to_process[0] - vm->obs_metadata->obs_id);
+    double mjd = vm->obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
+
+    unsigned int p;
+    for (p = 0; p < vm->npointing; p++)
+        calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
+
+    // Calculate the geometric delays, primary beam and Jones matrices
+    vmCalcPhi( vm, beam_geom_vals );
+    vmCalcB( vm, beam_geom_vals );
+    vmCalcJ( vm );
+
+    logger_stop_stopwatch( vm->log, "delay" );
+}
+
+
 /*****************************
  * Generic matrix operations *
  *****************************/

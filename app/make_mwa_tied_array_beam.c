@@ -120,7 +120,7 @@ int main(int argc, char **argv)
     vmSetNumNotFlaggedRFInputs( vm );
 
     // Get pointing geometry information
-    struct beam_geom beam_geom_vals[vm->npointing];
+    beam_geom beam_geom_vals[vm->npointing];
 
     double mjd, sec_offset;
     mjd = vm->obs_metadata->sched_start_mjd;
@@ -261,24 +261,12 @@ int main(int argc, char **argv)
         // Read in data from next file
         vmReadNextSecond( vm );
 
-        // Get the next second's worth of phases / jones matrices, if needed
-        logger_start_stopwatch( vm->log, "delay", true );
+        // Calculate J (inverse) and Phi (geometric delays)
+        vmCalcJonesAndDelays( vm, ras_hours, decs_degs, beam_geom_vals );
 
-        sec_offset = (double)(timestep_idx + vm->gps_seconds_to_process[0] - vm->obs_metadata->obs_id);
-        mjd = vm->obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
-        for (p = 0; p < vm->npointing; p++)
-            calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
-
-        // Calculate the geometric delays
-        vmCalcPhi( vm, beam_geom_vals );
+        // Move the needed (just calculated) quantities to the GPU
         vmPushPhi( vm );
-
-        // Calculate the primary beam and Jones matrices
-        vmCalcB( vm, beam_geom_vals );
-        vmCalcJ( vm );
         vmPushJ( vm );
-
-        logger_stop_stopwatch( vm->log, "delay" );
 
         // The writing (of the previous second) is put here in order to
         // allow the possibility that it can overlap with the reading step.

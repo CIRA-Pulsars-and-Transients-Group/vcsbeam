@@ -24,7 +24,7 @@ const double *sky[] = { Isky, Qsky, Usky, Vsky };
 
 void vmCalcB(
         vcsbeam_context   *vm,
-        struct beam_geom  *beam_geom_vals )
+        beam_geom         *beam_geom_vals )
 /* Calculate the required beam matrices for the given pointings. The
  * calculated Jones matrices are stored in pb->B
  *

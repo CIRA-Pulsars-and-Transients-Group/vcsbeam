@@ -453,11 +453,15 @@ void vmPushChunk( vcsbeam_context *vm )
 }
 
 
-void vmReadNextSecond( vcsbeam_context *vm )
+vcsbeam_error vmReadNextSecond( vcsbeam_context *vm )
 {
     uintptr_t timestep_idx = vm->chunk_to_load / vm->chunks_per_second;
     uintptr_t ntimesteps   = vm->num_gps_seconds_to_process;
     uint64_t  gps_second   = vm->gps_seconds_to_process[timestep_idx];
+
+    // Return "end of data" if the timestep idx is too high
+    if (timestep_idx >= ntimesteps)
+        return VB_EOD;
 
     sprintf( vm->log_message, "--- Processing GPS second %ld [%lu/%lu], Coarse channel %lu [%d/%d] ---",
                 gps_second, timestep_idx+1, ntimesteps,
@@ -482,6 +486,8 @@ void vmReadNextSecond( vcsbeam_context *vm )
     }
 
     logger_stop_stopwatch( vm->log, "read" );
+
+    return VB_SUCCESS;
 }
 
 void vmPushJ( vcsbeam_context *vm )

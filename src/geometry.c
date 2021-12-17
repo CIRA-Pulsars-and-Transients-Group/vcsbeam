@@ -18,7 +18,7 @@
 #include "vcsbeam.h"
 
 void calc_geometric_delays(
-        struct beam_geom  *beam_geom_vals,
+        beam_geom         *beam_geom_vals,
         uint32_t           freq_hz,
         MetafitsMetadata  *obs_metadata,
         cuDoubleComplex   *phi )
@@ -82,7 +82,7 @@ void calc_geometric_delays(
 
 void vmCalcPhi(
         vcsbeam_context   *vm,
-        struct beam_geom  *beam_geom_vals )
+        beam_geom         *beam_geom_vals )
 /* Calculate the geometric delay (in radians) for the given pointings
  */
 {
@@ -160,7 +160,7 @@ void calc_beam_geom(
         double            ras_hours,
         double            decs_degs,
         double            mjd,
-        struct beam_geom  *bg )
+        beam_geom        *bg )
 {
     // Calculate geometry of pointings
 
@@ -334,8 +334,8 @@ double parse_dec( char* dec_ddmmss )
 double calc_array_factor(
         MetafitsMetadata *obs_metadata,
         uint32_t          freq_hz,
-        struct beam_geom *bg1,
-        struct beam_geom *bg2 )
+        beam_geom        *bg1,
+        beam_geom        *bg2 )
 /* An implementation of Eq. (A4) in Meyers et al. (2017)
  */
 {
