@@ -136,6 +136,15 @@ vcsbeam_context *init_vcsbeam_context(
     // Default: data is legacy VCS format (VB_INT4)
     vm->datatype = VB_INT4;
 
+    // Start a logger
+    vm->log = create_logger( stdout, coarse_chan_idx_offset );
+    logger_add_stopwatch( vm->log, "read", "Reading in data" );
+    logger_add_stopwatch( vm->log, "delay", "Calculating geometric and cable delays" );
+    logger_add_stopwatch( vm->log, "calc", "Calculating tied-array beam" );
+    logger_add_stopwatch( vm->log, "ipfb", "Inverting the PFB" );
+    logger_add_stopwatch( vm->log, "splice", "Splicing coarse channels together" );
+    logger_add_stopwatch( vm->log, "write", "Writing out data to file" );
+
     // Return the new struct pointer
     return vm;
 }
@@ -178,6 +187,8 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
         mwalib_metafits_metadata_free( vm->cal_metadata );
         mwalib_metafits_context_free( vm->cal_context );
     }
+
+    destroy_logger( vm->log );
 
     // Finally, free the struct itself
     free( vm );
@@ -435,14 +446,50 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 void vmPushNextChunk( vcsbeam_context *vm )
 {
     // Loads the next chunk of data onto the GPU
-    char *ptrHost = (char *)vm->v + vm->chunk_to_load * vm->d_v_size_bytes;
+    int chunk = vm->chunk_to_load % vm->chunks_per_second;
+    char *ptrHost = (char *)vm->v + chunk*vm->d_v_size_bytes;
     cudaMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyNextChunk: cudaMemcpy failed" );
 
     // Increment the (internal) chunk counter
-    vm->chunk_to_load = (vm->chunk_to_load + 1) % vm->chunks_per_second;
+    vm->chunk_to_load++;
 }
 
+
+void vmReadNextChunk( vcsbeam_context *vm )
+{
+}
+
+void vmReadNextSecond( vcsbeam_context *vm )
+{
+    uintptr_t timestep_idx = vm->chunk_to_load / vm->chunks_per_second;
+    uintptr_t ntimesteps   = vm->num_gps_seconds_to_process;
+    uint64_t  gps_second   = vm->gps_seconds_to_process[timestep_idx];
+
+    sprintf( vm->log_message, "--- Processing GPS second %ld [%lu/%lu], Coarse channel %lu [%d/%d] ---",
+                gps_second, timestep_idx+1, ntimesteps,
+                vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number,
+                vm->coarse_chan_idxs_to_process[0], vm->num_coarse_chans_to_process );
+    logger_message( vm->log, vm->log_message );
+
+    logger_start_stopwatch( vm->log, "read", true );
+
+    if (mwalib_voltage_context_read_second(
+                vm->vcs_context,
+                vm->gps_seconds_to_process[timestep_idx],
+                1,
+                vm->coarse_chan_idxs_to_process[0],
+                vm->v,
+                vm->v_size_bytes,
+                vm->error_message,
+                ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+    {
+        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
+        exit(EXIT_FAILURE);
+    }
+
+    logger_stop_stopwatch( vm->log, "read" );
+}
 
 void vmPushJ( vcsbeam_context *vm )
 {

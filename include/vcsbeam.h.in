@@ -501,6 +501,11 @@ typedef struct vcsbeam_context_t
     vcsbeam_datatype datatype;        // What format the input data samples are in
 
     cudaStream_t *streams;            // CUDA streams used for forming multiple tied-array beams
+
+    logger *log;                      // Used for log messages
+    char log_message[MAX_COMMAND_LENGTH];
+
+    char error_message[ERROR_MESSAGE_LEN]; // MWALIB error message buffer
 } vcsbeam_context;
 
 #define NO_ANTENNA_FOUND  -1
@@ -922,14 +927,16 @@ void cu_form_incoh_beam(
         );
 
 
-void cu_form_beam( int file_no,
-                   cuDoubleComplex ****detected_beam,
+void cu_form_beam( cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm );
 void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm );
 
 float *create_pinned_data_buffer( size_t size );
 
 void vmPushPolIdxLists( vcsbeam_context *vm );
+
+void vmReadNextChunk( vcsbeam_context *vm );
+void vmReadNextSecond( vcsbeam_context *vm );
 
 cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
 void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );

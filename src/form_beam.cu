@@ -346,8 +346,7 @@ void cu_form_incoh_beam(
     gpuErrchk(cudaMemcpy( Iscaled, d_Iscaled, Iscaled_size,        cudaMemcpyDeviceToHost ));
 }
 
-void cu_form_beam( int file_no,
-                   cuDoubleComplex ****detected_beam,
+void cu_form_beam( cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm )
 /* Inputs:
 *   sample_rate = The voltage sample rate, in Hz
@@ -368,6 +367,8 @@ void cu_form_beam( int file_no,
     uintptr_t nant   = vm->obs_metadata->num_ants;
     uintptr_t nchan  = vm->nchan;
     uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
+
+    int file_no = vm->chunk_to_load / vm->chunks_per_second;
 
     // Processing happens in "chunks" (due to limited memory on GPU)
     int p;

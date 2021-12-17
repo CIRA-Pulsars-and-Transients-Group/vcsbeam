@@ -76,29 +76,20 @@ int main(int argc, char **argv)
 
     int i; // Generic counter
 
-    // Start a logger for output messages and time-keeping
-    logger *log = create_logger( stdout, mpi_proc_id );
-    logger_add_stopwatch( log, "read", "Reading in data" );
-    logger_add_stopwatch( log, "delay", "Calculating geometric and cable delays" );
-    logger_add_stopwatch( log, "calc", "Calculating tied-array beam" );
-    logger_add_stopwatch( log, "ipfb", "Inverting the PFB" );
-    logger_add_stopwatch( log, "splice", "Splicing coarse channels together" );
-    logger_add_stopwatch( log, "write", "Writing out data to file" );
-    char log_message[MAX_COMMAND_LENGTH];
-
     // Create an mwalib metafits context and associated metadata
-    char mwalib_version[32];
-    get_mwalib_version( mwalib_version );
-    sprintf( log_message, "Creating metafits and voltage contexts via MWALIB (v%s)",
-            mwalib_version );
-    logger_timed_message( log, log_message );
-
     const int chans_per_proc = 1;
     vcsbeam_context *vm = init_vcsbeam_context(
         opts.metafits, cal.metafits,
         opts.coarse_chan_str, chans_per_proc, mpi_proc_id,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
+
+    char mwalib_version[32];
+    get_mwalib_version( mwalib_version );
+
+    sprintf( vm->log_message, "Creating metafits and voltage contexts via MWALIB (v%s)",
+            mwalib_version );
+    logger_timed_message( vm->log, vm->log_message );
 
     if (opts.out_fine)    set_vcsbeam_fine_output( vm, true );
     if (opts.out_coarse)  set_vcsbeam_coarse_output( vm, true );
@@ -111,11 +102,10 @@ int main(int argc, char **argv)
 
 
     uintptr_t timestep_idx;
-    uint64_t  gps_second;
 
     // Start counting time from here (i.e. after parsing the command line)
-    sprintf( log_message, "Reading pointings file %s", opts.pointings_file );
-    logger_timed_message( log, log_message );
+    sprintf( vm->log_message, "Reading pointings file %s", opts.pointings_file );
+    logger_timed_message( vm->log, vm->log_message );
 
     // Parse input pointings
     double *ras_hours, *decs_degs;
@@ -225,7 +215,7 @@ int main(int argc, char **argv)
 
     if (cal.cal_type == CAL_RTS)
     {
-        vmLoadRTSSolution( vm, cal.use_bandpass, cal.caldir, mpi_proc_id, log );
+        vmLoadRTSSolution( vm, cal.use_bandpass, cal.caldir, mpi_proc_id, vm->log );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
@@ -242,7 +232,7 @@ int main(int argc, char **argv)
     // Apply any calibration corrections
     parse_calibration_correction_file( vm->obs_metadata->obs_id, &cal );
     apply_calibration_corrections( &cal, vm->D, vm->obs_metadata,
-            vm->coarse_chan_idxs_to_process[0], log );
+            vm->coarse_chan_idxs_to_process[0], vm->log );
 
     // ------------------
     // Prepare primary beam and geometric delay arrays
@@ -253,9 +243,9 @@ int main(int argc, char **argv)
 
     // ------------------
 
-    sprintf( log_message, "Preparing headers for output (receiver channel %lu)",
+    sprintf( vm->log_message, "Preparing headers for output (receiver channel %lu)",
             vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number );
-    logger_message( log, log_message );
+    logger_message( vm->log, vm->log_message );
 
     // Populate the relevant header structs
     populate_vdif_header( vf, &vhdr, vm->obs_metadata, vm->vcs_metadata, vm->coarse_chan_idxs_to_process[0],
@@ -263,40 +253,17 @@ int main(int argc, char **argv)
 
     // Begin the main loop: go through data one second at a time
 
-    logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
+    logger_message( vm->log, "\n*****BEGIN BEAMFORMING*****" );
     char error_message[ERROR_MESSAGE_LEN];
 
     uintptr_t ntimesteps = vm->num_gps_seconds_to_process;
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
-        gps_second = vm->gps_seconds_to_process[timestep_idx];
-
-        sprintf( log_message, "--- Processing GPS second %ld [%lu/%lu], Coarse channel %lu [%d/%d] ---",
-                gps_second, timestep_idx+1, ntimesteps,
-                vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number,
-                mpi_proc_id+1, world_size );
-        logger_message( log, log_message );
-
         // Read in data from next file
-        logger_start_stopwatch( log, "read", true );
-
-        if (mwalib_voltage_context_read_second(
-                    vm->vcs_context,
-                    gps_second,
-                    1,
-                    vm->coarse_chan_idxs_to_process[0],
-                    vm->v,
-                    vm->v_size_bytes,
-                    error_message,
-                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
-        {
-            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", error_message );
-            exit(EXIT_FAILURE);
-        }
-        logger_stop_stopwatch( log, "read" );
+        vmReadNextSecond( vm );
 
         // Get the next second's worth of phases / jones matrices, if needed
-        logger_start_stopwatch( log, "delay", true );
+        logger_start_stopwatch( vm->log, "delay", true );
 
         sec_offset = (double)(timestep_idx + vm->gps_seconds_to_process[0] - vm->obs_metadata->obs_id);
         mjd = vm->obs_metadata->sched_start_mjd + (sec_offset + 0.5)/86400.0;
@@ -313,7 +280,7 @@ int main(int argc, char **argv)
         vmCalcJ( vm );
         vmPushJ( vm );
 
-        logger_stop_stopwatch( log, "delay" );
+        logger_stop_stopwatch( vm->log, "delay" );
 
         // The writing (of the previous second) is put here in order to
         // allow the possibility that it can overlap with the reading step.
@@ -321,19 +288,19 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( mpfs, vm->npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, log );
+            write_step( mpfs, vm->npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, vm->log );
         }
 
         // Form the beams
-        logger_start_stopwatch( log, "calc", true );
+        logger_start_stopwatch( vm->log, "calc", true );
 
-        cu_form_beam( timestep_idx, detected_beam, mpfs, vm );
+        cu_form_beam( detected_beam, mpfs, vm );
         cu_flatten_bandpass( mpfs, vm );
 
-        logger_stop_stopwatch( log, "calc" );
+        logger_stop_stopwatch( vm->log, "calc" );
 
         // Invert the PFB, if requested
-        logger_start_stopwatch( log, "ipfb", true );
+        logger_start_stopwatch( vm->log, "ipfb", true );
 
         if (vm->do_inverse_pfb)
         {
@@ -342,26 +309,26 @@ int main(int argc, char **argv)
                     &gi, data_buffer_vdif );
         }
 
-        logger_stop_stopwatch( log, "ipfb" );
+        logger_stop_stopwatch( vm->log, "ipfb" );
 
         // Splice channels together
         if (vm->output_fine_channels) // Only PSRFITS output can be combined into a single file
         {
-            logger_start_stopwatch( log, "splice", true );
+            logger_start_stopwatch( vm->log, "splice", true );
 
             for (p = 0; p < vm->npointing; p++)
             {
                 gather_splice_psrfits( &(mpfs[p]) );
             }
 
-            logger_stop_stopwatch( log, "splice" );
+            logger_stop_stopwatch( vm->log, "splice" );
         }
     }
 
     // Write out the last second's worth of data
-    write_step( mpfs, vm->npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, log );
+    write_step( mpfs, vm->npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, vm->log );
 
-    logger_message( log, "\n*****END BEAMFORMING*****\n" );
+    logger_message( vm->log, "\n*****END BEAMFORMING*****\n" );
 
     // Clean up channel-dependent memory
     for (p = 0; p < vm->npointing; p++)
@@ -375,11 +342,11 @@ int main(int argc, char **argv)
         }
     }
 
-    logger_report_all_stats( log );
-    logger_message( log, "" );
+    logger_report_all_stats( vm->log );
+    logger_message( vm->log, "" );
 
     // Free up memory
-    logger_timed_message( log, "Starting clean-up" );
+    logger_timed_message( vm->log, "Starting clean-up" );
 
     destroy_detected_beam( detected_beam, vm->npointing, 2*nsamples, nchans );
 
@@ -420,8 +387,6 @@ int main(int argc, char **argv)
     {
         free_ipfb( &gi );
     }
-
-    destroy_logger( log );
 
     // Clean up memory associated with the Jones matrices
     free_primary_beam( &vm->pb );
