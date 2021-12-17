@@ -452,7 +452,7 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
     }
 }
 
-void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm )
+void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
 {
     // Flatten the bandpass
     dim3 chan_stokes(vm->nchan, NSTOKES);

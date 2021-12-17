@@ -84,7 +84,7 @@ int main(int argc, char **argv)
         // Read in the calibration solution
         if (cal.cal_type == CAL_RTS)
         {
-            vmLoadRTSSolution( &vm, cal.use_bandpass, cal.caldir, Ch, NULL );
+            vmLoadRTSSolution( &vm, cal.use_bandpass, cal.caldir, Ch );
         }
         else if (cal.cal_type == CAL_OFFRINGA)
         {

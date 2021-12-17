@@ -22,16 +22,19 @@ const double Usky[] = { 0. , 0. , 0.5,  0. , 0.5, 0. ,  0. , 0. };
 const double Vsky[] = { 0. , 0. , 0. , -0.5, 0  , 0.5,  0. , 0. };
 const double *sky[] = { Isky, Qsky, Usky, Vsky };
 
-void calc_primary_beam(
-        primary_beam      *pb,
+void vmCalcB(
+        vcsbeam_context   *vm,
         struct beam_geom  *beam_geom_vals )
-/* Calculate the required Jones matrices for the given pointings. The
+/* Calculate the required beam matrices for the given pointings. The
  * calculated Jones matrices are stored in pb->B
  *
  * Only those configurations of live (i.e. non-dead) dipoles which exist in
  * the array are calculated, in order to save calculation time.
  */
 {
+    // Shorthand variable for where to put the answer
+    primary_beam *pb = &vm->pb;
+
     // Calculate some array sizes
     uintptr_t nant      = pb->nant;
     uintptr_t npol      = pb->npol; // = 4 (XX, XY, YX, YY)

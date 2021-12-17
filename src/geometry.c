@@ -80,12 +80,13 @@ void calc_geometric_delays(
     }
 }
 
-void calc_all_geometric_delays(
-        geometric_delays  *gdelays,
+void vmCalcPhi(
+        vcsbeam_context   *vm,
         struct beam_geom  *beam_geom_vals )
 /* Calculate the geometric delay (in radians) for the given pointings
  */
 {
+    geometric_delays *gdelays = &vm->gdelays;
     cuDoubleComplex phi[gdelays->nant]; // <-- Temporary location for result
 
     uintptr_t p, c, a;
@@ -146,13 +147,13 @@ void free_geometric_delays( geometric_delays *gdelays )
     cudaCheckErrors( "(free_geometric_delays) cudaFree failed" );
 }
 
-void push_geometric_delays_to_device( geometric_delays *gdelays )
+void vmPushPhi( vcsbeam_context *vm )
 /* Copy host memory block to device
  */
 {
-    size_t size = gdelays->npointings * gdelays->nant * gdelays->nchan * sizeof(cuDoubleComplex);
-    cudaMemcpyAsync( gdelays->d_phi, gdelays->phi, size, cudaMemcpyHostToDevice, 0 );
-    cudaCheckErrors( "error: push_geometric_delays_to_device: cudaMemcpyAsync failed" );
+    size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(cuDoubleComplex);
+    cudaMemcpyAsync( vm->gdelays.d_phi, vm->gdelays.phi, size, cudaMemcpyHostToDevice, 0 );
+    cudaCheckErrors( "error: vmPushPhi: cudaMemcpyAsync failed" );
 }
 
 void calc_beam_geom(

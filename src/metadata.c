@@ -453,10 +453,6 @@ void vmPushChunk( vcsbeam_context *vm )
 }
 
 
-void vmReadNextChunk( vcsbeam_context *vm )
-{
-}
-
 void vmReadNextSecond( vcsbeam_context *vm )
 {
     uintptr_t timestep_idx = vm->chunk_to_load / vm->chunks_per_second;

@@ -50,8 +50,8 @@ void usage();
 void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts, struct calibration *cal );
 void parse_pointing_file( const char *filename, double **ras_hours, double **decs_degs, unsigned int *npointings );
 
-void write_step( mpi_psrfits *mpfs, int npointing, bool out_fine, bool out_coarse,
-        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif, logger *log );
+void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
+        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif );
 
 /********
  * MAIN *
@@ -59,6 +59,12 @@ void write_step( mpi_psrfits *mpfs, int npointing, bool out_fine, bool out_coars
 
 int main(int argc, char **argv)
 {
+    // Parse command line arguments
+    struct make_tied_array_beam_opts opts;
+    struct calibration cal;           // Variables for calibration settings
+    init_calibration( &cal );
+    make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
+
     // Initialise MPI
     MPI_Init( NULL, NULL );
     int world_size, mpi_proc_id;
@@ -67,12 +73,6 @@ int main(int argc, char **argv)
 
     const int writer = 0; // Designate process 0 to write out the files
     const int ncoarse_chans = world_size;
-
-    // Parse command line arguments
-    struct make_tied_array_beam_opts opts;
-    struct calibration cal;           // Variables for calibration settings
-    init_calibration( &cal );
-    make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
 
     int i; // Generic counter
 
@@ -215,7 +215,7 @@ int main(int argc, char **argv)
 
     if (cal.cal_type == CAL_RTS)
     {
-        vmLoadRTSSolution( vm, cal.use_bandpass, cal.caldir, mpi_proc_id, vm->log );
+        vmLoadRTSSolution( vm, cal.use_bandpass, cal.caldir, mpi_proc_id );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
@@ -254,7 +254,6 @@ int main(int argc, char **argv)
     // Begin the main loop: go through data one second at a time
 
     logger_message( vm->log, "\n*****BEGIN BEAMFORMING*****" );
-    char error_message[ERROR_MESSAGE_LEN];
 
     uintptr_t ntimesteps = vm->num_gps_seconds_to_process;
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
@@ -270,13 +269,12 @@ int main(int argc, char **argv)
         for (p = 0; p < vm->npointing; p++)
             calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
-        // Calculate the primary beam
-        calc_primary_beam( &vm->pb, beam_geom_vals );
-
         // Calculate the geometric delays
-        calc_all_geometric_delays( &vm->gdelays, beam_geom_vals );
-        push_geometric_delays_to_device( &vm->gdelays );
+        vmCalcPhi( vm, beam_geom_vals );
+        vmPushPhi( vm );
 
+        // Calculate the primary beam and Jones matrices
+        vmCalcB( vm, beam_geom_vals );
         vmCalcJ( vm );
         vmPushJ( vm );
 
@@ -288,31 +286,31 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( mpfs, vm->npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, vm->log );
+            write_step( vm, mpfs, vf, &vhdr, data_buffer_vdif );
         }
 
         // Form the beams
         logger_start_stopwatch( vm->log, "calc", true );
 
         vmBeamformSecond( vm );
-        vmPullE( vm );
         vmPullS( vm );
-        cu_flatten_bandpass( mpfs, vm );
+        vmSendSToFits( vm, mpfs );
 
         logger_stop_stopwatch( vm->log, "calc" );
 
         // Invert the PFB, if requested
-        logger_start_stopwatch( vm->log, "ipfb", true );
-
         if (vm->do_inverse_pfb)
         {
+            logger_start_stopwatch( vm->log, "ipfb", true );
+
+            vmPullE( vm );
             prepare_detected_beam( detected_beam, mpfs, vm );
             cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
-        }
 
-        logger_stop_stopwatch( vm->log, "ipfb" );
+            logger_stop_stopwatch( vm->log, "ipfb" );
+        }
 
         // Splice channels together
         if (vm->output_fine_channels) // Only PSRFITS output can be combined into a single file
@@ -329,7 +327,7 @@ int main(int argc, char **argv)
     }
 
     // Write out the last second's worth of data
-    write_step( mpfs, vm->npointing, vm->output_fine_channels, vm->output_coarse_channels, vf, &vhdr, data_buffer_vdif, vm->log );
+    write_step( vm, mpfs, vf, &vhdr, data_buffer_vdif );
 
     logger_message( vm->log, "\n*****END BEAMFORMING*****\n" );
 
@@ -729,18 +727,18 @@ void parse_pointing_file( const char *filename, double **ras_hours, double **dec
 }
 
 
-void write_step( mpi_psrfits *mpfs, int npointing, bool out_fine, bool out_coarse,
-        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif, logger *log )
+void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
+        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif )
 {
     int mpi_proc_id;
     MPI_Comm_rank( MPI_COMM_WORLD, &mpi_proc_id );
 
     int p;
-    for (p = 0; p < npointing; p++)
+    for (p = 0; p < vm->npointing; p++)
     {
-        logger_start_stopwatch( log, "write", true );
+        logger_start_stopwatch( vm->log, "write", true );
 
-        if (out_fine)
+        if (vm->output_fine_channels)
         {
             // Write out the spliced channels
             wait_splice_psrfits( &(mpfs[p]) );
@@ -757,12 +755,12 @@ void write_step( mpi_psrfits *mpfs, int npointing, bool out_fine, bool out_coars
             }
         }
 
-        if (out_coarse)
+        if (vm->output_coarse_channels)
         {
             vdif_write_second( &vf[p], vhdr,
                     data_buffer_vdif + p * vf->sizeof_buffer );
         }
 
-        logger_stop_stopwatch( log, "write" );
+        logger_stop_stopwatch( vm->log, "write" );
     }
 }

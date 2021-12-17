@@ -615,7 +615,7 @@ void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings );
 
 // (defined in calibration.c:)
 void vmLoadRTSSolution( vcsbeam_context *vm,
-        bool use_bandpass, const char *caldir, int coarse_chan_idx, logger *log );
+        bool use_bandpass, const char *caldir, int coarse_chan_idx );
 void vmLoadOffringaSolution( vcsbeam_context *vm, int coarse_chan, char *gains_file );
 
 char **create_filenames(
@@ -705,8 +705,8 @@ extern "C" {
 
 /* Calculate the geometric delay (in radians) for the given pointings
  */
-void calc_all_geometric_delays(
-        geometric_delays  *gdelays,
+void vmCalcPhi(
+        vcsbeam_context   *vm,
         struct beam_geom  *beam_geom_vals );
 
 void calc_geometric_delays(
@@ -731,7 +731,7 @@ void free_geometric_delays( geometric_delays *gdelays );
 
 /* Copy host memory block to device
  */
-void push_geometric_delays_to_device( geometric_delays *gdelays );
+void vmPushPhi( vcsbeam_context *vm );
 
 double calc_array_factor(
         MetafitsMetadata *obs_metadata,
@@ -934,13 +934,12 @@ void vmPullS( vcsbeam_context *vm );
 
 void prepare_detected_beam( cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm );
-void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm );
+void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs );
 
 float *create_pinned_data_buffer( size_t size );
 
 void vmPushPolIdxLists( vcsbeam_context *vm );
 
-void vmReadNextChunk( vcsbeam_context *vm );
 void vmReadNextSecond( vcsbeam_context *vm );
 
 cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
@@ -1136,8 +1135,8 @@ void parallactic_angle_correction(
 
 int hash_dipole_config( double * );
 
-void calc_primary_beam(
-        primary_beam      *pb,
+void vmCalcB(
+        vcsbeam_context   *vm,
         struct beam_geom  *beam_geom_vals );
 
 void create_primary_beam(

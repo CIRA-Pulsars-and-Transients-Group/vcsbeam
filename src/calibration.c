@@ -15,7 +15,7 @@
 #include "vcsbeam.h"
 
 void vmLoadRTSSolution( vcsbeam_context *vm,
-        bool use_bandpass, const char *caldir, int coarse_chan_idx, logger *log )
+        bool use_bandpass, const char *caldir, int coarse_chan_idx )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel.
@@ -47,13 +47,12 @@ void vmLoadRTSSolution( vcsbeam_context *vm,
     uintptr_t ant, ch; // For loop variables
 
     // Write out the channel --> gpubox number mapping
-    char log_message[256];
-    if (log)
+    if (vm->log)
     {
-        sprintf( log_message, "Receiver channel #%lu --> GPUBox #%lu",
+        sprintf( vm->log_message, "Receiver channel #%lu --> GPUBox #%lu",
                 vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
                 gpubox_number );
-        logger_timed_message( log, log_message );
+        logger_timed_message( vm->log, vm->log_message );
     }
 
     // Temporary arrays for DI Jones matrices ('Dd') and Bandpass matrices ('Db')
@@ -89,19 +88,19 @@ void vmLoadRTSSolution( vcsbeam_context *vm,
     // Make the master mpi thread print out the antenna names of both
     // obs and cal metafits. "Header" printed here, actual numbers
     // printed inside antenna for loop below
-    if (log)
+    if (vm->log)
     {
-        if (log->world_rank == 0)
+        if (vm->log->world_rank == 0)
         {
-            logger_message( log, "" );
-            logger_timed_message( log, "Calibration metafits info:" );
-            logger_timed_message( log, "--------------------------" );
-            logger_timed_message( log, "|Input| Ant |Tile ID| TileName |Pol|VCS order|" );
+            logger_message( vm->log, "" );
+            logger_timed_message( vm->log, "Calibration metafits info:" );
+            logger_timed_message( vm->log, "--------------------------" );
+            logger_timed_message( vm->log, "|Input| Ant |Tile ID| TileName |Pol|VCS order|" );
 
             uintptr_t i;
             for (i = 0; i < ninputs; i++)
             {
-                sprintf( log_message, "| %3u | %3u | %5u | %8s | %c |  %3u   |",
+                sprintf( vm->log_message, "| %3u | %3u | %5u | %8s | %c |  %3u   |",
                         vm->cal_metadata->rf_inputs[i].input,
                         vm->cal_metadata->rf_inputs[i].ant,
                         vm->cal_metadata->rf_inputs[i].tile_id,
@@ -109,10 +108,10 @@ void vmLoadRTSSolution( vcsbeam_context *vm,
                         *(vm->cal_metadata->rf_inputs[i].pol),
                         vm->cal_metadata->rf_inputs[i].vcs_order
                        );
-                logger_timed_message( log, log_message );
+                logger_timed_message( vm->log, vm->log_message );
             }
 
-            logger_message( log, "" );
+            logger_message( vm->log, "" );
         }
     }
 
