@@ -274,8 +274,6 @@ void free_calibration( struct calibration *cal );
 extern "C" {
 #endif
 
-void create_antenna_lists( MetafitsMetadata *metafits_metadata, uint32_t *polQ_idxs, uint32_t *polP_idxs );
-
 void get_jones(
         // an array of pointings [pointing][ra/dec][characters]
         int                    npointing, // number of pointings
@@ -448,9 +446,9 @@ typedef struct vcsbeam_context_t
     uintptr_t data_size_bytes;        // The size of data in bytes (currently always = bytes_per_second)
     uintptr_t d_data_size_bytes;      // The size of d_data in bytes (depends on number of "chunks")
 
-    void *coh, *d_coh;                // The buffers for the coherent beam on host/device
-    uintptr_t coh_size_bytes;         // The size of coh in bytes
-    uintptr_t d_coh_size_bytes;       // The size of d_coh in bytes
+    void *S, *d_S;                    // The buffers for the detected (full Stokes) coherent beam on host/device
+    uintptr_t S_size_bytes;           // The size of S in bytes
+    uintptr_t d_S_size_bytes;         // The size of d_S in bytes
 
     void *J, *d_J;                    // The buffers for Jones matrices on host/device
     uintptr_t J_size_bytes;           // The size of J in bytes
@@ -592,6 +590,8 @@ void vmDestroyCudaStreams( vcsbeam_context *vm );
 
 void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs );
 void vmDestroyStatistics( vcsbeam_context *vm );
+
+void vmSetPolIdxLists( vcsbeam_context *vm ); // (defined in jones.c)
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
@@ -910,8 +910,7 @@ struct gpu_formbeam_arrays
 extern "C" {
 #endif
 
-void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
-                      int npointing );
+void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm );
 void free_formbeam( struct gpu_formbeam_arrays *g );
 
 
@@ -934,7 +933,7 @@ void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm );
 
 float *create_pinned_data_buffer( size_t size );
 
-void cu_upload_pol_idx_lists( vcsbeam_context *vm );
+void vmMemcpyPolIdxLists( vcsbeam_context *vm );
 
 cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
 void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );

@@ -16,32 +16,32 @@
 
 #include "vcsbeam.h"
 
-void create_antenna_lists( MetafitsMetadata *obs_metadata, uint32_t *polQ_idxs, uint32_t *polP_idxs )
+void vmSetPolIdxLists( vcsbeam_context *vm )
 /* Creates a list of indexes into the data for the P and Q polarisations,
  * ordered by antenna number. Assumption: polQ_idxs and polP_idxs have
  * sufficient allocated memory.
  */
 {
     // Go through the rf_inputs and construct the lookup table for the antennas
-    unsigned int ninputs = obs_metadata->num_rf_inputs;
+    unsigned int ninputs = vm->obs_metadata->num_rf_inputs;
     unsigned int ant;
     unsigned int i;
     char pol;
     for (i = 0; i < ninputs; i++)
     {
-        ant = obs_metadata->rf_inputs[i].ant;
-        pol = *(obs_metadata->rf_inputs[i].pol);
+        ant = vm->obs_metadata->rf_inputs[i].ant;
+        pol = *(vm->obs_metadata->rf_inputs[i].pol);
 
         // As written in the documentation, the polarisation identified by
         // 'X' in the metafits file is the N-S-aligned, or 'Q' dipole,
         // 'Y' in the metafits file is the E-W-aligned, or 'P' dipole,
         if (pol == 'X')
         {
-            polQ_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
+            vm->polQ_idxs[ant] = vm->obs_metadata->rf_inputs[i].vcs_order;
         }
         else // if (pol == 'Y')
         {
-            polP_idxs[ant] = obs_metadata->rf_inputs[i].vcs_order;
+            vm->polP_idxs[ant] = vm->obs_metadata->rf_inputs[i].vcs_order;
         }
     }
 }

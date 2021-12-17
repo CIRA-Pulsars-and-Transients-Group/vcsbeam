@@ -213,32 +213,32 @@ void vmFreeDataDevice( vcsbeam_context *vm )
 void vmMallocCohBeamHost( vcsbeam_context *vm )
 {
     // Calculate and store the size of this array
-    vm->coh_size_bytes = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
+    vm->S_size_bytes = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
 
     // Allocate memory on host
-    cudaMallocHost( &(vm->coh), vm->coh_size_bytes );
+    cudaMallocHost( &(vm->S), vm->S_size_bytes );
     cudaCheckErrors( "vmMallocCohBeamHost: cudaMallocHost failed" );
 }
 
 void vmFreeCohBeamHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->coh );
+    cudaFreeHost( vm->S );
     cudaCheckErrors( "vmFreeCohBeamHost: cudaFreeHost failed" );
 }
 
 void vmMallocCohBeamDevice( vcsbeam_context *vm )
 {
     // Calculate and store the size of this array
-    vm->d_coh_size_bytes = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
+    vm->d_S_size_bytes = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
 
     // Allocate memory on device
-    cudaMalloc( &(vm->d_coh), vm->d_coh_size_bytes );
+    cudaMalloc( &(vm->d_S), vm->d_S_size_bytes );
     cudaCheckErrors( "vmMallocCohBeamDevice: cudaMalloc failed" );
 }
 
 void vmFreeCohBeamDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_coh );
+    cudaFree( vm->d_S );
     cudaCheckErrors( "vmFreeCohBeamDevice: cudaFree failed" );
 }
 

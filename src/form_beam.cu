@@ -396,7 +396,7 @@ void cu_form_beam( int file_no,
             beamform_kernel<<<chan_samples, stat, 11*nant*sizeof(double), vm->streams[p]>>>( g->d_JDq, g->d_JDp,
                             vm->gdelays.d_phi, 1.0/(double)vm->num_not_flagged,
                             p, ichunk*vm->sample_rate/vm->chunks_per_second, vm->chunks_per_second,
-                            g->d_Bd, (float *)vm->d_coh, npol );
+                            g->d_Bd, (float *)vm->d_S, npol );
 
             gpuErrchk( cudaPeekAtLastError() );
         }
@@ -406,7 +406,7 @@ void cu_form_beam( int file_no,
 
     // Copy the results back into host memory
     gpuErrchk(cudaMemcpyAsync( g->Bd,   g->d_Bd,    g->Bd_size,    cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( vm->coh, vm->d_coh,   vm->coh_size_bytes,   cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( vm->S, vm->d_S,   vm->S_size_bytes,   cudaMemcpyDeviceToHost ));
 
     // Copy the data back from Bd back into the detected_beam array
     // Make sure we put it back into the correct half of the array, depending
@@ -434,7 +434,7 @@ void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm )
 {
     // Flatten the bandpass
     dim3 chan_stokes(vm->nchan, NSTOKES);
-    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_coh, vm->sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
+    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_S, vm->sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
 
@@ -452,8 +452,7 @@ void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm )
 
 }
 
-void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
-                      int npointing )
+void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm )
 {
     size_t JD_base_size;
 
@@ -465,8 +464,8 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
     int npol        = vm->obs_metadata->num_ant_pols; // (X,Y)
 
     // Calculate array sizes for host and device
-    g->coh_size    = npointing * sample_rate * NSTOKES * nchan * sizeof(float);
-    g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
+    g->coh_size    = vm->npointing * sample_rate * NSTOKES * nchan * sizeof(float);
+    g->Bd_size     = vm->npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
     JD_base_size   = sample_rate * nants * nchan * sizeof(cuDoubleComplex);
     g->JD_size   = JD_base_size / nchunks;
 
@@ -480,7 +479,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
     gpuErrchk(cudaMalloc( (void **)&g->d_Bd,    g->Bd_size ));
 }
 
-void cu_upload_pol_idx_lists( vcsbeam_context *vm )
+void vmMemcpyPolIdxLists( vcsbeam_context *vm )
 {
     gpuErrchk(cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size, cudaMemcpyHostToDevice ));
     gpuErrchk(cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size, cudaMemcpyHostToDevice ));

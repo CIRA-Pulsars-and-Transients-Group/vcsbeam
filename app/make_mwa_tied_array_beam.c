@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 
     struct gpu_ipfb_arrays gi;
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
-    malloc_formbeam( &gf, vm, vm->npointing );
+    malloc_formbeam( &gf, vm );
     vmMallocDataDevice( vm );
     vmMallocCohBeamDevice( vm );
     vmMallocJHost( vm );
@@ -174,10 +174,10 @@ int main(int argc, char **argv)
     vmMallocPQIdxsDevice( vm );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
-    create_antenna_lists( vm->obs_metadata, vm->polQ_idxs, vm->polP_idxs );
+    vmSetPolIdxLists( vm );
 
     // ... and upload them to the gpu, ready for use!
-    cu_upload_pol_idx_lists( vm );
+    vmMemcpyPolIdxLists( vm );
 
     // Create output buffer arrays
     float *data_buffer_vdif   = NULL;
