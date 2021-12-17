@@ -596,7 +596,7 @@ void vmFreePQIdxsDevice( vcsbeam_context *vm );
 
 
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
-void vmPushNextChunk( vcsbeam_context *vm );
+void vmPushChunk( vcsbeam_context *vm );
 void vmPushJ( vcsbeam_context *vm );
 
 void vmCreatePrimaryBeam( vcsbeam_context *vm );

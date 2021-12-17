@@ -346,6 +346,56 @@ void cu_form_incoh_beam(
     gpuErrchk(cudaMemcpy( Iscaled, d_Iscaled, Iscaled_size,        cudaMemcpyDeviceToHost ));
 }
 
+void vmBeamformChunk( vcsbeam_context *vm )
+{
+    // Get some shorthand variables
+    uintptr_t nant   = vm->obs_metadata->num_ants;
+    uintptr_t nchan  = vm->nchan;
+    uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
+
+    // Call the kernels
+    dim3 chan_samples( nchan, vm->sample_rate / vm->chunks_per_second );
+    dim3 stat( nant );
+
+    // convert the data and multiply it by J
+    invj_the_data<<<chan_samples, stat>>>(
+            vm->d_v,
+            (cuDoubleComplex *)vm->d_J,
+            vm->gdelays.d_phi,
+            vm->d_Jv_Q,
+            vm->d_Jv_P,
+            vm->d_polQ_idxs,
+            vm->d_polP_idxs,
+            npol,
+            vm->datatype );
+    cudaCheckErrors( "cu_form_beam: invj_the_data failed" );
+
+    // Get the "chunk" number
+    int chunk = vm->chunk_to_load % vm->chunks_per_second;
+    // Send off a parallel CUDA stream for each pointing
+    int p;
+    for (p = 0; p < vm->npointing; p++ )
+    {
+        // Call the beamformer kernel
+        // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
+        beamform_kernel<<<chan_samples, stat, 11*nant*sizeof(double), vm->streams[p]>>>(
+                vm->d_Jv_Q,
+                vm->d_Jv_P,
+                vm->gdelays.d_phi,
+                1.0/(double)vm->num_not_flagged,
+                p,
+                chunk*vm->sample_rate/vm->chunks_per_second,
+                vm->chunks_per_second,
+                vm->d_e,
+                (float *)vm->d_S,
+                npol );
+
+        gpuErrchk( cudaPeekAtLastError() );
+    }
+    gpuErrchk( cudaDeviceSynchronize() );
+
+}
+
 void cu_form_beam( cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm )
 /* Inputs:
@@ -364,41 +414,18 @@ void cu_form_beam( cuDoubleComplex ****detected_beam,
 */
 {
     // Get shortcut variables
-    uintptr_t nant   = vm->obs_metadata->num_ants;
     uintptr_t nchan  = vm->nchan;
     uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
 
     int file_no = vm->chunk_to_load / vm->chunks_per_second;
 
-    // Processing happens in "chunks" (due to limited memory on GPU)
-    int p;
-    for (int ichunk = 0; ichunk < vm->chunks_per_second; ichunk++)
+    // Processing a second's worth of "chunks"
+    int chunk;
+    for (chunk = 0; chunk < vm->chunks_per_second; chunk++)
     {
-        vmPushNextChunk( vm );
-
-        // Call the kernels
-        dim3 chan_samples( nchan, vm->sample_rate / vm->chunks_per_second );
-        dim3 stat( nant );
-
-        // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( vm->d_v, (cuDoubleComplex *)vm->d_J, vm->gdelays.d_phi, vm->d_Jv_Q, vm->d_Jv_P,
-                                               vm->d_polQ_idxs, vm->d_polP_idxs,
-                                               npol, vm->datatype );
-        cudaCheckErrors( "cu_form_beam: invj_the_data failed" );
-
-        // Send off a parallel CUDA stream for each pointing
-        for (p = 0; p < vm->npointing; p++ )
-        {
-            // Call the beamformer kernel
-            // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
-            beamform_kernel<<<chan_samples, stat, 11*nant*sizeof(double), vm->streams[p]>>>( vm->d_Jv_Q, vm->d_Jv_P,
-                            vm->gdelays.d_phi, 1.0/(double)vm->num_not_flagged,
-                            p, ichunk*vm->sample_rate/vm->chunks_per_second, vm->chunks_per_second,
-                            vm->d_e, (float *)vm->d_S, npol );
-
-            gpuErrchk( cudaPeekAtLastError() );
-        }
-        gpuErrchk( cudaDeviceSynchronize() );
+        vmPushChunk( vm );
+        vmBeamformChunk( vm );
+        vm->chunk_to_load++;
     }
     gpuErrchk( cudaDeviceSynchronize() );
 
@@ -414,7 +441,7 @@ void cu_form_beam( cuDoubleComplex ****detected_beam,
     offset = file_no % 2 * vm->sample_rate;
 
     // TODO: turn detected_beam into a 1D array
-    int ch, s, pol;
+    int p, ch, s, pol;
     for (p   = 0; p   < vm->npointing  ; p++  )
     for (s   = 0; s   < vm->sample_rate; s++  )
     for (ch  = 0; ch  < nchan      ; ch++ )

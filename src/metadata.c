@@ -443,16 +443,13 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
     vm->d_Jv_size_bytes = vm->Jv_size_bytes / vm->chunks_per_second;
 }
 
-void vmPushNextChunk( vcsbeam_context *vm )
+void vmPushChunk( vcsbeam_context *vm )
 {
-    // Loads the next chunk of data onto the GPU
+    // Loads a "chunk" of data onto the GPU
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
     char *ptrHost = (char *)vm->v + chunk*vm->d_v_size_bytes;
     cudaMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyNextChunk: cudaMemcpy failed" );
-
-    // Increment the (internal) chunk counter
-    vm->chunk_to_load++;
 }
 
 
