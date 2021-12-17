@@ -297,25 +297,6 @@ __global__ void renormalise_channels_kernel( float *I, int nstep, float *offsets
     // Set the scales and offsets
     scales[p*nstokes*nchan + stokes*nchan + chan] = scale;
     offsets[p*nstokes*nchan + stokes*nchan + chan] = offset;
-
-    // Originally, this function's purpose was to "flatten the bandpass";
-    // however, it appears that all downstream pulsar software does this
-    // routinely anyway. Along with the commented-out lines above relating
-    // to the calculation of the mean, the following line was the original
-    // "flattening" instruction, with "32" being a magic number to get
-    // the range to fit nicely (NB but not perfectly!) into 8 bits.
-    // As it is, Iscaled as calculated above, only affects the PSRFITS
-    // output, while uncommenting the following line (along with the other
-    // necessary lines above) will only affect the VDIF output.
-    //
-    // In particular, I currently believe that the PFB inversion should
-    // in principle have higher fidelity if the bandpass is _not_ flattened
-    // first, since the inverse filter is designed to be the complement of
-    // the forward filter anyway. However, preliminary tests show that the
-    // difference it marginal, even negligible. Uncomment at your own risk!
-
-    //float mean = summed / nstep;
-    //I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] *= 32.0/mean;
 }
 
 
@@ -415,7 +396,7 @@ void cu_form_beam( int file_no,
             beamform_kernel<<<chan_samples, stat, 11*nant*sizeof(double), vm->streams[p]>>>( g->d_JDq, g->d_JDp,
                             vm->gdelays.d_phi, 1.0/(double)vm->num_not_flagged,
                             p, ichunk*vm->sample_rate/vm->chunks_per_second, vm->chunks_per_second,
-                            g->d_Bd, g->d_coh, npol );
+                            g->d_Bd, (float *)vm->d_coh, npol );
 
             gpuErrchk( cudaPeekAtLastError() );
         }
@@ -423,26 +404,9 @@ void cu_form_beam( int file_no,
     gpuErrchk( cudaDeviceSynchronize() );
 
 
-    // Flatten the bandpass
-    dim3 chan_stokes(nchan, NSTOKES);
-    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( g->d_coh, vm->sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
-    gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaDeviceSynchronize() );
-
-    gpuErrchk(cudaMemcpy( vm->offsets, vm->d_offsets, vm->offsets_size, cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( vm->scales,  vm->d_scales,  vm->scales_size,  cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( vm->Cscaled, vm->d_Cscaled, vm->Cscaled_size, cudaMemcpyDeviceToHost ));
-
-    for (p = 0; p < vm->npointing; p++)
-    {
-        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(vm->offsets[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(vm->scales[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->sample_rate*nchan*NSTOKES]), vm->sample_rate*nchan*NSTOKES );
-    }
-
     // Copy the results back into host memory
     gpuErrchk(cudaMemcpyAsync( g->Bd,   g->d_Bd,    g->Bd_size,    cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( vm->coh, g->d_coh,   g->coh_size,   cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( vm->coh, vm->d_coh,   g->coh_size,   cudaMemcpyDeviceToHost ));
 
     // Copy the data back from Bd back into the detected_beam array
     // Make sure we put it back into the correct half of the array, depending
@@ -466,9 +430,31 @@ void cu_form_beam( int file_no,
     }
 }
 
+void cu_flatten_bandpass( struct gpu_formbeam_arrays *g,
+                   mpi_psrfits *mpfs, vcsbeam_context *vm )
+{
+    // Flatten the bandpass
+    dim3 chan_stokes(vm->nchan, NSTOKES);
+    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_coh, vm->sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
+    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchk( cudaDeviceSynchronize() );
+
+    gpuErrchk(cudaMemcpy( vm->offsets, vm->d_offsets, vm->offsets_size, cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( vm->scales,  vm->d_scales,  vm->scales_size,  cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( vm->Cscaled, vm->d_Cscaled, vm->Cscaled_size, cudaMemcpyDeviceToHost ));
+
+    unsigned int p;
+    for (p = 0; p < vm->npointing; p++)
+    {
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(vm->offsets[p*vm->nchan*NSTOKES]), vm->nchan*NSTOKES*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(vm->scales[p*vm->nchan*NSTOKES]), vm->nchan*NSTOKES*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->sample_rate*vm->nchan*NSTOKES]), vm->sample_rate*vm->nchan*NSTOKES );
+    }
+
+}
+
 void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
-                      float gpu_mem_gb, int outpol_coh,
-                      int npointing, logger *log )
+                      float gpu_mem_gb, int npointing, logger *log )
 {
     size_t data_base_size;
     size_t JD_base_size;
@@ -481,7 +467,7 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
     int npol        = vm->obs_metadata->num_ant_pols; // (X,Y)
 
     // Calculate array sizes for host and device
-    g->coh_size    = npointing * sample_rate * outpol_coh * nchan * sizeof(float);
+    g->coh_size    = npointing * sample_rate * NSTOKES * nchan * sizeof(float);
     data_base_size = sample_rate * nants * nchan * npol * sizeof(uint8_t);
     g->Bd_size     = npointing * sample_rate * nchan * npol * sizeof(cuDoubleComplex);
     size_t phi_size = npointing * nants * nchan * sizeof(cuDoubleComplex);
@@ -550,7 +536,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
     gpuErrchk(cudaMalloc( (void **)&g->d_JDq,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDp,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_Bd,    g->Bd_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_coh,   g->coh_size ));
 
     // Allocate memory on both host and device for polX and polY idx arrays
     g->pol_idxs_size = nants * sizeof(uint32_t);
@@ -575,7 +560,6 @@ void free_formbeam( struct gpu_formbeam_arrays *g )
     cudaFreeHost( g->polP_idxs );
     cudaFree( g->d_J );
     cudaFree( g->d_Bd );
-    cudaFree( g->d_coh );
     cudaFree( g->d_polQ_idxs );
     cudaFree( g->d_polP_idxs );
 }
@@ -652,68 +636,3 @@ void free_input_output_arrays( void *data, void *d_data )
     cudaFree( d_data );
     cudaCheckErrors( "cudaFree() failed" );
 }
-
-
-void flatten_bandpass(int nstep, int nchan, int npol, void *data)
-{
-
-    // nstep -> ? number of time steps (ie 10,000 per 1 second of data)
-    // nchan -> number of (fine) channels (128)
-    // npol -> number of polarisations (1 for icoh or 4 for coh)
-
-    // magical mystery normalisation constant
-    int new_var = 32;
-
-    // purpose is to generate a mean value for each channel/polaridation
-
-    int i=0, j=0;
-    int p=0;
-
-    float *data_ptr = (float *) data;
-    float **band;
-
-
-    band = (float **) calloc (npol, sizeof(float *));
-    for (i=0;i<npol;i++) {
-      band[i] = (float *) calloc(nchan, sizeof(float));
-    }
-
-    // initialise the band array
-    for (p = 0;p<npol;p++) {
-        for (j=0;j<nchan;j++){
-            band[p][j] = 0.0;
-        }
-    }
-
-
-    // accumulate abs(data) over all time samples and save into band
-    data_ptr = (float *)data;
-    for (i=0;i<nstep;i++) { // time steps
-        for (p = 0;p<npol;p++) { // pols
-            for (j=0;j<nchan;j++){ // channels
-                band[p][j] += fabsf(*data_ptr);
-                data_ptr++;
-            }
-        }
-
-    }
-
-    // calculate and apply the normalisation to the data
-    data_ptr = (float *)data;
-    for (i=0;i<nstep;i++) {
-        for (p = 0;p<npol;p++) {
-            for (j=0;j<nchan;j++){
-                *data_ptr = (*data_ptr)/( (band[p][j]/nstep)/new_var );
-                data_ptr++;
-            }
-        }
-
-    }
-
-    // free the memory
-    for (i=0;i<npol;i++) {
-        free(band[i]);
-    }
-    free(band);
-}
-

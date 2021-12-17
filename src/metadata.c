@@ -202,7 +202,6 @@ void vmMallocDataDevice( vcsbeam_context *vm )
 {
     cudaMalloc( (void **)&vm->d_data,  vm->d_data_size_bytes );
     cudaCheckErrors( "vmMallocDataDevice: cudaMalloc(d_data) failed" );
-fprintf( stderr, "vmMallocDataDevice: Allocated %lu bytes on device\n", vm->d_data_size_bytes );
 }
 
 void vmFreeDataDevice( vcsbeam_context *vm )
@@ -224,7 +223,23 @@ void vmMallocCohBeamHost( vcsbeam_context *vm )
 void vmFreeCohBeamHost( vcsbeam_context *vm )
 {
     cudaFreeHost( vm->coh );
-    cudaCheckErrors( "cudaFreeHost(coh) failed" );
+    cudaCheckErrors( "vmFreeCohBeamHost: cudaFreeHost failed" );
+}
+
+void vmMallocCohBeamDevice( vcsbeam_context *vm )
+{
+    // Calculate and store the size of this array
+    vm->d_coh_size_bytes = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
+
+    // Allocate memory on device
+    cudaMalloc( &(vm->d_coh), vm->d_coh_size_bytes );
+    cudaCheckErrors( "vmMallocCohBeamDevice: cudaMalloc failed" );
+}
+
+void vmFreeCohBeamDevice( vcsbeam_context *vm )
+{
+    cudaFree( vm->d_coh );
+    cudaCheckErrors( "vmFreeCohBeamDevice: cudaFree failed" );
 }
 
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )

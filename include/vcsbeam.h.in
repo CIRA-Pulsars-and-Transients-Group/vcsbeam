@@ -561,6 +561,9 @@ void vmFreeDataDevice( vcsbeam_context *vm );
 void vmMallocCohBeamHost( vcsbeam_context *vm );
 void vmFreeCohBeamHost( vcsbeam_context *vm );
 
+void vmMallocCohBeamDevice( vcsbeam_context *vm );
+void vmFreeCohBeamDevice( vcsbeam_context *vm );
+
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
 void vmMemcpyNextChunk( vcsbeam_context *vm );
 
@@ -891,8 +894,7 @@ extern "C" {
 #endif
 
 void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
-                      float gpu_mem_gb, int outpol_coh,
-                      int npointing, logger *log );
+                      float gpu_mem_gb, int npointing, logger *log );
 void free_formbeam( struct gpu_formbeam_arrays *g );
 
 
@@ -911,6 +913,8 @@ void cu_form_beam( int file_no,
                    struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm );
+void cu_flatten_bandpass( struct gpu_formbeam_arrays *g,
+                   mpi_psrfits *mpfs, vcsbeam_context *vm );
 
 float *create_pinned_data_buffer( size_t size );
 
@@ -925,8 +929,6 @@ void              destroy_detected_beam( cuDoubleComplex ****array, int npointin
 
 void allocate_input_output_arrays( void **data, void **d_data, size_t size );
 void free_input_output_arrays( void *data, void *d_data );
-
-void flatten_bandpass( int nstep, int nchan, int npol, void *data);
 
 #ifdef __cplusplus
 }

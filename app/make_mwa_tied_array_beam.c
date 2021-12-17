@@ -166,8 +166,9 @@ int main(int argc, char **argv)
     struct gpu_ipfb_arrays gi;
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
     malloc_formbeam( &gf, vm, (opts.gpu_mem_GB > 0 ? opts.gpu_mem_GB : -1.0),
-                     NSTOKES, vm->npointing, log );
+                     vm->npointing, log );
     vmMallocDataDevice( vm );
+    vmMallocCohBeamDevice( vm );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
     create_antenna_lists( vm->obs_metadata, gf.polQ_idxs, gf.polP_idxs );
@@ -329,6 +330,7 @@ int main(int argc, char **argv)
         logger_start_stopwatch( log, "calc", true );
 
         cu_form_beam( timestep_idx, &gf, detected_beam, mpfs, vm );
+        cu_flatten_bandpass( &gf, mpfs, vm );
 
         logger_stop_stopwatch( log, "calc" );
 
@@ -406,6 +408,7 @@ int main(int argc, char **argv)
 
     free_formbeam( &gf );
     vmFreeDataDevice( vm );
+    vmFreeCohBeamDevice( vm );
 
     if (vm->do_inverse_pfb)
     {
