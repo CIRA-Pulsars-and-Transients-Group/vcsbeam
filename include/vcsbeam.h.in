@@ -269,15 +269,6 @@ void free_calibration( struct calibration *cal );
 extern "C" {
 #endif
 
-void get_jones(
-        // an array of pointings [pointing][ra/dec][characters]
-        int                    npointing, // number of pointings
-        MetafitsMetadata      *osb_metadata,
-        cuDoubleComplex       *D,
-        cuDoubleComplex       *B,
-        cuDoubleComplex       *invJi // <-- output
-);
-
 /**** MATRIX OPERATIONS ****/
 
 void cp2x2( cuDoubleComplex *Min, cuDoubleComplex *Mout );
@@ -449,7 +440,7 @@ typedef struct vcsbeam_context_t
     uintptr_t e_size_bytes;           // The size of S in bytes
     uintptr_t d_e_size_bytes;         // The size of d_S in bytes
 
-    void *J, *d_J;                    // The buffers for Jones matrices on host/device
+    cuDoubleComplex *J, *d_J;         // The buffers for Jones matrices on host/device
     uintptr_t J_size_bytes;           // The size of J in bytes
     uintptr_t d_J_size_bytes;         // The size of d_J in bytes
 
@@ -600,7 +591,8 @@ void vmFreePQIdxsDevice( vcsbeam_context *vm );
 
 
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
-void vmMemcpyNextChunk( vcsbeam_context *vm );
+void vmPushNextChunk( vcsbeam_context *vm );
+void vmPushJ( vcsbeam_context *vm );
 
 void vmCreatePrimaryBeam( vcsbeam_context *vm );
 void vmCreateGeometricDelays( vcsbeam_context *vm );
@@ -612,6 +604,7 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs );
 void vmDestroyStatistics( vcsbeam_context *vm );
 
 void vmSetPolIdxLists( vcsbeam_context *vm ); // (defined in jones.c)
+void vmCalcJ( vcsbeam_context *vm ); // (defined in jones.c)
 
 void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings );
 
@@ -936,7 +929,7 @@ void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm );
 
 float *create_pinned_data_buffer( size_t size );
 
-void vmMemcpyPolIdxLists( vcsbeam_context *vm );
+void vmPushPolIdxLists( vcsbeam_context *vm );
 
 cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
 void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );

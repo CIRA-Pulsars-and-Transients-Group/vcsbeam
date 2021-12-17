@@ -46,24 +46,21 @@ void vmSetPolIdxLists( vcsbeam_context *vm )
     }
 }
 
-void get_jones(
-        // an array of pointings [pointing][ra/dec][characters]
-        int                    npointing, // number of pointings
-        MetafitsMetadata      *obs_metadata,
-        cuDoubleComplex       *D,
-        cuDoubleComplex       *B,
-        cuDoubleComplex       *invJi )
+/**
+ * Compute the Jones matrix J = DB (and its inverse)
+ */
+void vmCalcJ( vcsbeam_context *vm )
 {
 
     // Give "shorthand" variables for often-used values in metafits
-    int nant           = obs_metadata->num_ants;
-    int nchan          = obs_metadata->num_volt_fine_chans_per_coarse;
-    int npol           = obs_metadata->num_ant_pols;   // (X,Y)
+    int nant           = vm->obs_metadata->num_ants;
+    int nchan          = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    int npol           = vm->obs_metadata->num_ant_pols;   // (X,Y)
 
-    int p;       // Pointing number
-    int ant;     // Antenna number
-    int ch;      // Channel number
-    int p1, p2;  // Counters for polarisation
+    unsigned int p;  // Pointing number
+    int ant;         // Antenna number
+    int ch;          // Channel number
+    int p1, p2;      // Counters for polarisation
 
     /* easy -- now the positions from the database */
 
@@ -73,7 +70,7 @@ void get_jones(
 
     int j_idx, pb_idx;
 
-    for (p = 0; p < npointing; p++)
+    for (p = 0; p < vm->npointing; p++)
     {
         // Everything from this point on is frequency-dependent
         for (ch = 0; ch < nchan; ch++) {
@@ -85,14 +82,14 @@ void get_jones(
                 j_idx  = J_IDX(ant,ch,0,0,nchan,npol);
                 pb_idx = PB_IDX(p, ant, 0, nant, npol*npol);
 
-                mult2x2d(&(D[j_idx]), &(B[pb_idx]), Ji); // the gain in the desired look direction
+                mult2x2d(&(vm->D[j_idx]), &(vm->pb.B[pb_idx]), Ji); // the gain in the desired look direction
 
 #ifdef DEBUG
-if (ch == 10 && ant == 0)
+if (ch == 0 && ant == 0)
 {
     //fprintf( stderr, "Dd = "); fprintf_complex_matrix( stderr, Dd[dd_idx] );
-    fprintf( stderr, "D       = "); fprintf_complex_matrix( stderr, &(D[j_idx]) );
-    fprintf( stderr, "BP      = "); fprintf_complex_matrix( stderr, &(B[pb_idx]) );
+    fprintf( stderr, "D       = "); fprintf_complex_matrix( stderr, &(vm->D[j_idx]) );
+    fprintf( stderr, "BP      = "); fprintf_complex_matrix( stderr, &(vm->pb.B[pb_idx]) );
     fprintf( stderr, "J = DBP = "); fprintf_complex_matrix( stderr, Ji );
 }
 #endif
@@ -100,11 +97,11 @@ if (ch == 10 && ant == 0)
                 Fnorm = norm2x2( Ji, Ji );
 
                 if (Fnorm != 0.0)
-                    inv2x2S( Ji, &(invJi[j_idx]) );
+                    inv2x2S( Ji, &(vm->J[j_idx]) );
                 else {
                     for (p1 = 0; p1 < npol;  p1++)
                     for (p2 = 0; p2 < npol;  p2++)
-                        invJi[J_IDX(ant,ch,p1,p2,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
+                        vm->J[J_IDX(ant,ch,p1,p2,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
                 }
 
             } // end loop through antenna/pol (rf_input)

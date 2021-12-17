@@ -312,7 +312,7 @@ void vmFreeSDevice( vcsbeam_context *vm )
 void vmMallocJHost( vcsbeam_context *vm )
 {
     // Allocate memory on device
-    cudaMallocHost( &(vm->J), vm->J_size_bytes );
+    cudaMallocHost( (void **)&(vm->J), vm->J_size_bytes );
     cudaCheckErrors( "vmMallocJHost: cudaMallocHost failed" );
 }
 
@@ -325,7 +325,7 @@ void vmFreeJHost( vcsbeam_context *vm )
 void vmMallocJDevice( vcsbeam_context *vm )
 {
     // Allocate memory on device
-    cudaMalloc( &(vm->d_J), vm->d_J_size_bytes );
+    cudaMalloc( (void **)&(vm->d_J), vm->d_J_size_bytes );
     cudaCheckErrors( "vmMallocJDevice: cudaMalloc failed" );
 }
 
@@ -432,7 +432,7 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
     vm->d_Jv_size_bytes = vm->Jv_size_bytes / vm->chunks_per_second;
 }
 
-void vmMemcpyNextChunk( vcsbeam_context *vm )
+void vmPushNextChunk( vcsbeam_context *vm )
 {
     // Loads the next chunk of data onto the GPU
     char *ptrHost = (char *)vm->v + vm->chunk_to_load * vm->d_v_size_bytes;
@@ -441,6 +441,13 @@ void vmMemcpyNextChunk( vcsbeam_context *vm )
 
     // Increment the (internal) chunk counter
     vm->chunk_to_load = (vm->chunk_to_load + 1) % vm->chunks_per_second;
+}
+
+
+void vmPushJ( vcsbeam_context *vm )
+{
+    cudaMemcpy( vm->d_J, vm->J, vm->J_size_bytes, cudaMemcpyHostToDevice );
+    cudaCheckErrors( "vmMemcpyJ: cudaMemcpy failed" );
 }
 
 

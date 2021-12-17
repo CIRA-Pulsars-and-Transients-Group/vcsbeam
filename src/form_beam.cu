@@ -369,15 +369,11 @@ void cu_form_beam( int file_no,
     uintptr_t nchan  = vm->nchan;
     uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
 
-    // Copy the data to the device
-    cudaMemcpy( vm->d_J, vm->J, vm->J_size_bytes, cudaMemcpyHostToDevice );
-    cudaCheckErrors( "cu_form_beam: cudaMemcpy(J) failed" );
-
     // Processing happens in "chunks" (due to limited memory on GPU)
     int p;
     for (int ichunk = 0; ichunk < vm->chunks_per_second; ichunk++)
     {
-        vmMemcpyNextChunk( vm );
+        vmPushNextChunk( vm );
 
         // Call the kernels
         dim3 chan_samples( nchan, vm->sample_rate / vm->chunks_per_second );
@@ -454,7 +450,7 @@ void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm )
 
 }
 
-void vmMemcpyPolIdxLists( vcsbeam_context *vm )
+void vmPushPolIdxLists( vcsbeam_context *vm )
 {
     cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polQ_idxs) failed" );

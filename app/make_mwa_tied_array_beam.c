@@ -182,7 +182,7 @@ int main(int argc, char **argv)
     vmSetPolIdxLists( vm );
 
     // ... and upload them to the gpu, ready for use!
-    vmMemcpyPolIdxLists( vm );
+    vmPushPolIdxLists( vm );
 
     // Create output buffer arrays
     float *data_buffer_vdif   = NULL;
@@ -310,12 +310,8 @@ int main(int argc, char **argv)
         calc_all_geometric_delays( &vm->gdelays, beam_geom_vals );
         push_geometric_delays_to_device( &vm->gdelays );
 
-        get_jones(
-                vm->npointing,              // number of pointings
-                vm->obs_metadata,
-                vm->D,                      // Calibration Jones matrices
-                vm->pb.B,                   // Primary beam jones matrices
-                vm->J );                 // inverse Jones array (output)
+        vmCalcJ( vm );
+        vmPushJ( vm );
 
         logger_stop_stopwatch( log, "delay" );
 
