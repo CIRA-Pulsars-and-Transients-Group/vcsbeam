@@ -367,7 +367,7 @@ void cu_form_incoh_beam(
 
 void cu_form_beam( int file_no,
                    struct gpu_formbeam_arrays *g,
-                   cuDoubleComplex ****detected_beam, float *coh,
+                   cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm )
 /* Inputs:
 *   sample_rate = The voltage sample rate, in Hz
@@ -382,13 +382,11 @@ void cu_form_beam( int file_no,
 * Outputs:
 *   detected_beam = result of beamforming operation, summed over antennas
 *                   [2*nsamples][nchan][npol]
-*   coh           = result in Stokes parameters (minus noise floor)
-*                   [nsamples][nstokes][nchan]
 */
 {
     // Get shortcut variables
     uintptr_t nant   = vm->obs_metadata->num_ants;
-    uintptr_t nchan  = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nchan  = vm->nchan;
     uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
 
     // Copy the data to the device
@@ -426,49 +424,25 @@ void cu_form_beam( int file_no,
 
 
     // Flatten the bandpass
-    float *d_offsets, *offsets;
-    float *d_scales, *scales;
-    uint8_t *d_Cscaled, *Cscaled;
-
-    size_t offsets_size = vm->npointing*nchan*NSTOKES*sizeof(float);
-    size_t scales_size  = vm->npointing*nchan*NSTOKES*sizeof(float);
-    size_t Cscaled_size = vm->npointing*mpfs[0].coarse_chan_pf.sub.bytes_per_subint;
-
-    gpuErrchk(cudaMalloc( (void **)&d_offsets, offsets_size ));
-    gpuErrchk(cudaMalloc( (void **)&d_scales,  scales_size ));
-    gpuErrchk(cudaMalloc( (void **)&d_Cscaled, Cscaled_size ));
-
-    gpuErrchk(cudaMallocHost( (void **)&offsets, offsets_size ));
-    gpuErrchk(cudaMallocHost( (void **)&scales,  scales_size ));
-    gpuErrchk(cudaMallocHost( (void **)&Cscaled, Cscaled_size ));
-
     dim3 chan_stokes(nchan, NSTOKES);
-    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( g->d_coh, vm->sample_rate, d_offsets, d_scales, d_Cscaled );
+    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( g->d_coh, vm->sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
 
-    gpuErrchk(cudaMemcpy( offsets, d_offsets, offsets_size, cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( scales,  d_scales,  scales_size,  cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( Cscaled, d_Cscaled, Cscaled_size, cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( vm->offsets, vm->d_offsets, vm->offsets_size, cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( vm->scales,  vm->d_scales,  vm->scales_size,  cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpy( vm->Cscaled, vm->d_Cscaled, vm->Cscaled_size, cudaMemcpyDeviceToHost ));
 
     for (p = 0; p < vm->npointing; p++)
     {
-        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(offsets[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(scales[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(Cscaled[p*vm->sample_rate*nchan*NSTOKES]), vm->sample_rate*nchan*NSTOKES );
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(vm->offsets[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(vm->scales[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->sample_rate*nchan*NSTOKES]), vm->sample_rate*nchan*NSTOKES );
     }
 
-    gpuErrchk(cudaFreeHost( offsets ));
-    gpuErrchk(cudaFreeHost( scales ));
-    gpuErrchk(cudaFreeHost( Cscaled ));
-
-    gpuErrchk(cudaFree( d_offsets ));
-    gpuErrchk(cudaFree( d_scales ));
-    gpuErrchk(cudaFree( d_Cscaled ));
-
     // Copy the results back into host memory
-    gpuErrchk(cudaMemcpyAsync( g->Bd, g->d_Bd,    g->Bd_size,    cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( coh,   g->d_coh,   g->coh_size,   cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( g->Bd,   g->d_Bd,    g->Bd_size,    cudaMemcpyDeviceToHost ));
+    gpuErrchk(cudaMemcpyAsync( vm->coh, g->d_coh,   g->coh_size,   cudaMemcpyDeviceToHost ));
 
     // Copy the data back from Bd back into the detected_beam array
     // Make sure we put it back into the correct half of the array, depending

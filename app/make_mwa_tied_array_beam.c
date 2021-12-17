@@ -176,10 +176,9 @@ int main(int argc, char **argv)
     cu_upload_pol_idx_lists( &gf );
 
     // Create output buffer arrays
-    float *data_buffer_coh    = NULL;
     float *data_buffer_vdif   = NULL;
 
-    data_buffer_coh   = create_pinned_data_buffer( vm->npointing * nchans * NSTOKES * nsamples * sizeof(float) );
+    vmMallocCohBeamHost( vm );
     data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * vm->npointing * 2 * sizeof(float) );
 
     if (vm->do_inverse_pfb)
@@ -247,6 +246,7 @@ int main(int argc, char **argv)
     // ------------------
     vmCreatePrimaryBeam( vm );
     vmCreateGeometricDelays( vm );
+    vmCreateStatistics( vm, mpfs );
 
     // ------------------
 
@@ -328,7 +328,7 @@ int main(int argc, char **argv)
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
 
-        cu_form_beam( timestep_idx, &gf, detected_beam, data_buffer_coh, mpfs, vm );
+        cu_form_beam( timestep_idx, &gf, detected_beam, mpfs, vm );
 
         logger_stop_stopwatch( log, "calc" );
 
@@ -387,12 +387,12 @@ int main(int argc, char **argv)
 
     free( D );
 
-    cudaFreeHost( data_buffer_coh   );
-    cudaCheckErrors( "cudaFreeHost(data_buffer_coh) failed" );
+    vmFreeCohBeamHost( vm );
     cudaFreeHost( data_buffer_vdif  );
     cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
 
     vmFreeDataHost( vm );
+    vmDestroyStatistics( vm );
 
     free( opts.pointings_file  );
     free( opts.datadir         );

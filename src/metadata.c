@@ -104,6 +104,8 @@ vcsbeam_context *init_vcsbeam_context(
     vm->bytes_per_second = vm->vcs_metadata->num_voltage_blocks_per_second *
                            vm->vcs_metadata->voltage_block_size_bytes;
 
+    vm->nchan = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+
     // Assume that the whole GPU is available
     vm->data_size_bytes = vm->bytes_per_second;
     vmSetMaxGPUMem( vm, 0 ); // "0" = Use all available GPU memory
@@ -209,6 +211,22 @@ void vmFreeDataDevice( vcsbeam_context *vm )
     cudaCheckErrors( "vmFreeDataDevice: cudaFree(d_data) failed" );
 }
 
+void vmMallocCohBeamHost( vcsbeam_context *vm )
+{
+    // Calculate and store the size of this array
+    vm->coh_size_bytes = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
+
+    // Allocate memory on host
+    cudaMallocHost( &(vm->coh), vm->coh_size_bytes );
+    cudaCheckErrors( "vmMallocCohBeamHost: cudaMallocHost failed" );
+}
+
+void vmFreeCohBeamHost( vcsbeam_context *vm )
+{
+    cudaFreeHost( vm->coh );
+    cudaCheckErrors( "cudaFreeHost(coh) failed" );
+}
+
 void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 {
     vm->max_gpu_mem_bytes = max_gpu_mem_bytes;
@@ -285,6 +303,46 @@ void vmDestroyCudaStreams( vcsbeam_context *vm )
     }
 
     free( vm->streams );
+}
+
+void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
+{
+    uintptr_t nchan  = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+
+    vm->offsets_size = vm->npointing*nchan*NSTOKES*sizeof(float);
+    vm->scales_size  = vm->npointing*nchan*NSTOKES*sizeof(float);
+    vm->Cscaled_size = vm->npointing*mpfs[0].coarse_chan_pf.sub.bytes_per_subint;
+
+    cudaMalloc( (void **)&vm->d_offsets, vm->offsets_size );
+    cudaCheckErrors( "vmCreateStatistics: cudaMalloc(offsets) failed" );
+    cudaMalloc( (void **)&vm->d_scales,  vm->scales_size );
+    cudaCheckErrors( "vmCreateStatistics: cudaMalloc(scales) failed" );
+    cudaMalloc( (void **)&vm->d_Cscaled, vm->Cscaled_size );
+    cudaCheckErrors( "vmCreateStatistics: cudaMalloc(Cscaled) failed" );
+
+    cudaMallocHost( (void **)&vm->offsets, vm->offsets_size );
+    cudaCheckErrors( "vmCreateStatistics: cudaMallocHost(offsets) failed" );
+    cudaMallocHost( (void **)&vm->scales,  vm->scales_size );
+    cudaCheckErrors( "vmCreateStatistics: cudaMallocHost(scales) failed" );
+    cudaMallocHost( (void **)&vm->Cscaled, vm->Cscaled_size );
+    cudaCheckErrors( "vmCreateStatistics: cudaMallocHost(Cscaled) failed" );
+}
+
+void vmDestroyStatistics( vcsbeam_context *vm )
+{
+    cudaFreeHost( vm->offsets );
+    cudaCheckErrors( "vmDestroyStatistics: cudaFreeHost(offsets) failed" );
+    cudaFreeHost( vm->scales );
+    cudaCheckErrors( "vmDestroyStatistics: cudaFreeHost(scales) failed" );
+    cudaFreeHost( vm->Cscaled );
+    cudaCheckErrors( "vmDestroyStatistics: cudaFreeHost(Cscaled) failed" );
+
+    cudaFree( vm->d_offsets );
+    cudaCheckErrors( "vmDestroyStatistics: cudaFree(offsets) failed" );
+    cudaFree( vm->d_scales );
+    cudaCheckErrors( "vmDestroyStatistics: cudaFree(scales) failed" );
+    cudaFree( vm->d_Cscaled );
+    cudaCheckErrors( "vmDestroyStatistics: cudaFree(Cscaled) failed" );
 }
 
 char **create_filenames(
