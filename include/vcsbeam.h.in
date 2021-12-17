@@ -457,10 +457,13 @@ typedef struct vcsbeam_context_t
     // for convenience.
     int sample_rate;                  // Number of samples per second
     int bytes_per_second;             // Bytes per second of data
+    int num_not_flagged;              // Number of RF inputs that are not flagged
 
     // *** FOR INTERNAL USE ONLY ***
     int chunk_to_load;                // Which chunk number to load to gpu next
     vcsbeam_datatype datatype;        // What format the input data samples are in
+
+    cudaStream_t *streams;            // CUDA streams used for forming multiple tied-array beams
 } vcsbeam_context;
 
 #define NO_ANTENNA_FOUND  -1
@@ -469,7 +472,7 @@ typedef struct vcsbeam_context_t
 extern "C" {
 #endif
 
-/* INIT_VCSBEAM_METADATA
+/* INIT_VCSBEAM_CONTEXT
  * =====================
  *
  * Using mwalib, set up the context and metadata structs required to process
@@ -526,6 +529,9 @@ void vmMemcpyNextChunk( vcsbeam_context *vm );
 void vmCreatePrimaryBeam( vcsbeam_context *vm );
 void vmCreateGeometricDelays( vcsbeam_context *vm );
 
+void vmCreateCudaStreams( vcsbeam_context *vm );
+void vmDestroyCudaStreams( vcsbeam_context *vm );
+
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
         const struct MetafitsMetadata *metafits_metadata,
@@ -561,7 +567,7 @@ long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int rel
 long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str );
 uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_coarse_chan_str );
 
-int get_num_not_flagged_rf_inputs( vcsbeam_context *vm );
+void vmSetNumNotFlaggedRFInputs( vcsbeam_context *vm );
 
 Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput );
 Antenna *find_matching_antenna( MetafitsMetadata *metadata, Rfinput *rfinput );
@@ -885,12 +891,9 @@ void cu_form_incoh_beam(
         );
 
 
-void cu_form_beam( cuDoubleComplex *d_phi,
-                   int file_no,
-                   int npointing, int nstation, int nchan,
-                   int npol, double invw, struct gpu_formbeam_arrays *g,
+void cu_form_beam( int file_no,
+                   struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
-                   cudaStream_t *streams,
                    mpi_psrfits *mpfs, vcsbeam_context *vm );
 
 float *create_pinned_data_buffer( size_t size );

@@ -365,25 +365,17 @@ void cu_form_incoh_beam(
     gpuErrchk(cudaMemcpy( Iscaled, d_Iscaled, Iscaled_size,        cudaMemcpyDeviceToHost ));
 }
 
-void cu_form_beam( cuDoubleComplex *d_phi,
-                   int file_no,
-                   int npointing, int nants, int nchan,
-                   int npol, double invw,
+void cu_form_beam( int file_no,
                    struct gpu_formbeam_arrays *g,
                    cuDoubleComplex ****detected_beam, float *coh,
-                   cudaStream_t *streams,
                    mpi_psrfits *mpfs, vcsbeam_context *vm )
 /* Inputs:
-*   data    = array of 4bit+4bit complex numbers. For data order, refer to the
-*             documentation.
 *   sample_rate = The voltage sample rate, in Hz
-*   d_phi   = geometric delays (device)  [pointing][nants][nchan]
 *   J       = inverse Jones matrix.  [nants][nchan][npol][npol]
 *   file_no = number of file we are processing, starting at 0.
 *   nants     = number of antennas
 *   nchan        = number of channels
 *   npol         = number of polarisations (=2)
-*   invw         = the reciprocal of the sum of the antenna weights
 *   g            = struct containing pointers to various arrays on
 *                  both host and device
 *
@@ -394,6 +386,11 @@ void cu_form_beam( cuDoubleComplex *d_phi,
 *                   [nsamples][nstokes][nchan]
 */
 {
+    // Get shortcut variables
+    uintptr_t nant   = vm->obs_metadata->num_ants;
+    uintptr_t nchan  = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
+
     // Copy the data to the device
     gpuErrchk(cudaMemcpyAsync( g->d_J,    g->J, g->J_size,    cudaMemcpyHostToDevice ));
 
@@ -404,26 +401,21 @@ void cu_form_beam( cuDoubleComplex *d_phi,
         vmMemcpyNextChunk( vm );
 
         // Call the kernels
-        // samples_chan(index=blockIdx.x  size=gridDim.x,
-        //              index=blockIdx.y  size=gridDim.y)
-        // stat_point  (index=threadIdx.x size=blockDim.x,
-        //              index=threadIdx.y size=blockDim.y)
-        //dim3 samples_chan(sample_rate, nchan);
         dim3 chan_samples( nchan, vm->sample_rate / vm->chunks_per_second );
-        dim3 stat( nants );
+        dim3 stat( nant );
 
         // convert the data and multiply it by J
-        invj_the_data<<<chan_samples, stat>>>( vm->d_data, g->d_J, d_phi, g->d_JDq, g->d_JDp,
+        invj_the_data<<<chan_samples, stat>>>( vm->d_data, g->d_J, vm->gdelays.d_phi, g->d_JDq, g->d_JDp,
                                                g->d_polQ_idxs, g->d_polP_idxs,
                                                npol, vm->datatype );
 
         // Send off a parallel CUDA stream for each pointing
-        for (p = 0; p < npointing; p++ )
+        for (p = 0; p < vm->npointing; p++ )
         {
             // Call the beamformer kernel
             // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
-            beamform_kernel<<<chan_samples, stat, 11*nants*sizeof(double), streams[p]>>>( g->d_JDq, g->d_JDp,
-                            d_phi, invw,
+            beamform_kernel<<<chan_samples, stat, 11*nant*sizeof(double), vm->streams[p]>>>( g->d_JDq, g->d_JDp,
+                            vm->gdelays.d_phi, 1.0/(double)vm->num_not_flagged,
                             p, ichunk*vm->sample_rate/vm->chunks_per_second, vm->chunks_per_second,
                             g->d_Bd, g->d_coh, npol );
 
@@ -438,9 +430,9 @@ void cu_form_beam( cuDoubleComplex *d_phi,
     float *d_scales, *scales;
     uint8_t *d_Cscaled, *Cscaled;
 
-    size_t offsets_size = npointing*nchan*NSTOKES*sizeof(float);
-    size_t scales_size  = npointing*nchan*NSTOKES*sizeof(float);
-    size_t Cscaled_size = npointing*mpfs[0].coarse_chan_pf.sub.bytes_per_subint;
+    size_t offsets_size = vm->npointing*nchan*NSTOKES*sizeof(float);
+    size_t scales_size  = vm->npointing*nchan*NSTOKES*sizeof(float);
+    size_t Cscaled_size = vm->npointing*mpfs[0].coarse_chan_pf.sub.bytes_per_subint;
 
     gpuErrchk(cudaMalloc( (void **)&d_offsets, offsets_size ));
     gpuErrchk(cudaMalloc( (void **)&d_scales,  scales_size ));
@@ -451,7 +443,7 @@ void cu_form_beam( cuDoubleComplex *d_phi,
     gpuErrchk(cudaMallocHost( (void **)&Cscaled, Cscaled_size ));
 
     dim3 chan_stokes(nchan, NSTOKES);
-    renormalise_channels_kernel<<<npointing, chan_stokes, 0, streams[0]>>>( g->d_coh, vm->sample_rate, d_offsets, d_scales, d_Cscaled );
+    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( g->d_coh, vm->sample_rate, d_offsets, d_scales, d_Cscaled );
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
 
@@ -459,7 +451,7 @@ void cu_form_beam( cuDoubleComplex *d_phi,
     gpuErrchk(cudaMemcpy( scales,  d_scales,  scales_size,  cudaMemcpyDeviceToHost ));
     gpuErrchk(cudaMemcpy( Cscaled, d_Cscaled, Cscaled_size, cudaMemcpyDeviceToHost ));
 
-    for (p = 0; p < npointing; p++)
+    for (p = 0; p < vm->npointing; p++)
     {
         memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(offsets[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
         memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(scales[p*nchan*NSTOKES]), nchan*NSTOKES*sizeof(float) );
@@ -486,7 +478,7 @@ void cu_form_beam( cuDoubleComplex *d_phi,
 
     // TODO: turn detected_beam into a 1D array
     int ch, s, pol;
-    for (p   = 0; p   < npointing  ; p++  )
+    for (p   = 0; p   < vm->npointing  ; p++  )
     for (s   = 0; s   < vm->sample_rate; s++  )
     for (ch  = 0; ch  < nchan      ; ch++ )
     for (pol = 0; pol < npol       ; pol++)

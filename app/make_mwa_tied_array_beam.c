@@ -125,7 +125,7 @@ int main(int argc, char **argv)
     // Allocate memory for various data products
     cuDoubleComplex  ****detected_beam = create_detected_beam( vm->npointing, 2*nsamples, nchans, npols );
 
-    double invw = 1.0/get_num_not_flagged_rf_inputs( vm );
+    vmSetNumNotFlaggedRFInputs( vm );
 
     // Get pointing geometry information
     struct beam_geom beam_geom_vals[vm->npointing];
@@ -189,9 +189,7 @@ int main(int argc, char **argv)
     }
 
     // Set up parallel streams
-    cudaStream_t streams[vm->npointing];
-    for (p = 0; p < vm->npointing; p++)
-        cudaStreamCreate(&(streams[p])) ;
+    vmCreateCudaStreams( vm );
 
     // Create structures for holding header information
     mpi_psrfits mpfs[vm->npointing];
@@ -330,10 +328,7 @@ int main(int argc, char **argv)
         // Form the beams
         logger_start_stopwatch( log, "calc", true );
 
-        cu_form_beam( vm->gdelays.d_phi, timestep_idx,
-                vm->npointing, nants, nchans, npols, invw, &gf,
-                detected_beam, data_buffer_coh,
-                streams, mpfs, vm );
+        cu_form_beam( timestep_idx, &gf, detected_beam, data_buffer_coh, mpfs, vm );
 
         logger_stop_stopwatch( log, "calc" );
 
@@ -423,6 +418,10 @@ int main(int argc, char **argv)
     free_primary_beam( &vm->pb );
     free_geometric_delays( &vm->gdelays );
 
+    // Free the CUDA streams
+    vmDestroyCudaStreams( vm );
+
+    // Destroy the whole context
     destroy_vcsbeam_context( vm );
 
     // Finalise MPI

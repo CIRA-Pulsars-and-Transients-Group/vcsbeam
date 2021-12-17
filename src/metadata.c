@@ -263,6 +263,30 @@ void vmCreateGeometricDelays( vcsbeam_context *vm )
     create_geometric_delays( &vm->gdelays, vm->obs_metadata, vm->vcs_metadata, vm->coarse_chan_idxs_to_process[0], vm->npointing );
 }
 
+void vmCreateCudaStreams( vcsbeam_context *vm )
+{
+    vm->streams = (cudaStream_t *)malloc( vm->npointing * sizeof(cudaStream_t) );
+
+    unsigned int p;
+    for (p = 0; p < vm->npointing; p++)
+    {
+        cudaStreamCreate( &(vm->streams[p]) );
+        cudaCheckErrors( "vmCreateCudaStreams: cudaStreamCreate failed" );
+    }
+}
+
+void vmDestroyCudaStreams( vcsbeam_context *vm )
+{
+    unsigned int p;
+    for (p = 0; p < vm->npointing; p++)
+    {
+        cudaStreamDestroy( vm->streams[p] );
+        cudaCheckErrors( "vmDestroyCudaStreams: cudaStreamDestroy failed" );
+    }
+
+    free( vm->streams );
+}
+
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,
         const struct MetafitsMetadata *metafits_metadata,
@@ -526,15 +550,13 @@ uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_
 }
 
 
-int get_num_not_flagged_rf_inputs( vcsbeam_context *vm )
+void vmSetNumNotFlaggedRFInputs( vcsbeam_context *vm )
 {
-    int num_not_flagged = 0;
+    vm->num_not_flagged = 0;
     uintptr_t i;
     for (i = 0; i < vm->obs_metadata->num_rf_inputs; i++)
         if (!(vm->obs_metadata->rf_inputs[i].flagged))
-            num_not_flagged++;
-
-    return num_not_flagged;
+            vm->num_not_flagged++;
 }
 
 Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput )
