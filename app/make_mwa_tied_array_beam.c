@@ -178,7 +178,7 @@ int main(int argc, char **argv)
     create_antenna_lists( vm->obs_metadata, vm->polQ_idxs, vm->polP_idxs );
 
     // ... and upload them to the gpu, ready for use!
-    cu_upload_pol_idx_lists( &gf );
+    cu_upload_pol_idx_lists( vm );
 
     // Create output buffer arrays
     float *data_buffer_vdif   = NULL;

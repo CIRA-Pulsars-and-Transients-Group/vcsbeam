@@ -284,19 +284,21 @@ void vmMallocPQIdxsHost( vcsbeam_context *vm )
     uintptr_t nant = vm->obs_metadata->num_ants;
 
     // Calculate and store the size of this array
-    vm->pol_idxs_size = nants * sizeof(uint32_t);
+    vm->pol_idxs_size = nant * sizeof(uint32_t);
 
     // Allocate memory on device
-    cudaMallocHost( &(vm->polP_idxs, vm->pol_idxs_size );
+    cudaMallocHost( (void **)&(vm->polP_idxs), vm->pol_idxs_size );
     cudaCheckErrors( "vmMallocPQIdxsHost: cudaMallocHost(polP_idxs) failed" );
-    cudaMallocHost( &(vm->polQ_idxs, vm->pol_idxs_size );
+    cudaMallocHost( (void **)&(vm->polQ_idxs), vm->pol_idxs_size );
     cudaCheckErrors( "vmMallocPQIdxsHost: cudaMallocHost(polQ_idxs) failed" );
 }
 
 void vmFreePQIdxsHost( vcsbeam_context *vm )
 {
     cudaFreeHost( vm->polP_idxs );
-    cudaCheckErrors( "vmFreePQIdxsHost: cudaFreeHost failed" );
+    cudaCheckErrors( "vmFreePQIdxsHost: cudaFreeHost(polP_idxs) failed" );
+    cudaFreeHost( vm->polQ_idxs );
+    cudaCheckErrors( "vmFreePQIdxsHost: cudaFreeHost(polQ_idxs) failed" );
 }
 
 
@@ -305,19 +307,21 @@ void vmMallocPQIdxsDevice( vcsbeam_context *vm )
     uintptr_t nant = vm->obs_metadata->num_ants;
 
     // Calculate and store the size of this array
-    vm->pol_idxs_size = nants * sizeof(uint32_t);
+    vm->d_pol_idxs_size = nant * sizeof(uint32_t);
 
     // Allocate memory on device
-    cudaMalloc( &(vm->polP_idxs, vm->pol_idxs_size );
+    cudaMalloc( (void **)&(vm->d_polP_idxs), vm->d_pol_idxs_size );
     cudaCheckErrors( "vmMallocPQIdxsDevice: cudaMalloc(polP_idxs) failed" );
-    cudaMalloc( &(vm->polQ_idxs, vm->pol_idxs_size );
+    cudaMalloc( (void **)&(vm->d_polQ_idxs), vm->d_pol_idxs_size );
     cudaCheckErrors( "vmMallocPQIdxsDevice: cudaMalloc(polQ_idxs) failed" );
 }
 
 void vmFreePQIdxsDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->polP_idxs );
-    cudaCheckErrors( "vmFreePQIdxsDevice: cudaFree failed" );
+    cudaFree( vm->d_polP_idxs );
+    cudaCheckErrors( "vmFreePQIdxsDevice: cudaFree(polP_idxs) failed" );
+    cudaFree( vm->d_polQ_idxs );
+    cudaCheckErrors( "vmFreePQIdxsDevice: cudaFree(polQ_idxs) failed" );
 }
 
 

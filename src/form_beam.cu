@@ -510,13 +510,6 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm,
     gpuErrchk(cudaMalloc( (void **)&g->d_JDq,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_JDp,   g->JD_size ));
     gpuErrchk(cudaMalloc( (void **)&g->d_Bd,    g->Bd_size ));
-
-    // Allocate memory on both host and device for polX and polY idx arrays
-    g->pol_idxs_size = nants * sizeof(uint32_t);
-    cudaMallocHost( &g->polQ_idxs, g->pol_idxs_size );
-    cudaMallocHost( &g->polP_idxs, g->pol_idxs_size );
-    gpuErrchk(cudaMalloc( (void **)&g->d_polQ_idxs, g->pol_idxs_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_polP_idxs, g->pol_idxs_size ));
 }
 
 void cu_upload_pol_idx_lists( vcsbeam_context *vm )
@@ -529,11 +522,7 @@ void free_formbeam( struct gpu_formbeam_arrays *g )
 {
     // Free memory on host and device
     cudaFreeHost( g->Bd );
-    cudaFreeHost( g->polQ_idxs );
-    cudaFreeHost( g->polP_idxs );
     cudaFree( g->d_Bd );
-    cudaFree( g->d_polQ_idxs );
-    cudaFree( g->d_polP_idxs );
 }
 
 float *create_pinned_data_buffer( size_t size )
