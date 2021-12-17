@@ -396,29 +396,8 @@ void vmBeamformChunk( vcsbeam_context *vm )
 
 }
 
-void cu_form_beam( cuDoubleComplex ****detected_beam,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm )
-/* Inputs:
-*   sample_rate = The voltage sample rate, in Hz
-*   J       = inverse Jones matrix.  [nants][nchan][npol][npol]
-*   file_no = number of file we are processing, starting at 0.
-*   nants     = number of antennas
-*   nchan        = number of channels
-*   npol         = number of polarisations (=2)
-*   g            = struct containing pointers to various arrays on
-*                  both host and device
-*
-* Outputs:
-*   detected_beam = result of beamforming operation, summed over antennas
-*                   [2*nsamples][nchan][npol]
-*/
+void vmBeamformSecond( vcsbeam_context *vm )
 {
-    // Get shortcut variables
-    uintptr_t nchan  = vm->nchan;
-    uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
-
-    int file_no = vm->chunk_to_load / vm->chunks_per_second;
-
     // Processing a second's worth of "chunks"
     int chunk;
     for (chunk = 0; chunk < vm->chunks_per_second; chunk++)
@@ -428,11 +407,28 @@ void cu_form_beam( cuDoubleComplex ****detected_beam,
         vm->chunk_to_load++;
     }
     gpuErrchk( cudaDeviceSynchronize() );
+}
 
-
+void vmPullE( vcsbeam_context *vm )
+{
     // Copy the results back into host memory
-    gpuErrchk(cudaMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, cudaMemcpyDeviceToHost ));
+    cudaMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, cudaMemcpyDeviceToHost );
+    cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
+}
+
+void vmPullS( vcsbeam_context *vm )
+{
+    cudaMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, cudaMemcpyDeviceToHost );
+    cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
+}
+
+void prepare_detected_beam( cuDoubleComplex ****detected_beam,
+                   mpi_psrfits *mpfs, vcsbeam_context *vm )
+{
+    // Get shortcut variables
+    uintptr_t nchan  = vm->nchan;
+    uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
+    int file_no = vm->chunk_to_load / vm->chunks_per_second;
 
     // Copy the data back from e back into the detected_beam array
     // Make sure we put it back into the correct half of the array, depending

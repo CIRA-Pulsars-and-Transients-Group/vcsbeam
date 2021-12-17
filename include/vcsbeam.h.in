@@ -927,7 +927,12 @@ void cu_form_incoh_beam(
         );
 
 
-void cu_form_beam( cuDoubleComplex ****detected_beam,
+void vmBeamformChunk( vcsbeam_context *vm );
+void vmBeamformSecond( vcsbeam_context *vm );
+void vmPullE( vcsbeam_context *vm );
+void vmPullS( vcsbeam_context *vm );
+
+void prepare_detected_beam( cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm );
 void cu_flatten_bandpass( mpi_psrfits *mpfs, vcsbeam_context *vm );
 

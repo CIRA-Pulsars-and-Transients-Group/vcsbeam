@@ -294,7 +294,9 @@ int main(int argc, char **argv)
         // Form the beams
         logger_start_stopwatch( vm->log, "calc", true );
 
-        cu_form_beam( detected_beam, mpfs, vm );
+        vmBeamformSecond( vm );
+        vmPullE( vm );
+        vmPullS( vm );
         cu_flatten_bandpass( mpfs, vm );
 
         logger_stop_stopwatch( vm->log, "calc" );
@@ -304,6 +306,7 @@ int main(int argc, char **argv)
 
         if (vm->do_inverse_pfb)
         {
+            prepare_detected_beam( detected_beam, mpfs, vm );
             cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
