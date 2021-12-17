@@ -508,6 +508,10 @@ typedef struct vcsbeam_context_t
     int num_not_flagged;              // Number of RF inputs that are not flagged
     int nchan;                        // Number of fine channels
 
+    // VDIF output
+    vdif_header      vhdr;
+    struct vdifinfo *vf;
+
     // Beam output statistics
     float *d_offsets, *offsets;
     float *d_scales, *scales;
@@ -1086,14 +1090,9 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output );
 void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
         float *data_buffer_vdif );
 
-void populate_vdif_header(
-        struct vdifinfo  *vf,
-        vdif_header      *vhdr,
-        MetafitsMetadata *obs_metadata,
-        VoltageMetadata  *vcs_metadata,
-        int               coarse_chan_idx,
-        beam_geom        *beam_geom_vals,
-        int               npointing );
+void vmPopulateVDIFHeader(
+        vcsbeam_context  *vm,
+        beam_geom        *beam_geom_vals );
 
 cuFloatComplex get_std_dev_complex( cuFloatComplex *input, int nsamples );
 

@@ -187,10 +187,6 @@ int main(int argc, char **argv)
                 true );
     }
 
-    vdif_header     vhdr;
-    struct vdifinfo *vf;
-    vf = (struct vdifinfo *)malloc(vm->npointing * sizeof(struct vdifinfo));
-
     /****************************
      * GET CALIBRATION SOLUTION *
      ****************************/
@@ -221,13 +217,8 @@ int main(int argc, char **argv)
 
     // ------------------
 
-    sprintf( vm->log_message, "Preparing headers for output (receiver channel %lu)",
-            vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number );
-    logger_message( vm->log, vm->log_message );
-
     // Populate the relevant header structs
-    populate_vdif_header( vf, &vhdr, vm->obs_metadata, vm->vcs_metadata, vm->coarse_chan_idxs_to_process[0],
-            beam_geom_vals, vm->npointing );
+    vmPopulateVDIFHeader( vm, beam_geom_vals );
 
     // Begin the main loop: go through data one second at a time
 
@@ -254,7 +245,7 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( vm, mpfs, vf, &vhdr, data_buffer_vdif );
+            write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif );
         }
 
         // Form the beams
@@ -274,7 +265,7 @@ int main(int argc, char **argv)
             vmPullE( vm );
             prepare_detected_beam( detected_beam, mpfs, vm );
             cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
-                    nsamples, nchans, npols, vf->sizeof_buffer,
+                    nsamples, nchans, npols, vm->vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
 
             logger_stop_stopwatch( vm->log, "ipfb" );
@@ -295,7 +286,7 @@ int main(int argc, char **argv)
     }
 
     // Write out the last second's worth of data
-    write_step( vm, mpfs, vf, &vhdr, data_buffer_vdif );
+    write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif );
 
     logger_message( vm->log, "\n*****END BEAMFORMING*****\n" );
 
@@ -306,8 +297,8 @@ int main(int argc, char **argv)
 
         if (vm->output_coarse_channels)
         {
-            free( vf[p].b_scales  );
-            free( vf[p].b_offsets );
+            free( vm->vf[p].b_scales  );
+            free( vm->vf[p].b_offsets );
         }
     }
 
