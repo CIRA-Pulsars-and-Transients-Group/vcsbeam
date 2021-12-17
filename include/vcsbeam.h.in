@@ -202,15 +202,10 @@ struct calibration
 extern "C" {
 #endif
 
-cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, bool use_bandpass, const char *caldir,
-        uintptr_t coarse_chan_idx, logger *log );
 
 void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
         MetafitsMetadata *cal_metadata, char *filename );
-cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
-        MetafitsMetadata *cal_metadata, int coarse_chan, char *gains_file );
 
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
 void zero_PQ_and_QP( cuDoubleComplex *J );
@@ -454,6 +449,10 @@ typedef struct vcsbeam_context_t
     uintptr_t J_size_bytes;           // The size of J in bytes
     uintptr_t d_J_size_bytes;         // The size of d_J in bytes
 
+    cuDoubleComplex *D, *d_D;         // The buffers for calibration solutions on host/device
+    uintptr_t D_size_bytes;           // The size of D in bytes
+    uintptr_t d_D_size_bytes;         // The size of d_D in bytes
+
     uint32_t *polP_idxs, *d_polP_idxs; // List of indices for VCS-ordered data
     uint32_t *polQ_idxs, *d_polQ_idxs;
     uintptr_t pol_idxs_size;           // The size of (each of) the P/Q idxs (host) arrays
@@ -561,17 +560,23 @@ void vmFreeDataHost( vcsbeam_context *vm );
 void vmMallocDataDevice( vcsbeam_context *vm );
 void vmFreeDataDevice( vcsbeam_context *vm );
 
-void vmMallocCohBeamHost( vcsbeam_context *vm );
-void vmFreeCohBeamHost( vcsbeam_context *vm );
+void vmMallocSHost( vcsbeam_context *vm );
+void vmFreeSHost( vcsbeam_context *vm );
 
-void vmMallocCohBeamDevice( vcsbeam_context *vm );
-void vmFreeCohBeamDevice( vcsbeam_context *vm );
+void vmMallocSDevice( vcsbeam_context *vm );
+void vmFreeSDevice( vcsbeam_context *vm );
 
 void vmMallocJHost( vcsbeam_context *vm );
 void vmFreeJHost( vcsbeam_context *vm );
 
 void vmMallocJDevice( vcsbeam_context *vm );
 void vmFreeJDevice( vcsbeam_context *vm );
+
+void vmMallocDHost( vcsbeam_context *vm );
+void vmFreeDHost( vcsbeam_context *vm );
+
+void vmMallocDDevice( vcsbeam_context *vm );
+void vmFreeDDevice( vcsbeam_context *vm );
 
 void vmMallocPQIdxsHost( vcsbeam_context *vm );
 void vmFreePQIdxsHost( vcsbeam_context *vm );
@@ -592,6 +597,11 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs );
 void vmDestroyStatistics( vcsbeam_context *vm );
 
 void vmSetPolIdxLists( vcsbeam_context *vm ); // (defined in jones.c)
+
+// (defined in calibration.c:)
+void vmLoadRTSSolution( vcsbeam_context *vm,
+        bool use_bandpass, const char *caldir, int coarse_chan_idx, logger *log );
+void vmLoadOffringaSolution( vcsbeam_context *vm, int coarse_chan, char *gains_file );
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,

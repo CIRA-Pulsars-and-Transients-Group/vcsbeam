@@ -167,7 +167,7 @@ int main(int argc, char **argv)
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
     malloc_formbeam( &gf, vm );
     vmMallocDataDevice( vm );
-    vmMallocCohBeamDevice( vm );
+    vmMallocSDevice( vm );
     vmMallocJHost( vm );
     vmMallocJDevice( vm );
     vmMallocPQIdxsHost( vm );
@@ -182,7 +182,7 @@ int main(int argc, char **argv)
     // Create output buffer arrays
     float *data_buffer_vdif   = NULL;
 
-    vmMallocCohBeamHost( vm );
+    vmMallocSHost( vm );
     data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * vm->npointing * 2 * sizeof(float) );
 
     if (vm->do_inverse_pfb)
@@ -220,29 +220,28 @@ int main(int argc, char **argv)
      * GET CALIBRATION SOLUTION *
      ****************************/
 
-    cuDoubleComplex *D = NULL; // See Eqs. (27) to (29) in Ord et al. (2019)
+    vmMallocDHost( vm );
+    vmMallocDDevice( vm );
 
     if (cal.cal_type == CAL_RTS)
     {
-        D = get_rts_solution( vm->cal_metadata, vm->obs_metadata,
-                cal.use_bandpass, cal.caldir,
-                vm->coarse_chan_idxs_to_process[0], log );
+        vmLoadRTSSolution( vm, cal.use_bandpass, cal.caldir, mpi_proc_id, log );
     }
     else if (cal.cal_type == CAL_OFFRINGA)
     {
-        D = read_offringa_gains_file( vm->obs_metadata, vm->cal_metadata, mpi_proc_id, cal.caldir );
+        vmLoadOffringaSolution( vm, mpi_proc_id, cal.caldir );
     }
 
     // Flag antennas that need flagging
     if (opts.custom_flags != NULL)
     {
         parse_flagged_tilenames_file( opts.custom_flags, &cal );
-        set_flagged_tiles_to_zero( &cal, vm->obs_metadata, D );
+        set_flagged_tiles_to_zero( &cal, vm->obs_metadata, vm->D );
     }
 
     // Apply any calibration corrections
     parse_calibration_correction_file( vm->obs_metadata->obs_id, &cal );
-    apply_calibration_corrections( &cal, D, vm->obs_metadata,
+    apply_calibration_corrections( &cal, vm->D, vm->obs_metadata,
             vm->coarse_chan_idxs_to_process[0], log );
 
     // ------------------
@@ -314,7 +313,7 @@ int main(int argc, char **argv)
         get_jones(
                 vm->npointing,              // number of pointings
                 vm->obs_metadata,
-                D,                      // Calibration Jones matrices
+                vm->D,                      // Calibration Jones matrices
                 vm->pb.B,                   // Primary beam jones matrices
                 vm->J );                 // inverse Jones array (output)
 
@@ -390,9 +389,7 @@ int main(int argc, char **argv)
 
     free_pfb_filter( filter );
 
-    free( D );
-
-    vmFreeCohBeamHost( vm );
+    vmFreeSHost( vm );
     cudaFreeHost( data_buffer_vdif  );
     cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
 
@@ -411,9 +408,11 @@ int main(int argc, char **argv)
 
     free_formbeam( &gf );
     vmFreeDataDevice( vm );
-    vmFreeCohBeamDevice( vm );
+    vmFreeSDevice( vm );
     vmFreeJDevice( vm );
     vmFreeJHost( vm );
+    vmFreeDHost( vm );
+    vmFreeDDevice( vm );
     vmFreePQIdxsDevice( vm );
     vmFreePQIdxsHost( vm );
 

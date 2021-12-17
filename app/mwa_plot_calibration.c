@@ -72,17 +72,28 @@ int main(int argc, char **argv)
     uintptr_t Ch, ch; // (Coarse channel idx, fine channel idx)
     cuDoubleComplex *D[ncoarse_chans]; // See Eqs. (27) to (29) in Ord et al. (2019)
     logger *plog = log;
+
+    vcsbeam_context vm;
+    vm.obs_metadata = obs_metadata;
+    vm.cal_metadata = cal_metadata;
+
+    vmMallocDHost( &vm );
+
     for (Ch = 0; Ch < ncoarse_chans; Ch++)
     {
         // Read in the calibration solution
         if (cal.cal_type == CAL_RTS)
         {
-            D[Ch] = get_rts_solution( cal_metadata, obs_metadata, cal.use_bandpass, cal.caldir, Ch, NULL );
+            vmLoadRTSSolution( &vm, cal.use_bandpass, cal.caldir, Ch, NULL );
         }
         else if (cal.cal_type == CAL_OFFRINGA)
         {
-            D[Ch] = read_offringa_gains_file( obs_metadata, cal_metadata, Ch, cal.caldir );
+            vmLoadOffringaSolution( &vm, Ch, cal.caldir );
         }
+
+        // Copy the solution into the "D" arrays
+        D[Ch] = (cuDoubleComplex *)malloc( vm.D_size_bytes );
+        memcpy( D[Ch], vm.D, vm.D_size_bytes );
 
         // Flag antennas that need flagging
         if (opts.custom_flags != NULL)
@@ -98,6 +109,8 @@ int main(int argc, char **argv)
         // After the first coarse channel, don't print out any more messages
         plog = NULL;
     }
+
+    vmFreeDHost( &vm );
 
     // Print out results
     FILE *fout = stdout;

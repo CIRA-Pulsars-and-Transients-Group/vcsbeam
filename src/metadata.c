@@ -210,36 +210,36 @@ void vmFreeDataDevice( vcsbeam_context *vm )
     cudaCheckErrors( "vmFreeDataDevice: cudaFree(d_data) failed" );
 }
 
-void vmMallocCohBeamHost( vcsbeam_context *vm )
+void vmMallocSHost( vcsbeam_context *vm )
 {
     // Calculate and store the size of this array
     vm->S_size_bytes = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
 
     // Allocate memory on host
     cudaMallocHost( &(vm->S), vm->S_size_bytes );
-    cudaCheckErrors( "vmMallocCohBeamHost: cudaMallocHost failed" );
+    cudaCheckErrors( "vmMallocSHost: cudaMallocHost failed" );
 }
 
-void vmFreeCohBeamHost( vcsbeam_context *vm )
+void vmFreeSHost( vcsbeam_context *vm )
 {
     cudaFreeHost( vm->S );
-    cudaCheckErrors( "vmFreeCohBeamHost: cudaFreeHost failed" );
+    cudaCheckErrors( "vmFreeSHost: cudaFreeHost failed" );
 }
 
-void vmMallocCohBeamDevice( vcsbeam_context *vm )
+void vmMallocSDevice( vcsbeam_context *vm )
 {
     // Calculate and store the size of this array
     vm->d_S_size_bytes = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
 
     // Allocate memory on device
     cudaMalloc( &(vm->d_S), vm->d_S_size_bytes );
-    cudaCheckErrors( "vmMallocCohBeamDevice: cudaMalloc failed" );
+    cudaCheckErrors( "vmMallocSDevice: cudaMalloc failed" );
 }
 
-void vmFreeCohBeamDevice( vcsbeam_context *vm )
+void vmFreeSDevice( vcsbeam_context *vm )
 {
     cudaFree( vm->d_S );
-    cudaCheckErrors( "vmFreeCohBeamDevice: cudaFree failed" );
+    cudaCheckErrors( "vmFreeSDevice: cudaFree failed" );
 }
 
 void vmMallocJHost( vcsbeam_context *vm )
@@ -276,6 +276,47 @@ void vmFreeJDevice( vcsbeam_context *vm )
 {
     cudaFree( vm->d_J );
     cudaCheckErrors( "vmFreeJDevice: cudaFree failed" );
+}
+
+
+void vmMallocDHost( vcsbeam_context *vm )
+{
+    uintptr_t nant      = vm->cal_metadata->num_ants;
+    uintptr_t nvispol   = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+    uintptr_t vcs_nchan = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+
+    // Calculate and store the size of this array
+    vm->D_size_bytes = nant * vcs_nchan * nvispol * sizeof(cuDoubleComplex);
+
+    // Allocate memory on device
+    cudaMallocHost( (void **)&(vm->D), vm->D_size_bytes );
+    cudaCheckErrors( "vmMallocDHost: cudaMallocHost failed" );
+}
+
+void vmFreeDHost( vcsbeam_context *vm )
+{
+    cudaFreeHost( vm->D );
+    cudaCheckErrors( "vmFreeDHost: cudaFreeHost failed" );
+}
+
+void vmMallocDDevice( vcsbeam_context *vm )
+{
+    uintptr_t nant      = vm->cal_metadata->num_ants;
+    uintptr_t nvispol   = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+    uintptr_t vcs_nchan = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+
+    // Calculate and store the size of this array
+    vm->d_D_size_bytes = nant * vcs_nchan * nvispol * sizeof(cuDoubleComplex);
+
+    // Allocate memory on device
+    cudaMalloc( (void **)&(vm->d_D), vm->d_D_size_bytes );
+    cudaCheckErrors( "vmMallocDDevice: cudaMalloc failed" );
+}
+
+void vmFreeDDevice( vcsbeam_context *vm )
+{
+    cudaFree( vm->d_D );
+    cudaCheckErrors( "vmFreeDDevice: cudaFree failed" );
 }
 
 

@@ -14,9 +14,8 @@
 
 #include "vcsbeam.h"
 
-cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
-        MetafitsMetadata *obs_metadata, bool use_bandpass, const char *caldir,
-        uintptr_t coarse_chan_idx, logger *log )
+void vmLoadRTSSolution( vcsbeam_context *vm,
+        bool use_bandpass, const char *caldir, int coarse_chan_idx, logger *log )
 /* Read in the RTS solution from the DI_Jones... and Bandpass... files in
  * the CALDIR directory. The output is a set of Jones matrices (D) for each
  * antenna and (non-flagged) fine channel.
@@ -27,8 +26,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
  */
 {
     // Find the "GPUBox" number for this coarse channel
-    //uintptr_t gpubox_number = cal_metadata->metafits_coarse_chans[coarse_chan_idx].gpubox_number; // <-- This is what it should be, when the mwalib bug is fixed
-    uintptr_t gpubox_number = cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1; // <-- This is the temporary hack
+    uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1; // <-- This is the temporary hack
 
     // With the gpubox number in hand, construct the filenames for the
     // DI_Jones and Bandpass files
@@ -39,12 +37,12 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     sprintf( bandpass_path, "%s/BandpassCalibration_node%03lu.dat", caldir, gpubox_number );
 
     // Allocate memory for the Jones arrays
-    uintptr_t nant    = cal_metadata->num_ants;
-    uintptr_t ninputs = cal_metadata->num_rf_inputs;
-    uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
-    uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t nchan   = cal_metadata->num_corr_fine_chans_per_coarse;
-    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nant    = vm->cal_metadata->num_ants;
+    uintptr_t ninputs = vm->cal_metadata->num_rf_inputs;
+    uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+    uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
+    uintptr_t nchan   = vm->cal_metadata->num_corr_fine_chans_per_coarse;
+    uintptr_t vcs_nchan = vm->obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t ant, ch; // For loop variables
 
@@ -53,7 +51,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     if (log)
     {
         sprintf( log_message, "Receiver channel #%lu --> GPUBox #%lu",
-                cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
+                vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
                 gpubox_number );
         logger_timed_message( log, log_message );
     }
@@ -65,8 +63,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     // The array for the final output product (D = Dd x Db)
     // This will have the same dimensions as the final Jones matrix, so use
     // J_IDX for indexing
-    size_t Dsize = nant*vcs_nchan*nvispol;
-    cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
     cuDoubleComplex A[nvispol];
 
     for (ant = 0; ant < nant; ant++)
@@ -79,7 +75,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     }
 
     // Read in the DI Jones file
-    read_dijones_file(Dd, A, NULL, cal_metadata->num_ants, dijones_path);
+    read_dijones_file(Dd, A, NULL, vm->cal_metadata->num_ants, dijones_path);
 
     // Invert the alignment matrix and multiply it to the gains matrix
     // Eq. (29) in Ord et al. (2019)
@@ -88,7 +84,7 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
 
     // Read in the Bandpass file
     if (use_bandpass)
-        read_bandpass_file( NULL, Db, cal_metadata, bandpass_path );
+        read_bandpass_file( NULL, Db, vm->cal_metadata, bandpass_path );
 
     // Make the master mpi thread print out the antenna names of both
     // obs and cal metafits. "Header" printed here, actual numbers
@@ -106,12 +102,12 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             for (i = 0; i < ninputs; i++)
             {
                 sprintf( log_message, "| %3u | %3u | %5u | %8s | %c |  %3u   |",
-                        cal_metadata->rf_inputs[i].input,
-                        cal_metadata->rf_inputs[i].ant,
-                        cal_metadata->rf_inputs[i].tile_id,
-                        cal_metadata->rf_inputs[i].tile_name,
-                        *(cal_metadata->rf_inputs[i].pol),
-                        cal_metadata->rf_inputs[i].vcs_order
+                        vm->cal_metadata->rf_inputs[i].input,
+                        vm->cal_metadata->rf_inputs[i].ant,
+                        vm->cal_metadata->rf_inputs[i].tile_id,
+                        vm->cal_metadata->rf_inputs[i].tile_name,
+                        *(vm->cal_metadata->rf_inputs[i].pol),
+                        vm->cal_metadata->rf_inputs[i].vcs_order
                        );
                 logger_timed_message( log, log_message );
             }
@@ -131,14 +127,14 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
     {
         // Order the Jones matrices by the TARGET OBSERVATION metadata
         // (not the calibration metadata)
-        obs_rfinput = &(obs_metadata->rf_inputs[i]);
+        obs_rfinput = &(vm->obs_metadata->rf_inputs[i]);
 
         // Only have to loop once per tile, so skip the 'Y's
         if (*(obs_rfinput->pol) == 'Y')
             continue;
 
         // Match up antenna indices between the cal and obs metadata
-        cal_rfinput = find_matching_rf_input( cal_metadata, obs_rfinput );
+        cal_rfinput = find_matching_rf_input( vm->cal_metadata, obs_rfinput );
 
         obs_ant = obs_rfinput->ant;
         dd_idx  = cal_rfinput->input/2;
@@ -156,16 +152,16 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
             // DI Jones matrices (Dd).
             cal_ch = ch / interp_factor;
             if (use_bandpass)
-                mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(D[d_idx]) );
+                mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(vm->D[d_idx]) );
             else
-                cp2x2( Dd[dd_idx], &(D[d_idx]) );
+                cp2x2( Dd[dd_idx], &(vm->D[d_idx]) );
 
             // Multiply in (the inverse of) the alignment matrix
-            mult2x2d( &(D[d_idx]), Ainv, &(D[d_idx]) );
+            mult2x2d( &(vm->D[d_idx]), Ainv, &(vm->D[d_idx]) );
 
             // The RTS matrices are apparently in (p,q)<-(p,q) basis. The
             // following converts to (q,p)<-(q,p)
-            reverse2x2( &(D[d_idx]), &(D[d_idx]) );
+            reverse2x2( &(vm->D[d_idx]), &(vm->D[d_idx]) );
         }
     }
 
@@ -181,8 +177,6 @@ cuDoubleComplex *get_rts_solution( MetafitsMetadata *cal_metadata,
 
     free( Db );
     free( Dd );
-
-    return D;
 }
 
 void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname )
@@ -369,8 +363,7 @@ void read_bandpass_file(
 }
 
 
-cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
-        MetafitsMetadata *cal_metadata, int coarse_chan, char *gains_file )
+void vmLoadOffringaSolution( vcsbeam_context *vm, int coarse_chan_idx, char *gains_file )
 /* Offringa's own documentation for the format of these binary files (copied from an email
  * dated 4 May 2016 from franz.kirsten@curtin.edu.au to sammy.mcsweeney@gmail.com). This is
  * itself copied from Andre Offringa's original C++ code, in his Anoko repository, in
@@ -431,18 +424,14 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
     // Read in the necessary information from the header
 
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
-    uint32_t nant   = cal_metadata->num_ants;
-    uint32_t nchan  = cal_metadata->num_corr_fine_chans_per_coarse;
-    uint32_t nChan  = nchan * cal_metadata->num_metafits_coarse_chans;
-    uint32_t ninput = cal_metadata->num_rf_inputs;
-    uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
+    uint32_t nant   = vm->cal_metadata->num_ants;
+    uint32_t nchan  = vm->cal_metadata->num_corr_fine_chans_per_coarse;
+    uint32_t nChan  = nchan * vm->cal_metadata->num_metafits_coarse_chans;
+    uint32_t ninput = vm->cal_metadata->num_rf_inputs;
+    uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
+    uintptr_t vcs_nchan = vm->obs_metadata->num_volt_fine_chans_per_coarse;
     uintptr_t interp_factor = vcs_nchan / nchan;
-    uintptr_t nvispol = cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
-
-    // Allocate memory for the calibration solutions
-    size_t Dsize = nant*vcs_nchan*nvispol;
-    cuDoubleComplex *D  = (cuDoubleComplex *)calloc( Dsize, sizeof(cuDoubleComplex) );
+    uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
 
     // Make another dummy matrix for reading in
     cuDoubleComplex Dread[nvispol];
@@ -473,14 +462,14 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
         fprintf( stderr, "contains a different number (%d) ", channelCount );
         fprintf( stderr, "than the expected (%d) channels.\n", nChan );
         nChan = channelCount;
-        nchan = nChan / cal_metadata->num_metafits_coarse_chans;
+        nchan = nChan / vm->cal_metadata->num_metafits_coarse_chans;
         interp_factor = vcs_nchan / nchan;
         fprintf( stderr, "Assuming calibration channels are "
-                "%d kHz\n", cal_metadata->coarse_chan_width_hz / nchan / 1000 );
+                "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
     }
-    if (coarse_chan >= (int)cal_metadata->num_metafits_coarse_chans)
+    if (coarse_chan_idx >= (int)vm->cal_metadata->num_metafits_coarse_chans)
     {
-        fprintf( stderr, "Error: Requested coarse channel number (%d) ", coarse_chan );
+        fprintf( stderr, "Error: Requested coarse channel number (%d) ", coarse_chan_idx );
         fprintf( stderr, "is more than the number of channels " );
         fprintf( stderr, "available in the calibration solution (%s)\n", gains_file );
         exit(EXIT_FAILURE);
@@ -500,7 +489,7 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
     for (i = 0; i < ninput; i++)
     {
         // We only need information for each antenna, so skip one of the pols
-        rfinput = &(cal_metadata->rf_inputs[i]);
+        rfinput = &(vm->cal_metadata->rf_inputs[i]);
         if (*(rfinput->pol) == 'Y')
             continue;
 
@@ -512,7 +501,7 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
         {
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
-            Ch = ch + coarse_chan*nchan;
+            Ch = ch + coarse_chan_idx*nchan;
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
@@ -538,16 +527,13 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
                 d_idx = J_IDX(ant,vch,0,0,vcs_nchan,nantpol);
 
                 // Copy it across
-                cp2x2( Dread, &(D[d_idx]) );
+                cp2x2( Dread, &(vm->D[d_idx]) );
             }
         }
     }
 
     // Close the file
     fclose(fp);
-
-    // Return a pointer to the newly allocated memory
-    return D;
 }
 
 
