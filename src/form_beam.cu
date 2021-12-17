@@ -371,13 +371,22 @@ void cu_form_beam( int file_no,
     uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
 
     // Copy the data to the device
-    gpuErrchk(cudaMemcpyAsync( vm->d_J, vm->J, vm->J_size_bytes, cudaMemcpyHostToDevice ));
+    cudaMemcpy( vm->d_J, vm->J, vm->J_size_bytes, cudaMemcpyHostToDevice );
+    cudaCheckErrors( "cu_form_beam: cudaMemcpy(J) failed" );
 
     // Processing happens in "chunks" (due to limited memory on GPU)
     int p;
     for (int ichunk = 0; ichunk < vm->chunks_per_second; ichunk++)
     {
         vmMemcpyNextChunk( vm );
+fprintf( stderr, "d_data= %p\n", vm->d_data );
+fprintf( stderr, "d_J   = %p\n", vm->d_J );
+fprintf( stderr, "d_phi = %p\n", vm->gdelays.d_phi );
+fprintf( stderr, "d_JDq = %p\n", g->d_JDq );
+fprintf( stderr, "d_JDp = %p\n", g->d_JDp );
+fprintf( stderr, "d_polQ_idxs = %p\n", vm->d_polQ_idxs );
+fprintf( stderr, "d_polP_idxs = %p\n", vm->d_polP_idxs );
+fprintf( stderr, "d_Bd  = %p\n", g->d_Bd );
 
         // Call the kernels
         dim3 chan_samples( nchan, vm->sample_rate / vm->chunks_per_second );
@@ -387,6 +396,7 @@ void cu_form_beam( int file_no,
         invj_the_data<<<chan_samples, stat>>>( vm->d_data, (cuDoubleComplex *)vm->d_J, vm->gdelays.d_phi, g->d_JDq, g->d_JDp,
                                                vm->d_polQ_idxs, vm->d_polP_idxs,
                                                npol, vm->datatype );
+        cudaCheckErrors( "cu_form_beam: invj_the_data failed" );
 
         // Send off a parallel CUDA stream for each pointing
         for (p = 0; p < vm->npointing; p++ )
@@ -400,6 +410,7 @@ void cu_form_beam( int file_no,
 
             gpuErrchk( cudaPeekAtLastError() );
         }
+        gpuErrchk( cudaDeviceSynchronize() );
     }
     gpuErrchk( cudaDeviceSynchronize() );
 
@@ -480,8 +491,10 @@ void malloc_formbeam( struct gpu_formbeam_arrays *g, vcsbeam_context *vm )
 
 void vmMemcpyPolIdxLists( vcsbeam_context *vm )
 {
-    gpuErrchk(cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice ));
-    gpuErrchk(cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice ));
+    cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
+    cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polQ_idxs) failed" );
+    cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
+    cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polP_idxs) failed" );
 }
 
 void free_formbeam( struct gpu_formbeam_arrays *g )

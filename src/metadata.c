@@ -110,6 +110,7 @@ vcsbeam_context *init_vcsbeam_context(
     uintptr_t nant      = vm->obs_metadata->num_ants;
     uintptr_t nvispol   = vm->obs_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
     vm->data_size_bytes = vm->bytes_per_second;
+    vm->d_data_size_bytes = vm->bytes_per_second;
     vm->pol_idxs_size_bytes   = nant * sizeof(uint32_t);
     vm->d_pol_idxs_size_bytes = nant * sizeof(uint32_t);
     vm->D_size_bytes    = nant * vm->nchan * nvispol * sizeof(cuDoubleComplex);
@@ -118,9 +119,6 @@ vcsbeam_context *init_vcsbeam_context(
     vm->d_J_size_bytes  = nant * vm->nchan * nvispol * sizeof(cuDoubleComplex);
     vm->S_size_bytes    = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
     vm->d_S_size_bytes  = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
-
-
-    vmSetMaxGPUMem( vm, 0 ); // "0" = Use all available GPU memory
 
     // Start with the first chunk
     vm->chunk_to_load = 0;
@@ -201,21 +199,20 @@ void vmMallocDataHost( vcsbeam_context *vm )
 {
     cudaMallocHost( &(vm->data), vm->data_size_bytes );
     cudaCheckErrors( "vmMallocDataHost: cudaMallocHost(data) failed" );
-fprintf( stderr, "Allocated %lu bytes on host (data)\n", vm->data_size_bytes );
+fprintf( stderr, "Allocated %lu bytes on host (data) @ %p\n", vm->data_size_bytes, vm->data );
 }
 
 void vmFreeDataHost( vcsbeam_context *vm )
 {
     cudaFreeHost( vm->data );
     cudaCheckErrors( "vmFreeDataHost: cudaFreeHost(data) failed" );
-    vm->data = NULL;
 }
 
 void vmMallocDataDevice( vcsbeam_context *vm )
 {
     cudaMalloc( (void **)&vm->d_data,  vm->d_data_size_bytes );
     cudaCheckErrors( "vmMallocDataDevice: cudaMalloc(d_data) failed" );
-fprintf( stderr, "Allocated %lu bytes on device (data)\n", vm->d_data_size_bytes );
+fprintf( stderr, "Allocated %lu bytes on device (data) @ %p\n", vm->d_data_size_bytes, vm->d_data );
 }
 
 void vmFreeDataDevice( vcsbeam_context *vm )
@@ -376,10 +373,9 @@ void vmMemcpyNextChunk( vcsbeam_context *vm )
 {
     // Loads the next chunk of data onto the GPU
     char *ptrHost = (char *)vm->data + vm->chunk_to_load * vm->d_data_size_bytes;
-    cudaMemcpy( vm->d_data,
-            ptrHost, vm->d_data_size_bytes, cudaMemcpyHostToDevice );
-fprintf( stderr, "d_data = %p, ptrHost = %p\n", vm->d_data, ptrHost );
-    cudaCheckErrors( "vmMemcpyChunk: cudaMemcpyAsync failed" );
+    cudaMemcpy( vm->d_data, ptrHost, vm->d_data_size_bytes, cudaMemcpyHostToDevice );
+fprintf( stderr, "d_data = %p, nchunk = %u, ptrHost = %p, nbytes = %lu\n", vm->d_data, vm->chunk_to_load, ptrHost, vm->d_data_size_bytes );
+    cudaCheckErrors( "vmMemcpyNextChunk: cudaMemcpy failed" );
 
     // Increment the (internal) chunk counter
     vm->chunk_to_load = (vm->chunk_to_load + 1) % vm->chunks_per_second;

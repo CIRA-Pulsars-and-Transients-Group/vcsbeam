@@ -166,9 +166,11 @@ int main(int argc, char **argv)
     malloc_formbeam( &gf, vm );
     vmMallocDataHost( vm );
     vmMallocDataDevice( vm );
+    vmMallocSHost( vm );
     vmMallocSDevice( vm );
     vmMallocJHost( vm );
     vmMallocJDevice( vm );
+    vmMallocDHost( vm );
     vmMallocPQIdxsHost( vm );
     vmMallocPQIdxsDevice( vm );
 
@@ -180,8 +182,6 @@ int main(int argc, char **argv)
 
     // Create output buffer arrays
     float *data_buffer_vdif   = NULL;
-
-    vmMallocSHost( vm );
     data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * vm->npointing * 2 * sizeof(float) );
 
     if (vm->do_inverse_pfb)
@@ -218,8 +218,6 @@ int main(int argc, char **argv)
     /****************************
      * GET CALIBRATION SOLUTION *
      ****************************/
-
-    vmMallocDHost( vm );
 
     if (cal.cal_type == CAL_RTS)
     {
@@ -391,7 +389,6 @@ int main(int argc, char **argv)
     cudaFreeHost( data_buffer_vdif  );
     cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
 
-    vmFreeDataHost( vm );
     vmDestroyStatistics( vm );
 
     free( opts.pointings_file  );
@@ -405,6 +402,7 @@ int main(int argc, char **argv)
     free_calibration( &cal );
 
     free_formbeam( &gf );
+    vmFreeDataHost( vm );
     vmFreeDataDevice( vm );
     vmFreeSDevice( vm );
     vmFreeJDevice( vm );

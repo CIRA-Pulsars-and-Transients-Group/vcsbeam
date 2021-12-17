@@ -449,9 +449,9 @@ typedef struct vcsbeam_context_t
     uintptr_t J_size_bytes;           // The size of J in bytes
     uintptr_t d_J_size_bytes;         // The size of d_J in bytes
 
-    void *Jv, *d_Jv;                    // The buffers for Jones-corrected voltages on host/device
-    uintptr_t Jv_size_bytes;           // The size of Jv in bytes
-    uintptr_t d_Jv_size_bytes;         // The size of d_Jv in bytes
+    void *Jv, *d_Jv;                  // The buffers for Jones-corrected voltages on host/device
+    uintptr_t Jv_size_bytes;          // The size of Jv in bytes
+    uintptr_t d_Jv_size_bytes;        // The size of d_Jv in bytes
 
     cuDoubleComplex *D, *d_D;         // The buffers for calibration solutions on host/device
     uintptr_t D_size_bytes;           // The size of D in bytes
