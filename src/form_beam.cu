@@ -176,8 +176,8 @@ __global__ void beamform_kernel( cuDoubleComplex *Jv_Q,
     // Organise dynamically allocated shared arrays (see tag 11NSTATION for kernel call)
     extern __shared__ double arrays[];
 
-    cuDoubleComplex *Bx  = (cuDoubleComplex *)(&arrays[1*nant]);
-    cuDoubleComplex *By  = (cuDoubleComplex *)(&arrays[3*nant]);
+    cuDoubleComplex *ex  = (cuDoubleComplex *)(&arrays[1*nant]);
+    cuDoubleComplex *ey  = (cuDoubleComplex *)(&arrays[3*nant]);
     cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[5*nant]);
     cuDoubleComplex *Nxy = (cuDoubleComplex *)(&arrays[7*nant]);
     cuDoubleComplex *Nyy = (cuDoubleComplex *)(&arrays[9*nant]);
@@ -188,8 +188,8 @@ __global__ void beamform_kernel( cuDoubleComplex *Jv_Q,
     Apparently the different compilers and architectures are treating what were
     unintialised variables very differently */
 
-    Bx[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
-    By[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
+    ex[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
+    ey[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
 
     Nxx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     Nxy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
@@ -198,13 +198,13 @@ __global__ void beamform_kernel( cuDoubleComplex *Jv_Q,
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
-    Bx[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(s,c,ant,nc,nant)] );
-    By[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(s,c,ant,nc,nant)] );
+    ex[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(s,c,ant,nc,nant)] );
+    ey[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(s,c,ant,nc,nant)] );
 
-    Nxx[ant] = cuCmul( Bx[ant], cuConj(Bx[ant]) );
-    Nxy[ant] = cuCmul( Bx[ant], cuConj(By[ant]) );
-    //Nyx[ant] = cuCmul( By[ant], cuConj(Bx[ant]) ); // Not needed as it's degenerate with Nxy[]
-    Nyy[ant] = cuCmul( By[ant], cuConj(By[ant]) );
+    Nxx[ant] = cuCmul( ex[ant], cuConj(ex[ant]) );
+    Nxy[ant] = cuCmul( ex[ant], cuConj(ey[ant]) );
+    //Nyx[ant] = cuCmul( ey[ant], cuConj(ex[ant]) ); // Not needed as it's degenerate with Nxy[]
+    Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
 
     // Detect the coherent beam
     // A summation over an array is faster on a GPU if you add half on array
@@ -215,8 +215,8 @@ __global__ void beamform_kernel( cuDoubleComplex *Jv_Q,
     {
         if (ant < h_ant)
         {
-            Bx[ant]  = cuCadd( Bx[ant],  Bx[ant  + h_ant] );
-            By[ant]  = cuCadd( By[ant],  By[ant  + h_ant] );
+            ex[ant]  = cuCadd( ex[ant],  ex[ant  + h_ant] );
+            ey[ant]  = cuCadd( ey[ant],  ey[ant  + h_ant] );
             Nxx[ant] = cuCadd( Nxx[ant], Nxx[ant + h_ant] );
             Nxy[ant] = cuCadd( Nxy[ant], Nxy[ant + h_ant] );
             //Nyx[ant]=cuCadd( Nyx[ant], Nyx[ant + h_ant] );
@@ -231,9 +231,9 @@ __global__ void beamform_kernel( cuDoubleComplex *Jv_Q,
     // Only doing it for ant 0 so that it only prints once
     if ( ant == 0 )
     {
-        float bnXX = DETECT(Bx[0]) - cuCreal(Nxx[0]);
-        float bnYY = DETECT(By[0]) - cuCreal(Nyy[0]);
-        cuDoubleComplex bnXY = cuCsub( cuCmul( Bx[0], cuConj( By[0] ) ),
+        float bnXX = DETECT(ex[0]) - cuCreal(Nxx[0]);
+        float bnYY = DETECT(ey[0]) - cuCreal(Nyy[0]);
+        cuDoubleComplex bnXY = cuCsub( cuCmul( ex[0], cuConj( ey[0] ) ),
                                     Nxy[0] );
 
         // Stokes I, Q, U, V:
@@ -243,8 +243,8 @@ __global__ void beamform_kernel( cuDoubleComplex *Jv_Q,
         C[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
 
         // The beamformed products
-        e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = Bx[0];
-        e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = By[0];
+        e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = ex[0];
+        e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = ey[0];
     }
 }
 
