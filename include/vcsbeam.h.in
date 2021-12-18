@@ -673,6 +673,7 @@ char **create_filenames(
 void destroy_filenames( char **filenames, int nfiles );
 
 void vmLoadMetafits(
+        vcsbeam_context   *vm,
         char              *filename,
         MetafitsMetadata **metadata,
         MetafitsContext  **context

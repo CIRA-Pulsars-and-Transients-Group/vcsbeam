@@ -49,23 +49,22 @@ int main(int argc, char **argv)
     double arrf_dec_degs = parse_dec( opts.arrf_dec_str );
 
     // Get the metadata for the selected observation
-    MetafitsContext  *obs_context  = NULL;
-    MetafitsMetadata *obs_metadata = NULL;
-    vmLoadMetafits( opts.metafits, &obs_metadata, &obs_context );
+    vcsbeam_context vm;
+    vmLoadMetafits( &vm, opts.metafits, &vm.obs_metadata, &vm.obs_context );
 
     // Set the channels to use in calculation
     if (opts.nchans <= 0)
-        opts.nchans = obs_metadata->num_metafits_coarse_chans;
+        opts.nchans = vm.obs_metadata->num_metafits_coarse_chans;
 
     // Set start and end times, if not explicitly given on command line, or if
     // invalid start/end times are given
     if (opts.start_time < 0)              opts.start_time = 0;
-    if (opts.end_time < opts.start_time)  opts.end_time   = obs_metadata->num_metafits_timesteps;
+    if (opts.end_time < opts.start_time)  opts.end_time   = vm.obs_metadata->num_metafits_timesteps;
 
     uint32_t freq_hz; // Used for loop iterator
-    double BW_hz = (double)(obs_metadata->obs_bandwidth_hz); // Total bandwidth
+    double BW_hz = (double)(vm.obs_metadata->obs_bandwidth_hz); // Total bandwidth
     double   bw_hz = BW_hz / opts.nchans; // Make floating point to allow fractional-Hz divisions
-    double   flo_hz = obs_metadata->centre_freq_hz - BW_hz/2.0;
+    double   flo_hz = vm.obs_metadata->centre_freq_hz - BW_hz/2.0;
     double   freq_hz_start = flo_hz + bw_hz/2.0;
 
     // Get a "beam geometry" struct (and other variables) ready
@@ -91,13 +90,13 @@ int main(int argc, char **argv)
     cuDoubleComplex *J = NULL; // For the FEE beam
     uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
     uintptr_t npointings = 1;
-    create_primary_beam( &pb, obs_metadata, coarse_chan_idx, npointings );
+    create_primary_beam( &pb, vm.obs_metadata, coarse_chan_idx, npointings );
 
     // This program assumes no dead dipoles
-    uint32_t *delays = obs_metadata->delays;
-    double amps[obs_metadata->num_delays];
+    uint32_t *delays = vm.obs_metadata->delays;
+    double amps[vm.obs_metadata->num_delays];
     uintptr_t i;
-    for (i = 0; i < obs_metadata->num_delays; i++)
+    for (i = 0; i < vm.obs_metadata->num_delays; i++)
         amps[i] = 1.0;
 
     // Write out the output header
@@ -127,9 +126,9 @@ int main(int argc, char **argv)
             "# 8  U                         (Power, a.u.)\n"
             "# 9  V                         (Power, a.u.)\n"
             "# 10 Array factor\n",
-            obs_metadata->sched_start_mjd,
-            obs_metadata->az_deg, obs_metadata->za_deg,
-            obs_metadata->ra_tile_pointing_deg, obs_metadata->dec_tile_pointing_deg,
+            vm.obs_metadata->sched_start_mjd,
+            vm.obs_metadata->az_deg, vm.obs_metadata->za_deg,
+            vm.obs_metadata->ra_tile_pointing_deg, vm.obs_metadata->dec_tile_pointing_deg,
             ra_hours * PAL__DH2R * PAL__DR2D, dec_degs
            );
 
@@ -151,7 +150,7 @@ int main(int argc, char **argv)
         for (t = opts.start_time; t < opts.end_time; t += opts.time_stride)
         {
             // Calculate the beam geometry for the requested pointing
-            mjd = obs_metadata->sched_start_mjd + (double)t/86400.0;
+            mjd = vm.obs_metadata->sched_start_mjd + (double)t/86400.0;
             calc_beam_geom( ra_hours, dec_degs, mjd, &bg );
             az = bg.az;
             za = PAL__DPIBY2 - bg.el;
@@ -160,7 +159,7 @@ int main(int argc, char **argv)
             if (opts.do_array_factor)
             {
                 calc_beam_geom( arrf_ra_hours, arrf_dec_degs, mjd, &arrf_bg );
-                array_factor = calc_array_factor( obs_metadata, freq_hz, &bg, &arrf_bg );
+                array_factor = calc_array_factor( vm.obs_metadata, freq_hz, &bg, &arrf_bg );
             }
 
             calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, opts.apply_pa_correction );
@@ -170,7 +169,7 @@ int main(int argc, char **argv)
                     t, freq_hz/1e6,
                     az*PAL__DR2D, za*PAL__DR2D,
                     palDsep( az, bg.el,
-                        obs_metadata->az_deg*PAL__DD2R, obs_metadata->alt_deg*PAL__DD2R ) * PAL__DR2D,
+                        vm.obs_metadata->az_deg*PAL__DD2R, vm.obs_metadata->alt_deg*PAL__DD2R ) * PAL__DR2D,
                     IQUV[0],
                     IQUV[1],
                     IQUV[2],

@@ -49,14 +49,13 @@ int main(int argc, char **argv)
     double Y0 = dec_degs - opts.height_deg/2.0 + dY/2.0;
 
     // Get the metadata for the selected observation
-    MetafitsContext  *obs_context  = NULL;
-    MetafitsMetadata *obs_metadata = NULL;
-    vmLoadMetafits( opts.metafits, &obs_metadata, &obs_context );
+    vcsbeam_context vm;
+    vmLoadMetafits( &vm, opts.metafits, &vm.obs_metadata, &vm.obs_context );
 
     // If no frequency was selected, get the obs centre frequency
     uint32_t freq_hz;
     if (opts.freq_MHz == 0.0)
-        freq_hz = obs_metadata->centre_freq_hz;
+        freq_hz = vm.obs_metadata->centre_freq_hz;
     else
         freq_hz = (uint32_t)(opts.freq_MHz * 1e6);
 
@@ -70,13 +69,13 @@ int main(int argc, char **argv)
     primary_beam pb;
     uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
     uintptr_t npointings = 1;
-    create_primary_beam( &pb, obs_metadata, coarse_chan_idx, npointings );
+    create_primary_beam( &pb, vm.obs_metadata, coarse_chan_idx, npointings );
 
     // This program assumes no dead dipoles
-    uint32_t *delays = obs_metadata->delays;
-    double amps[obs_metadata->num_delays];
+    uint32_t *delays = vm.obs_metadata->delays;
+    double amps[vm.obs_metadata->num_delays];
     uintptr_t i;
-    for (i = 0; i < obs_metadata->num_delays; i++)
+    for (i = 0; i < vm.obs_metadata->num_delays; i++)
         amps[i] = 1.0;
 
     // Write out the output header
@@ -99,15 +98,15 @@ int main(int argc, char **argv)
             "# 1            2            3   4   5   6 |\n"
             "# RA (hours) | Dec (degs) | Array_factor  |\n",
             "#                         | I | Q | U | V |\n",
-            obs_metadata->sched_start_mjd,
-            obs_metadata->az_deg, obs_metadata->za_deg,
-            obs_metadata->ra_tile_pointing_deg, obs_metadata->dec_tile_pointing_deg,
+            vm.obs_metadata->sched_start_mjd,
+            vm.obs_metadata->az_deg, vm.obs_metadata->za_deg,
+            vm.obs_metadata->ra_tile_pointing_deg, vm.obs_metadata->dec_tile_pointing_deg,
             ra_hours * H2R * R2D, dec_degs,
             opts.freq_MHz
            );
 
     // Calculate the beam geometry for the requested pointing
-    mjd = obs_metadata->sched_start_mjd;
+    mjd = vm.obs_metadata->sched_start_mjd;
     calc_beam_geom( ra_hours, dec_degs, mjd, &bg );
     az = bg.az;
     za = PIBY2 - bg.el;
@@ -126,7 +125,7 @@ int main(int argc, char **argv)
             Y = Y0 + Y_idx*dY;
 
             calc_beam_geom( X, Y, mjd, &arrf_bg );
-            array_factor = calc_array_factor( obs_metadata, freq_hz, &arrf_bg, &bg );
+            array_factor = calc_array_factor( vm.obs_metadata, freq_hz, &arrf_bg, &bg );
 
             calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, true );
 

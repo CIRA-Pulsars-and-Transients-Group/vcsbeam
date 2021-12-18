@@ -74,8 +74,8 @@ int main(int argc, char **argv)
 
     // Get metadata for obs and cal
     vcsbeam_context vm;
-    vmLoadMetafits( opts.metafits, &vm.obs_metadata, &vm.obs_context );
-    vmLoadMetafits( cal.metafits, &vm.cal_metadata, &vm.cal_context );
+    vmLoadMetafits( &vm, opts.metafits, &vm.obs_metadata, &vm.obs_context );
+    vmLoadMetafits( &vm, cal.metafits, &vm.cal_metadata, &vm.cal_context );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nants          = vm.obs_metadata->num_ants;

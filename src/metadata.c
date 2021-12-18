@@ -102,6 +102,7 @@ void vmBindToObservation(
 {
     // Get the observation context and metadata
     vmLoadMetafits(
+            vm,
             obs_metafits_filename,
             &(vm->obs_metadata),
             &(vm->obs_context) );
@@ -131,6 +132,7 @@ void vmBindToObservation(
         // Get the calibration obs in the "normal" way, where it guesses what
         // type of observation it came from
         vmLoadMetafits(
+                vm,
                 cal_metafits_filename,
                 &(vm->cal_metadata),
                 &(vm->cal_context) );
@@ -739,25 +741,23 @@ void destroy_filenames( char **filenames, int nfiles )
 
 
 void vmLoadMetafits(
+        vcsbeam_context   *vm,
         char              *filename,
         MetafitsMetadata **metadata,
         MetafitsContext  **context
         )
 {
-    char error_message[ERROR_MESSAGE_LEN];
-    error_message[0] = '\0'; // <-- Just to avoid a compiler warning about uninitialised variables
-
     // Create OBS_CONTEXT
-    if (mwalib_metafits_context_new2( filename, context, error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
+    if (mwalib_metafits_context_new2( filename, context, vm->error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
     {
-        fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", error_message );
+        fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
 
     // Create OBS_METADATA
-    if (mwalib_metafits_metadata_get( *context, NULL, NULL, metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    if (mwalib_metafits_metadata_get( *context, NULL, NULL, metadata, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
-        fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", error_message );
+        fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
 }
