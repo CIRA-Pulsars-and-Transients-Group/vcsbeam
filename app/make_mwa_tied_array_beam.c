@@ -29,12 +29,24 @@ struct make_tied_array_beam_opts {
     char              *coarse_chan_str;  // Absolute or relative coarse channel number
 
     // Variables for MWA/VCS configuration
-    char              *custom_flags;    // Use custom list for flagging antennas
+    char              *custom_flags;     // Use custom list for flagging antennas
 
     // Output options
     bool               out_fine;         // Output fine channelised data (PSRFITS)
     bool               out_coarse;       // Output coarse channelised data (VDIF)
     bool               emulate_legacy;   // Use the offline forward pfb if input data is MWAX
+
+    // Calibration options
+    char              *cal_metafits;     // Filename of the metafits file
+    char              *caldir;           // Location of calibration data
+    int                cal_type;         // Either RTS or OFFRINGA
+    char              *ref_ant;          // Reference antenna for calibration phases
+    double             phase_offset;     // Rotate the phase of Y by m*freq + c, where
+    double             phase_slope;      //   m = phase_slope (rad/Hz)
+                                         //   c = phase_offset (rad)
+    bool               custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
+    bool               keep_cross_terms; // Include PQ and QP of calibration Jones matrices
+    bool               use_bandpass;     // Use the Bandpass solutions
 
     // Other options
     char              *synth_filter;     // Which synthesis filter to use
@@ -47,7 +59,7 @@ struct make_tied_array_beam_opts {
  ***********************/
 
 void usage();
-void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts, calibration *cal );
+void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts );
 
 void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif );
@@ -60,28 +72,28 @@ int main(int argc, char **argv)
 {
     // Parse command line arguments
     struct make_tied_array_beam_opts opts;
-    calibration cal;           // Variables for calibration settings
-    init_calibration( &cal );
-    make_tied_array_beam_parse_cmdline( argc, argv, &opts, &cal );
-
-    // Initialise MPI
-    MPI_Init( NULL, NULL );
-    int world_size, mpi_proc_id;
-    MPI_Comm_size( MPI_COMM_WORLD, &world_size );
-    MPI_Comm_rank( MPI_COMM_WORLD, &mpi_proc_id );
-
-    const int writer = 0; // Designate process 0 to write out the files
-    const int ncoarse_chans = world_size;
+    make_tied_array_beam_parse_cmdline( argc, argv, &opts );
 
     int i; // Generic counter
 
     // Create an mwalib metafits context and associated metadata
-    const int chans_per_proc = 1;
-    vcsbeam_context *vm = init_vcsbeam_context(
-        opts.metafits, cal.metafits,
-        opts.coarse_chan_str, chans_per_proc, mpi_proc_id,
+    bool use_mpi = true;
+    vcsbeam_context *vm = vmInit( use_mpi );
+    vmBindToObservation( vm,
+        opts.metafits, opts.cal_metafits,
+        opts.coarse_chan_str, 1, vm->coarse_chan_idx,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
+
+    vm->cal.metafits     = strdup( opts.cal_metafits );
+    vm->cal.caldir       = strdup( opts.caldir );
+    vm->cal.cal_type     = opts.cal_type;
+    vm->cal.ref_ant      = strdup( opts.ref_ant );
+    vm->cal.phase_offset = opts.phase_offset;
+    vm->cal.phase_slope  = opts.phase_slope;
+    vm->cal.custom_pq_correction = opts.custom_pq_correction;
+    vm->cal.keep_cross_terms     = opts.keep_cross_terms;
+    vm->cal.use_bandpass         = opts.use_bandpass;
 
     char mwalib_version[32];
     get_mwalib_version( mwalib_version );
@@ -153,9 +165,8 @@ int main(int argc, char **argv)
     vmMallocPQIdxsDevice( vm );
 
     // Create a lists of rf_input indexes ordered by antenna number (needed for gpu kernels)
+    // and upload them to the gpu
     vmSetPolIdxLists( vm );
-
-    // ... and upload them to the gpu, ready for use!
     vmPushPolIdxLists( vm );
 
     // Create output buffer arrays
@@ -177,13 +188,13 @@ int main(int argc, char **argv)
                 &(mpfs[p]),
                 vm->obs_metadata,
                 vm->vcs_metadata,
-                ncoarse_chans,
-                mpi_proc_id,
+                vm->ncoarse_chans,
+                vm->coarse_chan_idx,
                 opts.max_sec_per_file,
                 NSTOKES,
                 &(beam_geom_vals[p]),
                 NULL,
-                writer,
+                vm->writer,
                 true );
     }
 
@@ -191,21 +202,21 @@ int main(int argc, char **argv)
      * GET CALIBRATION SOLUTION *
      ****************************/
 
-    if (cal.cal_type == CAL_RTS)
+    if (vm->cal.cal_type == CAL_RTS)
     {
-        vmLoadRTSSolution( vm, cal.use_bandpass, cal.caldir, mpi_proc_id );
+        vmLoadRTSSolution( vm, vm->cal.use_bandpass, vm->cal.caldir, vm->coarse_chan_idx );
     }
-    else if (cal.cal_type == CAL_OFFRINGA)
+    else if (vm->cal.cal_type == CAL_OFFRINGA)
     {
-        vmLoadOffringaSolution( vm, mpi_proc_id, cal.caldir );
+        vmLoadOffringaSolution( vm, vm->coarse_chan_idx, vm->cal.caldir );
     }
 
     // Flag antennas that need flagging
-    vmSetCustomTileFlags( vm, opts.custom_flags, &cal );
+    vmSetCustomTileFlags( vm, opts.custom_flags, &vm->cal );
 
     // Apply any calibration corrections
-    parse_calibration_correction_file( vm->obs_metadata->obs_id, &cal );
-    apply_calibration_corrections( &cal, vm->D, vm->obs_metadata,
+    parse_calibration_correction_file( vm->obs_metadata->obs_id, &vm->cal );
+    apply_calibration_corrections( &vm->cal, vm->D, vm->obs_metadata,
             vm->coarse_chan_idxs_to_process[0], vm->log );
 
     // ------------------
@@ -328,8 +339,6 @@ int main(int argc, char **argv)
     free( opts.metafits        );
     free( opts.synth_filter    );
 
-    free_calibration( &cal );
-
     vmFreeVHost( vm );
     vmFreeVDevice( vm );
     vmFreeJVDevice( vm );
@@ -359,9 +368,6 @@ int main(int argc, char **argv)
 
     // Destroy the whole context
     destroy_vcsbeam_context( vm );
-
-    // Finalise MPI
-    MPI_Finalize();
 
     return EXIT_SUCCESS;
 }
@@ -440,32 +446,32 @@ void usage()
 
 
 void make_tied_array_beam_parse_cmdline(
-        int argc, char **argv, struct make_tied_array_beam_opts *opts, calibration *cal )
+        int argc, char **argv, struct make_tied_array_beam_opts *opts )
 {
     // Set defaults
-    opts->begin_str          = NULL;  // Absolute or relative GPS time -- when to start beamforming
-    opts->nseconds           = -1;    // How many seconds to process (-1 = as many as possible)
-    opts->pointings_file     = NULL;  // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
-    opts->datadir            = NULL;  // The path to where the recombined data live
-    opts->metafits           = NULL;  // filename of the metafits file for the target observation
-    opts->coarse_chan_str    = NULL;  // Absolute or relative coarse channel
-    opts->out_fine           = false; // Output fine channelised data (PSRFITS)
-    opts->out_coarse         = false; // Output coarse channelised data (VDIF)
-    opts->emulate_legacy     = false; // Emulate the legacy VCS system using the offline fine PFB
-    opts->synth_filter       = NULL;
-    opts->max_sec_per_file   = 200;   // Number of seconds per fits files
-    opts->gpu_mem_GB         = 0.0;
-    opts->custom_flags       = NULL;
+    opts->begin_str            = NULL;  // Absolute or relative GPS time -- when to start beamforming
+    opts->nseconds             = -1;    // How many seconds to process (-1 = as many as possible)
+    opts->pointings_file       = NULL;  // File containing list of pointings "hh:mm:ss dd:mm:ss ..."
+    opts->datadir              = NULL;  // The path to where the recombined data live
+    opts->metafits             = NULL;  // filename of the metafits file for the target observation
+    opts->coarse_chan_str      = NULL;  // Absolute or relative coarse channel
+    opts->out_fine             = false; // Output fine channelised data (PSRFITS)
+    opts->out_coarse           = false; // Output coarse channelised data (VDIF)
+    opts->emulate_legacy       = false; // Emulate the legacy VCS system using the offline fine PFB
+    opts->synth_filter         = NULL;
+    opts->max_sec_per_file     = 200;   // Number of seconds per fits files
+    opts->gpu_mem_GB           = 0.0;
+    opts->custom_flags         = NULL;
 
-    cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
-    cal->caldir              = NULL;  // The path to where the calibration solutions live
-    cal->cal_type            = CAL_RTS;
-    cal->ref_ant             = NULL;
-    cal->keep_cross_terms    = false;
-    cal->phase_offset        = 0.0;
-    cal->phase_slope         = 0.0;
-    cal->custom_pq_correction = false;
-    cal->use_bandpass        = false; // use the Bandpass calibration solutions
+    opts->cal_metafits         = NULL;  // filename of the metafits file for the calibration observation
+    opts->caldir               = NULL;  // The path to where the calibration solutions live
+    opts->cal_type             = CAL_RTS;
+    opts->ref_ant              = NULL;
+    opts->keep_cross_terms     = false;
+    opts->phase_offset         = 0.0;
+    opts->phase_slope          = 0.0;
+    opts->custom_pq_correction = false;
+    opts->use_bandpass         = false; // use the Bandpass calibration solutions
 
     if (argc > 1) {
 
@@ -511,15 +517,15 @@ void make_tied_array_beam_parse_cmdline(
                     strcpy( opts->begin_str, optarg );
                     break;
                 case 'B':
-                    cal->use_bandpass = true;
+                    opts->use_bandpass = true;
                     break;
                 case 'c':
-                    cal->metafits = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( cal->metafits, optarg );
+                    opts->cal_metafits = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->cal_metafits, optarg );
                     break;
                 case 'C':
-                    cal->caldir = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( cal->caldir, optarg );
+                    opts->caldir = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->caldir, optarg );
                     break;
                 case 'd':
                     opts->datadir = (char *)malloc( strlen(optarg) + 1 );
@@ -547,7 +553,7 @@ void make_tied_array_beam_parse_cmdline(
                     opts->metafits = strdup(optarg);
                     break;
                 case 'O':
-                    cal->cal_type = CAL_OFFRINGA;
+                    opts->cal_type = CAL_OFFRINGA;
                     break;
                 case 'p':
                     opts->out_fine = true;
@@ -557,8 +563,8 @@ void make_tied_array_beam_parse_cmdline(
                     strcpy( opts->pointings_file, optarg );
                     break;
                 case 'R':
-                    cal->ref_ant = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( cal->ref_ant, optarg );
+                    opts->ref_ant = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->ref_ant, optarg );
                     break;
                 case 'S':
                     opts->synth_filter = (char *)malloc( strlen(optarg) + 1 );
@@ -577,13 +583,13 @@ void make_tied_array_beam_parse_cmdline(
                     }
                     break;
                 case 'U':
-                    if (sscanf( optarg, "%lf,%lf", &(cal->phase_slope), &(cal->phase_offset) ) != 2)
+                    if (sscanf( optarg, "%lf,%lf", &(opts->phase_slope), &(opts->phase_offset) ) != 2)
                     {
                         fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
                                 "cannot parse -U option (\"%s\") as \"FLOAT,FLOAT\"\n", optarg );
                         exit(EXIT_FAILURE);
                     }
-                    cal->custom_pq_correction = true;
+                    opts->custom_pq_correction = true;
                     break;
                 case 'v':
                     opts->out_coarse = true;
@@ -593,7 +599,7 @@ void make_tied_array_beam_parse_cmdline(
                     exit(0);
                     break;
                 case 'X':
-                    cal->keep_cross_terms = true;
+                    opts->keep_cross_terms = true;
                     break;
                 default:
                     fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
@@ -612,9 +618,9 @@ void make_tied_array_beam_parse_cmdline(
 
     // Check that all the required options were supplied
     assert( opts->pointings_file != NULL );
-    assert( cal->caldir          != NULL );
+    assert( opts->caldir          != NULL );
     assert( opts->metafits       != NULL );
-    assert( cal->metafits        != NULL );
+    assert( opts->cal_metafits    != NULL );
 
     if (opts->datadir == NULL)
     {
@@ -640,9 +646,6 @@ void make_tied_array_beam_parse_cmdline(
 void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif )
 {
-    int mpi_proc_id;
-    MPI_Comm_rank( MPI_COMM_WORLD, &mpi_proc_id );
-
     int p;
     for (p = 0; p < vm->npointing; p++)
     {
@@ -653,7 +656,7 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
             // Write out the spliced channels
             wait_splice_psrfits( &(mpfs[p]) );
 
-            if (mpi_proc_id == mpfs[p].writer_id)
+            if (vm->coarse_chan_idx == mpfs[p].writer_id)
             {
                 if (psrfits_write_subint( &(mpfs[p].spliced_pf) ) != 0)
                 {

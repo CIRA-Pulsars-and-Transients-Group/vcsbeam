@@ -12,17 +12,96 @@
 
 #include "vcsbeam.h"
 
-vcsbeam_context *init_vcsbeam_context(
+vcsbeam_context *vmInit( bool use_mpi )
+{
+    // Allocate memory for the VCSBEAM_METADATA struct
+    vcsbeam_context *vm = (vcsbeam_context *)malloc( sizeof(vcsbeam_context) );
+
+    // Initialise MPI
+    vm->use_mpi = use_mpi;
+    if (use_mpi)
+    {
+        MPI_Init( NULL, NULL );
+        MPI_Comm_size( MPI_COMM_WORLD, &vm->ncoarse_chans );
+        MPI_Comm_rank( MPI_COMM_WORLD, &vm->coarse_chan_idx );
+    }
+    else
+    {
+        vm->ncoarse_chans = 1;
+        vm->coarse_chan_idx = 0;
+    }
+    vm->writer = 0;
+
+    // Start with the first chunk
+    vm->chunk_to_load = 0;
+
+    // Initialise data pointers to NULL
+    vm->v           = NULL;
+    vm->d_v         = NULL;
+    vm->S           = NULL;
+    vm->d_S         = NULL;
+    vm->e           = NULL;
+    vm->d_e         = NULL;
+    vm->J           = NULL;
+    vm->d_J         = NULL;
+    vm->Jv_P        = NULL;
+    vm->d_Jv_P      = NULL;
+    vm->Jv_Q        = NULL;
+    vm->d_Jv_Q      = NULL;
+    vm->D           = NULL;
+    vm->d_D         = NULL;
+    vm->polP_idxs   = NULL;
+    vm->polQ_idxs   = NULL;
+    vm->d_polP_idxs = NULL;
+    vm->d_polQ_idxs = NULL;
+
+    vm->v_size_bytes          = 0;
+    vm->d_v_size_bytes        = 0;
+    vm->pol_idxs_size_bytes   = 0;
+    vm->d_pol_idxs_size_bytes = 0;
+    vm->D_size_bytes          = 0;
+    vm->d_D_size_bytes        = 0;
+    vm->J_size_bytes          = 0;
+    vm->d_J_size_bytes        = 0;
+    vm->e_size_bytes          = 0;
+    vm->d_e_size_bytes        = 0;
+    vm->S_size_bytes          = 0;
+    vm->d_S_size_bytes        = 0;
+    vm->Jv_size_bytes         = 0;
+    vm->d_Jv_size_bytes       = 0;
+
+    // Default: data is legacy VCS format (VB_INT4)
+    vm->datatype = VB_INT4;
+
+    // Calibration
+    init_calibration( &vm->cal );
+
+    // Start a logger
+    vm->log = create_logger( stdout, vm->coarse_chan_idx );
+    logger_add_stopwatch( vm->log, "read", "Reading in data" );
+    logger_add_stopwatch( vm->log, "delay", "Calculating geometric and cable delays" );
+    logger_add_stopwatch( vm->log, "calc", "Calculating tied-array beam" );
+    logger_add_stopwatch( vm->log, "ipfb", "Inverting the PFB" );
+    logger_add_stopwatch( vm->log, "splice", "Splicing coarse channels together" );
+    logger_add_stopwatch( vm->log, "write", "Writing out data to file" );
+
+    // Initialise pointing RAs and Decs to NULL
+    vm->ras_hours = NULL;
+    vm->decs_degs = NULL;
+
+    // Return the new struct pointer
+    return vm;
+}
+
+void vmBindToObservation(
+        vcsbeam_context *vm,
         char *obs_metafits_filename, char *cal_metafits_filename,
         char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir )
 {
-    // Allocate memory for the VCSBEAM_METADATA struct
-    vcsbeam_context *vm = (vcsbeam_context *)malloc( sizeof(vcsbeam_context) );
-
     // Get the observation context and metadata
-    get_mwalib_metafits_metadata(
+    vmLoadMetafits(
             obs_metafits_filename,
             &(vm->obs_metadata),
             &(vm->obs_context) );
@@ -51,7 +130,7 @@ vcsbeam_context *init_vcsbeam_context(
     {
         // Get the calibration obs in the "normal" way, where it guesses what
         // type of observation it came from
-        get_mwalib_metafits_metadata(
+        vmLoadMetafits(
                 cal_metafits_filename,
                 &(vm->cal_metadata),
                 &(vm->cal_context) );
@@ -91,7 +170,7 @@ vcsbeam_context *init_vcsbeam_context(
             vm->output_coarse_channels = true;
             break;
         default:
-            fprintf( stderr, "init_vcsbeam_context: error: "
+            fprintf( stderr, "vmBindToObservation: error: "
                     "this observation does not appear to be a VCS observation\n" );
             exit(EXIT_FAILURE);
             break;
@@ -126,31 +205,6 @@ vcsbeam_context *init_vcsbeam_context(
     vm->Jv_size_bytes   = nant * vm->nchan * vm->sample_rate * sizeof(cuDoubleComplex);
     vm->d_Jv_size_bytes = vm->Jv_size_bytes;
 
-    // Start with the first chunk
-    vm->chunk_to_load = 0;
-
-    // Initialise data pointers to NULL
-    vm->v = NULL;
-    vm->d_v = NULL;
-
-    // Default: data is legacy VCS format (VB_INT4)
-    vm->datatype = VB_INT4;
-
-    // Start a logger
-    vm->log = create_logger( stdout, coarse_chan_idx_offset );
-    logger_add_stopwatch( vm->log, "read", "Reading in data" );
-    logger_add_stopwatch( vm->log, "delay", "Calculating geometric and cable delays" );
-    logger_add_stopwatch( vm->log, "calc", "Calculating tied-array beam" );
-    logger_add_stopwatch( vm->log, "ipfb", "Inverting the PFB" );
-    logger_add_stopwatch( vm->log, "splice", "Splicing coarse channels together" );
-    logger_add_stopwatch( vm->log, "write", "Writing out data to file" );
-
-    // Initialise pointing RAs and Decs to NULL
-    vm->ras_hours = NULL;
-    vm->decs_degs = NULL;
-
-    // Return the new struct pointer
-    return vm;
 }
 
 
@@ -197,6 +251,13 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     // Free the RA and Dec pointing arrays
     if (vm->ras_hours != NULL)  free( vm->ras_hours );
     if (vm->decs_degs != NULL)  free( vm->decs_degs );
+
+    // Calibration
+    free_calibration( &vm->cal );
+
+    // Finalise MPI
+    if (vm->use_mpi)
+        MPI_Finalize();
 
     // Finally, free the struct itself
     free( vm );
@@ -677,7 +738,7 @@ void destroy_filenames( char **filenames, int nfiles )
 }
 
 
-void get_mwalib_metafits_metadata(
+void vmLoadMetafits(
         char              *filename,
         MetafitsMetadata **metadata,
         MetafitsContext  **context

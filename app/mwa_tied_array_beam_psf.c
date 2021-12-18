@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     // Get the metadata for the selected observation
     MetafitsContext  *obs_context  = NULL;
     MetafitsMetadata *obs_metadata = NULL;
-    get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
+    vmLoadMetafits( opts.metafits, &obs_metadata, &obs_context );
 
     // If no frequency was selected, get the obs centre frequency
     uint32_t freq_hz;

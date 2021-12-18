@@ -22,6 +22,18 @@ struct make_plot_calibrate_opts {
     uintptr_t  ncoarse_chans;
     char      *custom_flags;
     char      *zero_string;
+
+    // Calibration options
+    char              *cal_metafits;     // Filename of the metafits file
+    char              *caldir;           // Location of calibration data
+    int                cal_type;         // Either RTS or OFFRINGA
+    char              *ref_ant;          // Reference antenna for calibration phases
+    double             phase_offset;     // Rotate the phase of Y by m*freq + c, where
+    double             phase_slope;      //   m = phase_slope (rad/Hz)
+                                         //   c = phase_offset (rad)
+    bool               custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
+    bool               keep_cross_terms; // Include PQ and QP of calibration Jones matrices
+    bool               use_bandpass;     // Use the Bandpass solutions
 };
 
 /***********************
@@ -30,7 +42,7 @@ struct make_plot_calibrate_opts {
 
 void usage();
 void make_plot_calibrate_parse_cmdline( int argc, char **argv,
-        struct make_plot_calibrate_opts *opts, calibration *cal );
+        struct make_plot_calibrate_opts *opts );
 
 /********
  * MAIN *
@@ -40,42 +52,43 @@ int main(int argc, char **argv)
 {
     // Parse command line arguments
     struct make_plot_calibrate_opts opts;
+    make_plot_calibrate_parse_cmdline( argc, argv, &opts );
+
     calibration cal;  // Variables for calibration settings
     init_calibration( &cal );
 
-    make_plot_calibrate_parse_cmdline( argc, argv, &opts, &cal );
+    cal.metafits     = strdup( opts.cal_metafits );
+    cal.caldir       = strdup( opts.caldir );
+    cal.cal_type     = opts.cal_type;
+    cal.ref_ant      = strdup( opts.ref_ant );
+    cal.phase_offset = opts.phase_offset;
+    cal.phase_slope  = opts.phase_slope;
+    cal.custom_pq_correction = opts.custom_pq_correction;
+    cal.keep_cross_terms     = opts.keep_cross_terms;
+    cal.use_bandpass         = opts.use_bandpass;
 
     int i; // Generic counter
 
     // Start a logger for output messages and time-keeping
     logger *log = create_logger( stderr, 0 );
 
-    // Get metadata for obs...
-    MetafitsMetadata *obs_metadata;
-    MetafitsContext  *obs_context;
-    get_mwalib_metafits_metadata( opts.metafits, &obs_metadata, &obs_context );
-
-    // ...and cal
-    MetafitsMetadata *cal_metadata;
-    MetafitsContext  *cal_context;
-    get_mwalib_metafits_metadata( cal.metafits, &cal_metadata, &cal_context );
+    // Get metadata for obs and cal
+    vcsbeam_context vm;
+    vmLoadMetafits( opts.metafits, &vm.obs_metadata, &vm.obs_context );
+    vmLoadMetafits( cal.metafits, &vm.cal_metadata, &vm.cal_context );
 
     // Create some "shorthand" variables for code brevity
-    uintptr_t nants          = obs_metadata->num_ants;
-    uintptr_t nchans         = obs_metadata->num_volt_fine_chans_per_coarse;
-    uintptr_t npols          = obs_metadata->num_ant_pols;   // (X,Y)
+    uintptr_t nants          = vm.obs_metadata->num_ants;
+    uintptr_t nchans         = vm.obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t npols          = vm.obs_metadata->num_ant_pols;   // (X,Y)
 
     // Now, do the following for each coarse channel
     uintptr_t ncoarse_chans = opts.ncoarse_chans;
-    if (ncoarse_chans <= 0 || ncoarse_chans > obs_metadata->num_metafits_coarse_chans)
-        ncoarse_chans = obs_metadata->num_metafits_coarse_chans;
+    if (ncoarse_chans <= 0 || ncoarse_chans > vm.obs_metadata->num_metafits_coarse_chans)
+        ncoarse_chans = vm.obs_metadata->num_metafits_coarse_chans;
     uintptr_t Ch, ch; // (Coarse channel idx, fine channel idx)
     cuDoubleComplex *D[ncoarse_chans]; // See Eqs. (27) to (29) in Ord et al. (2019)
     logger *plog = log;
-
-    vcsbeam_context vm;
-    vm.obs_metadata = obs_metadata;
-    vm.cal_metadata = cal_metadata;
 
     vmMallocDHost( &vm );
 
@@ -99,8 +112,8 @@ int main(int argc, char **argv)
         vmSetCustomTileFlags( &vm, opts.custom_flags, &cal );
 
         // Apply any calibration corrections
-        parse_calibration_correction_file( cal_metadata->obs_id, &cal );
-        apply_calibration_corrections( &cal, D[Ch], obs_metadata, Ch, plog );
+        parse_calibration_correction_file( vm.cal_metadata->obs_id, &cal );
+        apply_calibration_corrections( &cal, D[Ch], vm.obs_metadata, Ch, plog );
 
         // After the first coarse channel, don't print out any more messages
         plog = NULL;
@@ -124,11 +137,11 @@ int main(int argc, char **argv)
                    "#   Tile1_abs(Dqq), Tile1_arg(Dqq), Tile1_abs(Dqp), Tile1_arg(Dqp), ..., Tile2_abs(Dqq), ...\n"
                    "#\n# The ordered tile names are (reading rows first):" );
     uintptr_t ant;
-    for (ant = 0; ant < obs_metadata->num_ants; ant++)
+    for (ant = 0; ant < vm.obs_metadata->num_ants; ant++)
     {
         if (ant % 8 == 0)
             fprintf( fout, "\n#  " );
-        fprintf( fout, "  %-10s", obs_metadata->antennas[ant].tile_name );
+        fprintf( fout, "  %-10s", vm.obs_metadata->antennas[ant].tile_name );
     }
     fprintf( fout, "\n#\n# DATA:\n#\n" );
 
@@ -139,7 +152,7 @@ int main(int argc, char **argv)
     {
         for (ch = 0; ch < nchans; ch++)
         {
-            for (ant = 0; ant < obs_metadata->num_ants; ant++)
+            for (ant = 0; ant < vm.obs_metadata->num_ants; ant++)
             {
                 // Special output if all elements are zero (if user requested)
                 didx = J_IDX(ant,ch,0,0,nchans,npols);
@@ -181,10 +194,10 @@ int main(int argc, char **argv)
         free( opts.custom_flags );
 
     // Free mwalib structs
-    mwalib_metafits_context_free( obs_context );
-    mwalib_metafits_context_free( cal_context );
-    mwalib_metafits_metadata_free( obs_metadata );
-    mwalib_metafits_metadata_free( cal_metadata );
+    mwalib_metafits_context_free( vm.obs_context );
+    mwalib_metafits_context_free( vm.cal_context );
+    mwalib_metafits_metadata_free( vm.obs_metadata );
+    mwalib_metafits_metadata_free( vm.cal_metadata );
 
     destroy_logger( log );
 
@@ -229,22 +242,22 @@ void usage()
 
 
 void make_plot_calibrate_parse_cmdline( int argc, char **argv,
-        struct make_plot_calibrate_opts *opts, calibration *cal )
+        struct make_plot_calibrate_opts *opts )
 {
     // Set defaults
-    opts->ncoarse_chans      = -1;    // Number of coarse channels to include
-    opts->metafits           = NULL;  // filename of the metafits file for the target observations
-    opts->custom_flags       = NULL;  // filename of text file containing TileNames of tiles to be flagged
-    opts->zero_string        = NULL;  // string to output if all matrix elements are identically zero
-    cal->use_bandpass        = false; // use the Bandpass calibration solutions
-    cal->metafits            = NULL;  // filename of the metafits file for the calibration observation
-    cal->caldir              = NULL;  // The path to where the calibration solutions live
-    cal->cal_type            = CAL_RTS;
-    cal->ref_ant             = NULL;
-    cal->keep_cross_terms    = false;
-    cal->phase_offset        = 0.0;
-    cal->phase_slope         = 0.0;
-    cal->custom_pq_correction = false;
+    opts->ncoarse_chans        = -1;    // Number of coarse channels to include
+    opts->metafits             = NULL;  // filename of the metafits file for the target observations
+    opts->custom_flags         = NULL;  // filename of text file containing TileNames of tiles to be flagged
+    opts->zero_string          = NULL;  // string to output if all matrix elements are identically zero
+    opts->use_bandpass         = false; // use the Bandpass calibration solutions
+    opts->metafits             = NULL;  // filename of the metafits file for the calibration observation
+    opts->caldir               = NULL;  // The path to where the calibration solutions live
+    opts->cal_type             = CAL_RTS;
+    opts->ref_ant              = NULL;
+    opts->keep_cross_terms     = false;
+    opts->phase_offset         = 0.0;
+    opts->phase_slope          = 0.0;
+    opts->custom_pq_correction = false;
 
     if (argc > 1) {
 
@@ -277,15 +290,15 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
             switch(c)
             {
                 case 'B':
-                    cal->use_bandpass = true;
+                    opts->use_bandpass = true;
                     break;
                 case 'c':
-                    cal->metafits = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( cal->metafits, optarg );
+                    opts->cal_metafits = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->cal_metafits, optarg );
                     break;
                 case 'C':
-                    cal->caldir = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( cal->caldir, optarg );
+                    opts->caldir = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->caldir, optarg );
                     break;
                 case 'F':
                     opts->custom_flags = (char *)malloc( strlen(optarg) + 1 );
@@ -302,27 +315,27 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                     opts->ncoarse_chans = atoi(optarg);
                     break;
                 case 'O':
-                    cal->cal_type = CAL_OFFRINGA;
+                    opts->cal_type = CAL_OFFRINGA;
                     break;
                 case 'R':
-                    cal->ref_ant = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( cal->ref_ant, optarg );
+                    opts->ref_ant = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->ref_ant, optarg );
                     break;
                 case 'U':
-                    if (sscanf( optarg, "%lf,%lf", &(cal->phase_slope), &(cal->phase_offset) ) != 2)
+                    if (sscanf( optarg, "%lf,%lf", &(opts->phase_slope), &(opts->phase_offset) ) != 2)
                     {
                         fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
                                 "cannot parse -U option (\"%s\") as \"FLOAT,FLOAT\"\n", optarg );
                         exit(EXIT_FAILURE);
                     }
-                    cal->custom_pq_correction = true;
+                    opts->custom_pq_correction = true;
                     break;
                 case 'V':
                     printf( "MWA Beamformer %s\n", VCSBEAM_VERSION);
                     exit(0);
                     break;
                 case 'X':
-                    cal->keep_cross_terms = true;
+                    opts->keep_cross_terms = true;
                     break;
                 case 'z':
                     opts->zero_string = optarg;
@@ -344,6 +357,6 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
 
     // Check that all the required options were supplied
     assert( opts->metafits       != NULL );
-    assert( cal->caldir          != NULL );
-    assert( cal->metafits        != NULL );
+    assert( opts->caldir         != NULL );
+    assert( opts->cal_metafits   != NULL );
 }

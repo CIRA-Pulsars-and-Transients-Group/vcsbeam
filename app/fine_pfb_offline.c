@@ -56,7 +56,9 @@ int main( int argc, char *argv[] )
     logger_start_stopwatch( log, "init", true );
 
     // Set up the VCS metadata struct
-    vcsbeam_context *vm = init_vcsbeam_context(
+    bool use_mpi = false;
+    vcsbeam_context *vm = vmInit( use_mpi );
+    vmBindToObservation( vm,
         opts.metafits, NULL,
         opts.coarse_chan_str, 1, 0,
         opts.begin_str, opts.nseconds, 0,

@@ -437,6 +437,13 @@ typedef struct mpi_psrfits_t
 
 typedef struct vcsbeam_context_t
 {
+    // MPI
+    bool use_mpi;                     // Toggle MPI usage
+    int ncoarse_chans;                // MPI world size
+    int coarse_chan_idx;              // MPI rank
+    int writer;                       // The rank of the process responsible for writing output files
+
+    // Observation metadata
     MetafitsContext  *obs_context;    // The mwalib context derived from the target observation's metafits file
     MetafitsMetadata *obs_metadata;   // The mwalib metadata   "      "   "     "         "          "      "
 
@@ -445,6 +452,9 @@ typedef struct vcsbeam_context_t
 
     MetafitsContext  *cal_context;    // The mwalib context derived from the calibration observation's metafits file
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
+
+    // Calibration
+    calibration cal;                  // Calibration specification
 
     double *ras_hours;                // Array of pointing RAs (in decimal hours)
     double *decs_degs;                // Array of pointing degs (in decimal degrees)
@@ -539,8 +549,11 @@ typedef struct vcsbeam_context_t
 extern "C" {
 #endif
 
-/* INIT_VCSBEAM_CONTEXT
- * =====================
+vcsbeam_context *vmInit( bool use_mpi );
+
+/**    
+ * vmBindToObservation
+ * ===================
  *
  * Using mwalib, set up the context and metadata structs required to process
  * MWA data. This function sets things up to process a contiguous block of
@@ -556,11 +569,9 @@ extern "C" {
  *   NUM_GPS_SECONDS_TO_PROCESS  - The number of (contiguous) gps seconds to be processed
  *   GPS_SECOND_OFFSET           - Force the processing to begin at a different gps second
  *   DATADIR                     - The folder containing the observation data files
- *
- * Returns:
- *   A pointer to a newly allocated VCSBEAM_METADATA struct
  */
-vcsbeam_context *init_vcsbeam_context(
+void vmBindToObservation(
+        vcsbeam_context *vm,
         char *obs_metafits_filename, char *cal_metafits_filename,
         char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
@@ -661,7 +672,7 @@ char **create_filenames(
 
 void destroy_filenames( char **filenames, int nfiles );
 
-void get_mwalib_metafits_metadata(
+void vmLoadMetafits(
         char              *filename,
         MetafitsMetadata **metadata,
         MetafitsContext  **context

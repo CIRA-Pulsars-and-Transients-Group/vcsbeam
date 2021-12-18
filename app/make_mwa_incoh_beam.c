@@ -54,36 +54,20 @@ const uintptr_t outpol_incoh = 1;  // ("I")
 
 int main(int argc, char **argv)
 {
-    // Initialise MPI
-    MPI_Init( NULL, NULL );
-    int world_size, mpi_proc_id;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_proc_id);
-
-    const int writer = 0; // Designate process 0 to write out the files
-    const int chans_per_proc = 1;
-
     // Parse command line arguments
     struct cmd_line_opts opts;
     make_incoh_beam_parse_cmdline( argc, argv, &opts );
 
-    // Start a logger for output messages and time-keeping
-    logger *log = create_logger( stdout, mpi_proc_id );
-    logger_add_stopwatch( log, "read", "Reading in data" );
-    logger_add_stopwatch( log, "calc", "Calculating the incoherent beam" );
-    logger_add_stopwatch( log, "splice", "Splicing coarse channels together" );
-    if( mpi_proc_id == writer )
-        logger_add_stopwatch( log, "write", "Writing data to file" );
-    char log_message[MAX_COMMAND_LENGTH];
-
-    // Create an mwalib metafits context and associated metadata
-    logger_timed_message( log, "Creating metafits and voltage contexts via MWALIB" );
-
-    vcsbeam_context *vm = init_vcsbeam_context(
+    bool use_mpi = true;
+    vcsbeam_context *vm = vmInit( use_mpi );
+    vmBindToObservation( vm,
         opts.metafits, NULL,
-        opts.coarse_chan_str, chans_per_proc, mpi_proc_id,
+        opts.coarse_chan_str, 1, vm->coarse_chan_idx,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
+
+    // Create an mwalib metafits context and associated metadata
+    logger_timed_message( vm->log, "Creating metafits and voltage contexts via MWALIB" );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t    nchans          = vm->obs_metadata->num_volt_fine_chans_per_coarse;
@@ -98,7 +82,7 @@ int main(int argc, char **argv)
     uint64_t     gps_second;
 
     // Allocate memory
-    logger_timed_message( log, "Allocate host and device memory" );
+    logger_timed_message( vm->log, "Allocate host and device memory" );
 
     uint8_t *data, *d_data;
     float *d_incoh;
@@ -128,18 +112,18 @@ int main(int argc, char **argv)
         &mpf,
         vm->obs_metadata,
         vm->vcs_metadata,
-        world_size,
-        mpi_proc_id,
+        vm->ncoarse_chans,
+        vm->coarse_chan_idx,
         opts.max_sec_per_file,
         outpol_incoh,
         &beam_geom_vals,
         opts.outfile,
-        writer,
+        vm->writer,
         false );
 
     // Begin the main loop: go through data one second at a time
 
-    logger_message( log, "\n*****BEGIN BEAMFORMING*****" );
+    logger_message( vm->log, "\n*****BEGIN BEAMFORMING*****" );
 
     uintptr_t ntimesteps = vm->num_gps_seconds_to_process;
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
@@ -147,12 +131,12 @@ int main(int argc, char **argv)
         // Get the next gps second 
         gps_second = vm->gps_seconds_to_process[timestep_idx];
 
-        sprintf( log_message, "---Processing GPS second %ld [%lu/%lu]---",
+        sprintf( vm->log_message, "---Processing GPS second %ld [%lu/%lu]---",
                 gps_second, timestep_idx+1, ntimesteps );
-        logger_message( log, log_message );
+        logger_message( vm->log, vm->log_message );
 
         // Read in data from next file
-        read_step( vm->vcs_context, gps_second, vm->coarse_chan_idxs_to_process[0], data, data_size, log );
+        read_step( vm->vcs_context, gps_second, vm->coarse_chan_idxs_to_process[0], data, data_size, vm->log );
 
         // The writing (of the previous second) is put here in order to
         // allow the possibility that it can overlap with the reading step.
@@ -160,11 +144,11 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( &mpf, log );
+            write_step( &mpf, vm->log );
         }
 
         // Form the incoherent beam
-        logger_start_stopwatch( log, "calc", true );
+        logger_start_stopwatch( vm->log, "calc", true );
 
         cu_form_incoh_beam(
                 data, d_data, data_size,
@@ -175,26 +159,26 @@ int main(int argc, char **argv)
                 mpf.coarse_chan_pf.sub.data, d_Iscaled, Iscaled_size
                 );
 
-        logger_stop_stopwatch( log, "calc" );
+        logger_stop_stopwatch( vm->log, "calc" );
 
 
         // Splice the channels together
-        logger_start_stopwatch( log, "splice", true );
+        logger_start_stopwatch( vm->log, "splice", true );
 
         gather_splice_psrfits( &mpf );
 
-        logger_stop_stopwatch( log, "splice" );
+        logger_stop_stopwatch( vm->log, "splice" );
     }
 
     // Write out the last second's worth of data
-    write_step( &mpf, log );
+    write_step( &mpf, vm->log );
 
-    logger_message( log, "\n*****END BEAMFORMING*****\n" );
+    logger_message( vm->log, "\n*****END BEAMFORMING*****\n" );
 
-    logger_report_all_stats( log );
-    logger_message( log, "" );
+    logger_report_all_stats( vm->log );
+    logger_message( vm->log, "" );
 
-    logger_timed_message( log, "Starting memory clean-up" );
+    logger_timed_message( vm->log, "Starting memory clean-up" );
 
     // Free up memory
     free_mpi_psrfits( &mpf );
@@ -218,12 +202,7 @@ int main(int argc, char **argv)
     // Clean up memory associated with mwalib
     destroy_vcsbeam_context( vm );
 
-    // Free the logger
-    logger_timed_message( log, "Exiting successfully" );
-    destroy_logger( log );
-
-    // Finalise MPI
-    MPI_Finalize();
+    logger_timed_message( vm->log, "Exiting successfully" );
 
     return EXIT_SUCCESS;
 }
