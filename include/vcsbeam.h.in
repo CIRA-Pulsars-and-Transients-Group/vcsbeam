@@ -660,9 +660,8 @@ void vmParseFlaggedTilenamesFile( char *filename, calibration *cal ); // (define
 void vmSetCustomTileFlags( vcsbeam_context *vm, char *filename, calibration *cal ); // (defined in calibration.c);
 
 // (defined in calibration.c:)
-void vmLoadRTSSolution( vcsbeam_context *vm,
-        bool use_bandpass, const char *caldir, int coarse_chan_idx );
-void vmLoadOffringaSolution( vcsbeam_context *vm, int coarse_chan, char *gains_file );
+void vmLoadRTSSolution( vcsbeam_context *vm );
+void vmLoadOffringaSolution( vcsbeam_context *vm );
 
 char **create_filenames(
         const struct MetafitsContext  *metafits_context,

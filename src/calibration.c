@@ -14,19 +14,34 @@
 
 #include "vcsbeam.h"
 
-void vmLoadRTSSolution( vcsbeam_context *vm,
-        bool use_bandpass, const char *caldir, int coarse_chan_idx )
-/* Read in the RTS solution from the DI_Jones... and Bandpass... files in
- * the CALDIR directory. The output is a set of Jones matrices (D) for each
- * antenna and (non-flagged) fine channel.
+/**
+ * vmLoadRTSSolution
+ * =================
  *
- * The Jones matrices (D) are output in the (Q,P) basis.
+ * Read in the RTS solution from the DI_Jones and Bandpass files in the
+ * VM->CAL.CALDIR directory. It only reads the solution for the coarse channel
+ * specified in VM->COARSE_CHAN_IDX. The output is a set of Jones matrices (D)
+ * for each antenna and (non-flagged) fine channel.
  *
- * This function allocates memory, which should be freed by the caller (free())
+ * The Jones matrices (D) are output in the (Q,P) basis, i.e.
+ * [ 1  2 ] = [ QQ  QP ]
+ * [ 3  4 ] = [ PQ  PP ]
+ *
+ * The RTS bandpass solutions are used if VM->CAL.USE_BANDPASS is set,
+ * otherwise only the coarse channel solutions are used. (This has no effect
+ * for Offringa-style solutions.)
+ *
+ * This function assumes that a buffer for the D matrices has already been
+ * allocated.
  */
+void vmLoadRTSSolution( vcsbeam_context *vm )
 {
+    // Shorthand variables
+    bool        use_bandpass = vm->cal.use_bandpass;
+    const char *caldir       = vm->cal.caldir;
+
     // Find the "GPUBox" number for this coarse channel
-    uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1;
+    uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[vm->coarse_chan_idx].corr_chan_number + 1;
 
     // With the gpubox number in hand, construct the filenames for the
     // DI_Jones and Bandpass files
@@ -50,7 +65,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm,
     if (vm->log)
     {
         sprintf( vm->log_message, "Receiver channel #%lu --> GPUBox #%lu",
-                vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
+                vm->cal_metadata->metafits_coarse_chans[vm->coarse_chan_idx].rec_chan_number,
                 gpubox_number );
         logger_timed_message( vm->log, vm->log_message );
     }
@@ -362,8 +377,11 @@ void read_bandpass_file(
 }
 
 
-void vmLoadOffringaSolution( vcsbeam_context *vm, int coarse_chan_idx, char *gains_file )
-/* Offringa's own documentation for the format of these binary files (copied from an email
+/**
+ * vmLoadOffringaSolution
+ * ======================
+ *
+ * Offringa's own documentation for the format of these binary files (copied from an email
  * dated 4 May 2016 from franz.kirsten@curtin.edu.au to sammy.mcsweeney@gmail.com). This is
  * itself copied from Andre Offringa's original C++ code, in his Anoko repository, in
  * mwa-reduce/solutionfile.h:
@@ -406,17 +424,26 @@ void vmLoadOffringaSolution( vcsbeam_context *vm, int coarse_chan_idx, char *gai
   * or because the calibration diverged, a "NaN" will be stored in the
   * doubles belonging to that solution.
   *
-  * This function allocates memory, which should be freed by the caller.
+  * ----------------------------------------------
+  *
+  * The input file is taken from VM->CAL.CALDIR.
+  *
+  * Only the coarse channel specified in VM->COARSE_CHAN_IDX will be read in.
+  *
+  * This function assumes that memory for the Jones matrices (D) has already
+  * been allocated.
   */
+void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
-    // Assumes that memory for antenna (D) has already been allocated
+    // Shorthand variables
+    int coarse_chan_idx = vm->coarse_chan_idx;
 
     // Open the calibration file for reading
     FILE *fp = NULL;
-    fp = fopen(gains_file,"r");
+    fp = fopen(vm->cal.caldir,"r");
     if (fp == NULL)
     {
-        fprintf( stderr, "Failed to open %s: quitting\n", gains_file );
+        fprintf( stderr, "Failed to open %s: quitting\n", vm->cal.caldir );
         exit(EXIT_FAILURE);
     }
 
@@ -446,18 +473,18 @@ void vmLoadOffringaSolution( vcsbeam_context *vm, int coarse_chan_idx, char *gai
     if (intervalCount > 1)
     {
         fprintf( stderr, "Warning: Only the first interval in the calibration " );
-        fprintf( stderr, "solution (%s) will be used\n", gains_file );
+        fprintf( stderr, "solution (%s) will be used\n", vm->cal.caldir );
     }
     if (antennaCount != nant)
     {
-        fprintf( stderr, "Error: Calibration solution (%s) ", gains_file );
+        fprintf( stderr, "Error: Calibration solution (%s) ", vm->cal.caldir );
         fprintf( stderr, "contains a different number of antennas (%d) ", antennaCount );
         fprintf( stderr, "than specified (%d)\n", nant );
         exit(EXIT_FAILURE);
     }
     if (channelCount != nChan)
     {
-        fprintf( stderr, "Warning: Calibration solution (%s) ", gains_file );
+        fprintf( stderr, "Warning: Calibration solution (%s) ", vm->cal.caldir );
         fprintf( stderr, "contains a different number (%d) ", channelCount );
         fprintf( stderr, "than the expected (%d) channels.\n", nChan );
         nChan = channelCount;
@@ -470,7 +497,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm, int coarse_chan_idx, char *gai
     {
         fprintf( stderr, "Error: Requested coarse channel number (%d) ", coarse_chan_idx );
         fprintf( stderr, "is more than the number of channels " );
-        fprintf( stderr, "available in the calibration solution (%s)\n", gains_file );
+        fprintf( stderr, "available in the calibration solution (%s)\n", vm->cal.caldir );
         exit(EXIT_FAILURE);
     }
 

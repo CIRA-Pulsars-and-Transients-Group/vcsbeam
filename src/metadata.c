@@ -212,13 +212,9 @@ void vmBindCalData( vcsbeam_context *vm,
     strcpy( vm->cal.caldir, caldir );
 
     if (vm->cal.cal_type == CAL_RTS)
-    {
-        vmLoadRTSSolution( vm, vm->cal.use_bandpass, vm->cal.caldir, vm->coarse_chan_idx );
-    }
+        vmLoadRTSSolution( vm );
     else if (vm->cal.cal_type == CAL_OFFRINGA)
-    {
-        vmLoadOffringaSolution( vm, vm->coarse_chan_idx, vm->cal.caldir );
-    }
+        vmLoadOffringaSolution( vm );
 
     // Flag antennas that need flagging
     vmSetCustomTileFlags( vm, flags_file, &vm->cal );
