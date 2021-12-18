@@ -398,6 +398,8 @@ void vmBeamformChunk( vcsbeam_context *vm )
 
 void vmBeamformSecond( vcsbeam_context *vm )
 {
+    logger_start_stopwatch( vm->log, "calc", true );
+
     // Processing a second's worth of "chunks"
     int chunk;
     for (chunk = 0; chunk < vm->chunks_per_second; chunk++)
@@ -407,6 +409,8 @@ void vmBeamformSecond( vcsbeam_context *vm )
         vm->chunk_to_load++;
     }
     gpuErrchk( cudaDeviceSynchronize() );
+
+    logger_stop_stopwatch( vm->log, "calc" );
 }
 
 void vmPullE( vcsbeam_context *vm )

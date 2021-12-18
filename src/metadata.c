@@ -90,6 +90,13 @@ vcsbeam_context *vmInit( bool use_mpi )
     vm->cal_context  = NULL;
     vm->cal_metadata = NULL;
 
+    // Initially, do nothing
+    vm->do_forward_pfb = false;
+    vm->do_inverse_pfb = false;
+
+    vm->output_fine_channels = false;
+    vm->output_coarse_channels = false;
+
     // Start a logger
     vm->log = create_logger( stdout, vm->mpi_rank );
     logger_add_stopwatch( vm->log, "read", "Reading in data" );
@@ -149,15 +156,14 @@ void vmBindObsData(
     }
 
     // Set the default output to match the same channelisation as the input
-    vm->do_forward_pfb = false;
-    vm->do_inverse_pfb = false;
-
     switch (vm->obs_metadata->mwa_version)
     {
         case VCSLegacyRecombined:
-            vm->output_fine_channels = true;
+            vm->output_fine_channels   = true;
+            vm->output_coarse_channels = false;
             break;
         case VCSMWAXv2:
+            vm->output_fine_channels   = false;
             vm->output_coarse_channels = true;
             break;
         default:
