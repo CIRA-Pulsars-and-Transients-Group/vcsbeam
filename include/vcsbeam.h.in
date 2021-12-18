@@ -825,8 +825,8 @@ typedef enum pfb_flags_t
 
     PFB_EMULATE_FPGA         = 0x200,
 
-    PFB_SMART                = 0x11D  // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
-                                      //   PFB_EMULATE_FPGA | PFB_COMPLEX_INT4 | PFB_IMAG_PART_FIRST
+    PFB_SMART                = 0x01D  // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
+                                      //   PFB_EMULATE_FPGA | PFB_COMPLEX_INT4
 } pfb_flags;
 
 typedef struct forward_pfb_t

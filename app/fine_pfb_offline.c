@@ -20,7 +20,7 @@ struct fine_pfb_offline_opts {
     char              *datadir;          // The path to where the recombined data live
     char              *metafits;         // filename of the metafits file
     char              *coarse_chan_str;  // Absolute or relative coarse channel number
-    char              *synth_filter;     // Which synthesis filter to use
+    char              *analysis_filter;  // Which analysis filter to use
 };
 
 /***********************
@@ -76,7 +76,7 @@ int main( int argc, char *argv[] )
 
     // Load the filter
     int K = 128; // The number of desired output channels
-    pfb_filter *filter = load_filter_coefficients( opts.synth_filter, ANALYSIS_FILTER, K );
+    pfb_filter *filter = load_filter_coefficients( opts.analysis_filter, ANALYSIS_FILTER, K );
 
     // Create and init the PFB struct
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
@@ -152,7 +152,7 @@ void usage()
             "\t                           relative to the first or last channel in the observation\n"
             "\t                           respectively. Otherwise, it is treated as a receiver channel number\n"
             "\t                           (0-255) [default: \"+0\"]\n"
-            "\t-S, --synth_filter=FILTER  Apply the named filter during high-time resolution synthesis.\n"
+            "\t-A, --analysis_filter=FILTER  Apply the named filter during fine channelisation.\n"
             "\t                           File [RUNTIME_DIR]/FILTER.dat must exist [default: FINEPFB]\n"
             "\t-T, --nseconds=VAL         Process VAL seconds of data [default: as many as possible]\n"
           );
@@ -171,7 +171,7 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
     opts->datadir            = NULL;  // The path to where the recombined data live
     opts->metafits           = NULL;  // filename of the metafits file for the target observation
     opts->coarse_chan_str    = NULL;  // Absolute or relative coarse channel
-    opts->synth_filter       = NULL;
+    opts->analysis_filter    = NULL;
 
     if (argc > 1) {
 
@@ -179,25 +179,29 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
         while (1) {
 
             static struct option long_options[] = {
+                {"analysis_filter", required_argument, 0, 'A'},
                 {"begin",           required_argument, 0, 'b'},
                 {"data-location",   required_argument, 0, 'd'},
                 {"coarse-chan",     required_argument, 0, 'f'},
                 {"help",            required_argument, 0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
-                {"synth_filter",    required_argument, 0, 'S'},
                 {"nseconds",        required_argument, 0, 'T'},
                 {"version",         required_argument, 0, 'V'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:d:f:hm:S:T:V",
+                             "A:b:d:f:hm:T:V",
                              long_options, &option_index);
             if (c == -1)
                 break;
 
             switch(c)
             {
+                case 'A':
+                    opts->analysis_filter = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->analysis_filter, optarg );
+                    break;
                 case 'b':
                     opts->begin_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->begin_str, optarg );
@@ -216,10 +220,6 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);
-                    break;
-                case 'S':
-                    opts->synth_filter = (char *)malloc( strlen(optarg) + 1 );
-                    strcpy( opts->synth_filter, optarg );
                     break;
                 case 'T':
                     opts->nseconds = atol(optarg);
@@ -270,9 +270,9 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
         strcpy( opts->coarse_chan_str, "+0" );
     }
 
-    if (opts->synth_filter == NULL)
+    if (opts->analysis_filter == NULL)
     {
-        opts->synth_filter = (char *)malloc( 8 );
-        strcpy( opts->synth_filter, "FINEPFB" );
+        opts->analysis_filter = (char *)malloc( 8 );
+        strcpy( opts->analysis_filter, "FINEPFB" );
     }
 }
