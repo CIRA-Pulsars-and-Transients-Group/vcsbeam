@@ -26,7 +26,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm,
  */
 {
     // Find the "GPUBox" number for this coarse channel
-    uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1; // <-- This is the temporary hack
+    uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1;
 
     // With the gpubox number in hand, construct the filenames for the
     // DI_Jones and Bandpass files

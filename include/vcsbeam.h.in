@@ -555,14 +555,14 @@ vcsbeam_context *vmInit( bool use_mpi );
 
 /**    
  * vmBindObsData
- * ===================
+ * =============
  *
  * Using mwalib, set up the context and metadata structs required to process
  * MWA data. This function sets things up to process a contiguous block of
  * coarse channels and seconds.
  *
  * Inputs:
- *   OBS_METAFITS_FILENAME       - The name of the metafits file for the target observation
+ *   VM                          - VCSBeam Context
  *   FIRST_COARSE_CHAN_STR       - A string representation* of the first coarse channel to be processed (*see below)
  *   NUM_COARSE_CHANS_TO_PROCESS - The number of (contiguous) coarse channels to be processed
  *   COARSE_CHAN_IDX_OFFSET      - Force the processing to begin at a different coarse channel idx
@@ -577,6 +577,11 @@ void vmBindObsData(
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir );
 
+void vmBindCalData( vcsbeam_context *vm,
+        char   *caldir,
+        int     cal_type,
+        bool    use_bandpass,  // only relevant for RTS observations
+        char   *flags_file );
 
 /* DESTROY_VCSBEAM_METADATA
  * ========================

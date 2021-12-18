@@ -57,15 +57,11 @@ int main(int argc, char **argv)
     calibration cal;  // Variables for calibration settings
     init_calibration( &cal );
 
-    cal.metafits     = strdup( opts.cal_metafits );
-    cal.caldir       = strdup( opts.caldir );
-    cal.cal_type     = opts.cal_type;
     cal.ref_ant      = strdup( opts.ref_ant );
     cal.phase_offset = opts.phase_offset;
     cal.phase_slope  = opts.phase_slope;
     cal.custom_pq_correction = opts.custom_pq_correction;
     cal.keep_cross_terms     = opts.keep_cross_terms;
-    cal.use_bandpass         = opts.use_bandpass;
 
     int i; // Generic counter
 
@@ -75,7 +71,7 @@ int main(int argc, char **argv)
     // Get metadata for obs and cal
     vcsbeam_context vm;
     vmLoadObsMetafits( &vm, opts.metafits );
-    vmLoadCalMetafits( &vm, cal.metafits );
+    vmLoadCalMetafits( &vm, opts.cal_metafits );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nants          = vm.obs_metadata->num_ants;
@@ -94,22 +90,14 @@ int main(int argc, char **argv)
 
     for (Ch = 0; Ch < ncoarse_chans; Ch++)
     {
+        vm.coarse_chan_idx = Ch;
+
         // Read in the calibration solution
-        if (cal.cal_type == CAL_RTS)
-        {
-            vmLoadRTSSolution( &vm, cal.use_bandpass, cal.caldir, Ch );
-        }
-        else if (cal.cal_type == CAL_OFFRINGA)
-        {
-            vmLoadOffringaSolution( &vm, Ch, cal.caldir );
-        }
+        vmBindCalData( &vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
 
         // Copy the solution into the "D" arrays
         D[Ch] = (cuDoubleComplex *)malloc( vm.D_size_bytes );
         memcpy( D[Ch], vm.D, vm.D_size_bytes );
-
-        // Flag antennas that need flagging
-        vmSetCustomTileFlags( &vm, opts.custom_flags, &cal );
 
         // Apply any calibration corrections
         parse_calibration_correction_file( vm.cal_metadata->obs_id, &cal );
@@ -187,7 +175,6 @@ int main(int argc, char **argv)
         free( D[Ch] );
     }
 
-    free( cal.caldir           );
     free( opts.metafits        );
 
     if (opts.custom_flags != NULL)

@@ -199,6 +199,31 @@ void vmBindObsData(
 }
 
 
+void vmBindCalData( vcsbeam_context *vm,
+        char   *caldir,
+        int     cal_type,
+        bool    use_bandpass,  // only relevant for RTS observations
+        char   *flags_file )
+{
+    // Set the calibration type (either RTS or Offringa)
+    vm->cal.cal_type     = cal_type;
+    vm->cal.use_bandpass = use_bandpass;
+    vm->cal.caldir       = (char *)malloc( strlen( caldir ) + 1 );
+    strcpy( vm->cal.caldir, caldir );
+
+    if (vm->cal.cal_type == CAL_RTS)
+    {
+        vmLoadRTSSolution( vm, vm->cal.use_bandpass, vm->cal.caldir, vm->coarse_chan_idx );
+    }
+    else if (vm->cal.cal_type == CAL_OFFRINGA)
+    {
+        vmLoadOffringaSolution( vm, vm->coarse_chan_idx, vm->cal.caldir );
+    }
+
+    // Flag antennas that need flagging
+    vmSetCustomTileFlags( vm, flags_file, &vm->cal );
+}
+
 Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
 /* Returns the index (to obs_metadata->antennas[]) for the antenna with the
  * specified name. If no antenna with that name exists, returns

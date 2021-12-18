@@ -89,14 +89,11 @@ int main(int argc, char **argv)
         opts.datadir );
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
-    vm->cal.caldir       = strdup( opts.caldir );
-    vm->cal.cal_type     = opts.cal_type;
     vm->cal.ref_ant      = strdup( opts.ref_ant );
     vm->cal.phase_offset = opts.phase_offset;
     vm->cal.phase_slope  = opts.phase_slope;
     vm->cal.custom_pq_correction = opts.custom_pq_correction;
     vm->cal.keep_cross_terms     = opts.keep_cross_terms;
-    vm->cal.use_bandpass         = opts.use_bandpass;
 
     char mwalib_version[32];
     get_mwalib_version( mwalib_version );
@@ -205,17 +202,7 @@ int main(int argc, char **argv)
      * GET CALIBRATION SOLUTION *
      ****************************/
 
-    if (vm->cal.cal_type == CAL_RTS)
-    {
-        vmLoadRTSSolution( vm, vm->cal.use_bandpass, vm->cal.caldir, vm->coarse_chan_idx );
-    }
-    else if (vm->cal.cal_type == CAL_OFFRINGA)
-    {
-        vmLoadOffringaSolution( vm, vm->coarse_chan_idx, vm->cal.caldir );
-    }
-
-    // Flag antennas that need flagging
-    vmSetCustomTileFlags( vm, opts.custom_flags, &vm->cal );
+    vmBindCalData( vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
 
     // Apply any calibration corrections
     parse_calibration_correction_file( vm->obs_metadata->obs_id, &vm->cal );
