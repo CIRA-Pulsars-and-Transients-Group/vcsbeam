@@ -439,8 +439,10 @@ typedef struct vcsbeam_context_t
 {
     // MPI
     bool use_mpi;                     // Toggle MPI usage
-    int ncoarse_chans;                // MPI world size
-    int coarse_chan_idx;              // MPI rank
+    int mpi_size;                     // MPI world size
+    int mpi_rank;                     // MPI process rank
+    int ncoarse_chans;
+    int coarse_chan_idx;
     int writer;                       // The rank of the process responsible for writing output files
 
     // Observation metadata
@@ -552,7 +554,7 @@ extern "C" {
 vcsbeam_context *vmInit( bool use_mpi );
 
 /**    
- * vmBindToObservation
+ * vmBindObsData
  * ===================
  *
  * Using mwalib, set up the context and metadata structs required to process
@@ -569,9 +571,8 @@ vcsbeam_context *vmInit( bool use_mpi );
  *   GPS_SECOND_OFFSET           - Force the processing to begin at a different gps second
  *   DATADIR                     - The folder containing the observation data files
  */
-void vmBindToObservation(
+void vmBindObsData(
         vcsbeam_context *vm,
-        char *obs_metafits_filename,
         char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir );

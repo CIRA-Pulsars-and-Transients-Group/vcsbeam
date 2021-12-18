@@ -22,15 +22,19 @@ vcsbeam_context *vmInit( bool use_mpi )
     if (use_mpi)
     {
         MPI_Init( NULL, NULL );
-        MPI_Comm_size( MPI_COMM_WORLD, &vm->ncoarse_chans );
-        MPI_Comm_rank( MPI_COMM_WORLD, &vm->coarse_chan_idx );
+        MPI_Comm_size( MPI_COMM_WORLD, &vm->mpi_size );
+        MPI_Comm_rank( MPI_COMM_WORLD, &vm->mpi_rank );
     }
     else
     {
-        vm->ncoarse_chans = 1;
-        vm->coarse_chan_idx = 0;
+        vm->mpi_size = 1;
+        vm->mpi_rank = 0;
     }
     vm->writer = 0;
+
+    // TODO: Change this to give user flexibility of how to use mpi structure
+    vm->ncoarse_chans   = vm->mpi_size;
+    vm->coarse_chan_idx = vm->mpi_rank;
 
     // Start with the first chunk
     vm->chunk_to_load = 0;
@@ -87,7 +91,7 @@ vcsbeam_context *vmInit( bool use_mpi )
     vm->cal_metadata = NULL;
 
     // Start a logger
-    vm->log = create_logger( stdout, vm->coarse_chan_idx );
+    vm->log = create_logger( stdout, vm->mpi_rank );
     logger_add_stopwatch( vm->log, "read", "Reading in data" );
     logger_add_stopwatch( vm->log, "delay", "Calculating geometric and cable delays" );
     logger_add_stopwatch( vm->log, "calc", "Calculating tied-array beam" );
@@ -103,16 +107,12 @@ vcsbeam_context *vmInit( bool use_mpi )
     return vm;
 }
 
-void vmBindToObservation(
+void vmBindObsData(
         vcsbeam_context *vm,
-        char *obs_metafits_filename,
         char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir )
 {
-    // Get the observation context and metadata
-    vmLoadObsMetafits( vm, obs_metafits_filename );
-
     // Convert the (first) chan and gps strings to numbers
     uint32_t first_gps_second = parse_begin_string( vm->obs_metadata, first_gps_second_str ) + gps_second_offset;
     int first_coarse_chan_idx = parse_coarse_chan_string( vm->obs_metadata, first_coarse_chan_str ) + coarse_chan_idx_offset;
@@ -161,7 +161,7 @@ void vmBindToObservation(
             vm->output_coarse_channels = true;
             break;
         default:
-            fprintf( stderr, "vmBindToObservation: error: "
+            fprintf( stderr, "vmBindObsData: error: "
                     "this observation does not appear to be a VCS observation\n" );
             exit(EXIT_FAILURE);
             break;
