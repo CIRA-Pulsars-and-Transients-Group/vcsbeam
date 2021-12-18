@@ -17,7 +17,7 @@
 // Local includes
 #include "vcsbeam.h"
 
-struct make_plot_calibrate_opts {
+struct mwa_plot_calibration_opts {
     char      *metafits; // filename of the metafits file
     uintptr_t  ncoarse_chans;
     char      *custom_flags;
@@ -41,8 +41,8 @@ struct make_plot_calibrate_opts {
  ***********************/
 
 void usage();
-void make_plot_calibrate_parse_cmdline( int argc, char **argv,
-        struct make_plot_calibrate_opts *opts );
+void mwa_plot_calibration_parse_cmdline( int argc, char **argv,
+        struct mwa_plot_calibration_opts *opts );
 
 /********
  * MAIN *
@@ -51,8 +51,8 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
 int main(int argc, char **argv)
 {
     // Parse command line arguments
-    struct make_plot_calibrate_opts opts;
-    make_plot_calibrate_parse_cmdline( argc, argv, &opts );
+    struct mwa_plot_calibration_opts opts;
+    mwa_plot_calibration_parse_cmdline( argc, argv, &opts );
 
     calibration cal;  // Variables for calibration settings
     init_calibration( &cal );
@@ -74,8 +74,8 @@ int main(int argc, char **argv)
 
     // Get metadata for obs and cal
     vcsbeam_context vm;
-    vmLoadMetafits( &vm, opts.metafits, &vm.obs_metadata, &vm.obs_context );
-    vmLoadMetafits( &vm, cal.metafits, &vm.cal_metadata, &vm.cal_context );
+    vmLoadObsMetafits( &vm, opts.metafits );
+    vmLoadCalMetafits( &vm, cal.metafits );
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nants          = vm.obs_metadata->num_ants;
@@ -241,8 +241,8 @@ void usage()
 
 
 
-void make_plot_calibrate_parse_cmdline( int argc, char **argv,
-        struct make_plot_calibrate_opts *opts )
+void mwa_plot_calibration_parse_cmdline( int argc, char **argv,
+        struct mwa_plot_calibration_opts *opts )
 {
     // Set defaults
     opts->ncoarse_chans        = -1;    // Number of coarse channels to include
@@ -341,7 +341,7 @@ void make_plot_calibrate_parse_cmdline( int argc, char **argv,
                     opts->zero_string = optarg;
                     break;
                 default:
-                    fprintf( stderr, "error: make_plot_calibrate_parse_cmdline: "
+                    fprintf( stderr, "error: mwa_plot_calibration_parse_cmdline: "
                                     "unrecognised option '%s'\n", optarg );
                     usage();
                     exit(EXIT_FAILURE);

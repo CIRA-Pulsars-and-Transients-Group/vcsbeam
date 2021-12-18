@@ -59,7 +59,7 @@ int main( int argc, char *argv[] )
     bool use_mpi = false;
     vcsbeam_context *vm = vmInit( use_mpi );
     vmBindToObservation( vm,
-        opts.metafits, NULL,
+        opts.metafits,
         opts.coarse_chan_str, 1, 0,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );

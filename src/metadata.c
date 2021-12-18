@@ -76,6 +76,16 @@ vcsbeam_context *vmInit( bool use_mpi )
     // Calibration
     init_calibration( &vm->cal );
 
+    // Initially not bound to any observations
+    vm->obs_context  = NULL;
+    vm->obs_metadata = NULL;
+
+    vm->vcs_context  = NULL;
+    vm->vcs_metadata = NULL;
+
+    vm->cal_context  = NULL;
+    vm->cal_metadata = NULL;
+
     // Start a logger
     vm->log = create_logger( stdout, vm->coarse_chan_idx );
     logger_add_stopwatch( vm->log, "read", "Reading in data" );
@@ -95,17 +105,13 @@ vcsbeam_context *vmInit( bool use_mpi )
 
 void vmBindToObservation(
         vcsbeam_context *vm,
-        char *obs_metafits_filename, char *cal_metafits_filename,
+        char *obs_metafits_filename,
         char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir )
 {
     // Get the observation context and metadata
-    vmLoadMetafits(
-            vm,
-            obs_metafits_filename,
-            &(vm->obs_metadata),
-            &(vm->obs_context) );
+    vmLoadObsMetafits( vm, obs_metafits_filename );
 
     // Convert the (first) chan and gps strings to numbers
     uint32_t first_gps_second = parse_begin_string( vm->obs_metadata, first_gps_second_str ) + gps_second_offset;
@@ -125,23 +131,6 @@ void vmBindToObservation(
             datadir,
             first_coarse_chan_idx,
             num_coarse_chans_to_process );
-
-    // Get the calibration context and metadata
-    if (cal_metafits_filename != NULL)
-    {
-        // Get the calibration obs in the "normal" way, where it guesses what
-        // type of observation it came from
-        vmLoadMetafits(
-                vm,
-                cal_metafits_filename,
-                &(vm->cal_metadata),
-                &(vm->cal_context) );
-    }
-    else
-    {
-        vm->cal_metadata = NULL;
-        vm->cal_context = NULL;
-    }
 
     // Construct the gps second and coarse chan idx arrays
     vm->gps_seconds_to_process = (uint32_t *)malloc( num_gps_seconds_to_process * sizeof(uint32_t) );
@@ -740,22 +729,34 @@ void destroy_filenames( char **filenames, int nfiles )
 }
 
 
-void vmLoadMetafits(
-        vcsbeam_context   *vm,
-        char              *filename,
-        MetafitsMetadata **metadata,
-        MetafitsContext  **context
-        )
+void vmLoadObsMetafits( vcsbeam_context *vm, char *filename )
 {
     // Create OBS_CONTEXT
-    if (mwalib_metafits_context_new2( filename, context, vm->error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
+    if (mwalib_metafits_context_new2( filename, &vm->obs_context, vm->error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
 
     // Create OBS_METADATA
-    if (mwalib_metafits_metadata_get( *context, NULL, NULL, metadata, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    if (mwalib_metafits_metadata_get( vm->obs_context, NULL, NULL, &vm->obs_metadata, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", vm->error_message );
+        exit(EXIT_FAILURE);
+    }
+}
+
+void vmLoadCalMetafits( vcsbeam_context *vm, char *filename )
+{
+    // Create OBS_CONTEXT
+    if (mwalib_metafits_context_new2( filename, &vm->cal_context, vm->error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", vm->error_message );
+        exit(EXIT_FAILURE);
+    }
+
+    // Create OBS_METADATA
+    if (mwalib_metafits_metadata_get( vm->cal_context, NULL, NULL, &vm->cal_metadata, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", vm->error_message );
         exit(EXIT_FAILURE);

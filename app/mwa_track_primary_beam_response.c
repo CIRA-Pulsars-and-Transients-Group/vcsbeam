@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
     // Get the metadata for the selected observation
     vcsbeam_context vm;
-    vmLoadMetafits( &vm, opts.metafits, &vm.obs_metadata, &vm.obs_context );
+    vmLoadObsMetafits( &vm, opts.metafits );
 
     // Set the channels to use in calculation
     if (opts.nchans <= 0)

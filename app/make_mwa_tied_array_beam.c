@@ -79,11 +79,11 @@ int main(int argc, char **argv)
     // Create an mwalib metafits context and associated metadata
     bool use_mpi = true;
     vcsbeam_context *vm = vmInit( use_mpi );
-    vmBindToObservation( vm,
-        opts.metafits, opts.cal_metafits,
+    vmBindToObservation( vm, opts.metafits,
         opts.coarse_chan_str, 1, vm->coarse_chan_idx,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
+    vmLoadCalMetafits( vm, opts.cal_metafits );
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
     vm->cal.caldir       = strdup( opts.caldir );
