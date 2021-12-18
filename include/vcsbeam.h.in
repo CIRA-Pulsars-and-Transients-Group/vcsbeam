@@ -840,10 +840,16 @@ typedef struct forward_pfb_t
     uint8_t          *d_vcs_data;             // Same as above, on device
 
     size_t            htr_size;               // The size (in bytes) of htr_data
+    size_t            d_htr_size;             // The size (in bytes) of d_htr_data
+    size_t            htr_stride;             // Stride for chunks
     size_t            vcs_size;               // The size (in bytes) of vcs_data
+    size_t            d_vcs_size;             // The size (in bytes) of d_vcs_data
+    size_t            vcs_stride;             // Stride for chunks
 
     size_t            char2s_per_second;      // The number of char2's in one second of HTR data
     size_t            bytes_per_block;        // The number of bytes in one "voltage block" of HTR data
+    size_t            chunks_per_second;      // Split each second into this many chunks on the GPU
+    size_t            chunk;                  // The current chunk being/about to be processed
 
     size_t            current_gps_idx;        // Which gps second (in vm) to read next
 
@@ -857,6 +863,7 @@ typedef struct forward_pfb_t
     int              *d_filter_coeffs;        // As above, on the device
 
     int               nspectra;               // The number of spectra to generate
+    int               nspectra_per_chunk;     // The number of spectra per chunk
     int               M;                      // The "stride" of the PFB (setting M=K means critically sampled)
     int               K;                      // The number of channels
     int               I;                      // The number of RF inputs
@@ -877,7 +884,7 @@ typedef struct forward_pfb_t
 extern "C" {
 #endif
 
-forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, pfb_flags flags );
+forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, int nchunks, pfb_flags flags );
 
 void free_forward_pfb( forward_pfb *fpfb );
 

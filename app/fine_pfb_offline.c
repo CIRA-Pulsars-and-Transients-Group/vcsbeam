@@ -21,6 +21,7 @@ struct fine_pfb_offline_opts {
     char              *metafits;         // filename of the metafits file
     char              *coarse_chan_str;  // Absolute or relative coarse channel number
     char              *analysis_filter;  // Which analysis filter to use
+    int                nchunks;          // Split each second into this many processing chunks
 };
 
 /***********************
@@ -80,7 +81,7 @@ int main( int argc, char *argv[] )
 
     // Create and init the PFB struct
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
-    forward_pfb *fpfb = init_forward_pfb( vm, filter, M, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
+    forward_pfb *fpfb = init_forward_pfb( vm, filter, M, opts.nchunks, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
 
     logger_stop_stopwatch( log, "init" );
 
@@ -155,6 +156,8 @@ void usage()
             "\t-A, --analysis_filter=FILTER  Apply the named filter during fine channelisation.\n"
             "\t                           File [RUNTIME_DIR]/FILTER.dat must exist [default: FINEPFB]\n"
             "\t-T, --nseconds=VAL         Process VAL seconds of data [default: as many as possible]\n"
+            "\t-n, --nchunks=VAL          Split each second's worth of data into VAL processing chunks\n"
+            "\t                           [default: 1]\n"
           );
 
     printf( "\nOTHER OPTIONS\n\n"
@@ -172,6 +175,7 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
     opts->metafits           = NULL;  // filename of the metafits file for the target observation
     opts->coarse_chan_str    = NULL;  // Absolute or relative coarse channel
     opts->analysis_filter    = NULL;
+    opts->nchunks            = 1;
 
     if (argc > 1) {
 
@@ -185,13 +189,14 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
                 {"coarse-chan",     required_argument, 0, 'f'},
                 {"help",            required_argument, 0, 'h'},
                 {"metafits",        required_argument, 0, 'm'},
+                {"nchunks",         required_argument, 0, 'n'},
                 {"nseconds",        required_argument, 0, 'T'},
                 {"version",         required_argument, 0, 'V'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:d:f:hm:T:V",
+                             "A:b:d:f:hm:n:T:V",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -219,7 +224,11 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
                     exit(EXIT_SUCCESS);
                     break;
                 case 'm':
-                    opts->metafits = strdup(optarg);
+                    opts->metafits = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->metafits, optarg );
+                    break;
+                case 'n':
+                    opts->nchunks = atoi(optarg);
                     break;
                 case 'T':
                     opts->nseconds = atol(optarg);
@@ -251,6 +260,7 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
     // Check that all the required options were supplied
     // and/or set defaults
     assert( opts->metafits != NULL );
+    assert( opts->nchunks >= 1 );
 
     if (opts->datadir == NULL)
     {
