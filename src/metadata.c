@@ -156,22 +156,10 @@ void vmBindObsData(
     }
 
     // Set the default output to match the same channelisation as the input
-    switch (vm->obs_metadata->mwa_version)
-    {
-        case VCSLegacyRecombined:
-            vm->output_fine_channels   = true;
-            vm->output_coarse_channels = false;
-            break;
-        case VCSMWAXv2:
-            vm->output_fine_channels   = false;
-            vm->output_coarse_channels = true;
-            break;
-        default:
-            fprintf( stderr, "vmBindObsData: error: "
-                    "this observation does not appear to be a VCS observation\n" );
-            exit(EXIT_FAILURE);
-            break;
-    }
+    vmSetOutputChannelisation( vm,
+            (vm->obs_metadata->mwa_version == VCSLegacyRecombined),
+            (vm->obs_metadata->mwa_version == VCSMWAXv2)
+            );
 
     // Compute the "shorthand" variables
     vm->sample_rate = vm->vcs_metadata->num_samples_per_voltage_block *
@@ -281,22 +269,34 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     free( vm );
 }
 
-void set_vcsbeam_fine_output( vcsbeam_context *vm, bool switch_on )
-/* Turns on/off fine channelised output
- */
+void vmSetOutputChannelisation( vcsbeam_context *vm, bool out_fine, bool out_coarse )
 {
-    vm->output_fine_channels = switch_on;
-    if (vm->obs_metadata->mwa_version == VCSMWAXv2)
-        vm->do_forward_pfb = switch_on;
-}
+    /*   # | input  | fine | coarse || forward pfb | inverse pfb
+     *  ---+--------+------+--------||-------------+-------------
+     *   1 | legacy | no   | no     || no          | no
+     *   2 | legacy | no   | yes    || no          | yes
+     *   3 | legacy | yes  | no     || no          | no
+     *   4 | legacy | yes  | yes    || no          | yes
+     *   5 | mwax   | no   | no     || no          | no
+     *   6 | mwax   | no   | yes    || yes         | yes
+     *   7 | mwax   | yes  | no     || yes         | no
+     *   8 | mwax   | yes  | yes    || yes         | yes
+     */
+    vm->output_fine_channels   = out_fine;
+    vm->output_coarse_channels = out_coarse;
 
-void set_vcsbeam_coarse_output( vcsbeam_context *vm, bool switch_on )
-/* Turns on/off coarse channelised output
- */
-{
-    vm->output_coarse_channels = switch_on;
-    if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
-        vm->do_inverse_pfb = switch_on;
+    if (!out_fine && !out_coarse) // #1 and #5
+    {
+        vm->do_forward_pfb = false;
+        vm->do_inverse_pfb = false;
+        return;
+    }
+
+    // The inverse pfb is needed iff coarse channels are output
+    vm->do_inverse_pfb = vm->output_coarse_channels;
+
+    // The forward pfb is only needed for the (remaining) MWAX options
+    vm->do_forward_pfb = (vm->obs_metadata->mwa_version == VCSMWAXv2);
 }
 
 void vmMallocVHost( vcsbeam_context *vm )

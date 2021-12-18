@@ -80,16 +80,13 @@ int main(int argc, char **argv)
     bool use_mpi = true;
     vcsbeam_context *vm = vmInit( use_mpi );
 
-fprintf( stderr, "output_fine_channels is %s\n", (vm->output_fine_channels ? "on" : "off") );
     vmLoadObsMetafits( vm, opts.metafits );
     vmLoadCalMetafits( vm, opts.cal_metafits );
 
-fprintf( stderr, "output_fine_channels is %s\n", (vm->output_fine_channels ? "on" : "off") );
     vmBindObsData( vm,
         opts.coarse_chan_str, 1, vm->mpi_rank,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
-fprintf( stderr, "output_fine_channels is %s\n", (vm->output_fine_channels ? "on" : "off") );
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
     vm->cal.ref_ant      = strdup( opts.ref_ant );
@@ -105,20 +102,11 @@ fprintf( stderr, "output_fine_channels is %s\n", (vm->output_fine_channels ? "on
             mwalib_version );
     logger_timed_message( vm->log, vm->log_message );
 
-    if (opts.out_fine && opts.out_coarse)
+    // If explicit output flags are given, set the output channelisation
+    // accordingly
+    if (opts.out_fine || opts.out_coarse)
     {
-        set_vcsbeam_fine_output( vm, true );
-        set_vcsbeam_coarse_output( vm, true );
-    }
-    else if (opts.out_fine)
-    {
-        set_vcsbeam_fine_output( vm, true );
-        set_vcsbeam_coarse_output( vm, false );
-    }
-    else if (opts.out_coarse)
-    {
-        set_vcsbeam_fine_output( vm, false );
-        set_vcsbeam_coarse_output( vm, true );
+        vmSetOutputChannelisation( vm, opts.out_fine, opts.out_coarse );
     }
 
     // Create some "shorthand" variables for code brevity

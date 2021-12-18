@@ -590,13 +590,14 @@ void vmBindCalData( vcsbeam_context *vm,
  */
 void destroy_vcsbeam_context( vcsbeam_context *vm );
 
-/* SET_VCSBEAM_FINE_OUTPUT & SET_VCSBEAM_COARSE_OUTPUT
- * =======================   =========================
+/**
+ * vmSetOutputChannelisation
+ * =========================
  *
- * Turns on/off fine/coarse channelised output
+ * Turns on/off fine/coarse channelised output, and deduces whether the
+ * forward/inverse pfb will be needed, based on the input channelisation
  */
-void set_vcsbeam_fine_output( vcsbeam_context *vm, bool switch_on );
-void set_vcsbeam_coarse_output( vcsbeam_context *vm, bool switch_on );
+void vmSetOutputChannelisation( vcsbeam_context *vm, bool out_fine, bool out_coarse );
 
 // OTHER AUXILIARY FUNCTIONS
 
