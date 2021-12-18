@@ -815,7 +815,18 @@ typedef enum pfb_flags_t
     PFB_MALLOC_HOST_OUTPUT   = 0x02,
     PFB_MALLOC_DEVICE_INPUT  = 0x04,
     PFB_MALLOC_DEVICE_OUTPUT = 0x08,
-    PFB_MALLOC_ALL           = 0x0F
+    PFB_MALLOC_ALL           = 0x0F,
+
+    PFB_TYPE_MASK            = 0xF0, // Next four bytes used for listing different output data types
+    PFB_COMPLEX_INT4         = 0x10,
+    PFB_COMPLEX_FLOAT64      = 0x20,
+
+    PFB_IMAG_PART_FIRST      = 0x100,
+
+    PFB_EMULATE_FPGA         = 0x200,
+
+    PFB_SMART                = 0x11D  // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
+                                      //   PFB_EMULATE_FPGA | PFB_COMPLEX_INT4 | PFB_IMAG_PART_FIRST
 } pfb_flags;
 
 typedef struct forward_pfb_t
@@ -855,6 +866,7 @@ typedef struct forward_pfb_t
     int              *d_i_output_idx;         // (The MWAX files are ordered by "Antenna", whereas the legacy
                                               // VCS files are ordered in their own special order)
 
+    pfb_flags         flags;                  // See pfb_flags enum above for options
     cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
 
     bool              read_locked;            // For multi-threading: lock for reading
@@ -871,7 +883,7 @@ void free_forward_pfb( forward_pfb *fpfb );
 
 pfb_result forward_pfb_read_next_second( forward_pfb *fpfb );
     
-void cu_forward_pfb_fpga_version( forward_pfb *fpfb, bool copy_result_to_host, logger *log );
+void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log );
 
 #ifdef __cplusplus
 }
