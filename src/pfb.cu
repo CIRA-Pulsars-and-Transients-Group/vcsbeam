@@ -306,7 +306,9 @@ forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, i
 
     fpfb->nspectra = nsamples / M;
     fpfb->M        = M;
+fprintf( stderr, "before, filter = %p\n", filter );
     fpfb->K        = filter->nchans;
+fprintf( stderr, "after\n" );
     fpfb->I        = vm->obs_metadata->num_rf_inputs;
     fpfb->P        = filter->ncoeffs / fpfb->K;
     // ^^^ The user is responsible for making sure that the number of desired

@@ -138,14 +138,14 @@ int main(int argc, char **argv)
         strcpy( opts.synth_filter, "LSQ12" );
     }
 
-    pfb_filter *filter = load_filter_coefficients( opts.synth_filter, SYNTHESIS_FILTER, nchans );
+    vmLoadFilter( vm, opts.synth_filter, SYNTHESIS_FILTER, nchans );
 
     // Adjust by the scaling that was introduced by the forward PFB,
     // along with any other scaling that I, Lord and Master of the inverse
     // PFB, feel is appropriate.
     double approx_filter_scale = 15.0/7.2; // 7.2 = 16384/117964.8
-    for (i = 0; i < filter->ncoeffs; i++)
-        filter->coeffs[i] *= approx_filter_scale;
+    for (i = 0; i < vm->synth_filter->ncoeffs; i++)
+        vm->synth_filter->coeffs[i] *= approx_filter_scale;
 
     /*********************
      * Memory Allocation *
@@ -180,8 +180,8 @@ int main(int argc, char **argv)
     if (vm->do_inverse_pfb)
     {
         data_buffer_vdif  = create_pinned_data_buffer( nsamples * nchans * npols * vm->npointing * 2 * sizeof(float) );
-        malloc_ipfb( &gi, filter, nsamples, npols, vm->npointing );
-        cu_load_ipfb_filter( filter, &gi );
+        malloc_ipfb( &gi, vm->synth_filter, nsamples, npols, vm->npointing );
+        cu_load_ipfb_filter( vm->synth_filter, &gi );
     }
 
     // Create structures for holding header information
@@ -317,8 +317,6 @@ int main(int argc, char **argv)
     logger_timed_message( vm->log, "Starting clean-up" );
 
     destroy_detected_beam( detected_beam, vm->npointing, 2*nsamples, nchans );
-
-    free_pfb_filter( filter );
 
     if (vm->do_inverse_pfb)
     {

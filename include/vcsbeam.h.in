@@ -328,34 +328,6 @@ cuDoubleComplex *roots_of_unity( int N );
 
 
 
-/* LOAD_FILTER_COEFFICIENTS
- * ========================
- *
- * Load a set of filter coefficients
- * Inputs:
- *   FILTERNAME - string specifying a filter. There should be a corresponding
- *                file in the RUNTIME_DIR called FILTERNAME.dat.
- *   TYPE       - Whether it's an ANALYSIS_FILTER or a SYNTHESIS_FILTER
- *   NCHANS     - the number of channels that this filter will be applied to.
- *                For both ANALYSIS and SYNTHESIS filters, this should be
- *                the number of ANALYSIS channels.
- * Outputs:
- *   [return value] - pointer to the newly allocated struct containing the
- *                    coefficients. This should be freed using
- *                    free_pfb_filter()
- */
-pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nchans );
-
-
-
-/* FREE_PFB_FILTER
- * ===============
- *
- * Free the memory allocated in load_filter_coefficients()
- */
-void free_pfb_filter( pfb_filter *filter );
-
-
 #ifdef __cplusplus
 } // End extern "C"
 #endif
@@ -458,9 +430,15 @@ typedef struct vcsbeam_context_t
     // Calibration
     calibration cal;                  // Calibration specification
 
+    // Tied-array beam pointings
     double *ras_hours;                // Array of pointing RAs (in decimal hours)
     double *decs_degs;                // Array of pointing degs (in decimal degrees)
 
+    // PFB
+    pfb_filter *analysis_filter;      // Filters for PFB analysis
+    pfb_filter *synth_filter;         // Filter for PFB synthesis
+
+    // Data buffers
     void *v, *d_v;                    // The buffers for the input data on host/device
     uintptr_t v_size_bytes;           // The size of data in bytes (currently always = bytes_per_second)
     uintptr_t d_v_size_bytes;         // The size of d_data in bytes (depends on number of "chunks")
@@ -703,6 +681,31 @@ Antenna *find_matching_antenna( MetafitsMetadata *metadata, Rfinput *rfinput );
 Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name );
 
 void get_mwalib_version( char *version_str );
+
+/**
+ * vmLoadFilter
+ * ============
+ *
+ * Load a set of filter coefficients
+ * Inputs:
+ *   FILTERNAME - string specifying a filter. There should be a corresponding
+ *                file in the RUNTIME_DIR called FILTERNAME.dat.
+ *   TYPE       - Whether it's an ANALYSIS_FILTER or a SYNTHESIS_FILTER
+ *   NCHANS     - the number of channels that this filter will be applied to.
+ *                For both ANALYSIS and SYNTHESIS filters, this should be
+ *                the number of ANALYSIS channels.
+ */
+void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int nchans );
+
+
+/**
+ * FREE_PFB_FILTER
+ * ===============
+ *
+ * Free the memory allocated in vmLoadFilter()
+ */
+void free_pfb_filter( pfb_filter *filter );
+
 
 #ifdef __cplusplus
 } // End extern "C"

@@ -77,11 +77,11 @@ int main( int argc, char *argv[] )
 
     // Load the filter
     int K = 128; // The number of desired output channels
-    pfb_filter *filter = load_filter_coefficients( opts.analysis_filter, ANALYSIS_FILTER, K );
+    vmLoadFilter( vm, opts.analysis_filter, ANALYSIS_FILTER, K );
 
     // Create and init the PFB struct
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
-    forward_pfb *fpfb = init_forward_pfb( vm, filter, M, opts.nchunks, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
+    forward_pfb *fpfb = init_forward_pfb( vm, vm->analysis_filter, M, opts.nchunks, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
 
     logger_stop_stopwatch( log, "init" );
 
@@ -122,7 +122,6 @@ int main( int argc, char *argv[] )
     logger_timed_message( log, "... j/k. I'm out of files to read. Freeing memory buffers" );
 
     free_forward_pfb( fpfb );
-    free_pfb_filter( filter );
     destroy_vcsbeam_context( vm );
 
     // Exit gracefully

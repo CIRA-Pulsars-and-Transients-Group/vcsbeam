@@ -43,7 +43,7 @@ cuDoubleComplex *roots_of_unity( int N )
 }
 
 
-pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nchans )
+void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int nchans )
 /* Load a set of filter coefficients
  * Inputs:
  *   FILTERNAME - string specifying a filter. There should be a corresponding
@@ -52,16 +52,12 @@ pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nc
  *   NCHANS     - the number of channels that this filter will be applied to.
  *                For both ANALYSIS and SYNTHESIS filters, this should be
  *                the number of ANALYSIS channels.
- * Outputs:
- *   [return value] - pointer to the newly allocated struct containing the
- *                    coefficients. This should be freed using
- *                    free_pfb_filter()
  */
 {
     // Make sure function arguments are not NULL
     if (filtername == NULL)
     {
-        fprintf( stderr, "error: load_filter_coefficients: "
+        fprintf( stderr, "error: vmLoadFilter: "
                 "arguments must not be NULL\n" );
         exit(EXIT_FAILURE);
     }
@@ -74,10 +70,35 @@ pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nc
     FILE *f = fopen( path, "r" );
     if (f == NULL)
     {
-        fprintf( stderr, "error: load_filter_coefficients: "
+        fprintf( stderr, "error: vmLoadFilter: "
                 "could not find filter '%s'\n", filtername );
         exit(EXIT_FAILURE);
     }
+
+    // Allocate new memory and initialise variables
+    // If the specified kind of filter currently already exists, override it
+    pfb_filter *filter;
+    if (type == ANALYSIS_FILTER)
+    {
+        if (vm->analysis_filter != NULL)
+            free_pfb_filter( vm->analysis_filter );
+
+        vm->analysis_filter = (pfb_filter *)malloc( sizeof(pfb_filter) );
+        filter = vm->analysis_filter;
+    }
+    else // if (type == SYNTHESIS_FILTER)
+    {
+        if (vm->synth_filter != NULL)
+            free_pfb_filter( vm->synth_filter );
+
+        vm->synth_filter = (pfb_filter *)malloc( sizeof(pfb_filter) );
+        filter = vm->synth_filter;
+    }
+
+    // Initialise variables
+    filter->nchans  = nchans;
+    filter->ncoeffs = 0;
+    filter->type    = type;
 
     // Go through file and count the number of coefficients
     // We assume that the file contains ONLY ASCII floating point
@@ -85,18 +106,13 @@ pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nc
     double dummy;
     int num_read;
 
-    pfb_filter *filter = (pfb_filter *)malloc( sizeof(pfb_filter) );
-    filter->nchans     = nchans;
-    filter->ncoeffs    = 0;
-    filter->type       = type;
-
     while ((num_read = fscanf( f, "%lf", &dummy )) != EOF)
         filter->ncoeffs++;
 
     // Check to see that there is at least 1 coefficient!
     if (filter->ncoeffs == 0)
     {
-        fprintf( stderr, "error: load_filter_coefficients: "
+        fprintf( stderr, "error: vmLoadFilter: "
                 "No coefficients found in '%s'\n", filtername );
         exit(EXIT_FAILURE);
     }
@@ -112,7 +128,7 @@ pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nc
     // of channels does not divide evenly into the number of coefficients
     if (filter->ncoeffs % nchans != 0)
     {
-        fprintf( stderr, "warning: load_filter_coefficients: "
+        fprintf( stderr, "warning: vmLoadFilter: "
                 "number of channels (%d) does not divide evenly into the "
                 "number of coefficients (%d)\n", nchans, filter->ncoeffs );
     }
@@ -121,17 +137,17 @@ pfb_filter *load_filter_coefficients( char *filtername, filter_type type, int nc
     // Pre-calculate the twiddle factors
     filter->twiddles = roots_of_unity( nchans );
 
-    // Close the file and return the pointer
+    // Close the file
     fclose( f );
-
-    return filter;
 }
 
 
 void free_pfb_filter( pfb_filter *filter )
-/* Free the memory allocated in load_filter_coefficients()
+/* Free the memory allocated in vmLoadFilter()
  */
 {
     free( filter->coeffs );
     free( filter );
+
+    filter = NULL;
 }

@@ -97,6 +97,10 @@ vcsbeam_context *vmInit( bool use_mpi )
     vm->output_fine_channels = false;
     vm->output_coarse_channels = false;
 
+    // No filters
+    vm->analysis_filter = NULL;
+    vm->synth_filter    = NULL;
+
     // Start a logger
     vm->log = create_logger( stdout, vm->mpi_rank );
     logger_add_stopwatch( vm->log, "read", "Reading in data" );
@@ -260,6 +264,13 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
 
     // Calibration
     free_calibration( &vm->cal );
+
+    // Filters
+    if (vm->analysis_filter != NULL)
+        free_pfb_filter( vm->analysis_filter );
+
+    if (vm->synth_filter != NULL)
+        free_pfb_filter( vm->synth_filter );
 
     // Finalise MPI
     if (vm->use_mpi)
