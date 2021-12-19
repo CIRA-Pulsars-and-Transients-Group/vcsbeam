@@ -290,7 +290,6 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags 
     forward_pfb *fpfb = vm->fpfb; // (Shorthand variable)
 
     // Set the next gps second to read to be the first one
-    fpfb->current_gps_idx = 0;
     fpfb->flags           = flags; // It doesn't matter if there is "extra" information
                                    // in these flag bits apart from the output format
 
@@ -434,7 +433,7 @@ pfb_result vmForwardPFBReadNextSecond( vcsbeam_context *vm )
     forward_pfb *fpfb = vm->fpfb;
 
     // Error check: there are still data files to read
-    if (fpfb->current_gps_idx >= vm->num_gps_seconds_to_process)
+    if (vm->current_gps_idx >= vm->num_gps_seconds_to_process)
     {
         return PFB_END_OF_GPSTIMES;
     }
@@ -442,16 +441,14 @@ pfb_result vmForwardPFBReadNextSecond( vcsbeam_context *vm )
     // Turn the read lock on
     fpfb->htr_buffer->locked = true;
 
-    // First, copy the last voltage block to the front of the array
-    memcpy( fpfb->htr_buffer->copy_to_ptr,
-            fpfb->htr_buffer->copy_from_ptr,
-            fpfb->htr_buffer->copy_size );
+    // First, copy the last margin to the front of the array
+    vmReadBufferCopyMargin( fpfb->htr_buffer );
 
     // Now, read the next second's worth of data (via mwalib API) starting
     // at the second block
     if (mwalib_voltage_context_read_second(
                     vm->vcs_context,
-                    vm->gps_seconds_to_process[fpfb->current_gps_idx],
+                    vm->gps_seconds_to_process[vm->current_gps_idx],
                     1,
                     vm->coarse_chan_idxs_to_process[0],
                     (unsigned char *)fpfb->htr_buffer->read_ptr,
@@ -463,7 +460,7 @@ pfb_result vmForwardPFBReadNextSecond( vcsbeam_context *vm )
         exit(EXIT_FAILURE);
     }
 
-    fpfb->current_gps_idx++;
+    vm->current_gps_idx++;
 
     return PFB_SUCCESS;
 }

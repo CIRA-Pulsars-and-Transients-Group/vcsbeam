@@ -74,8 +74,8 @@ vcsbeam_context *vmInit( bool use_mpi )
     vm->Jv_size_bytes         = 0;
     vm->d_Jv_size_bytes       = 0;
 
-    // Default: data is legacy VCS format (VB_INT4)
-    vm->datatype = VB_INT4;
+    // Default: data is legacy VCS format (VM_INT4)
+    vm->datatype = VM_INT4;
 
     // Calibration
     init_calibration( &vm->cal );
@@ -103,6 +103,9 @@ vcsbeam_context *vmInit( bool use_mpi )
 
     // No forward PFB
     vm->fpfb = NULL;
+
+    // Start (reading) at the beginning
+    vm->current_gps_idx = 0;
 
     // Start a logger
     vm->log = create_logger( stdout, vm->mpi_rank );
@@ -558,27 +561,31 @@ void vmPushChunk( vcsbeam_context *vm )
 }
 
 
-vcsbeam_error vmReadNextSecond( vcsbeam_context *vm )
+vm_error vmReadNextSecond( vcsbeam_context *vm )
 {
-    uintptr_t timestep_idx = vm->chunk_to_load / vm->chunks_per_second;
+    // Shorthand variables
+    uintptr_t timestep_idx = vm->current_gps_idx;
     uintptr_t ntimesteps   = vm->num_gps_seconds_to_process;
     uint64_t  gps_second   = vm->gps_seconds_to_process[timestep_idx];
 
     // Return "end of data" if the timestep idx is too high
     if (timestep_idx >= ntimesteps)
-        return VB_EOD;
+        return VM_EOD;
 
     sprintf( vm->log_message, "--- Processing GPS second %ld [%lu/%lu], Coarse channel %lu [%d/%d] ---",
-                gps_second, timestep_idx+1, ntimesteps,
+                gps_second,
+                timestep_idx+1,
+                ntimesteps,
                 vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number,
-                vm->coarse_chan_idxs_to_process[0], vm->num_coarse_chans_to_process );
-    logger_message( vm->log, vm->log_message );
+                vm->coarse_chan_idxs_to_process[0],
+                vm->num_coarse_chans_to_process );
+    logger_timed_message( vm->log, vm->log_message );
 
     logger_start_stopwatch( vm->log, "read", true );
 
     if (mwalib_voltage_context_read_second(
                 vm->vcs_context,
-                vm->gps_seconds_to_process[timestep_idx],
+                gps_second,
                 1,
                 vm->coarse_chan_idxs_to_process[0],
                 vm->v,
@@ -592,7 +599,10 @@ vcsbeam_error vmReadNextSecond( vcsbeam_context *vm )
 
     logger_stop_stopwatch( vm->log, "read" );
 
-    return VB_SUCCESS;
+    // Increment the count of number of seconds read
+    vm->current_gps_idx++;
+
+    return VM_SUCCESS;
 }
 
 void vmPushJ( vcsbeam_context *vm )

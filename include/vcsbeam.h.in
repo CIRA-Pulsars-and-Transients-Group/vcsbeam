@@ -341,15 +341,16 @@ cuDoubleComplex *roots_of_unity( int N );
 
 typedef enum vcsbeam_datatype_t
 {
-    VB_INT4,
-    VB_DBL
+    VM_INT4,
+    VM_DBL
 } vcsbeam_datatype;
 
-typedef enum vcsbeam_error_t
+typedef enum vm_error_t
 {
-    VB_SUCCESS,
-    VB_EOD       // End Of Data
-} vcsbeam_error;
+    VM_SUCCESS,
+    VM_EOD,       // End Of Data
+    VM_READ_BUFFER_NOT_SET
+} vm_error;
 
 typedef struct geometric_delays_t {
     cuDoubleComplex   *phi;
@@ -484,8 +485,6 @@ typedef struct forward_pfb_t
     size_t            chunks_per_second;      // Split each second into this many chunks on the GPU
     size_t            chunk;                  // The current chunk being/about to be processed
 
-    size_t            current_gps_idx;        // Which gps second (in vm) to read next
-
     int               ninputs_per_cufft_batch; // Necessary because one can't do 2560000 batches, apparently
     int               cufft_batch_size;
 
@@ -592,6 +591,8 @@ typedef struct vcsbeam_context_t
 
     bool output_fine_channels;        // Whether to output fine channelised data
     bool output_coarse_channels;      // Whether to output coarse channelised data
+
+    size_t current_gps_idx;           // Which gps second to read next
 
     bool do_forward_pfb;              // Whether to perform the forward PFB
     bool do_inverse_pfb;              // Whether to perform the inverse PFB
@@ -814,6 +815,7 @@ void free_pfb_filter( pfb_filter *filter );
 
 
 read_buffer *vmInitReadBuffer( size_t read_size, size_t margin_size );
+vm_error vmReadBufferCopyMargin( read_buffer *rb );
 void vmFreeReadBuffer( read_buffer *rb );
 
 #ifdef __cplusplus
@@ -998,7 +1000,7 @@ float *create_pinned_data_buffer( size_t size );
 
 void vmPushPolIdxLists( vcsbeam_context *vm );
 
-vcsbeam_error vmReadNextSecond( vcsbeam_context *vm );
+vm_error vmReadNextSecond( vcsbeam_context *vm );
 
 cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
 void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );

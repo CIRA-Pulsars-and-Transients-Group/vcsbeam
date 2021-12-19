@@ -98,13 +98,13 @@ __global__ void invj_the_data( void            *data,
 
     cuDoubleComplex Dq, Dp;
     // Convert input data to complex float
-    if (datatype == VB_INT4)
+    if (datatype == VM_INT4)
     {
         uint8_t *v = (uint8_t *)data;
         Dq = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iQ,nc,ni)]);
         Dp = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iP,nc,ni)]);
     }
-    else if (datatype == VB_DBL)
+    else if (datatype == VM_DBL)
     {
         cuDoubleComplex *v = (cuDoubleComplex *)data;
         Dq = v[v_IDX(s,c,iQ,nc,ni)];

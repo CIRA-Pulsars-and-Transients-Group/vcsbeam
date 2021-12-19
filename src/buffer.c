@@ -65,3 +65,23 @@ void vmFreeReadBuffer( read_buffer *rb )
 
     free( rb );
 }
+
+vm_error vmReadBufferCopyMargin( read_buffer *rb )
+{
+    // Do nothing, in a variety of cases
+    if (rb == NULL)
+        return VM_READ_BUFFER_NOT_SET;
+
+    if (rb->buffer == NULL)
+        return VM_READ_BUFFER_NOT_SET;
+
+    if (rb->copy_from_ptr == NULL ||
+            rb->copy_to_ptr == NULL ||
+            rb->copy_size == 0)
+        return VM_SUCCESS;
+
+    // Execute copy
+    memcpy( rb->copy_to_ptr, rb->copy_from_ptr, rb->copy_size );
+
+    return VM_SUCCESS;
+}

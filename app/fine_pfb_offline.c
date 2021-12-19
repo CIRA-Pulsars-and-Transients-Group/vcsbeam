@@ -103,7 +103,7 @@ int main( int argc, char *argv[] )
 
         sprintf( filename, "%010u_%010u_ch%03lu.dat",
                 vm->obs_metadata->obs_id,
-                vm->gps_seconds_to_process[vm->fpfb->current_gps_idx - 1],
+                vm->gps_seconds_to_process[vm->current_gps_idx - 1],
                 vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number
                );
 
