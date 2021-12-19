@@ -141,6 +141,24 @@ void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int 
     fclose( f );
 }
 
+void vmScaleFilterCoeffs( vcsbeam_context *vm, filter_type type, double scale_factor )
+{
+    // Get the requested filter
+    pfb_filter *filter;
+    if (type == ANALYSIS_FILTER)
+        filter = vm->analysis_filter;
+    else // if (type == SYNTHESIS_FILTER)
+        filter = vm->synth_filter;
+
+    // If there is no such filter, silently do nothing
+    if (filter == NULL)
+        return;
+
+    // Loop through and multiply the scale factor to each coefficient
+    int i;
+    for (i = 0; i < filter->ncoeffs; i++)
+        filter->coeffs[i] *= scale_factor;
+}
 
 void free_pfb_filter( pfb_filter *filter )
 /* Free the memory allocated in vmLoadFilter()

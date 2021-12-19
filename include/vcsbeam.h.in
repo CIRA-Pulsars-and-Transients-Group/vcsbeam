@@ -307,7 +307,7 @@ typedef struct pfb_filter_t
     double          *coeffs;
     int              ncoeffs;
     int              ntaps;
-    int              nchans; // = size/ntaps
+    int              nchans; // = ncoeffs/ntaps
     cuDoubleComplex *twiddles; // twiddle factors
     filter_type      type;
 } pfb_filter;
@@ -876,6 +876,7 @@ void mjd2lst( double, double * );
 double parse_dec( char* ); // "01:23:45.67" --> Dec in degrees
 double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
 
+void vmScaleFilterCoeffs( vcsbeam_context *vm, filter_type type, double scale_factor );
 
 void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags );
 

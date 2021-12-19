@@ -129,23 +129,13 @@ int main(int argc, char **argv)
     for (p = 0; p < vm->npointing; p++)
         calc_beam_geom( vm->ras_hours[p], vm->decs_degs[p], mjd, &beam_geom_vals[p] );
 
-    // Create a structure for the PFB filter coefficients
-
-    // If no synthesis filter was explicitly chosen, choose the LSQ12 filter
-    if (!opts.synth_filter)
-    {
-        opts.synth_filter = (char *)malloc( 6 );
-        strcpy( opts.synth_filter, "LSQ12" );
-    }
-
-    vmLoadFilter( vm, opts.synth_filter, SYNTHESIS_FILTER, nchans );
+    // Load the (synthesis) PFB filter
 
     // Adjust by the scaling that was introduced by the forward PFB,
     // along with any other scaling that I, Lord and Master of the inverse
     // PFB, feel is appropriate.
-    double approx_filter_scale = 15.0/7.2; // 7.2 = 16384/117964.8
-    for (i = 0; i < vm->synth_filter->ncoeffs; i++)
-        vm->synth_filter->coeffs[i] *= approx_filter_scale;
+    vmLoadFilter( vm, opts.synth_filter, SYNTHESIS_FILTER, nchans );
+    vmScaleFilterCoeffs( vm, SYNTHESIS_FILTER, 15.0/7.2 ); // (1/7.2) = 16384/117964.8
 
     /*********************
      * Memory Allocation *
@@ -634,6 +624,13 @@ void make_tied_array_beam_parse_cmdline(
         opts->coarse_chan_str = (char *)malloc( 3 );
         strcpy( opts->coarse_chan_str, "+0" );
     }
+
+    if (opts->synth_filter == NULL)
+    {
+        opts->synth_filter = (char *)malloc( 6 );
+        strcpy( opts->synth_filter, "LSQ12" );
+    }
+
 }
 
 
