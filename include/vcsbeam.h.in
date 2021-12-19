@@ -406,17 +406,21 @@ typedef struct mpi_psrfits_t
     int             writer_id;
 } mpi_psrfits;
 
-typedef struct vm_buffer_t
+typedef struct read_buffer_t
 {
-    void *buffer;
-    void *d_buffer;
+    void   *buffer;        // The beginning of the whole buffer
+    size_t  buffer_size;   // The size (in bytes) of the whole buffer
 
-    size_t buffer_size;
-    size_t d_buffer_size;
+    void   *read_ptr;      // The pointer of where to read into
+    size_t  read_size;     // The number of bytes to read in
 
-    size_t read_size;
-    // ...
-} vm_buffer;
+    void   *copy_from_ptr; // The pointer of where to copy from
+    void   *copy_to_ptr;   // The pointer of where to copy to
+    size_t  copy_size;     // The number of bytes to copy
+
+    bool    locked;        // Whether reading/copying is allowed
+} read_buffer;
+
 
 /********************
  *                  *
@@ -462,13 +466,13 @@ typedef enum pfb_flags_t
 
 typedef struct forward_pfb_t
 {
-    char2            *htr_data;               // The input data, as obtained via mwalib from coarse channelised data
     char2            *d_htr_data;             // Same as above, on device
+
+    read_buffer      *htr_buffer;             // The input data buffer
 
     uint8_t          *vcs_data;               // The output data, fine channelised and packed into the VCS recombined format
     uint8_t          *d_vcs_data;             // Same as above, on device
 
-    size_t            htr_size;               // The size (in bytes) of htr_data
     size_t            d_htr_size;             // The size (in bytes) of d_htr_data
     size_t            htr_stride;             // Stride for chunks
     size_t            vcs_size;               // The size (in bytes) of vcs_data
@@ -504,8 +508,6 @@ typedef struct forward_pfb_t
 
     pfb_flags         flags;                  // See pfb_flags enum above for options
     cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
-
-    bool              read_locked;            // For multi-threading: lock for reading
 } forward_pfb;
 
 
@@ -810,6 +812,9 @@ void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int 
  */
 void free_pfb_filter( pfb_filter *filter );
 
+
+read_buffer *vmInitReadBuffer( size_t read_size, size_t margin_size );
+void vmFreeReadBuffer( read_buffer *rb );
 
 #ifdef __cplusplus
 } // End extern "C"
