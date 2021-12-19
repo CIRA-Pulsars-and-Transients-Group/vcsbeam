@@ -267,32 +267,27 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
     __syncthreads();
 }
 
-forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, int nchunks, pfb_flags flags )
+void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags )
 /* Create and initialise a forward_pfb struct.
-
-   Inputs:
-
-     VM                - vcsbeam metadata, derived from mwalib
-     FILTER            - struct containing the filter coefficients
-                         **WARNING! Will be forcibly typecast to int!!**
-     M                 - the stride of the application of the filter
-                         (this determines the time resolution of the
-                         channelised data). Set M = K for critically
-                         sampled PFB.
-     NCHUNKS           - Split each second into this many GPU processing chunks
-     FLAGS             - Various flags for whether to allocate memory
-                         (see pfb_flags enum)
-
-   Output:
-
-     FPFB         - Pointer to struct to be initialised
+ * A filter must already be loaded into VM->ANALYSIS_FILTER
+ * **WARNING! The filter will be forcibly typecast to int!!**
+ *
+ * Inputs:
+ *
+ *   VM                - vcsbeam metadata, derived from mwalib
+ *   M                 - the stride of the application of the filter
+ *                       (this determines the time resolution of the
+ *                       channelised data). Set M = K for critically
+ *                       sampled PFB.
+ *   NCHUNKS           - Split each second into this many GPU processing chunks
+ *   FLAGS             - Various flags for whether to allocate memory
+ *                       (see pfb_flags enum)
+ *
  */
 {
     // Create the struct in memory
-    forward_pfb *fpfb = (forward_pfb *)malloc( sizeof(forward_pfb) );
-
-    // Set the metadata pointer
-    fpfb->vm = vm;
+    vm->fpfb = (forward_pfb *)malloc( sizeof(forward_pfb) );
+    forward_pfb *fpfb = vm->fpfb; // (Shorthand variable)
 
     // Set the next gps second to read to be the first one
     fpfb->current_gps_idx = 0;
@@ -306,11 +301,9 @@ forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, i
 
     fpfb->nspectra = nsamples / M;
     fpfb->M        = M;
-fprintf( stderr, "before, filter = %p\n", filter );
-    fpfb->K        = filter->nchans;
-fprintf( stderr, "after\n" );
+    fpfb->K        = vm->analysis_filter->nchans;
     fpfb->I        = vm->obs_metadata->num_rf_inputs;
-    fpfb->P        = filter->ncoeffs / fpfb->K;
+    fpfb->P        = vm->analysis_filter->ncoeffs / fpfb->K;
     // ^^^ The user is responsible for making sure that the number of desired
     // channels divides evenly into the number of filter coefficients. No
     // error or warning is generated otherwise, not even if the inferred
@@ -373,14 +366,14 @@ fprintf( stderr, "after\n" );
     fpfb->bytes_per_block = vm->vcs_metadata->voltage_block_size_bytes;
 
     fpfb->weighted_overlap_add_size = fpfb->htr_size * (sizeof(cuFloatComplex) / sizeof(char2)) / nchunks;
-    size_t filter_size = filter->ncoeffs * sizeof(int);
+    size_t filter_size = vm->analysis_filter->ncoeffs * sizeof(int);
 
     // Allocate memory for filter and copy across the filter coefficients,
     // casting to int
     gpuErrchk(cudaMallocHost( (void **)&(fpfb->filter_coeffs),   filter_size ));
     gpuErrchk(cudaMalloc(     (void **)&(fpfb->d_filter_coeffs), filter_size ));
-    for (i = 0; i < filter->ncoeffs; i++)
-        fpfb->filter_coeffs[i] = (int)filter->coeffs[i]; // **WARNING! Forcible typecast to int!**
+    for (i = 0; i < vm->analysis_filter->ncoeffs; i++)
+        fpfb->filter_coeffs[i] = (int)vm->analysis_filter->coeffs[i]; // **WARNING! Forcible typecast to int!**
     gpuErrchk(cudaMemcpyAsync( fpfb->d_filter_coeffs, fpfb->filter_coeffs, filter_size, cudaMemcpyHostToDevice ));
 
     // Allocate device memory for the other arrays
@@ -413,9 +406,6 @@ fprintf( stderr, "after\n" );
         fprintf( stderr, "CUFFT error: Plan creation failed with error code %d\n", res );
         exit(EXIT_FAILURE);
     }
-
-    // Return the new struct
-    return fpfb;
 }
 
 void free_forward_pfb( forward_pfb *fpfb )
@@ -435,10 +425,13 @@ void free_forward_pfb( forward_pfb *fpfb )
     free( fpfb );
 }
 
-pfb_result forward_pfb_read_next_second( forward_pfb *fpfb )
+pfb_result vmForwardPFBReadNextSecond( vcsbeam_context *vm )
 {
+    // Shorthand variables
+    forward_pfb *fpfb = vm->fpfb;
+
     // Error check: there are still data files to read
-    if (fpfb->current_gps_idx >= fpfb->vm->num_gps_seconds_to_process)
+    if (fpfb->current_gps_idx >= vm->num_gps_seconds_to_process)
     {
         return PFB_END_OF_GPSTIMES;
     }
@@ -455,16 +448,16 @@ pfb_result forward_pfb_read_next_second( forward_pfb *fpfb )
     // at the second block
     char2 *second_block = &(fpfb->htr_data[nchar2s_per_block]);
     if (mwalib_voltage_context_read_second(
-                    fpfb->vm->vcs_context,
-                    fpfb->vm->gps_seconds_to_process[fpfb->current_gps_idx],
+                    vm->vcs_context,
+                    vm->gps_seconds_to_process[fpfb->current_gps_idx],
                     1,
-                    fpfb->vm->coarse_chan_idxs_to_process[0],
+                    vm->coarse_chan_idxs_to_process[0],
                     (unsigned char *)second_block,
-                    fpfb->vm->bytes_per_second,
-                    fpfb->vm->error_message,
+                    vm->bytes_per_second,
+                    vm->error_message,
                     ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
     {
-        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", fpfb->vm->error_message );
+        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
         exit(EXIT_FAILURE);
     }
 

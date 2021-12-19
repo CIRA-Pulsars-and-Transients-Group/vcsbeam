@@ -406,6 +406,96 @@ typedef struct mpi_psrfits_t
     int             writer_id;
 } mpi_psrfits;
 
+/********************
+ *                  *
+ *   FORWARD PFB    *
+ *                  *
+ ********************/
+
+/* The final step in the forward PFB version that emulates the FPGA
+ * implementation packs the data into (4+4)-bit complex samples. The
+ * following macros collectively achieve this.
+ */
+#define CLIP(x,max)        ((x) < -(max)   ? -(max)   : \
+                            (x) >  (max)-1 ?  (max)-1 : (x))
+#define INT_TO_UINT8(x)    ((x) < 0 ? CLIP(x,8) + 0x10 : CLIP(x,8))
+#define DEMOTE(x)  (INT_TO_UINT8((int)round(x)))
+#define PACK_NIBBLES(r,i)  ((DEMOTE(r) << 4) + DEMOTE(i))
+
+typedef enum pfb_result_t
+{
+    PFB_SUCCESS,
+    PFB_END_OF_GPSTIMES
+} pfb_result;
+
+typedef enum pfb_flags_t
+{
+    PFB_MALLOC_HOST_INPUT    = 0x01,
+    PFB_MALLOC_HOST_OUTPUT   = 0x02,
+    PFB_MALLOC_DEVICE_INPUT  = 0x04,
+    PFB_MALLOC_DEVICE_OUTPUT = 0x08,
+    PFB_MALLOC_ALL           = 0x0F,
+
+    PFB_TYPE_MASK            = 0xF0, // Next four bytes used for listing different output data types
+    PFB_COMPLEX_INT4         = 0x10,
+    PFB_COMPLEX_FLOAT64      = 0x20,
+
+    PFB_IMAG_PART_FIRST      = 0x100,
+
+    PFB_EMULATE_FPGA         = 0x200,
+
+    PFB_SMART                = 0x21D  // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
+                                      //   PFB_EMULATE_FPGA | PFB_COMPLEX_INT4
+} pfb_flags;
+
+typedef struct forward_pfb_t
+{
+    char2            *htr_data;               // The input data, as obtained via mwalib from coarse channelised data
+    char2            *d_htr_data;             // Same as above, on device
+
+    uint8_t          *vcs_data;               // The output data, fine channelised and packed into the VCS recombined format
+    uint8_t          *d_vcs_data;             // Same as above, on device
+
+    size_t            htr_size;               // The size (in bytes) of htr_data
+    size_t            d_htr_size;             // The size (in bytes) of d_htr_data
+    size_t            htr_stride;             // Stride for chunks
+    size_t            vcs_size;               // The size (in bytes) of vcs_data
+    size_t            d_vcs_size;             // The size (in bytes) of d_vcs_data
+    size_t            vcs_stride;             // Stride for chunks
+
+    size_t            char2s_per_second;      // The number of char2's in one second of HTR data
+    size_t            bytes_per_block;        // The number of bytes in one "voltage block" of HTR data
+    size_t            chunks_per_second;      // Split each second into this many chunks on the GPU
+    size_t            chunk;                  // The current chunk being/about to be processed
+
+    size_t            current_gps_idx;        // Which gps second (in vm) to read next
+
+    int               ninputs_per_cufft_batch; // Necessary because one can't do 2560000 batches, apparently
+    int               cufft_batch_size;
+
+    cuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
+    size_t            weighted_overlap_add_size; // The size (in bytes) of d_weighted_overlap_add
+
+    int              *filter_coeffs;          // The filter to be applied **WARNING! Filter will be typecast to int!!**
+    int              *d_filter_coeffs;        // As above, on the device
+
+    int               nspectra;               // The number of spectra to generate
+    int               nspectra_per_chunk;     // The number of spectra per chunk
+    int               M;                      // The "stride" of the PFB (setting M=K means critically sampled)
+    int               K;                      // The number of channels
+    int               I;                      // The number of RF inputs
+    int               P;                      // The number of taps
+
+    int              *i_output_idx;           // The idxs for where to put each RF input in the output
+    int              *d_i_output_idx;         // (The MWAX files are ordered by "Antenna", whereas the legacy
+                                              // VCS files are ordered in their own special order)
+
+    pfb_flags         flags;                  // See pfb_flags enum above for options
+    cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
+
+    bool              read_locked;            // For multi-threading: lock for reading
+} forward_pfb;
+
 
 typedef struct vcsbeam_context_t
 {
@@ -437,6 +527,8 @@ typedef struct vcsbeam_context_t
     // PFB
     pfb_filter *analysis_filter;      // Filters for PFB analysis
     pfb_filter *synth_filter;         // Filter for PFB synthesis
+
+    forward_pfb *fpfb;                // Forward PFB
 
     // Data buffers
     void *v, *d_v;                    // The buffers for the input data on host/device
@@ -784,114 +876,12 @@ void mjd2lst( double, double * );
 double parse_dec( char* ); // "01:23:45.67" --> Dec in degrees
 double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
 
-#ifdef __cplusplus
-}
-#endif
 
-
-
-/********************
- *                  *
- *   FORWARD PFB    *
- *                  *
- ********************/
-
-/* The final step in the forward PFB version that emulates the FPGA
- * implementation packs the data into (4+4)-bit complex samples. The
- * following macros collectively achieve this.
- */
-#define CLIP(x,max)        ((x) < -(max)   ? -(max)   : \
-                            (x) >  (max)-1 ?  (max)-1 : (x))
-#define INT_TO_UINT8(x)    ((x) < 0 ? CLIP(x,8) + 0x10 : CLIP(x,8))
-#define DEMOTE(x)  (INT_TO_UINT8((int)round(x)))
-#define PACK_NIBBLES(r,i)  ((DEMOTE(r) << 4) + DEMOTE(i))
-
-typedef enum pfb_result_t
-{
-    PFB_SUCCESS,
-    PFB_END_OF_GPSTIMES
-} pfb_result;
-
-typedef enum pfb_flags_t
-{
-    PFB_MALLOC_HOST_INPUT    = 0x01,
-    PFB_MALLOC_HOST_OUTPUT   = 0x02,
-    PFB_MALLOC_DEVICE_INPUT  = 0x04,
-    PFB_MALLOC_DEVICE_OUTPUT = 0x08,
-    PFB_MALLOC_ALL           = 0x0F,
-
-    PFB_TYPE_MASK            = 0xF0, // Next four bytes used for listing different output data types
-    PFB_COMPLEX_INT4         = 0x10,
-    PFB_COMPLEX_FLOAT64      = 0x20,
-
-    PFB_IMAG_PART_FIRST      = 0x100,
-
-    PFB_EMULATE_FPGA         = 0x200,
-
-    PFB_SMART                = 0x21D  // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
-                                      //   PFB_EMULATE_FPGA | PFB_COMPLEX_INT4
-} pfb_flags;
-
-typedef struct forward_pfb_t
-{
-    vcsbeam_context *vm;                     // All the necessary metadata
-
-    char2            *htr_data;               // The input data, as obtained via mwalib from coarse channelised data
-    char2            *d_htr_data;             // Same as above, on device
-
-    uint8_t          *vcs_data;               // The output data, fine channelised and packed into the VCS recombined format
-    uint8_t          *d_vcs_data;             // Same as above, on device
-
-    size_t            htr_size;               // The size (in bytes) of htr_data
-    size_t            d_htr_size;             // The size (in bytes) of d_htr_data
-    size_t            htr_stride;             // Stride for chunks
-    size_t            vcs_size;               // The size (in bytes) of vcs_data
-    size_t            d_vcs_size;             // The size (in bytes) of d_vcs_data
-    size_t            vcs_stride;             // Stride for chunks
-
-    size_t            char2s_per_second;      // The number of char2's in one second of HTR data
-    size_t            bytes_per_block;        // The number of bytes in one "voltage block" of HTR data
-    size_t            chunks_per_second;      // Split each second into this many chunks on the GPU
-    size_t            chunk;                  // The current chunk being/about to be processed
-
-    size_t            current_gps_idx;        // Which gps second (in vm) to read next
-
-    int               ninputs_per_cufft_batch; // Necessary because one can't do 2560000 batches, apparently
-    int               cufft_batch_size;
-
-    cuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
-    size_t            weighted_overlap_add_size; // The size (in bytes) of d_weighted_overlap_add
-
-    int              *filter_coeffs;          // The filter to be applied **WARNING! Filter will be typecast to int!!**
-    int              *d_filter_coeffs;        // As above, on the device
-
-    int               nspectra;               // The number of spectra to generate
-    int               nspectra_per_chunk;     // The number of spectra per chunk
-    int               M;                      // The "stride" of the PFB (setting M=K means critically sampled)
-    int               K;                      // The number of channels
-    int               I;                      // The number of RF inputs
-    int               P;                      // The number of taps
-
-    int              *i_output_idx;           // The idxs for where to put each RF input in the output
-    int              *d_i_output_idx;         // (The MWAX files are ordered by "Antenna", whereas the legacy
-                                              // VCS files are ordered in their own special order)
-
-    pfb_flags         flags;                  // See pfb_flags enum above for options
-    cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
-
-    bool              read_locked;            // For multi-threading: lock for reading
-} forward_pfb;
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, int nchunks, pfb_flags flags );
+void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags );
 
 void free_forward_pfb( forward_pfb *fpfb );
 
-pfb_result forward_pfb_read_next_second( forward_pfb *fpfb );
+pfb_result vmForwardPFBReadNextSecond( vcsbeam_context *vm );
     
 void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log );
 

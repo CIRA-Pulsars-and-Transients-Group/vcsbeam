@@ -81,7 +81,7 @@ int main( int argc, char *argv[] )
 
     // Create and init the PFB struct
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
-    forward_pfb *fpfb = init_forward_pfb( vm, vm->analysis_filter, M, opts.nchunks, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
+    vmInitForwardPFB( vm, M, opts.nchunks, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
 
     logger_stop_stopwatch( log, "init" );
 
@@ -89,13 +89,13 @@ int main( int argc, char *argv[] )
     char filename[128];
     pfb_result status;
     logger_start_stopwatch( log, "read", true );
-    while ((status = forward_pfb_read_next_second( fpfb )) == PFB_SUCCESS)
+    while ((status = vmForwardPFBReadNextSecond( vm )) == PFB_SUCCESS)
     {
         logger_stop_stopwatch( log, "read" );
 
         // Actually do the PFB
         logger_start_stopwatch( log, "pfb", false );
-        cu_forward_pfb( fpfb, true, log );
+        cu_forward_pfb( vm->fpfb, true, log );
         logger_stop_stopwatch( log, "pfb" );
 
         // Write out the answer to a file
@@ -103,12 +103,12 @@ int main( int argc, char *argv[] )
 
         sprintf( filename, "%010u_%010u_ch%03lu.dat",
                 vm->obs_metadata->obs_id,
-                vm->gps_seconds_to_process[fpfb->current_gps_idx - 1],
+                vm->gps_seconds_to_process[vm->fpfb->current_gps_idx - 1],
                 vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number
                );
 
         FILE *f = fopen( filename, "w" );
-        fwrite( fpfb->vcs_data, fpfb->vcs_size, sizeof(uint8_t), f );
+        fwrite( vm->fpfb->vcs_data, vm->fpfb->vcs_size, sizeof(uint8_t), f );
         fclose( f );
 
         logger_stop_stopwatch( log, "write" );
@@ -121,7 +121,6 @@ int main( int argc, char *argv[] )
     // Free memory
     logger_timed_message( log, "... j/k. I'm out of files to read. Freeing memory buffers" );
 
-    free_forward_pfb( fpfb );
     destroy_vcsbeam_context( vm );
 
     // Exit gracefully

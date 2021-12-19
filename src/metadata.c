@@ -101,6 +101,9 @@ vcsbeam_context *vmInit( bool use_mpi )
     vm->analysis_filter = NULL;
     vm->synth_filter    = NULL;
 
+    // No forward PFB
+    vm->fpfb = NULL;
+
     // Start a logger
     vm->log = create_logger( stdout, vm->mpi_rank );
     logger_add_stopwatch( vm->log, "read", "Reading in data" );
@@ -271,6 +274,10 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
 
     if (vm->synth_filter != NULL)
         free_pfb_filter( vm->synth_filter );
+
+    // Forward PFB
+    if (vm->fpfb != NULL)
+        free_forward_pfb( vm->fpfb );
 
     // Finalise MPI
     if (vm->use_mpi)
