@@ -406,6 +406,18 @@ typedef struct mpi_psrfits_t
     int             writer_id;
 } mpi_psrfits;
 
+typedef struct vm_buffer_t
+{
+    void *buffer;
+    void *d_buffer;
+
+    size_t buffer_size;
+    size_t d_buffer_size;
+
+    size_t read_size;
+    // ...
+} vm_buffer;
+
 /********************
  *                  *
  *   FORWARD PFB    *
@@ -878,10 +890,9 @@ double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
 
 void vmScaleFilterCoeffs( vcsbeam_context *vm, filter_type type, double scale_factor );
 
-void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags );
-
 void free_forward_pfb( forward_pfb *fpfb );
 
+void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags );
 pfb_result vmForwardPFBReadNextSecond( vcsbeam_context *vm );
     
 void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log );
