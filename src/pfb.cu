@@ -247,7 +247,7 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
     double im = b[b_idx].y / K;
 
     // Put the packed value back into global memory at the appropriate place
-    if (flags & PFB_TYPE_MASK == PFB_COMPLEX_INT4)
+    if (flags & PFB_COMPLEX_INT4)
     {
         uint8_t *X = (uint8_t *)outdata;
         if (flags & PFB_IMAG_PART_FIRST)
@@ -351,15 +351,18 @@ forward_pfb *init_forward_pfb( vcsbeam_context *vm, pfb_filter *filter, int M, i
     int num_voltage_blocks_per_chunk = vm->vcs_metadata->num_voltage_blocks_per_second / nchunks;
     fpfb->d_htr_size = (num_voltage_blocks_per_chunk + 1) * vm->vcs_metadata->voltage_block_size_bytes;
 
-    if (flags & PFB_TYPE_MASK == PFB_COMPLEX_INT4)
-        fpfb->vcs_size   = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
-    else // Currently, default is cuDoubleComplex
+    if (flags & PFB_COMPLEX_INT4)
+    {
+        fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
+    }
+    else // i.e., default is cuDoubleComplex
+    {
         fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(cuDoubleComplex);
+    }
 
     fpfb->d_vcs_size = fpfb->vcs_size / nchunks;
 
     fpfb->htr_stride = (vm->vcs_metadata->num_voltage_blocks_per_second*vm->vcs_metadata->voltage_block_size_bytes)/nchunks;
-fprintf( stderr, "htr_stride = %lu,  d_htr_size = %lu,  htr_size = %lu\n", fpfb->htr_stride, fpfb->d_htr_size, fpfb->htr_size );
     fpfb->vcs_stride = fpfb->d_vcs_size;
 
     fpfb->char2s_per_second =
@@ -441,9 +444,6 @@ pfb_result forward_pfb_read_next_second( forward_pfb *fpfb )
     // Turn the read lock on
     fpfb->read_locked = true;
 
-    // For catching mwalib errors
-    char message[ERROR_MESSAGE_LEN];
-
     // First, copy the last voltage block to the front of the array
     int nchar2s_per_block = fpfb->bytes_per_block / sizeof(char2);
     char2 *last_block = &(fpfb->htr_data[fpfb->char2s_per_second - nchar2s_per_block]);
@@ -459,10 +459,10 @@ pfb_result forward_pfb_read_next_second( forward_pfb *fpfb )
                     fpfb->vm->coarse_chan_idxs_to_process[0],
                     (unsigned char *)second_block,
                     fpfb->vm->bytes_per_second,
-                    message,
+                    fpfb->vm->error_message,
                     ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
     {
-        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", message );
+        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", fpfb->vm->error_message );
         exit(EXIT_FAILURE);
     }
 
@@ -495,16 +495,9 @@ void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
         // Copy data to device
         logger_start_stopwatch( log, "upload", true );
 
-fprintf( stderr, "chunk = %lu\n", fpfb->chunk );
-fprintf( stderr, "from: %p,  to: %p,  size: %lu,  stride: %lu\n",
-        fpfb->htr_data + fpfb->chunk*fpfb->htr_stride,
-        fpfb->d_htr_data,
-        fpfb->d_htr_size,
-        fpfb->htr_stride );
-
         gpuErrchk(cudaMemcpy(
                     fpfb->d_htr_data,                               // to
-                    fpfb->htr_data + fpfb->chunk*fpfb->htr_stride,  // from
+                    (char *)fpfb->htr_data + fpfb->chunk*fpfb->htr_stride,  // from
                     fpfb->d_htr_size,                               // how much
                     cudaMemcpyHostToDevice ));                      // which direction
 
@@ -578,18 +571,18 @@ fprintf( stderr, "from: %p,  to: %p,  size: %lu,  stride: %lu\n",
         logger_stop_stopwatch( log, "pack" );
 
         // Finally, copy the answer back to host memory, if requested
-        logger_start_stopwatch( log, "download", true );
-
         if (copy_result_to_host)
         {
+            logger_start_stopwatch( log, "download", true );
+
             gpuErrchk(cudaMemcpy(
-                        fpfb->vcs_data + fpfb->chunk*fpfb->vcs_stride,   // to
+                        (char *)fpfb->vcs_data + fpfb->chunk*fpfb->vcs_stride,   // to
                         fpfb->d_vcs_data,                                // from
                         fpfb->d_vcs_size,                                // how much
                         cudaMemcpyDeviceToHost ));                       // which direction
-        }
 
-        logger_stop_stopwatch( log, "download" );
+            logger_stop_stopwatch( log, "download" );
+        }
     }
 }
 

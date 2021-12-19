@@ -825,7 +825,7 @@ typedef enum pfb_flags_t
 
     PFB_EMULATE_FPGA         = 0x200,
 
-    PFB_SMART                = 0x01D  // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
+    PFB_SMART                = 0x21D  // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
                                       //   PFB_EMULATE_FPGA | PFB_COMPLEX_INT4
 } pfb_flags;
 
