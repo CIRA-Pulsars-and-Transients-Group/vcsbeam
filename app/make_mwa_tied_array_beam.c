@@ -198,7 +198,7 @@ int main(int argc, char **argv)
      * GET CALIBRATION SOLUTION *
      ****************************/
 
-    vmBindCalData( vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
+    vmBindCalibrationData( vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
     vmReadCalibration( vm );
 
     // Apply any calibration corrections

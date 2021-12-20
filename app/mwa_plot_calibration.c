@@ -93,7 +93,7 @@ int main(int argc, char **argv)
         vm.coarse_chan_idx = Ch;
 
         // Read in the calibration solution
-        vmBindCalData( &vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
+        vmBindCalibrationData( &vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
         vmReadCalibration( &vm );
 
         // Copy the solution into the "D" arrays

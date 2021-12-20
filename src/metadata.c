@@ -106,8 +106,10 @@ vcsbeam_context *vmInit( bool use_mpi )
     // Start (reading) at the beginning
     vm->current_gps_idx = 0;
 
-    // No input data directory
-    vm->datadir = NULL;
+    // No input
+    vm->datadir   = NULL;
+    vm->filenames = NULL;
+    vm->nfiles    = 0;
 
     // Start a logger
     vm->log = create_logger( stdout, vm->mpi_rank );
@@ -207,7 +209,7 @@ void vmBindObsData(
 }
 
 
-void vmBindCalData( vcsbeam_context *vm,
+void vmBindCalibrationData( vcsbeam_context *vm,
         char   *caldir,
         int     cal_type,
         bool    use_bandpass,  // only relevant for RTS observations
@@ -297,9 +299,11 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     // Read buffer
     vmFreeVHost( vm );
 
-    // Data directory
+    // Input data info
     if (vm->datadir != NULL)
         free( vm->datadir );
+
+    vmDestroyFilenames( vm );
 
     // Finalise MPI
     if (vm->use_mpi)
@@ -736,67 +740,64 @@ void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
     vm->d_e_size_bytes  = vm->e_size_bytes;
 }
 
-char **create_filenames(
-        const struct MetafitsContext  *metafits_context,
-        const struct MetafitsMetadata *metafits_metadata,
-        unsigned long int              begin_gps,
-        unsigned long int              nseconds,
-        char                          *datadir,
-        uintptr_t                      begin_coarse_chan_idx,
-        uintptr_t                      ncoarse_chans,
-        int                           *nfiles
-        )
-/* Create an array of filenames; free with destroy_filenames()
+void vmCreateFilenames( vcsbeam_context *vm )
+/* Create an array of filenames; free with vmDestroyFilenames()
  */
 {
+    // Shorthand variables
+    unsigned long int begin_gps       = vm->gps_seconds_to_process[0];
+    int               nseconds        = vm->num_gps_seconds_to_process;
+    uintptr_t         coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    int               ncoarse_chans   = vm->num_coarse_chans_to_process;
+
     // Buffer for mwalib error messages
     char error_message[ERROR_MESSAGE_LEN];
 
     // Check that the number of seconds is non-negative
     if (nseconds <= 0)
     {
-        fprintf( stderr, "error: create_filenames: nseconds (= %ld) must be >= 1\n",
+        fprintf( stderr, "error: vmCreateFilenames: nseconds (= %d) must be >= 1\n",
                  nseconds );
         exit(EXIT_FAILURE);
     }
 
     // Check that the number of requested course channels does not exceed the number of available coarse channels
-    if (begin_coarse_chan_idx + ncoarse_chans > metafits_metadata->num_metafits_coarse_chans)
+    if (coarse_chan_idx + ncoarse_chans > vm->obs_metadata->num_metafits_coarse_chans)
     {
-        fprintf( stderr, "error: create_filenames: requested coarse channels higher than "
+        fprintf( stderr, "error: vmCreateFilenames: requested coarse channels higher than "
                 "what is available\n" );
         exit(EXIT_FAILURE);
     }
 
     // Work out the number of files
-    int timestep_duration_sec      = (metafits_metadata->mwa_version == VCSMWAXv2 ? 8 : 1); // <-- Raise an issue with mwalib (I shouldn't have to do this)
+    int timestep_duration_sec      = (vm->obs_metadata->mwa_version == VCSMWAXv2 ? 8 : 1); // <-- Raise an issue with mwalib (I shouldn't have to do this)
     uint64_t end_gps               = begin_gps + nseconds - 1;
-    uint64_t t0_timestep_second    = metafits_metadata->metafits_timesteps[0].gps_time_ms/1000;
+    uint64_t t0_timestep_second    = vm->obs_metadata->metafits_timesteps[0].gps_time_ms/1000;
     uint64_t start_timestep_second = begin_gps - (begin_gps % timestep_duration_sec);
     uint64_t end_timestep_second   = end_gps - (end_gps % timestep_duration_sec);
     unsigned int ntimesteps        = (end_timestep_second - start_timestep_second)/timestep_duration_sec + 1;
     unsigned int t0_idx            = (start_timestep_second - t0_timestep_second)/timestep_duration_sec;
 
-    *nfiles = ncoarse_chans * ntimesteps;
+    vm->nfiles = ncoarse_chans * ntimesteps;
 
     // Allocate memory for the file name list
     char filename[MAX_COMMAND_LENGTH]; // Just the mwalib-generated filename (without the path)
-    char **filenames = (char **)malloc( *nfiles * ncoarse_chans * sizeof(char *) ); // The full array of filenames, including the paths
+    vm->filenames = (char **)malloc( vm->nfiles * ncoarse_chans * sizeof(char *) ); // The full array of filenames, including the paths
 
     // Allocate memory and write filenames
     unsigned int t_idx, f_idx;
     uintptr_t c_idx;
     for (t_idx = 0; t_idx < ntimesteps; t_idx++)
     {
-        for (c_idx = begin_coarse_chan_idx; c_idx < begin_coarse_chan_idx + ncoarse_chans; c_idx++)
+        for (c_idx = coarse_chan_idx; c_idx < coarse_chan_idx + ncoarse_chans; c_idx++)
         {
-            //f_idx = second*ncoarse_chans + c_idx - begin_coarse_chan_idx; // <-- this order seems to break mwalib (v0.9.4)
-            f_idx = (c_idx - begin_coarse_chan_idx)*ntimesteps + t_idx;
-            filenames[f_idx] = (char *)malloc( MAX_COMMAND_LENGTH );
+            //f_idx = second*ncoarse_chans + c_idx - coarse_chan_idx; // <-- this order seems to break mwalib (v0.9.4)
+            f_idx = (c_idx - coarse_chan_idx)*ntimesteps + t_idx;
+            vm->filenames[f_idx] = (char *)malloc( MAX_COMMAND_LENGTH );
             memset( filename, 0, MAX_COMMAND_LENGTH );
 
             if (mwalib_metafits_get_expected_volt_filename(
-                        metafits_context,
+                        vm->obs_context,
                         t_idx + t0_idx,
                         c_idx,
                         filename,
@@ -807,20 +808,23 @@ char **create_filenames(
                 fprintf( stderr, "error (mwalib): cannot create filenames: %s\n", error_message );
                 exit(EXIT_FAILURE);
             }
-            sprintf( filenames[f_idx], "%s/%s",
-                    datadir, filename );
+            sprintf( vm->filenames[f_idx], "%s/%s",
+                    vm->datadir, filename );
         }
     }
-
-    return filenames;
 }
 
-void destroy_filenames( char **filenames, int nfiles )
+void vmDestroyFilenames( vcsbeam_context *vm )
 {
-    int i;
-    for (i = 0; i < nfiles; i++)
-        free( filenames[i] );
-    free( filenames );
+    if (vm->filenames != NULL)
+    {
+        int i;
+        for (i = 0; i < vm->nfiles; i++)
+            free( vm->filenames[i] );
+        free( vm->filenames );
+    }
+
+    vm->nfiles = 0;
 }
 
 
@@ -865,11 +869,7 @@ void vmGetVoltageMetadata( vcsbeam_context *vm )
     // Shorthand variables
     unsigned long int begin_gps       = vm->gps_seconds_to_process[0];
     int               nseconds        = vm->num_gps_seconds_to_process;
-    uintptr_t         coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
     int               ncoarse_chans   = vm->num_coarse_chans_to_process;
-
-    char error_message[ERROR_MESSAGE_LEN];
-    error_message[0] = '\0'; // <-- Just to avoid a compiler warning about uninitialised variables
 
     // If nseconds is an invalid number (<= 0), make it equal to the max possible for this obs
     if (nseconds <= 0)
@@ -885,42 +885,40 @@ void vmGetVoltageMetadata( vcsbeam_context *vm )
     }
 
     // Create list of filenames
-    int nfiles;
-    char **filenames = create_filenames( vm->obs_context, vm->obs_metadata, begin_gps, nseconds, vm->datadir, coarse_chan_idx, ncoarse_chans, &nfiles );
+    vmCreateFilenames( vm );
 
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
-    const char **voltage_files = (const char **)malloc( sizeof(char *) * nfiles );
+    const char **voltage_files = (const char **)malloc( sizeof(char *) * vm->nfiles );
     int i;
-    for (i = 0; i < nfiles; i++)
+    for (i = 0; i < vm->nfiles; i++)
     {
-        voltage_files[i] = filenames[i];
+        voltage_files[i] = vm->filenames[i];
     }
 
     // Create VCS_CONTEXT
-    if (mwalib_voltage_context_new( vm->obs_metadata->metafits_filename, voltage_files, nfiles, &vm->vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    if (mwalib_voltage_context_new( vm->obs_metadata->metafits_filename, voltage_files, vm->nfiles, &vm->vcs_context, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
-        fprintf( stderr, "error (mwalib): cannot create voltage context: %s\n", error_message );
+        fprintf( stderr, "error (mwalib): cannot create voltage context: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
 
     // Create VCS_METADATA
-    if (mwalib_voltage_metadata_get( vm->vcs_context, &vm->vcs_metadata, error_message, ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+    if (mwalib_voltage_metadata_get( vm->vcs_context, &vm->vcs_metadata, vm->error_message, ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
     {
-        fprintf( stderr, "error (mwalib): cannot get metadata: %s\n", error_message );
+        fprintf( stderr, "error (mwalib): cannot get metadata: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
 
     // Replace the existing OBS_METADATA with a new one that knows this is a VCS observation
     mwalib_metafits_metadata_free( vm->obs_metadata );
-    if (mwalib_metafits_metadata_get( NULL, NULL, vm->vcs_context, &vm->obs_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    if (mwalib_metafits_metadata_get( NULL, NULL, vm->vcs_context, &vm->obs_metadata, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
-        fprintf( stderr, "error (mwalib): cannot create metafits metadata from voltage context: %s\n", error_message );
+        fprintf( stderr, "error (mwalib): cannot create metafits metadata from voltage context: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
 
     // Free memory
-    destroy_filenames( filenames, nfiles );
     free( voltage_files );
 }
 

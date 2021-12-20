@@ -530,6 +530,8 @@ typedef struct vcsbeam_context_t
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
 
     char *datadir;                    // The directory containing the input data
+    char **filenames;                 // The input filenames
+    int nfiles;                       // The number of filenames
 
     // Calibration
     calibration cal;                  // Calibration specification
@@ -664,7 +666,7 @@ void vmBindObsData(
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir );
 
-void vmBindCalData( vcsbeam_context *vm,
+void vmBindCalibrationData( vcsbeam_context *vm,
         char   *caldir,
         int     cal_type,
         bool    use_bandpass,  // only relevant for RTS observations
@@ -753,18 +755,8 @@ void vmSetCustomTileFlags( vcsbeam_context *vm ); // (defined in calibration.c);
 void vmLoadRTSSolution( vcsbeam_context *vm );
 void vmLoadOffringaSolution( vcsbeam_context *vm );
 
-char **create_filenames(
-        const struct MetafitsContext  *metafits_context,
-        const struct MetafitsMetadata *metafits_metadata,
-        unsigned long int              begin_gps,
-        unsigned long int              nseconds,
-        char                          *datadir,
-        uintptr_t                      begin_coarse_chan_idx,
-        uintptr_t                      ncoarse_chans,
-        int                           *nfiles
-        );
-
-void destroy_filenames( char **filenames, int nfiles );
+void vmCreateFilenames( vcsbeam_context *vm );
+void vmDestroyFilenames( vcsbeam_context *vm );
 
 void vmLoadObsMetafits( vcsbeam_context *vm, char *filename );
 void vmLoadCalMetafits( vcsbeam_context *vm, char *filename );
