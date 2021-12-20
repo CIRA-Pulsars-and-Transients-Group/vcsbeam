@@ -143,10 +143,8 @@ void vmBindObsData(
     vm->num_gps_seconds_to_process  = num_gps_seconds_to_process;
     vm->num_coarse_chans_to_process = num_coarse_chans_to_process;
 
-    get_mwalib_voltage_metadata(
-            &(vm->vcs_metadata),
-            &(vm->vcs_context),
-            &(vm->obs_metadata),
+    vmGetVoltageMetadata(
+            vm,
             vm->obs_context,
             first_gps_second,
             num_gps_seconds_to_process,
@@ -848,10 +846,8 @@ void vmLoadCalMetafits( vcsbeam_context *vm, char *filename )
     }
 }
 
-void get_mwalib_voltage_metadata(
-        VoltageMetadata  **vcs_metadata,
-        VoltageContext   **vcs_context,
-        MetafitsMetadata **obs_metadata,
+void vmGetVoltageMetadata(
+        vcsbeam_context   *vm,
         MetafitsContext   *obs_context,
         unsigned long int  begin_gps,
         int                nseconds,
@@ -868,19 +864,19 @@ void get_mwalib_voltage_metadata(
     // If nseconds is an invalid number (<= 0), make it equal to the max possible for this obs
     if (nseconds <= 0)
     {
-        nseconds = (*obs_metadata)->num_metafits_timesteps - (begin_gps - (*obs_metadata)->metafits_timesteps[0].gps_time_ms/1000);
+        nseconds = vm->obs_metadata->num_metafits_timesteps - (begin_gps - vm->obs_metadata->metafits_timesteps[0].gps_time_ms/1000);
     }
 
     // Ditto for the ncoarse_chans
     if (ncoarse_chans < 1)
     {
-        fprintf( stderr, "error: get_mwalib_voltage_metadata: number of coarse chans must be >1\n" );
+        fprintf( stderr, "error: vmGetVoltageMetadata: number of coarse chans must be >1\n" );
         exit(EXIT_FAILURE);
     }
 
     // Create list of filenames
     int nfiles;
-    char **filenames = create_filenames( obs_context, *obs_metadata, begin_gps, nseconds, datadir, coarse_chan_idx, ncoarse_chans, &nfiles );
+    char **filenames = create_filenames( obs_context, vm->obs_metadata, begin_gps, nseconds, datadir, coarse_chan_idx, ncoarse_chans, &nfiles );
 
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)
@@ -892,22 +888,22 @@ void get_mwalib_voltage_metadata(
     }
 
     // Create VCS_CONTEXT
-    if (mwalib_voltage_context_new( (*obs_metadata)->metafits_filename, voltage_files, nfiles, vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    if (mwalib_voltage_context_new( vm->obs_metadata->metafits_filename, voltage_files, nfiles, &vm->vcs_context, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create voltage context: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
 
     // Create VCS_METADATA
-    if (mwalib_voltage_metadata_get( *vcs_context, vcs_metadata, error_message, ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+    if (mwalib_voltage_metadata_get( vm->vcs_context, &vm->vcs_metadata, error_message, ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot get metadata: %s\n", error_message );
         exit(EXIT_FAILURE);
     }
 
     // Replace the existing OBS_METADATA with a new one that knows this is a VCS observation
-    mwalib_metafits_metadata_free( *obs_metadata );
-    if (mwalib_metafits_metadata_get( NULL, NULL, *vcs_context, obs_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    mwalib_metafits_metadata_free( vm->obs_metadata );
+    if (mwalib_metafits_metadata_get( NULL, NULL, vm->vcs_context, &vm->obs_metadata, error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create metafits metadata from voltage context: %s\n", error_message );
         exit(EXIT_FAILURE);

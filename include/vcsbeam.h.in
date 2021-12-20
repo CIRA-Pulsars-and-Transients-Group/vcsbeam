@@ -423,13 +423,10 @@ typedef struct host_buffer_t
 } host_buffer;
 
 
-typedef device_buffer_t
+typedef struct device_buffer_t
 {
     void   *buffer;
     size_t  buffer_size;
-
-    host_buffer *read_host_buffer;
-    host_buffer *write_host_buffer;
 } device_buffer;
 
 /********************
@@ -767,10 +764,8 @@ void destroy_filenames( char **filenames, int nfiles );
 void vmLoadObsMetafits( vcsbeam_context *vm, char *filename );
 void vmLoadCalMetafits( vcsbeam_context *vm, char *filename );
 
-void get_mwalib_voltage_metadata(
-        VoltageMetadata  **vcs_metadata,
-        VoltageContext   **vcs_context,
-        MetafitsMetadata **obs_metadata,
+void vmGetVoltageMetadata(
+        vcsbeam_context   *vm,
         MetafitsContext   *obs_context,
         unsigned long int  begin_gps,
         int                nseconds,
