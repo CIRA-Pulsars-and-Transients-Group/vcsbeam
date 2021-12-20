@@ -89,7 +89,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
       device memory, in order that it can make use of cuFFT. This is a 
  */
 
-__global__ void legacy_pfb_weighted_overlap_add( char2 *indata,
+__global__ void vmWOLA_kernel( char2 *indata,
         int *filter_coeffs, void *weighted_overlap_array )
 {
     // Parse the block and thread idxs:
@@ -267,10 +267,13 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
     __syncthreads();
 }
 
-void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags )
+void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
 /* Create and initialise a forward_pfb struct.
- * A filter must already be loaded into VM->ANALYSIS_FILTER
+ * A filter must already be loaded into VM->ANALYSIS_FILTER.
  * **WARNING! The filter will be forcibly typecast to int!!**
+ * The GPU processing will be divided up into VM->CHUNKS_PER_SECOND,
+ * chunks per second, but if this number does not divide the number
+ * of samples (10000) evenly, then it is incremented until it does.
  *
  * Inputs:
  *
@@ -279,7 +282,6 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags 
  *                       (this determines the time resolution of the
  *                       channelised data). Set M = K for critically
  *                       sampled PFB.
- *   NCHUNKS           - Split each second into this many GPU processing chunks
  *   FLAGS             - Various flags for whether to allocate memory
  *                       (see pfb_flags enum)
  *
@@ -329,13 +331,11 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags 
     gpuErrchk(cudaMemcpyAsync( fpfb->d_i_output_idx, fpfb->i_output_idx, fpfb->I*sizeof(int), cudaMemcpyHostToDevice ));
 
     // Work out the sizes of the various arrays
-    while (fpfb->nspectra % nchunks != 0)
-        nchunks++;
-    fpfb->chunks_per_second  = nchunks;
-    fpfb->chunk              = 0;
-    fpfb->nspectra_per_chunk = fpfb->nspectra / nchunks;
+    while (fpfb->nspectra % vm->chunks_per_second != 0)
+        vm->chunks_per_second++;
+    fpfb->nspectra_per_chunk = fpfb->nspectra / vm->chunks_per_second;
 
-    int num_voltage_blocks_per_chunk = vm->vcs_metadata->num_voltage_blocks_per_second / nchunks;
+    int num_voltage_blocks_per_chunk = vm->vcs_metadata->num_voltage_blocks_per_second / vm->chunks_per_second;
     fpfb->d_htr_size = (num_voltage_blocks_per_chunk + 1) * vm->vcs_metadata->voltage_block_size_bytes;
 
     if (flags & PFB_COMPLEX_INT4)
@@ -347,9 +347,9 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags 
         fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(cuDoubleComplex);
     }
 
-    fpfb->d_vcs_size = fpfb->vcs_size / nchunks;
+    fpfb->d_vcs_size = fpfb->vcs_size / vm->chunks_per_second;
 
-    fpfb->htr_stride = (vm->vcs_metadata->num_voltage_blocks_per_second*vm->vcs_metadata->voltage_block_size_bytes)/nchunks;
+    fpfb->htr_stride = (vm->vcs_metadata->num_voltage_blocks_per_second*vm->vcs_metadata->voltage_block_size_bytes)/vm->chunks_per_second;
     fpfb->vcs_stride = fpfb->d_vcs_size;
 
     fpfb->char2s_per_second =
@@ -357,7 +357,7 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags 
          vm->vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
     fpfb->bytes_per_block = vm->vcs_metadata->voltage_block_size_bytes;
 
-    fpfb->weighted_overlap_add_size = vm->v->buffer_size * (sizeof(cuFloatComplex) / sizeof(char2)) / nchunks;
+    fpfb->weighted_overlap_add_size = vm->v->buffer_size * (sizeof(cuFloatComplex) / sizeof(char2)) / vm->chunks_per_second;
     size_t filter_size = vm->analysis_filter->ncoeffs * sizeof(int);
 
     // Allocate memory for filter and copy across the filter coefficients,
@@ -370,7 +370,12 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags 
 
     // Allocate device memory for the other arrays
     if (flags & PFB_MALLOC_HOST_OUTPUT)
-        gpuErrchk(cudaMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size ));
+    {
+        cudaMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size );
+        cudaCheckErrors( "vmInitForwardPFB: cudaMallocHost(vcs_data) failed" );
+    }
+    else
+        fpfb->vcs_data = NULL;
 
     if (flags & PFB_MALLOC_DEVICE_INPUT)
         gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->d_htr_size ));
@@ -397,7 +402,7 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags 
     }
 }
 
-void free_forward_pfb( forward_pfb *fpfb )
+void vmFreeForwardPFB( forward_pfb *fpfb )
 /* Free host and device memory allocated in init_forward_pfb
  */
 {
@@ -413,124 +418,174 @@ void free_forward_pfb( forward_pfb *fpfb )
     free( fpfb );
 }
 
-void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host )
+void vmUploadForwardPFBChunk( vcsbeam_context *vm )
+{
+    logger_start_stopwatch( vm->log, "upload", false );
+
+    int chunk = vm->chunk_to_load % vm->chunks_per_second;
+
+    cudaMemcpy(
+            vm->fpfb->d_htr_data,                                // to
+            (char *)vm->v->buffer + chunk*vm->fpfb->htr_stride,  // from
+            vm->fpfb->d_htr_size,                                // how much
+            cudaMemcpyHostToDevice );                            // which direction
+    cudaCheckErrors( "vmUploadForwardPFBChunk: cudaMemcpy failed" );
+
+    logger_stop_stopwatch( vm->log, "upload" );
+
+    // If it's the last chunk of the second, read lock can be switched off
+    if (chunk == vm->chunks_per_second - 1)
+        vm->v->locked = false;
+}
+
+void vmWOLAChunk( vcsbeam_context *vm )
+{
+    // Shorthand variable
+    forward_pfb *fpfb = vm->fpfb;
+
+    dim3 blocks( fpfb->nspectra_per_chunk, fpfb->I, fpfb->P );
+    dim3 threads( fpfb->K );
+
+    logger_start_stopwatch( vm->log, "pfb-wola", false );
+
+    // Set the d_weighted_overlap_add array to zeros
+    gpuErrchk(cudaMemset( fpfb->d_weighted_overlap_add, 0, fpfb->weighted_overlap_add_size ));
+
+    vmWOLA_kernel<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
+    cudaDeviceSynchronize();
+    gpuErrchk( cudaPeekAtLastError() );
+
+    logger_stop_stopwatch( vm->log, "pfb-wola" );
+}
+
+void vmFPGARoundingChunk( vcsbeam_context *vm )
+{
+    // Shorthand variable
+    forward_pfb *fpfb = vm->fpfb;
+
+    logger_start_stopwatch( vm->log, "pfb-round", false );
+
+    if (fpfb->flags & PFB_EMULATE_FPGA)
+    {
+        // Perform the weird rounding and demotion described in the appendix of McSweeney et al. (2020)
+        dim3 blocks( fpfb->nspectra_per_chunk, fpfb->I );
+        dim3 threads( fpfb->K );
+        fpga_rounding_and_demotion<<<blocks, threads>>>( fpfb->d_weighted_overlap_add );
+    }
+    else
+    {
+        // Otherwise, just convert the ints to floats in preparation for the cuFFT
+        dim3 blocks( (2 * fpfb->nspectra_per_chunk * fpfb->I * fpfb->K) / 1024 ); // The factor of 2 is because each thread will deal with a single int, not a single int2
+        dim3 threads( 1024 );
+        double scale = 1.0/16384.0; // equivalent to the ">> 14" operation applied in fpga_rounding_and_demotion()
+        int2float<<<blocks, threads>>>( fpfb->d_weighted_overlap_add, scale );
+    }
+    cudaDeviceSynchronize();
+    gpuErrchk( cudaPeekAtLastError() );
+
+    logger_stop_stopwatch( vm->log, "pfb-round" );
+}
+
+void vmFFTChunk( vcsbeam_context *vm )
+{
+    // Shorthand variable
+    forward_pfb *fpfb = vm->fpfb;
+
+    logger_start_stopwatch( vm->log, "pfb-fft", false );
+
+    int batch;
+    for (batch = 0; batch < fpfb->I / fpfb->ninputs_per_cufft_batch; batch++)
+    {
+        cufftExecC2C(
+                fpfb->plan,
+                fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
+                fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
+                CUFFT_FORWARD );
+    }
+    cudaDeviceSynchronize();
+    gpuErrchk( cudaPeekAtLastError() );
+
+    logger_stop_stopwatch( vm->log, "pfb-fft" );
+}
+
+void vmPackChunk( vcsbeam_context *vm )
+{
+    // Shorthand variable
+    forward_pfb *fpfb = vm->fpfb;
+
+    dim3 blocks( fpfb->nspectra_per_chunk, fpfb->K );
+    dim3 threads( fpfb->I );
+
+    logger_start_stopwatch( vm->log, "pfb-pack", false );
+
+    pack_into_recombined_format<<<blocks, threads>>>( fpfb->d_weighted_overlap_add,
+            fpfb->d_vcs_data, fpfb->d_i_output_idx, fpfb->flags );
+    cudaDeviceSynchronize();
+    gpuErrchk( cudaPeekAtLastError() );
+
+    logger_stop_stopwatch( vm->log, "pfb-pack" );
+}
+
+void vmDownloadForwardPFBChunk( vcsbeam_context *vm )
+{
+    // Shorthand variable
+    forward_pfb *fpfb = vm->fpfb;
+
+    logger_start_stopwatch( vm->log, "download", false );
+
+    int chunk = vm->chunk_to_load % vm->chunks_per_second;
+
+    gpuErrchk(cudaMemcpy(
+                (char *)fpfb->vcs_data + chunk*fpfb->vcs_stride,   // to
+                fpfb->d_vcs_data,                                // from
+                fpfb->d_vcs_size,                                // how much
+                cudaMemcpyDeviceToHost ));                       // which direction
+
+    logger_stop_stopwatch( vm->log, "download" );
+}
+
+void vmExecuteForwardPFB( vcsbeam_context *vm )
 /* The wrapper function that performs a forward PFB on the GPU
  */
 {
     // Shorthand variables
     forward_pfb *fpfb = vm->fpfb;
 
-    // Check that the input and output buffers have been set
+    // Check that the input buffer has been set
     if (vm->v->buffer == NULL)
     {
-        fprintf( stderr, "error: cu_forward_pfb: Input data buffer "
-                "have not been set\n" );
-        exit(EXIT_FAILURE);
-    }
-
-    if (copy_result_to_host && fpfb->vcs_data == NULL)
-    {
-        fprintf( stderr, "error: cu_forward_pfb: Output data buffer "
+        fprintf( stderr, "error: vmExecuteForwardPFB: Input data buffer "
                 "have not been set\n" );
         exit(EXIT_FAILURE);
     }
 
     logger_start_stopwatch( vm->log, "pfb", true );
 
-    for (fpfb->chunk = 0; fpfb->chunk < fpfb->chunks_per_second; fpfb->chunk++)
+    int chunk;
+    for (chunk = 0; chunk < vm->chunks_per_second; chunk++)
     {
         // Copy data to device
-        logger_start_stopwatch( vm->log, "upload", false );
-
-        gpuErrchk(cudaMemcpy(
-                    fpfb->d_htr_data,                                      // to
-                    (char *)vm->v->buffer + fpfb->chunk*fpfb->htr_stride,  // from
-                    fpfb->d_htr_size,                                      // how much
-                    cudaMemcpyHostToDevice ));                             // which direction
-
-        logger_stop_stopwatch( vm->log, "upload" );
-
-        // Read lock can now be switched off
-        if (fpfb->chunk == fpfb->chunks_per_second - 1)
-            vm->v->locked = false;
+        vmUploadForwardPFBChunk( vm );
 
         // PFB algorithm:
-        // 1st step: weighted overlap add
-        dim3 blocks( fpfb->nspectra_per_chunk, fpfb->I, fpfb->P );
-        dim3 threads( fpfb->K );
+        // 1) weighted overlap add
+        vmWOLAChunk( vm );
 
-        logger_start_stopwatch( vm->log, "pfb-wola", false );
+        // 2) Rounding/demotion/scaling
+        vmFPGARoundingChunk( vm );
 
-        // Set the d_weighted_overlap_add array to zeros
-        gpuErrchk(cudaMemset( fpfb->d_weighted_overlap_add, 0, fpfb->weighted_overlap_add_size ));
+        // 3) FFT
+        vmFFTChunk( vm );
 
-        legacy_pfb_weighted_overlap_add<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
-        cudaDeviceSynchronize();
-        gpuErrchk( cudaPeekAtLastError() );
+        // 4) Packaging the result
+        vmPackChunk( vm );
 
-        if (fpfb->flags & PFB_EMULATE_FPGA)
-        {
-            // Perform the weird rounding and demotion described in the appendix of McSweeney et al. (2020)
-            dim3 blocks2( fpfb->nspectra_per_chunk, fpfb->I );
-            dim3 threads2( fpfb->K );
-            fpga_rounding_and_demotion<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add );
-        }
-        else
-        {
-            // Otherwise, just convert the ints to floats in preparation for the cuFFT
-            dim3 blocks2( (2 * fpfb->nspectra_per_chunk * fpfb->I * fpfb->K) / 1024 ); // The factor of 2 is because each thread will deal with a single int, not a single int2
-            dim3 threads2( 1024 );
-            double scale = 1.0/16384.0; // equivalent to the ">> 14" operation applied in fpga_rounding_and_demotion()
-            int2float<<<blocks2, threads2>>>( fpfb->d_weighted_overlap_add, scale );
-        }
-        cudaDeviceSynchronize();
-        gpuErrchk( cudaPeekAtLastError() );
+        // Finally, copy the answer back to host memory, if set up to do so
+        if (fpfb->vcs_data != NULL)
+            vmDownloadForwardPFBChunk( vm );
 
-        logger_stop_stopwatch( vm->log, "pfb-wola" );
-
-        // 2nd step: FFT
-        logger_start_stopwatch( vm->log, "pfb-fft", false );
-
-        int batch;
-        for (batch = 0; batch < fpfb->I / fpfb->ninputs_per_cufft_batch; batch++)
-        {
-            cufftExecC2C(
-                    fpfb->plan,
-                    fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
-                    fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
-                    CUFFT_FORWARD );
-        }
-        cudaDeviceSynchronize();
-        gpuErrchk( cudaPeekAtLastError() );
-
-        logger_stop_stopwatch( vm->log, "pfb-fft" );
-
-        // 3rd step: packaging the result
-        dim3 blocks3( fpfb->nspectra_per_chunk, fpfb->K );
-        dim3 threads3( fpfb->I );
-
-        logger_start_stopwatch( vm->log, "pfb-pack", false );
-
-        pack_into_recombined_format<<<blocks3, threads3>>>( fpfb->d_weighted_overlap_add,
-                fpfb->d_vcs_data, fpfb->d_i_output_idx, fpfb->flags );
-        cudaDeviceSynchronize();
-        gpuErrchk( cudaPeekAtLastError() );
-
-        logger_stop_stopwatch( vm->log, "pfb-pack" );
-
-        // Finally, copy the answer back to host memory, if requested
-        if (copy_result_to_host)
-        {
-            logger_start_stopwatch( vm->log, "download", false );
-
-            gpuErrchk(cudaMemcpy(
-                        (char *)fpfb->vcs_data + fpfb->chunk*fpfb->vcs_stride,   // to
-                        fpfb->d_vcs_data,                                // from
-                        fpfb->d_vcs_size,                                // how much
-                        cudaMemcpyDeviceToHost ));                       // which direction
-
-            logger_stop_stopwatch( vm->log, "download" );
-        }
+        // Increment chunk counter
+        vm->chunk_to_load++;
     }
 
     logger_stop_stopwatch( vm->log, "pfb" );

@@ -134,7 +134,7 @@ __global__ void vmApplyJ_kernel( void            *data,
 #endif
 }
 
-__global__ void beamform_kernel( cuDoubleComplex *Jv_Q,
+__global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                                  cuDoubleComplex *Jv_P,
                                  cuDoubleComplex *phi,
                                  double invw,
@@ -347,11 +347,10 @@ void cu_form_incoh_beam(
 
 void vmApplyJChunk( vcsbeam_context *vm )
 {
-    // Call the kernels
     dim3 chan_samples( vm->nchan, vm->sample_rate / vm->chunks_per_second );
     dim3 stat( vm->obs_metadata->num_ants );
 
-    // convert the data and multiply it by J
+    // J times v
     vmApplyJ_kernel<<<chan_samples, stat>>>(
             vm->d_v,
             (cuDoubleComplex *)vm->d_J,
@@ -361,16 +360,13 @@ void vmApplyJChunk( vcsbeam_context *vm )
             vm->d_polP_idxs,
             vm->obs_metadata->num_ant_pols,
             vm->datatype );
-    cudaCheckErrors( "vmBeamformChunk: vmApplyJ_kernel failed" );
+    cudaCheckErrors( "vmApplyJChunk: vmApplyJ_kernel failed" );
 }
 
 void vmBeamformChunk( vcsbeam_context *vm )
 {
-    // Get some shorthand variables
     uintptr_t shared_array_size = 11 * vm->obs_metadata->num_ants * sizeof(double);
     // (To see how the 11*STATION double arrays are used, go to this code tag: 11NSTATION)
-
-    vmApplyJChunk( vm );
 
     dim3 chan_samples( vm->nchan, vm->sample_rate / vm->chunks_per_second );
     dim3 stat( vm->obs_metadata->num_ants );
@@ -382,7 +378,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
     for (p = 0; p < vm->npointing; p++ )
     {
         // Call the beamformer kernel
-        beamform_kernel<<<chan_samples, stat, shared_array_size, vm->streams[p]>>>(
+        vmBeamform_kernel<<<chan_samples, stat, shared_array_size, vm->streams[p]>>>(
                 vm->d_Jv_Q,
                 vm->d_Jv_P,
                 vm->gdelays.d_phi,
@@ -394,7 +390,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 (float *)vm->d_S,
                 vm->obs_metadata->num_ant_pols );
 
-        gpuErrchk( cudaPeekAtLastError() );
+        cudaCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
     }
     gpuErrchk( cudaDeviceSynchronize() );
 
@@ -409,6 +405,7 @@ void vmBeamformSecond( vcsbeam_context *vm )
     for (chunk = 0; chunk < vm->chunks_per_second; chunk++)
     {
         vmPushChunk( vm );
+        vmApplyJChunk( vm );
         vmBeamformChunk( vm );
         vm->chunk_to_load++;
     }

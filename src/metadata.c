@@ -113,18 +113,19 @@ vcsbeam_context *vmInit( bool use_mpi )
 
     // Start a logger
     vm->log = create_logger( stdout, vm->mpi_rank );
-    logger_add_stopwatch( vm->log, "read",     "Reading in data" );
-    logger_add_stopwatch( vm->log, "upload",   "Uploading the data to the device" );
-    logger_add_stopwatch( vm->log, "pfb",      "Performing the PFB" );
-    logger_add_stopwatch( vm->log, "pfb-wola", "Weighted overlap-add" );
-    logger_add_stopwatch( vm->log, "pfb-fft",  "Performing FFT" );
-    logger_add_stopwatch( vm->log, "pfb-pack", "Packing the data into the recombined format" );
-    logger_add_stopwatch( vm->log, "delay",    "Calculating geometric and cable delays" );
-    logger_add_stopwatch( vm->log, "calc",     "Calculating tied-array beam" );
-    logger_add_stopwatch( vm->log, "ipfb",     "Inverting the PFB" );
-    logger_add_stopwatch( vm->log, "download", "Downloading the data to the host" );
-    logger_add_stopwatch( vm->log, "splice",   "Splicing coarse channels together" );
-    logger_add_stopwatch( vm->log, "write",    "Writing out data to file" );
+    logger_add_stopwatch( vm->log, "read",      "Reading in data" );
+    logger_add_stopwatch( vm->log, "upload",    "Uploading the data to the device" );
+    logger_add_stopwatch( vm->log, "pfb",       "Performing the PFB" );
+    logger_add_stopwatch( vm->log, "pfb-wola",  "Weighted overlap-add" );
+    logger_add_stopwatch( vm->log, "pfb-round", "FPGA rounding and demotion" );
+    logger_add_stopwatch( vm->log, "pfb-fft",   "Performing FFT" );
+    logger_add_stopwatch( vm->log, "pfb-pack",  "Packing the data into the recombined format" );
+    logger_add_stopwatch( vm->log, "delay",     "Calculating geometric and cable delays" );
+    logger_add_stopwatch( vm->log, "calc",      "Calculating tied-array beam" );
+    logger_add_stopwatch( vm->log, "ipfb",      "Inverting the PFB" );
+    logger_add_stopwatch( vm->log, "download",  "Downloading the data to the host" );
+    logger_add_stopwatch( vm->log, "splice",    "Splicing coarse channels together" );
+    logger_add_stopwatch( vm->log, "write",     "Writing out data to file" );
 
     // Initialise pointing RAs and Decs to NULL
     vm->ras_hours = NULL;
@@ -294,7 +295,7 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
 
     // Forward PFB
     if (vm->fpfb != NULL)
-        free_forward_pfb( vm->fpfb );
+        vmFreeForwardPFB( vm->fpfb );
 
     // Read buffer
     vmFreeVHost( vm );
@@ -583,12 +584,17 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 }
 
 void vmPushChunk( vcsbeam_context *vm )
+// Loads a "chunk" of data onto the GPU
 {
-    // Loads a "chunk" of data onto the GPU
+    logger_start_stopwatch( vm->log, "upload", false );
+
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
     char *ptrHost = (char *)vm->v->buffer + chunk*vm->d_v_size_bytes;
+
     cudaMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyNextChunk: cudaMemcpy failed" );
+
+    logger_stop_stopwatch( vm->log, "upload" );
 }
 
 

@@ -68,7 +68,8 @@ int main( int argc, char *argv[] )
 
     // Create and init the PFB struct
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
-    vmInitForwardPFB( vm, M, opts.nchunks, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
+    vm->chunks_per_second = opts.nchunks;
+    vmInitForwardPFB( vm, M, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
 
     // Let's try it out on one second of data
     char filename[128];
@@ -76,7 +77,7 @@ int main( int argc, char *argv[] )
     while ((status = vmReadNextSecond( vm )) == VM_SUCCESS)
     {
         // Actually do the PFB
-        vmExecuteForwardPFB( vm, true );
+        vmExecuteForwardPFB( vm );
 
         // Write out the answer to a file
         vmWritePFBOutputToFile( vm );

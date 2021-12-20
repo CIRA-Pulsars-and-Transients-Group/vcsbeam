@@ -889,11 +889,11 @@ double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
 
 void vmScaleFilterCoeffs( vcsbeam_context *vm, filter_type type, double scale_factor );
 
-void free_forward_pfb( forward_pfb *fpfb );
+void vmFreeForwardPFB( forward_pfb *fpfb );
 
-void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags );
+void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags );
     
-void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host );
+void vmExecuteForwardPFB( vcsbeam_context *vm );
 
 void vmWritePFBOutputToFile( vcsbeam_context *vm );
 
