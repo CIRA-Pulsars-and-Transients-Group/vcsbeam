@@ -106,33 +106,35 @@ void vmCalcPhi(
     }
 }
 
-void create_geometric_delays(
-        geometric_delays  *gdelays,
-        MetafitsMetadata  *obs_metadata,
-        VoltageMetadata   *vcs_metadata,
-        uintptr_t          coarse_chan_idx,
-        uintptr_t          npointings )
+void vmCreateGeometricDelays( vcsbeam_context *vm )
 /* Allocates memory for the geometric delay arrays ("phi") on both host and device.
  * Free with free_geometric_delays()
  */
 {
-    gdelays->npointings   = npointings;
-    gdelays->nant         = obs_metadata->num_ants;
-    gdelays->nchan        = vcs_metadata->num_fine_chans_per_coarse;
-    gdelays->obs_metadata = obs_metadata;
+    vm->gdelays.npointings   = vm->npointing;
+    vm->gdelays.nant         = vm->obs_metadata->num_ants;
+    vm->gdelays.nchan        = vm->nfine_chan;
+    vm->gdelays.obs_metadata = vm->obs_metadata;
 
-    // Get a pointer to the array of fine channel frequencies
-    // This is a (contiguous) subset of an array already provided
-    // by mwalib, but we need to jump into it at the right coarse channel
-    gdelays->chan_freqs_hz = &(obs_metadata->metafits_fine_chan_freqs_hz[coarse_chan_idx*gdelays->nchan]);
+    // Create an array of fine channel frequencies.
+    // This must be worked out ourselves (as opposed to grabbing it from mwalib)
+    // in case we have done the fine channelisation ourselves (e.g. via a fine PFB)
+    vm->gdelays.chan_freqs_hz = (double *)malloc( vm->nfine_chan * sizeof(double) );
+
+    uint32_t fine_chan_width = vm->obs_metadata->coarse_chan_width_hz / vm->nfine_chan;
+    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_start_hz;
+
+    int c;
+    for (c = 0; c < vm->nfine_chan; c++)
+        vm->gdelays.chan_freqs_hz[c] = start_hz + fine_chan_width*c;
 
     // Allocate memory
-    size_t size = gdelays->npointings * gdelays->nant * gdelays->nchan * sizeof(cuDoubleComplex);
+    size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(cuDoubleComplex);
 
-    cudaMallocHost( (void **)&(gdelays->phi), size );
+    cudaMallocHost( (void **)&(vm->gdelays.phi), size );
     cudaCheckErrors( "error: create_geometric_delays: cudaMallocHost failed" );
 
-    cudaMalloc( (void **)&(gdelays->d_phi), size );
+    cudaMalloc( (void **)&(vm->gdelays.d_phi), size );
     cudaCheckErrors( "error: create_geometric_delays: cudaMalloc failed" );
 }
 
@@ -140,6 +142,8 @@ void free_geometric_delays( geometric_delays *gdelays )
 /* Free memory allocated with create_geometric_delays()
  */
 {
+    free( gdelays->chan_freqs_hz );
+
     cudaFreeHost( gdelays->phi );
     cudaCheckErrors( "(free_geometric_delays) cudaFreeHost failed" );
 

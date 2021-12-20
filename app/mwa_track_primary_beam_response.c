@@ -86,11 +86,10 @@ int main(int argc, char **argv)
         sprintf( coord2, "ϕ" );
     }
 
-    primary_beam pb;
     cuDoubleComplex *J = NULL; // For the FEE beam
-    uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
-    uintptr_t npointings = 1;
-    create_primary_beam( &pb, vm.obs_metadata, coarse_chan_idx, npointings );
+    vm.npointing = 1;
+    vm.coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
+    vmCreatePrimaryBeam( &vm );
 
     // This program assumes no dead dipoles
     uint32_t *delays = vm.obs_metadata->delays;
@@ -162,7 +161,7 @@ int main(int argc, char **argv)
                 array_factor = calc_array_factor( vm.obs_metadata, freq_hz, &bg, &arrf_bg );
             }
 
-            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, opts.apply_pa_correction );
+            calc_normalised_beam_response( vm.pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, opts.apply_pa_correction );
 
             // Print out the results
             fprintf( opts.fout, "%lu %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n",
@@ -195,7 +194,7 @@ int main(int argc, char **argv)
         fclose( opts.fout );
     }
 
-    free_primary_beam( &pb );
+    free_primary_beam( &vm.pb );
 
     // Exit gracefully
     return EXIT_SUCCESS;

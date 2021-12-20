@@ -52,7 +52,8 @@ struct make_tied_array_beam_opts {
     char              *analysis_filter;  // Which analysis filter to use
     char              *synth_filter;     // Which synthesis filter to use
     int                max_sec_per_file; // Number of seconds per fits files
-    float              gpu_mem_GB;       // Default = 0.0. If 0.0 use all GPU mem
+    //float              gpu_mem_GB;       // Default = 0.0. If 0.0 use all GPU mem
+    int                nchunks;          // Split each second into this many processing chunks
 };
 
 /***********************
@@ -99,7 +100,7 @@ int main(int argc, char **argv)
     }
 
     // If we need to, set up the forward PFB
-    vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
+    vm->chunks_per_second = opts.nchunks;
     if (vm->do_forward_pfb)
     {
         // Load the filter
@@ -108,7 +109,6 @@ int main(int argc, char **argv)
 
         // Create and init the PFB struct
         int M = K; // The filter stride (M = K <=> "critically sampled PFB")
-        //vm->chunks_per_second = ?
         vmInitForwardPFB( vm, M, PFB_SMART );
     }
 
@@ -395,6 +395,8 @@ void usage()
             "\t                           relative to the first or last channel in the observation\n"
             "\t                           respectively. Otherwise, it is treated as a receiver channel number\n"
             "\t                           (0-255) [default: \"+0\"]\n"
+            "\t-n, --nchunks=VAL          Split each second's worth of data into VAL processing chunks\n"
+            "\t                           [default: 1]\n"
             "\t-p, --out-fine             Output fine-channelised, full-Stokes data (PSRFITS)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
             "\t-v, --out-coarse           Output coarse-channelised, 2-pol (XY) data (VDIF)\n"
@@ -434,9 +436,10 @@ void usage()
 
     printf( "\nOTHER OPTIONS\n\n"
             "\t-h, --help                 Print this help and exit\n"
-            "\t-g, --gpu-mem=N            The maximum amount of GPU memory you want make_beam to use in GB [default: -1]\n"
             "\t-V, --version              Print version number and exit\n\n"
           );
+// This option is currently too problematic to deal with:
+//            "\t-g, --gpu-mem=N            The maximum amount of GPU memory you want make_beam to use in GB [default: -1]\n"
 }
 
 
@@ -457,8 +460,9 @@ void make_tied_array_beam_parse_cmdline(
     opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
-    opts->gpu_mem_GB           = 0.0;
+    //opts->gpu_mem_GB           = 0.0;
     opts->custom_flags         = NULL;
+    opts->nchunks              = 1;
 
     opts->cal_metafits         = NULL;  // filename of the metafits file for the calibration observation
     opts->caldir               = NULL;  // The path to where the calibration solutions live
@@ -496,14 +500,15 @@ void make_tied_array_beam_parse_cmdline(
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"PQ-phase",        required_argument, 0, 'U'},
                 {"offringa",        no_argument      , 0, 'O'},
-                {"gpu-mem",         required_argument, 0, 'g'},
+                //{"gpu-mem",         required_argument, 0, 'g'},
+                {"nchunks",         required_argument, 0, 'n'},
                 {"help",            required_argument, 0, 'h'},
                 {"version",         required_argument, 0, 'V'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:g:hm:OpP:R:S:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:hm:n:OpP:R:S:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -544,15 +549,18 @@ void make_tied_array_beam_parse_cmdline(
                     opts->custom_flags = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->custom_flags, optarg );
                     break;
-                case 'g':
-                    opts->gpu_mem_GB = atof(optarg);
-                    break;
+                //case 'g':
+                //    opts->gpu_mem_GB = atof(optarg);
+                //    break;
                 case 'h':
                     usage();
                     exit(EXIT_SUCCESS);
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);
+                    break;
+                case 'n':
+                    opts->nchunks = atoi(optarg);
                     break;
                 case 'O':
                     opts->cal_type = CAL_OFFRINGA;
@@ -619,10 +627,11 @@ void make_tied_array_beam_parse_cmdline(
 
 
     // Check that all the required options were supplied
-    assert( opts->pointings_file != NULL );
+    assert( opts->pointings_file  != NULL );
     assert( opts->caldir          != NULL );
-    assert( opts->metafits       != NULL );
+    assert( opts->metafits        != NULL );
     assert( opts->cal_metafits    != NULL );
+    assert( opts->nchunks         >= 1 );
 
     if (opts->datadir == NULL)
     {

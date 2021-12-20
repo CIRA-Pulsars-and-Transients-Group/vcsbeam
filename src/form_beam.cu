@@ -205,6 +205,18 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     //Nyx[ant] = cuCmul( ey[ant], cuConj(ex[ant]) ); // Not needed as it's degenerate with Nxy[]
     Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
 
+#ifdef DEBUG
+    if (c==50 && s==0 && ant==0)
+    {
+        printf( "e    = [ex; ey] = [%lf%+lf*i; %lf%+lf*i]\n",
+                cuCreal( ex[ant] ), cuCimag( ex[ant] ),
+                cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
+        printf( "phi  = %lf%+lf*i\n",
+                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
+                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
+    }
+#endif
+
     // Detect the coherent beam
     // A summation over an array is faster on a GPU if you add half on array
     // to its other half as than can be done in parallel. Then this is repeated

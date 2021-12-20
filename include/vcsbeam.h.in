@@ -739,7 +739,22 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
 void vmPushChunk( vcsbeam_context *vm );
 void vmPushJ( vcsbeam_context *vm );
 
+/**
+ * vmCreatePrimaryBeam
+ * ===================
+ *
+ * Allocates memory for the primary beam matrices ("B")
+ * (see Eq. (30) in Ord et al. (2019))
+ */
 void vmCreatePrimaryBeam( vcsbeam_context *vm );
+
+/**
+ * vmCreateGeometricDelays
+ * =======================
+ *
+ * Allocates memory for the geometric delay arrays ("phi") on both host and device.
+ * Free with free_geometric_delays()
+ */
 void vmCreateGeometricDelays( vcsbeam_context *vm );
 
 void vmCreateCudaStreams( vcsbeam_context *vm );
@@ -855,15 +870,6 @@ void calc_geometric_delays(
         MetafitsMetadata  *obs_metadata,
         cuDoubleComplex   *phi );
 
-/* Allocates memory for the geometric delay arrays ("phi") on both host and device.
- * Free with free_geometric_delays()
- */
-void create_geometric_delays(
-        geometric_delays  *gdelays,
-        MetafitsMetadata  *obs_metadata,
-        VoltageMetadata   *vcs_metadata,
-        uintptr_t          coarse_chan,
-        uintptr_t          npointings );
 
 /* Free memory allocated with create_geometric_delays()
  */
@@ -1190,12 +1196,6 @@ int hash_dipole_config( double * );
 void vmCalcB(
         vcsbeam_context   *vm,
         beam_geom         *beam_geom_vals );
-
-void create_primary_beam(
-        primary_beam      *pb,
-        MetafitsMetadata  *obs_metadata,
-        uintptr_t          coarse_chan,
-        uintptr_t          npointings );
 
 void free_primary_beam( primary_beam *pb );
 

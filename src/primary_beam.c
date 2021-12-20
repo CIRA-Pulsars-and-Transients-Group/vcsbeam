@@ -118,33 +118,29 @@ if (config_idx == 0)
     }
 }
 
-void create_primary_beam(
-        primary_beam      *pb,
-        MetafitsMetadata  *obs_metadata,
-        uintptr_t          coarse_chan_idx,
-        uintptr_t          npointings )
+void vmCreatePrimaryBeam( vcsbeam_context *vm )
 /* Allocates memory for the primary beam matrices ("B")
  * (see Eq. (30) in Ord et al. (2019))
  */
 {
     // Calculate some array sizes
-    pb->npointings = npointings;
-    pb->nant = obs_metadata->num_ants;
-    pb->npol = obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+    vm->pb.npointings = vm->npointing;
+    vm->pb.nant = vm->obs_metadata->num_ants;
+    vm->pb.npol = vm->obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
 
-    size_t size = pb->npointings * pb->nant * pb->npol * sizeof(cuDoubleComplex);
+    size_t size = vm->pb.npointings * vm->pb.nant * vm->pb.npol * sizeof(cuDoubleComplex);
 
     // Allocate memory
-    pb->B = (cuDoubleComplex *)malloc( size );
+    vm->pb.B = (cuDoubleComplex *)malloc( size );
 
-    pb->beam = NULL;
-    pb->beam = new_fee_beam( HYPERBEAM_HDF5 );
+    vm->pb.beam = NULL;
+    vm->pb.beam = new_fee_beam( HYPERBEAM_HDF5 );
 
-    create_delays_amps_from_metafits( obs_metadata, &(pb->delays), &(pb->amps) );
+    create_delays_amps_from_metafits( vm->obs_metadata, &(vm->pb.delays), &(vm->pb.amps) );
 
-    pb->freq_hz = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz;
+    vm->pb.freq_hz = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_centre_hz;
 
-    pb->obs_metadata = obs_metadata;
+    vm->pb.obs_metadata = vm->obs_metadata;
 }
 
 void free_primary_beam( primary_beam *pb )

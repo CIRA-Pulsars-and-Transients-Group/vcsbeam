@@ -127,7 +127,7 @@ void populate_spliced_psrfits_header(
 
     int i; // idx into dat_freqs
     int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
-    uint32_t start_hz        = vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz;
+    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz;
     for (i = 0 ; i < pf->hdr.nchan; i++)
     {
         iC = i / vm->nfine_chan + first_coarse_chan_idx;
