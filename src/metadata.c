@@ -28,13 +28,13 @@ vcsbeam_context *vmInit( bool use_mpi )
     else
     {
         vm->mpi_size = 1;
-        vm->mpi_rank = 0;
+        vm->mpi_rank = PERFORMANCE_NO_MPI;
     }
     vm->writer = 0;
 
     // TODO: Change this to give user flexibility of how to use mpi structure
     vm->ncoarse_chans   = vm->mpi_size;
-    vm->coarse_chan_idx = vm->mpi_rank;
+    vm->coarse_chan_idx = (vm->use_mpi ? vm->mpi_rank : 0);
 
     // Start with the first chunk
     vm->chunk_to_load = 0;
