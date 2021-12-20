@@ -115,14 +115,14 @@ vcsbeam_context *vmInit( bool use_mpi )
     vm->log = create_logger( stdout, vm->mpi_rank );
     logger_add_stopwatch( vm->log, "read",     "Reading in data" );
     logger_add_stopwatch( vm->log, "upload",   "Uploading the data to the device" );
-    logger_add_stopwatch( vm->log, "download", "Downloading the data to the host" );
-    logger_add_stopwatch( vm->log, "delay",    "Calculating geometric and cable delays" );
-    logger_add_stopwatch( vm->log, "wola",     "Weighted overlap-add" );
-    logger_add_stopwatch( vm->log, "fft",      "Performing FFT" );
     logger_add_stopwatch( vm->log, "pfb",      "Performing the PFB" );
+    logger_add_stopwatch( vm->log, "pfb-wola", "Weighted overlap-add" );
+    logger_add_stopwatch( vm->log, "pfb-fft",  "Performing FFT" );
+    logger_add_stopwatch( vm->log, "pfb-pack", "Packing the data into the recombined format" );
+    logger_add_stopwatch( vm->log, "delay",    "Calculating geometric and cable delays" );
     logger_add_stopwatch( vm->log, "calc",     "Calculating tied-array beam" );
     logger_add_stopwatch( vm->log, "ipfb",     "Inverting the PFB" );
-    logger_add_stopwatch( vm->log, "pack",     "Packing the data into the recombined format" );
+    logger_add_stopwatch( vm->log, "download", "Downloading the data to the host" );
     logger_add_stopwatch( vm->log, "splice",   "Splicing coarse channels together" );
     logger_add_stopwatch( vm->log, "write",    "Writing out data to file" );
 

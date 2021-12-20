@@ -440,7 +440,7 @@ void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host )
     for (fpfb->chunk = 0; fpfb->chunk < fpfb->chunks_per_second; fpfb->chunk++)
     {
         // Copy data to device
-        logger_start_stopwatch( vm->log, "upload", true );
+        logger_start_stopwatch( vm->log, "upload", false );
 
         gpuErrchk(cudaMemcpy(
                     fpfb->d_htr_data,                                      // to
@@ -459,7 +459,7 @@ void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host )
         dim3 blocks( fpfb->nspectra_per_chunk, fpfb->I, fpfb->P );
         dim3 threads( fpfb->K );
 
-        logger_start_stopwatch( vm->log, "wola", true );
+        logger_start_stopwatch( vm->log, "pfb-wola", false );
 
         // Set the d_weighted_overlap_add array to zeros
         gpuErrchk(cudaMemset( fpfb->d_weighted_overlap_add, 0, fpfb->weighted_overlap_add_size ));
@@ -486,10 +486,10 @@ void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host )
         cudaDeviceSynchronize();
         gpuErrchk( cudaPeekAtLastError() );
 
-        logger_stop_stopwatch( vm->log, "wola" );
+        logger_stop_stopwatch( vm->log, "pfb-wola" );
 
         // 2nd step: FFT
-        logger_start_stopwatch( vm->log, "fft", true );
+        logger_start_stopwatch( vm->log, "pfb-fft", false );
 
         int batch;
         for (batch = 0; batch < fpfb->I / fpfb->ninputs_per_cufft_batch; batch++)
@@ -503,25 +503,25 @@ void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host )
         cudaDeviceSynchronize();
         gpuErrchk( cudaPeekAtLastError() );
 
-        logger_stop_stopwatch( vm->log, "fft" );
+        logger_stop_stopwatch( vm->log, "pfb-fft" );
 
         // 3rd step: packaging the result
         dim3 blocks3( fpfb->nspectra_per_chunk, fpfb->K );
         dim3 threads3( fpfb->I );
 
-        logger_start_stopwatch( vm->log, "pack", true );
+        logger_start_stopwatch( vm->log, "pfb-pack", false );
 
         pack_into_recombined_format<<<blocks3, threads3>>>( fpfb->d_weighted_overlap_add,
                 fpfb->d_vcs_data, fpfb->d_i_output_idx, fpfb->flags );
         cudaDeviceSynchronize();
         gpuErrchk( cudaPeekAtLastError() );
 
-        logger_stop_stopwatch( vm->log, "pack" );
+        logger_stop_stopwatch( vm->log, "pfb-pack" );
 
         // Finally, copy the answer back to host memory, if requested
         if (copy_result_to_host)
         {
-            logger_start_stopwatch( vm->log, "download", true );
+            logger_start_stopwatch( vm->log, "download", false );
 
             gpuErrchk(cudaMemcpy(
                         (char *)fpfb->vcs_data + fpfb->chunk*fpfb->vcs_stride,   // to
