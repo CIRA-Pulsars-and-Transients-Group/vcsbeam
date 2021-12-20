@@ -982,6 +982,7 @@ void cu_form_incoh_beam(
         );
 
 
+void vmApplyJChunk( vcsbeam_context *vm );
 void vmBeamformChunk( vcsbeam_context *vm );
 void vmBeamformSecond( vcsbeam_context *vm );
 void vmPullE( vcsbeam_context *vm );

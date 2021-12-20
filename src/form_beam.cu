@@ -65,9 +65,8 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 }
 
 
-__global__ void invj_the_data( void            *data,
+__global__ void vmApplyJ_kernel( void            *data,
                                cuDoubleComplex *J,
-                               cuDoubleComplex *phi,
                                cuDoubleComplex *Jv_Q,
                                cuDoubleComplex *Jv_P,
                                uint32_t      *polQ_idxs,
@@ -96,29 +95,29 @@ __global__ void invj_the_data( void            *data,
     int iQ   = polQ_idxs[ant]; /* The input index for the Q pol for this antenna */
     int iP   = polP_idxs[ant]; /* The input index for the P pol for this antenna */
 
-    cuDoubleComplex Dq, Dp;
+    cuDoubleComplex vq, vp;
     // Convert input data to complex float
     if (datatype == VM_INT4)
     {
         uint8_t *v = (uint8_t *)data;
-        Dq = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iQ,nc,ni)]);
-        Dp = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iP,nc,ni)]);
+        vq = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iQ,nc,ni)]);
+        vp = UCMPLX4_TO_CMPLX_FLT(v[v_IDX(s,c,iP,nc,ni)]);
     }
     else if (datatype == VM_DBL)
     {
         cuDoubleComplex *v = (cuDoubleComplex *)data;
-        Dq = v[v_IDX(s,c,iQ,nc,ni)];
-        Dp = v[v_IDX(s,c,iP,nc,ni)];
+        vq = v[v_IDX(s,c,iQ,nc,ni)];
+        vp = v[v_IDX(s,c,iP,nc,ni)];
     }
     // else send an error message... yet to do
 
-    // Calculate the first step (J*D) of the coherent beam (B = J*phi*D)
-    // Jv_Q = Jqq*Dq + Jqp*Dp
-    // Jv_P = Jpq*Dq + Jpy*Dp
-    Jv_Q[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], Dq ),
-                                           cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], Dp ) );
-    Jv_P[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], Dq ),
-                                           cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], Dp ) );
+    // Calculate the first step (J*v) of the coherent beam
+    // Jv_Q = Jqq*vq + Jqp*vp
+    // Jv_P = Jpq*vq + Jpy*vp
+    Jv_Q[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], vq ),
+                                           cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], vp ) );
+    Jv_P[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], vq ),
+                                           cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], vp ) );
 #ifdef DEBUG
     if (c==0 && s==0 && ant==0)
     {
@@ -129,8 +128,8 @@ __global__ void invj_the_data( void            *data,
                 cuCreal(J[J_IDX(ant,c,1,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,0,nc,npol)]),
                 cuCreal(J[J_IDX(ant,c,1,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,1,nc,npol)]) );
         printf( "v    = [vq; vp] = [%.1lf%+.1lf*i; %.1lf%+.1lf*i]\n",
-                cuCreal( Dq ), cuCimag( Dq ),
-                cuCreal( Dp ), cuCimag( Dp ) );
+                cuCreal( vq ), cuCimag( vq ),
+                cuCreal( vp ), cuCimag( vp ) );
     }
 #endif
 }
@@ -346,29 +345,35 @@ void cu_form_incoh_beam(
     gpuErrchk(cudaMemcpy( Iscaled, d_Iscaled, Iscaled_size,        cudaMemcpyDeviceToHost ));
 }
 
-void vmBeamformChunk( vcsbeam_context *vm )
+void vmApplyJChunk( vcsbeam_context *vm )
 {
-    // Get some shorthand variables
-    uintptr_t nant   = vm->obs_metadata->num_ants;
-    uintptr_t nchan  = vm->nchan;
-    uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
-
     // Call the kernels
-    dim3 chan_samples( nchan, vm->sample_rate / vm->chunks_per_second );
-    dim3 stat( nant );
+    dim3 chan_samples( vm->nchan, vm->sample_rate / vm->chunks_per_second );
+    dim3 stat( vm->obs_metadata->num_ants );
 
     // convert the data and multiply it by J
-    invj_the_data<<<chan_samples, stat>>>(
+    vmApplyJ_kernel<<<chan_samples, stat>>>(
             vm->d_v,
             (cuDoubleComplex *)vm->d_J,
-            vm->gdelays.d_phi,
             vm->d_Jv_Q,
             vm->d_Jv_P,
             vm->d_polQ_idxs,
             vm->d_polP_idxs,
-            npol,
+            vm->obs_metadata->num_ant_pols,
             vm->datatype );
-    cudaCheckErrors( "cu_form_beam: invj_the_data failed" );
+    cudaCheckErrors( "vmBeamformChunk: vmApplyJ_kernel failed" );
+}
+
+void vmBeamformChunk( vcsbeam_context *vm )
+{
+    // Get some shorthand variables
+    uintptr_t shared_array_size = 11 * vm->obs_metadata->num_ants * sizeof(double);
+    // (To see how the 11*STATION double arrays are used, go to this code tag: 11NSTATION)
+
+    vmApplyJChunk( vm );
+
+    dim3 chan_samples( vm->nchan, vm->sample_rate / vm->chunks_per_second );
+    dim3 stat( vm->obs_metadata->num_ants );
 
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
@@ -377,8 +382,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
     for (p = 0; p < vm->npointing; p++ )
     {
         // Call the beamformer kernel
-        // To see how the 11*STATION double arrays are used, go to tag 11NSTATION
-        beamform_kernel<<<chan_samples, stat, 11*nant*sizeof(double), vm->streams[p]>>>(
+        beamform_kernel<<<chan_samples, stat, shared_array_size, vm->streams[p]>>>(
                 vm->d_Jv_Q,
                 vm->d_Jv_P,
                 vm->gdelays.d_phi,
@@ -388,7 +392,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 vm->chunks_per_second,
                 vm->d_e,
                 (float *)vm->d_S,
-                npol );
+                vm->obs_metadata->num_ant_pols );
 
         gpuErrchk( cudaPeekAtLastError() );
     }
