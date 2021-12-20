@@ -66,13 +66,13 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 
 
 __global__ void vmApplyJ_kernel( void            *data,
-                               cuDoubleComplex *J,
-                               cuDoubleComplex *Jv_Q,
-                               cuDoubleComplex *Jv_P,
-                               uint32_t      *polQ_idxs,
-                               uint32_t      *polP_idxs,
-                               int npol,
-                               vcsbeam_datatype datatype )
+                                 cuDoubleComplex *J,
+                                 cuDoubleComplex *Jv_Q,
+                                 cuDoubleComplex *Jv_P,
+                                 uint32_t      *polQ_idxs,
+                                 uint32_t      *polP_idxs,
+                                 int npol,
+                                 vcsbeam_datatype datatype )
 /* Layout for input arrays:
 *   data [nsamples] [nchan] [ninputs]            -- see docs
 *   J    [nants] [nchan] [npol] [npol]        -- jones matrix
@@ -119,7 +119,7 @@ __global__ void vmApplyJ_kernel( void            *data,
     Jv_P[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], vq ),
                                            cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], vp ) );
 #ifdef DEBUG
-    if (c==0 && s==0 && ant==0)
+    if (c==50 && s==0 && ant==0)
     {
         printf( "Jinv = [jyq, jyp; jxq; jxp]\n"
                 "     = [%lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i]\n",

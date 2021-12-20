@@ -213,8 +213,7 @@ int main(int argc, char **argv)
 
     // Apply any calibration corrections
     parse_calibration_correction_file( vm->obs_metadata->obs_id, &vm->cal );
-    apply_calibration_corrections( &vm->cal, vm->D, vm->obs_metadata,
-            vm->coarse_chan_idxs_to_process[0], vm->log );
+    vmApplyCalibrationCorrections( vm );
 
     // ------------------
     // Prepare primary beam and geometric delay arrays

@@ -740,7 +740,7 @@ void vmDestroyCudaStreams( vcsbeam_context *vm )
 
 void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
 {
-    uintptr_t nchan  = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nchan  = vm->nfine_chan;
 
     vm->offsets_size = vm->npointing*nchan*NSTOKES*sizeof(float);
     vm->scales_size  = vm->npointing*nchan*NSTOKES*sizeof(float);

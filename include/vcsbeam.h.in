@@ -211,8 +211,6 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
 void zero_PQ_and_QP( cuDoubleComplex *J );
 
 void parse_calibration_correction_file( uint32_t gpstime, calibration *cal );
-void apply_calibration_corrections( calibration *cal, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
-        int coarse_chan_idx, logger *log );
 
 bool tilename_is_flagged( char *tilename, calibration *cal );
 
@@ -771,6 +769,8 @@ void vmDestroyFilenames( vcsbeam_context *vm );
 
 void vmLoadObsMetafits( vcsbeam_context *vm, char *filename );
 void vmLoadCalMetafits( vcsbeam_context *vm, char *filename );
+
+void vmApplyCalibrationCorrections( vcsbeam_context *vm );
 
 void vmGetVoltageMetadata( vcsbeam_context *vm );
 

@@ -57,7 +57,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
     uintptr_t nchan   = vm->cal_metadata->num_corr_fine_chans_per_coarse;
-    uintptr_t vcs_nchan = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t vcs_nchan = vm->nfine_chan;
     uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t ant, ch; // For loop variables
 
@@ -455,7 +455,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     uint32_t nChan  = nchan * vm->cal_metadata->num_metafits_coarse_chans;
     uint32_t ninput = vm->cal_metadata->num_rf_inputs;
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t vcs_nchan = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t vcs_nchan = vm->nfine_chan;
     uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
 
@@ -667,37 +667,34 @@ void parse_calibration_correction_file( uint32_t gpstime, calibration *cal )
     }
 }
 
-void apply_calibration_corrections( calibration *cal, cuDoubleComplex *D, MetafitsMetadata *obs_metadata,
-        int coarse_chan_idx, logger *log )
+void vmApplyCalibrationCorrections( vcsbeam_context *vm )
 /* Optionally apply certain corrections/adjustments to the calibration solutions
- * given in D. The corrections to be applied are stored in the calibration struct CAL.
+ * given in VM->D. The corrections to be applied are stored in the calibration struct VM->CAL.
  * Three corrections are applied here:
  *   (1) Subtract the phases from each antenna by a reference antenna
  *   (2) Remove the PQ and QP (i.e. off-diagonal) terms
  *   (3) Apply a phase slope to the QQ terms
  */
 {
-    char log_message[256];
-
     // Three locally defined booleans for whether to do the corrections
     bool apply_ref_ant         = true; // Whether this should be true is checked below
-    bool apply_zero_PQ_and_QP  = !(cal->keep_cross_terms);
-    bool apply_phase_slope     = (cal->phase_offset != 0.0 || cal->phase_slope != 0.0);
+    bool apply_zero_PQ_and_QP  = !(vm->cal.keep_cross_terms);
+    bool apply_phase_slope     = (vm->cal.phase_offset != 0.0 || vm->cal.phase_slope != 0.0);
 
     Antenna *Aref = NULL; // The reference antenna struct
-    if (strcmp(cal->ref_ant, "NONE") == 0) // i.e. the user explicitly wanted to NOT apply the reference antenna correction
+    if (strcmp(vm->cal.ref_ant, "NONE") == 0) // i.e. the user explicitly wanted to NOT apply the reference antenna correction
     {
         apply_ref_ant = false;
     }
     else
     {
-        Aref = find_antenna_by_name( obs_metadata, cal->ref_ant );
+        Aref = find_antenna_by_name( vm->obs_metadata, vm->cal.ref_ant );
 
         // If the lookup failed, then quit with an error
         if (Aref == NULL)
         {
             fprintf( stderr, "error: apply_calibration_corrections: "
-                    "tile %s does not exist in this observation\n", cal->ref_ant );
+                    "tile %s does not exist in this observation\n", vm->cal.ref_ant );
             exit(EXIT_FAILURE);
         }
     }
@@ -707,31 +704,28 @@ void apply_calibration_corrections( calibration *cal, cuDoubleComplex *D, Metafi
         return;
 
     // Report on what's being done, if requested
-    if (log)
+    if (apply_ref_ant)
     {
-        if (apply_ref_ant)
-        {
-            sprintf( log_message, "Using tile %s as reference tile for rotating phases", cal->ref_ant );
-            logger_timed_message( log, log_message );
-        }
-        else
-        {
-            logger_timed_message( log, "Rotation of phases relative to reference tile is turned OFF" );
-        }
-
-        if (apply_zero_PQ_and_QP)
-            logger_timed_message( log, "Setting off-diagonal terms of calibration Jones matrix (PQ and QP) to zero" );
-        else
-            logger_timed_message( log, "Retaining off-diagonal terms of calibration Jones matrix (PQ and QP)" );
-
-        if (apply_phase_slope)
-        {
-            sprintf( log_message, "Applying phase slope %e*FREQ + %e (rad) to PP", cal->phase_slope, cal->phase_offset );
-            logger_timed_message( log, log_message );
-        }
-        else
-            logger_timed_message( log, "Phase slope correction turned OFF" );
+        sprintf( vm->log_message, "Using tile %s as reference tile for rotating phases", vm->cal.ref_ant );
+        logger_timed_message( vm->log, vm->log_message );
     }
+    else
+    {
+        logger_timed_message( vm->log, "Rotation of phases relative to reference tile is turned OFF" );
+    }
+
+    if (apply_zero_PQ_and_QP)
+        logger_timed_message( vm->log, "Setting off-diagonal terms of calibration Jones matrix (PQ and QP) to zero" );
+    else
+        logger_timed_message( vm->log, "Retaining off-diagonal terms of calibration Jones matrix (PQ and QP)" );
+
+    if (apply_phase_slope)
+    {
+        sprintf( vm->log_message, "Applying phase slope %e*FREQ + %e (rad) to PP", vm->cal.phase_slope, vm->cal.phase_offset );
+        logger_timed_message( vm->log, vm->log_message );
+    }
+    else
+        logger_timed_message( vm->log, "Phase slope correction turned OFF" );
 
     // Variables for converting slope and offset to a complex phase
     //     z = exp(i*phi) = cos(phi) + i*sin(phi),
@@ -742,14 +736,14 @@ void apply_calibration_corrections( calibration *cal, cuDoubleComplex *D, Metafi
     cuDoubleComplex z;   // complex phase
 
     long int freq_ch; // Hz
-    long int frequency  = obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_start_hz; // Hz
-    int      chan_width = obs_metadata->corr_fine_chan_width_hz; // Hz
+    long int frequency  = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_start_hz; // Hz
+    int      chan_width = vm->obs_metadata->coarse_chan_width_hz / vm->nfine_chan;
 
     uintptr_t d_idx, dref_idx;
 
-    uintptr_t nant    = obs_metadata->num_ants;
-    uintptr_t nantpol = obs_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t nchan   = obs_metadata->num_volt_fine_chans_per_coarse;
+    uintptr_t nant    = vm->obs_metadata->num_ants;
+    uintptr_t nantpol = vm->obs_metadata->num_ant_pols; // = 2 (P, Q)
+    uintptr_t nchan   = vm->nfine_chan;
 
     // A temporary copy of the reference antenna matrix, so that we don't clobber it midway
     // through this operation!
@@ -764,14 +758,14 @@ void apply_calibration_corrections( calibration *cal, cuDoubleComplex *D, Metafi
             // Make a copy of the reference Jones matrix for this channel
             // reference antenna and channel
             dref_idx = J_IDX(Aref->ant,ch,0,0,nchan,nantpol);
-            cp2x2( &(D[dref_idx]), Dref );
+            cp2x2( &(vm->D[dref_idx]), Dref );
         }
 
         if (apply_phase_slope)
         {
             // Convert the slope and offset into a complex phase
             freq_ch = frequency + ch*chan_width;                // The frequency of this fine channel (Hz)
-            phi = cal->phase_slope*freq_ch + cal->phase_offset; // (rad)
+            phi = vm->cal.phase_slope*freq_ch + vm->cal.phase_offset; // (rad)
             z = make_cuDoubleComplex( cos(phi), sin(phi) );
         }
 
@@ -784,12 +778,12 @@ void apply_calibration_corrections( calibration *cal, cuDoubleComplex *D, Metafi
             // Divide through a reference antenna...
             if (apply_ref_ant)
             {
-                remove_reference_phase( &(D[d_idx]), Dref );
+                remove_reference_phase( &(vm->D[d_idx]), Dref );
             }
 
             // ...zero the off-diagonal terms...
             if (apply_zero_PQ_and_QP)
-                zero_PQ_and_QP( &(D[d_idx]) );
+                zero_PQ_and_QP( &(vm->D[d_idx]) );
 
             // ...and apply the phase correction:
             // DZ = [ d00 d01 ] [ z 0 ]
@@ -800,10 +794,10 @@ void apply_calibration_corrections( calibration *cal, cuDoubleComplex *D, Metafi
             if (apply_phase_slope)
             {
                 d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
-                D[d_idx] = cuCmul( D[d_idx], z );
+                vm->D[d_idx] = cuCmul( vm->D[d_idx], z );
 
                 d_idx = J_IDX(ant,ch,1,0,nchan,nantpol);
-                D[d_idx] = cuCmul( D[d_idx], z );
+                vm->D[d_idx] = cuCmul( vm->D[d_idx], z );
             }
         }
     }

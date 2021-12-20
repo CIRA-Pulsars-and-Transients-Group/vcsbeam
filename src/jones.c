@@ -54,7 +54,7 @@ void vmCalcJ( vcsbeam_context *vm )
 
     // Give "shorthand" variables for often-used values in metafits
     int nant           = vm->obs_metadata->num_ants;
-    int nchan          = vm->obs_metadata->num_volt_fine_chans_per_coarse;
+    int nchan          = vm->nfine_chan;
     int npol           = vm->obs_metadata->num_ant_pols;   // (X,Y)
 
     unsigned int p;  // Pointing number
@@ -85,7 +85,7 @@ void vmCalcJ( vcsbeam_context *vm )
                 mult2x2d(&(vm->D[j_idx]), &(vm->pb.B[pb_idx]), Ji); // the gain in the desired look direction
 
 #ifdef DEBUG
-if (ch == 0 && ant == 0)
+if (ch == 50 && ant == 0)
 {
     //fprintf( stderr, "Dd = "); fprintf_complex_matrix( stderr, Dd[dd_idx] );
     fprintf( stderr, "D       = "); fprintf_complex_matrix( stderr, &(vm->D[j_idx]) );

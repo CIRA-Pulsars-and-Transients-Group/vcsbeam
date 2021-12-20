@@ -72,6 +72,7 @@ int main(int argc, char **argv)
     vcsbeam_context vm;
     vmLoadObsMetafits( &vm, opts.metafits );
     vmLoadCalMetafits( &vm, opts.cal_metafits );
+    vm.log = log;
 
     // Create some "shorthand" variables for code brevity
     uintptr_t nants          = vm.obs_metadata->num_ants;
@@ -84,7 +85,6 @@ int main(int argc, char **argv)
         ncoarse_chans = vm.obs_metadata->num_metafits_coarse_chans;
     uintptr_t Ch, ch; // (Coarse channel idx, fine channel idx)
     cuDoubleComplex *D[ncoarse_chans]; // See Eqs. (27) to (29) in Ord et al. (2019)
-    logger *plog = log;
 
     vmMallocDHost( &vm );
 
@@ -102,10 +102,7 @@ int main(int argc, char **argv)
 
         // Apply any calibration corrections
         parse_calibration_correction_file( vm.cal_metadata->obs_id, &cal );
-        apply_calibration_corrections( &cal, D[Ch], vm.obs_metadata, Ch, plog );
-
-        // After the first coarse channel, don't print out any more messages
-        plog = NULL;
+        vmApplyCalibrationCorrections( &vm );
     }
 
     vmFreeDHost( &vm );
