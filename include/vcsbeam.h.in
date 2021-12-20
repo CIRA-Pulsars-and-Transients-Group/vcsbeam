@@ -676,6 +676,8 @@ void vmBindCalibrationData( vcsbeam_context *vm,
 
 void vmReadCalibration( vcsbeam_context *vm );
 
+void vmPrintTitle( vcsbeam_context *vm, const char *title );
+
 /* DESTROY_VCSBEAM_METADATA
  * ========================
  *

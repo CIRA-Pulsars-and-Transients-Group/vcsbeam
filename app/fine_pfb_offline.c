@@ -51,8 +51,7 @@ int main( int argc, char *argv[] )
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
 
-    sprintf( vm->log_message, "------- VCSBeam (%s): Offline PFB -------", VCSBEAM_VERSION );
-    logger_message( vm->log, vm->log_message );
+    vmPrintTitle( vm, "Offline PFB" );
 
     // This only works for new-style (coarse-channelised) MWAX data
     if (vm->obs_metadata->mwa_version != VCSMWAXv2)

@@ -1190,3 +1190,10 @@ void vmReportPerformanceStats( vcsbeam_context *vm )
 {
     logger_report_all_stats( vm->log );
 }
+
+void vmPrintTitle( vcsbeam_context *vm, const char *title )
+{
+    sprintf( vm->log_message, "------- VCSBeam (%s): %s -------",
+            VCSBEAM_VERSION, title );
+    logger_message( vm->log, vm->log_message );
+}

@@ -80,6 +80,8 @@ int main(int argc, char **argv)
     bool use_mpi = true;
     vcsbeam_context *vm = vmInit( use_mpi );
 
+    vmPrintTitle( vm, "Beamformer" );
+
     vmLoadObsMetafits( vm, opts.metafits );
     vmLoadCalMetafits( vm, opts.cal_metafits );
 
