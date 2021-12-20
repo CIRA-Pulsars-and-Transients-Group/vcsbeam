@@ -12,7 +12,7 @@
 
 #include "vcsbeam.h"
 
-read_buffer *vmInitReadBuffer( size_t read_size, size_t copy_size )
+host_buffer *vmInitReadBuffer( size_t read_size, size_t copy_size )
 /*
  *  <----------------------- buffer_size ------------------------->
  *                <---------------- read_size -------------------->
@@ -27,8 +27,8 @@ read_buffer *vmInitReadBuffer( size_t read_size, size_t copy_size )
     if (read_size == 0)
         return NULL;
 
-    // Allocate memory for the read_buffer struct itself
-    read_buffer *rb = (read_buffer *)malloc( sizeof(read_buffer) );
+    // Allocate memory for the host_buffer struct itself
+    host_buffer *rb = (host_buffer *)malloc( sizeof(host_buffer) );
 
     // Set the size and allocate the host memory
     rb->buffer_size = read_size + copy_size;
@@ -45,11 +45,11 @@ read_buffer *vmInitReadBuffer( size_t read_size, size_t copy_size )
     // Initially, set as unlocked
     rb->locked = false;
 
-    // Return pointer to newly allocated read_buffer
+    // Return pointer to newly allocated host_buffer
     return rb;
 }
 
-void vmFreeReadBuffer( read_buffer *rb )
+void vmFreeReadBuffer( host_buffer *rb )
 {
     cudaFreeHost( rb->buffer );
     cudaCheckErrors( "vmFreeReadBuffer: cudaFreeHost failed" );
@@ -57,7 +57,7 @@ void vmFreeReadBuffer( read_buffer *rb )
     free( rb );
 }
 
-vm_error vmReadBufferCopyMargin( read_buffer *rb )
+vm_error vmReadBufferCopyMargin( host_buffer *rb )
 {
     // Do nothing, in a variety of cases
     if (rb == NULL)

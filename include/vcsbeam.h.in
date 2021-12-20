@@ -407,7 +407,7 @@ typedef struct mpi_psrfits_t
     int             writer_id;
 } mpi_psrfits;
 
-typedef struct read_buffer_t
+typedef struct host_buffer_t
 {
     void   *buffer;        // The beginning of the whole buffer
     size_t  buffer_size;   // The size (in bytes) of the whole buffer
@@ -420,8 +420,17 @@ typedef struct read_buffer_t
     size_t  copy_size;     // The number of bytes to copy
 
     bool    locked;        // Whether reading/copying is allowed
-} read_buffer;
+} host_buffer;
 
+
+typedef device_buffer_t
+{
+    void   *buffer;
+    size_t  buffer_size;
+
+    host_buffer *read_host_buffer;
+    host_buffer *write_host_buffer;
+} device_buffer;
 
 /********************
  *                  *
@@ -536,7 +545,7 @@ typedef struct vcsbeam_context_t
     forward_pfb *fpfb;                // Forward PFB
 
     // Data buffers
-    read_buffer *v;                   // The buffer for the input data on host
+    host_buffer *v;                   // The buffer for the input data on host
     void *d_v;                        // The buffer for the input data on device
     uintptr_t v_size_bytes;           // The size of data in bytes (currently always = bytes_per_second)
     uintptr_t d_v_size_bytes;         // The size of d_data in bytes (depends on number of "chunks")
@@ -807,9 +816,9 @@ void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int 
 void free_pfb_filter( pfb_filter *filter );
 
 
-read_buffer *vmInitReadBuffer( size_t read_size, size_t margin_size );
-vm_error vmReadBufferCopyMargin( read_buffer *rb );
-void vmFreeReadBuffer( read_buffer *rb );
+host_buffer *vmInitReadBuffer( size_t read_size, size_t margin_size );
+vm_error vmReadBufferCopyMargin( host_buffer *rb );
+void vmFreeReadBuffer( host_buffer *rb );
 
 #ifdef __cplusplus
 } // End extern "C"
