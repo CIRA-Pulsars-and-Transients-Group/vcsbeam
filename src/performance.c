@@ -266,7 +266,9 @@ void logger_stopwatch_report_stats( logger *log, const char *stopwatch_name )
 
     logger_stopwatch *sw = &(log->stopwatches[idx]);
 
-    write_stopwatch_stats_str( log, sw );
+    // Only write something if this stopwatch was actually used
+    if (sw->nstart_stops > 0)
+        write_stopwatch_stats_str( log, sw );
 }
 
 void logger_report_all_stats( logger *log )
@@ -274,6 +276,7 @@ void logger_report_all_stats( logger *log )
     int i;
     for (i = 0; i < log->nstopwatches; i++)
     {
-        write_stopwatch_stats_str( log, &(log->stopwatches[i]) );
+        if (log->stopwatches[i].nstart_stops > 0)
+            write_stopwatch_stats_str( log, &(log->stopwatches[i]) );
     }
 }

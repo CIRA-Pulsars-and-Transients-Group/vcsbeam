@@ -94,6 +94,10 @@ int main( int argc, char *argv[] )
         logger_stop_stopwatch( vm->log, "write" );
     }
 
+    // Report timing stats
+    logger_report_all_stats( vm->log );
+    logger_message( vm->log, "" );
+
     // Free memory
     destroy_vcsbeam_context( vm );
 
