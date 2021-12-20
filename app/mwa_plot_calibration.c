@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 
         // Read in the calibration solution
         vmBindCalData( &vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
+        vmReadCalibration( &vm );
 
         // Copy the solution into the "D" arrays
         D[Ch] = (cuDoubleComplex *)malloc( vm.D_size_bytes );

@@ -856,17 +856,17 @@ bool tilename_is_flagged( char *tilename, calibration *cal )
     return false;
 }
 
-void vmSetCustomTileFlags( vcsbeam_context *vm, char *filename, calibration *cal )
+void vmSetCustomTileFlags( vcsbeam_context *vm )
 {
     // If no filename given, just count the number of active tiles and return
-    if (filename == NULL)
+    if (vm->cal.flags_file == NULL)
     {
         vmSetNumNotFlaggedRFInputs( vm );
         return;
     }
 
     // Parse the given file for tilenames
-    vmParseFlaggedTilenamesFile( filename, cal );
+    vmParseFlaggedTilenamesFile( vm->cal.flags_file, &vm->cal );
 
     // Create a "zero" matrix that will be copied
     cuDoubleComplex Zero[4];
@@ -883,12 +883,12 @@ void vmSetCustomTileFlags( vcsbeam_context *vm, char *filename, calibration *cal
     uintptr_t ch;       // A particular fine channel
     uintptr_t d_idx;    // Idx into the D array
 
-    for (i = 0; i < cal->nflags; i++)
+    for (i = 0; i < vm->cal.nflags; i++)
     {
         // Pointer to the tilename in question
-        tilename = cal->flagged_tilenames[i];
+        tilename = vm->cal.flagged_tilenames[i];
 
-        if (!tilename_is_flagged( tilename, cal ))
+        if (!tilename_is_flagged( tilename, &vm->cal ))
             continue;
 
         // Find the corresponding antenna in the observation
@@ -914,6 +914,7 @@ void init_calibration( calibration *cal )
 {
     cal->caldir            = NULL;
     cal->ref_ant           = NULL;
+    cal->flags_file        = NULL;
     cal->nflags            = 0;
     cal->flagged_tilenames = NULL;
 }
@@ -925,6 +926,9 @@ void free_calibration( calibration *cal )
 
     if (cal->ref_ant != NULL)
         free( cal->ref_ant );
+
+    if (cal->flags_file != NULL)
+        free( cal->flags_file );
 
     int i;
     for (i = 0; i < cal->nflags; i++)

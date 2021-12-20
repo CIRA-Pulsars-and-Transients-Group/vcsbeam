@@ -192,6 +192,7 @@ typedef struct calibration_t
                                //   c = phase_offset (rad)
     bool   use_bandpass;       // Use the Bandpass solutions
     bool   custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
+    char  *flags_file;         // Name of file containing custom flagged tiles
     int    nflags;             // The size of flagged_tilenames
     char **flagged_tilenames;  // a list of tilenames to be flagged
 } calibration;
@@ -669,6 +670,8 @@ void vmBindCalData( vcsbeam_context *vm,
         bool    use_bandpass,  // only relevant for RTS observations
         char   *flags_file );
 
+void vmReadCalibration( vcsbeam_context *vm );
+
 /* DESTROY_VCSBEAM_METADATA
  * ========================
  *
@@ -744,7 +747,7 @@ void vmParsePointingFile( vcsbeam_context *vm, const char *filename );
 void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings );
 
 void vmParseFlaggedTilenamesFile( char *filename, calibration *cal ); // (defined in calibration.c)
-void vmSetCustomTileFlags( vcsbeam_context *vm, char *filename, calibration *cal ); // (defined in calibration.c);
+void vmSetCustomTileFlags( vcsbeam_context *vm ); // (defined in calibration.c);
 
 // (defined in calibration.c:)
 void vmLoadRTSSolution( vcsbeam_context *vm );

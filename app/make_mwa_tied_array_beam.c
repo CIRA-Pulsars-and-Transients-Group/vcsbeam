@@ -199,6 +199,7 @@ int main(int argc, char **argv)
      ****************************/
 
     vmBindCalData( vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
+    vmReadCalibration( vm );
 
     // Apply any calibration corrections
     parse_calibration_correction_file( vm->obs_metadata->obs_id, &vm->cal );

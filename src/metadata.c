@@ -216,16 +216,24 @@ void vmBindCalData( vcsbeam_context *vm,
     // Set the calibration type (either RTS or Offringa)
     vm->cal.cal_type     = cal_type;
     vm->cal.use_bandpass = use_bandpass;
+
     vm->cal.caldir       = (char *)malloc( strlen( caldir ) + 1 );
     strcpy( vm->cal.caldir, caldir );
 
+    vm->cal.flags_file   = (char *)malloc( strlen( flags_file ) + 1 );
+    strcpy( vm->cal.flags_file, flags_file );
+}
+
+void vmReadCalibration( vcsbeam_context *vm )
+{
+    // Read in the calibration data from file
     if (vm->cal.cal_type == CAL_RTS)
         vmLoadRTSSolution( vm );
     else if (vm->cal.cal_type == CAL_OFFRINGA)
         vmLoadOffringaSolution( vm );
 
-    // Flag antennas that need flagging
-    vmSetCustomTileFlags( vm, flags_file, &vm->cal );
+    // Flag extra tiles that need flagging
+    vmSetCustomTileFlags( vm );
 }
 
 Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
@@ -857,7 +865,7 @@ void vmGetVoltageMetadata( vcsbeam_context *vm )
     // Shorthand variables
     unsigned long int begin_gps       = vm->gps_seconds_to_process[0];
     int               nseconds        = vm->num_gps_seconds_to_process;
-    uintptr_t         coarse_chan_idx = vm->coarse_chan_idxs_to_process[0]
+    uintptr_t         coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
     int               ncoarse_chans   = vm->num_coarse_chans_to_process;
 
     char error_message[ERROR_MESSAGE_LEN];
