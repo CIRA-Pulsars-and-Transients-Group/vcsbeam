@@ -106,6 +106,9 @@ vcsbeam_context *vmInit( bool use_mpi )
     // Start (reading) at the beginning
     vm->current_gps_idx = 0;
 
+    // No input data directory
+    vm->datadir = NULL;
+
     // Start a logger
     vm->log = create_logger( stdout, vm->mpi_rank );
     logger_add_stopwatch( vm->log, "read",     "Reading in data" );
@@ -143,21 +146,12 @@ void vmBindObsData(
     vm->num_gps_seconds_to_process  = num_gps_seconds_to_process;
     vm->num_coarse_chans_to_process = num_coarse_chans_to_process;
 
-    vmGetVoltageMetadata(
-            vm,
-            vm->obs_context,
-            first_gps_second,
-            num_gps_seconds_to_process,
-            datadir,
-            first_coarse_chan_idx,
-            num_coarse_chans_to_process );
-
     // Construct the gps second and coarse chan idx arrays
-    vm->gps_seconds_to_process = (uint32_t *)malloc( num_gps_seconds_to_process * sizeof(uint32_t) );
-    vm->coarse_chan_idxs_to_process = (int *)malloc( num_coarse_chans_to_process * sizeof(int) );
+    vm->gps_seconds_to_process = (uint32_t *)malloc( vm->num_gps_seconds_to_process * sizeof(uint32_t) );
+    vm->coarse_chan_idxs_to_process = (int *)malloc( vm->num_coarse_chans_to_process * sizeof(int) );
 
     int g;
-    for (g = 0; g < num_gps_seconds_to_process; g++)
+    for (g = 0; g < vm->num_gps_seconds_to_process; g++)
     {
         vm->gps_seconds_to_process[g] = g + first_gps_second;
     }
@@ -167,6 +161,12 @@ void vmBindObsData(
     {
         vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
     }
+
+    // Copy across the data directory
+    vm->datadir = (char *)malloc( strlen( datadir ) + 1 );
+    strcpy( vm->datadir, datadir );
+
+    vmGetVoltageMetadata( vm );
 
     // Set the default output to match the same channelisation as the input
     vmSetOutputChannelisation( vm,
@@ -288,6 +288,10 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
 
     // Read buffer
     vmFreeVHost( vm );
+
+    // Data directory
+    if (vm->datadir != NULL)
+        free( vm->datadir );
 
     // Finalise MPI
     if (vm->use_mpi)
@@ -846,18 +850,16 @@ void vmLoadCalMetafits( vcsbeam_context *vm, char *filename )
     }
 }
 
-void vmGetVoltageMetadata(
-        vcsbeam_context   *vm,
-        MetafitsContext   *obs_context,
-        unsigned long int  begin_gps,
-        int                nseconds,
-        char              *datadir,
-        uintptr_t          coarse_chan_idx,
-        int                ncoarse_chans
-        )
+void vmGetVoltageMetadata( vcsbeam_context *vm )
 /* Create the voltage metadata structs using mwalib's API.
  */
 {
+    // Shorthand variables
+    unsigned long int begin_gps       = vm->gps_seconds_to_process[0];
+    int               nseconds        = vm->num_gps_seconds_to_process;
+    uintptr_t         coarse_chan_idx = vm->coarse_chan_idxs_to_process[0]
+    int               ncoarse_chans   = vm->num_coarse_chans_to_process;
+
     char error_message[ERROR_MESSAGE_LEN];
     error_message[0] = '\0'; // <-- Just to avoid a compiler warning about uninitialised variables
 
@@ -876,7 +878,7 @@ void vmGetVoltageMetadata(
 
     // Create list of filenames
     int nfiles;
-    char **filenames = create_filenames( obs_context, vm->obs_metadata, begin_gps, nseconds, datadir, coarse_chan_idx, ncoarse_chans, &nfiles );
+    char **filenames = create_filenames( vm->obs_context, vm->obs_metadata, begin_gps, nseconds, vm->datadir, coarse_chan_idx, ncoarse_chans, &nfiles );
 
     // Create an mwalib voltage context, voltage metadata, and new obs metadata (now with correct antenna ordering)
     // (MWALIB is expecting a const array, so we will give it one!)

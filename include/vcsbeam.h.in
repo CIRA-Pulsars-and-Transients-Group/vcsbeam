@@ -528,6 +528,8 @@ typedef struct vcsbeam_context_t
     MetafitsContext  *cal_context;    // The mwalib context derived from the calibration observation's metafits file
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
 
+    char *datadir;                    // The directory containing the input data
+
     // Calibration
     calibration cal;                  // Calibration specification
 
@@ -764,15 +766,7 @@ void destroy_filenames( char **filenames, int nfiles );
 void vmLoadObsMetafits( vcsbeam_context *vm, char *filename );
 void vmLoadCalMetafits( vcsbeam_context *vm, char *filename );
 
-void vmGetVoltageMetadata(
-        vcsbeam_context   *vm,
-        MetafitsContext   *obs_context,
-        unsigned long int  begin_gps,
-        int                nseconds,
-        char               *datadir,
-        uintptr_t          coarse_chan_idx,
-        int                ncoarse_chans
-        );
+void vmGetVoltageMetadata( vcsbeam_context *vm );
 
 long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int relative_begin );
 long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str );
