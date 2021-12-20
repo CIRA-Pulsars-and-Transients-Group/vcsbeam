@@ -198,6 +198,8 @@ void vmBindObsData(
     vm->Jv_size_bytes   = nant * vm->nchan * vm->sample_rate * sizeof(cuDoubleComplex);
     vm->d_Jv_size_bytes = vm->Jv_size_bytes;
 
+    // Actually allocate the read buffer
+    vmMallocVHost( vm );
 }
 
 
@@ -279,6 +281,9 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     // Forward PFB
     if (vm->fpfb != NULL)
         free_forward_pfb( vm->fpfb );
+
+    // Read buffer
+    vmFreeVHost( vm );
 
     // Finalise MPI
     if (vm->use_mpi)

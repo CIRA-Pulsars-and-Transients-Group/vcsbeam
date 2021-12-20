@@ -15,8 +15,8 @@
 read_buffer *vmInitReadBuffer( size_t read_size, size_t copy_size )
 /*
  *  <----------------------- buffer_size ------------------------->
- *  <-copy_size-> <---------------- read_size -------------------->
- *  <---------------- read_size --------------------> <-copy_size->
+ *                <---------------- read_size -------------------->
+ *  <-copy_size->                                     <-copy_size->
  * |-------------|-----------------------------------|-------------|
  * ^             ^                                   ^
  * buffer        read_ptr                            copy_from_ptr

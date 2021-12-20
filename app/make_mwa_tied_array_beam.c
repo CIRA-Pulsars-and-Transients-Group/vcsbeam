@@ -87,7 +87,6 @@ int main(int argc, char **argv)
         opts.coarse_chan_str, 1, vm->mpi_rank,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
-    vmMallocVHost( vm );
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
     vm->cal.ref_ant      = strdup( opts.ref_ant );
@@ -324,7 +323,6 @@ int main(int argc, char **argv)
     free( opts.metafits        );
     free( opts.synth_filter    );
 
-    vmFreeVHost( vm );
     vmFreeVDevice( vm );
     vmFreeJVDevice( vm );
     vmFreeEHost( vm );
