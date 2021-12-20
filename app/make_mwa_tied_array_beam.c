@@ -87,6 +87,7 @@ int main(int argc, char **argv)
         opts.coarse_chan_str, 1, vm->mpi_rank,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
+    vmMallocVHost( vm );
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
     vm->cal.ref_ant      = strdup( opts.ref_ant );
@@ -144,7 +145,6 @@ int main(int argc, char **argv)
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
     vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
-    vmMallocVHost( vm );
     vmMallocVDevice( vm );
     vmMallocJVDevice( vm );
     vmMallocEHost( vm );

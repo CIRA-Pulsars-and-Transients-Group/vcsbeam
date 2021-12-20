@@ -59,7 +59,6 @@ vcsbeam_context *vmInit( bool use_mpi )
     vm->d_polP_idxs = NULL;
     vm->d_polQ_idxs = NULL;
 
-    vm->v_size_bytes          = 0;
     vm->d_v_size_bytes        = 0;
     vm->pol_idxs_size_bytes   = 0;
     vm->d_pol_idxs_size_bytes = 0;
@@ -185,8 +184,7 @@ void vmBindObsData(
     uintptr_t nvispol   = vm->obs_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
     uintptr_t npol      = vm->obs_metadata->num_ant_pols; // = 2
 
-    vm->v_size_bytes    = vm->bytes_per_second;
-    vm->d_v_size_bytes  = vm->v_size_bytes;
+    vm->d_v_size_bytes  = vm->bytes_per_second;
     vm->pol_idxs_size_bytes   = nant * sizeof(uint32_t);
     vm->d_pol_idxs_size_bytes = vm->pol_idxs_size_bytes;
     vm->D_size_bytes    = nant * vm->nchan * nvispol * sizeof(cuDoubleComplex);
@@ -322,14 +320,22 @@ void vmSetOutputChannelisation( vcsbeam_context *vm, bool out_fine, bool out_coa
 
 void vmMallocVHost( vcsbeam_context *vm )
 {
-    cudaMallocHost( (void **)&(vm->v), vm->v_size_bytes );
-    cudaCheckErrors( "vmMallocVHost: cudaMallocHost failed" );
+    // If the input is legacy, the read buffer can be just enough
+    // for one second's worth of data.
+    if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+        vm->v = vmInitReadBuffer( vm->bytes_per_second, 0 );
+    // However, for MWAX, the read buffer must be slightly bigger
+    // to accommodate the PFB's extra taps.
+    // For now, this is FIXED to one voltage block. Changing this
+    // will break the gpu kernels that do the fine PFB, for which
+    // the offset into the data is currently hard-coded.
+    else if (vm->obs_metadata->mwa_version == VCSMWAXv2)
+        vm->v = vmInitReadBuffer( vm->bytes_per_second, vm->vcs_metadata->voltage_block_size_bytes );
 }
 
 void vmFreeVHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->v );
-    cudaCheckErrors( "vmFreeVHost: cudaFreeHost failed" );
+    vmFreeReadBuffer( vm->v );
 }
 
 void vmMallocVDevice( vcsbeam_context *vm )
@@ -539,7 +545,7 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
     }
 
     // (This currently only accounts for some of the memory needed)
-    vm->chunks_per_second = (vm->v_size_bytes + vm->Jv_size_bytes) /
+    vm->chunks_per_second = (vm->bytes_per_second + vm->Jv_size_bytes) /
         vm->max_gpu_mem_bytes + 1;
 
     // Make sure the number of chunks is divisible by the number of samples (per second)
@@ -547,7 +553,7 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
         vm->chunks_per_second++;
 
     // Calculate the amount of gpu memory needed
-    vm->d_v_size_bytes = vm->v_size_bytes / vm->chunks_per_second;
+    vm->d_v_size_bytes = vm->bytes_per_second / vm->chunks_per_second;
     vm->d_Jv_size_bytes = vm->Jv_size_bytes / vm->chunks_per_second;
 }
 
@@ -555,7 +561,7 @@ void vmPushChunk( vcsbeam_context *vm )
 {
     // Loads a "chunk" of data onto the GPU
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
-    char *ptrHost = (char *)vm->v + chunk*vm->d_v_size_bytes;
+    char *ptrHost = (char *)vm->v->buffer + chunk*vm->d_v_size_bytes;
     cudaMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyNextChunk: cudaMemcpy failed" );
 }
@@ -568,9 +574,20 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
     uintptr_t ntimesteps   = vm->num_gps_seconds_to_process;
     uint64_t  gps_second   = vm->gps_seconds_to_process[timestep_idx];
 
+    // Make sure the buffer is allocated
+    if (vm->v == NULL)
+        return VM_READ_BUFFER_NOT_SET;
+
+    // Make sure the buffer is not locked
+    if (vm->v->locked)
+        return VM_READ_BUFFER_LOCKED;
+
     // Return "end of data" if the timestep idx is too high
     if (timestep_idx >= ntimesteps)
-        return VM_EOD;
+        return VM_END_OF_DATA;
+
+    // Now lock the buffer!
+    vm->v->locked = true;
 
     sprintf( vm->log_message, "--- Processing GPS second %ld [%lu/%lu], Coarse channel %lu [%d/%d] ---",
                 gps_second,
@@ -583,13 +600,15 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
 
     logger_start_stopwatch( vm->log, "read", true );
 
+    vmReadBufferCopyMargin( vm->v );
+
     if (mwalib_voltage_context_read_second(
                 vm->vcs_context,
                 gps_second,
                 1,
                 vm->coarse_chan_idxs_to_process[0],
-                vm->v,
-                vm->v_size_bytes,
+                vm->v->read_ptr,
+                vm->v->read_size,
                 vm->error_message,
                 ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
     {

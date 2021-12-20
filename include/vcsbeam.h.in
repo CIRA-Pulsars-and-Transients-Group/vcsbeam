@@ -348,8 +348,9 @@ typedef enum vcsbeam_datatype_t
 typedef enum vm_error_t
 {
     VM_SUCCESS,
-    VM_EOD,       // End Of Data
-    VM_READ_BUFFER_NOT_SET
+    VM_END_OF_DATA,
+    VM_READ_BUFFER_NOT_SET,
+    VM_READ_BUFFER_LOCKED
 } vm_error;
 
 typedef struct geometric_delays_t {
@@ -439,12 +440,6 @@ typedef struct read_buffer_t
 #define DEMOTE(x)  (INT_TO_UINT8((int)round(x)))
 #define PACK_NIBBLES(r,i)  ((DEMOTE(r) << 4) + DEMOTE(i))
 
-typedef enum pfb_result_t
-{
-    PFB_SUCCESS,
-    PFB_END_OF_GPSTIMES
-} pfb_result;
-
 typedef enum pfb_flags_t
 {
     PFB_MALLOC_HOST_INPUT    = 0x01,
@@ -468,8 +463,6 @@ typedef enum pfb_flags_t
 typedef struct forward_pfb_t
 {
     char2            *d_htr_data;             // Same as above, on device
-
-    read_buffer      *htr_buffer;             // The input data buffer
 
     uint8_t          *vcs_data;               // The output data, fine channelised and packed into the VCS recombined format
     uint8_t          *d_vcs_data;             // Same as above, on device
@@ -544,7 +537,8 @@ typedef struct vcsbeam_context_t
     forward_pfb *fpfb;                // Forward PFB
 
     // Data buffers
-    void *v, *d_v;                    // The buffers for the input data on host/device
+    read_buffer *v;                   // The buffer for the input data on host
+    void *d_v;                        // The buffer for the input data on device
     uintptr_t v_size_bytes;           // The size of data in bytes (currently always = bytes_per_second)
     uintptr_t d_v_size_bytes;         // The size of d_data in bytes (depends on number of "chunks")
 
@@ -900,9 +894,8 @@ void vmScaleFilterCoeffs( vcsbeam_context *vm, filter_type type, double scale_fa
 void free_forward_pfb( forward_pfb *fpfb );
 
 void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags );
-pfb_result vmForwardPFBReadNextSecond( vcsbeam_context *vm );
     
-void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log );
+void cu_forward_pfb( vcsbeam_context *vm, bool copy_result_to_host, logger *log );
 
 #ifdef __cplusplus
 }

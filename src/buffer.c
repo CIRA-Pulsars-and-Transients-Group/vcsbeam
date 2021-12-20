@@ -54,15 +54,6 @@ void vmFreeReadBuffer( read_buffer *rb )
     cudaFreeHost( rb->buffer );
     cudaCheckErrors( "vmFreeReadBuffer: cudaFreeHost failed" );
 
-    rb->buffer        = NULL;
-    rb->buffer_size   = 0;
-    rb->read_ptr      = NULL;
-    rb->read_size     = 0;
-    rb->copy_from_ptr = NULL;
-    rb->copy_to_ptr   = NULL;
-    rb->copy_size     = 0;
-    rb->locked        = false;
-
     free( rb );
 }
 

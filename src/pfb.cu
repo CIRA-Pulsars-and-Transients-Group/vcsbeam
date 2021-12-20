@@ -357,20 +357,7 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags 
          vm->vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
     fpfb->bytes_per_block = vm->vcs_metadata->voltage_block_size_bytes;
 
-    size_t htr_size_plus_margin =
-        (vm->vcs_metadata->num_voltage_blocks_per_second + 1) *
-         vm->vcs_metadata->voltage_block_size_bytes;
-        // Add room for one more voltage block, for the spillover. ^^^
-        // This choice only makes sense for MWAX data... but then again,
-        // the same is true for this whole function!
-    if (flags & PFB_MALLOC_HOST_INPUT)
-    {
-        fpfb->htr_buffer = vmInitReadBuffer(
-                vm->vcs_metadata->num_voltage_blocks_per_second * vm->vcs_metadata->voltage_block_size_bytes,
-                vm->vcs_metadata->voltage_block_size_bytes );
-    }
-
-    fpfb->weighted_overlap_add_size = htr_size_plus_margin * (sizeof(cuFloatComplex) / sizeof(char2)) / nchunks;
+    fpfb->weighted_overlap_add_size = vm->v->buffer_size * (sizeof(cuFloatComplex) / sizeof(char2)) / nchunks;
     size_t filter_size = vm->analysis_filter->ncoeffs * sizeof(int);
 
     // Allocate memory for filter and copy across the filter coefficients,
@@ -416,7 +403,6 @@ void free_forward_pfb( forward_pfb *fpfb )
 {
     cufftDestroy( fpfb->plan );
     gpuErrchk(cudaFreeHost( fpfb->filter_coeffs ));
-    vmFreeReadBuffer( fpfb->htr_buffer );
     gpuErrchk(cudaFreeHost( fpfb->vcs_data ));
     gpuErrchk(cudaFreeHost( fpfb->i_output_idx ));
     gpuErrchk(cudaFree( fpfb->d_filter_coeffs ));
@@ -427,50 +413,15 @@ void free_forward_pfb( forward_pfb *fpfb )
     free( fpfb );
 }
 
-pfb_result vmForwardPFBReadNextSecond( vcsbeam_context *vm )
+void cu_forward_pfb( vcsbeam_context *vm, bool copy_result_to_host, logger *log )
+/* The wrapper function that performs a forward PFB on the GPU
+ */
 {
     // Shorthand variables
     forward_pfb *fpfb = vm->fpfb;
 
-    // Error check: there are still data files to read
-    if (vm->current_gps_idx >= vm->num_gps_seconds_to_process)
-    {
-        return PFB_END_OF_GPSTIMES;
-    }
-
-    // Turn the read lock on
-    fpfb->htr_buffer->locked = true;
-
-    // First, copy the last margin to the front of the array
-    vmReadBufferCopyMargin( fpfb->htr_buffer );
-
-    // Now, read the next second's worth of data (via mwalib API) starting
-    // at the second block
-    if (mwalib_voltage_context_read_second(
-                    vm->vcs_context,
-                    vm->gps_seconds_to_process[vm->current_gps_idx],
-                    1,
-                    vm->coarse_chan_idxs_to_process[0],
-                    (unsigned char *)fpfb->htr_buffer->read_ptr,
-                    vm->bytes_per_second,
-                    vm->error_message,
-                    ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
-    {
-        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
-        exit(EXIT_FAILURE);
-    }
-
-    vm->current_gps_idx++;
-
-    return PFB_SUCCESS;
-}
-
-void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
-/* The wrapper function that performs a forward PFB on the GPU
- */
-{
     // Check that the input and output buffers have been set
-    if (fpfb->htr_buffer->buffer == NULL)
+    if (vm->v->buffer == NULL)
     {
         fprintf( stderr, "error: cu_forward_pfb: Input data buffer "
                 "have not been set\n" );
@@ -491,7 +442,7 @@ void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
 
         gpuErrchk(cudaMemcpy(
                     fpfb->d_htr_data,                                                 // to
-                    (char *)fpfb->htr_buffer->buffer + fpfb->chunk*fpfb->htr_stride,  // from
+                    (char *)vm->v->buffer + fpfb->chunk*fpfb->htr_stride,  // from
                     fpfb->d_htr_size,                                                 // how much
                     cudaMemcpyHostToDevice ));                                        // which direction
 
@@ -499,7 +450,7 @@ void cu_forward_pfb( forward_pfb *fpfb, bool copy_result_to_host, logger *log )
 
         // Read lock can now be switched off
         if (fpfb->chunk == fpfb->chunks_per_second - 1)
-            fpfb->htr_buffer->locked = false;
+            vm->v->locked = false;
 
         // PFB algorithm:
         // 1st step: weighted overlap add

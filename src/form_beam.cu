@@ -411,6 +411,10 @@ void vmBeamformSecond( vcsbeam_context *vm )
     gpuErrchk( cudaDeviceSynchronize() );
 
     logger_stop_stopwatch( vm->log, "calc" );
+
+    // Unlock the buffer for reading
+    // TODO: generalise this for arbitrary pipelines
+    vm->v->locked = false;
 }
 
 void vmPullE( vcsbeam_context *vm )

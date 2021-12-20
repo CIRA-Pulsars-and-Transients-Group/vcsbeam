@@ -65,6 +65,7 @@ int main( int argc, char *argv[] )
         opts.coarse_chan_str, 1, 0,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
+    vmMallocVHost( vm );
 
     // This only works for new-style (coarse-channelised) MWAX data
     if (vm->obs_metadata->mwa_version != VCSMWAXv2)
@@ -87,15 +88,15 @@ int main( int argc, char *argv[] )
 
     // Let's try it out on one second of data
     char filename[128];
-    pfb_result status;
+    vm_error status;
     logger_start_stopwatch( log, "read", true );
-    while ((status = vmForwardPFBReadNextSecond( vm )) == PFB_SUCCESS)
+    while ((status = vmReadNextSecond( vm )) == VM_SUCCESS)
     {
         logger_stop_stopwatch( log, "read" );
 
         // Actually do the PFB
         logger_start_stopwatch( log, "pfb", false );
-        cu_forward_pfb( vm->fpfb, true, log );
+        cu_forward_pfb( vm, true, log );
         logger_stop_stopwatch( log, "pfb" );
 
         // Write out the answer to a file
@@ -121,6 +122,7 @@ int main( int argc, char *argv[] )
     // Free memory
     logger_timed_message( log, "... j/k. I'm out of files to read. Freeing memory buffers" );
 
+    vmFreeVHost( vm );
     destroy_vcsbeam_context( vm );
 
     // Exit gracefully
