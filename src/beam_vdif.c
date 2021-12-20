@@ -117,9 +117,6 @@ void vmPopulateVDIFHeader(
     char   time_utc[24];
     strftime( time_utc, sizeof(time_utc), "%Y-%m-%dT%H:%M:%S", ts );
 
-    // Get the sample rate
-    unsigned int sample_rate = vm->vcs_metadata->num_samples_per_voltage_block * vm->vcs_metadata->num_voltage_blocks_per_second;
-
     unsigned int p;
     for (p = 0; p < vm->npointing; p++)
     {
@@ -128,7 +125,7 @@ void vmPopulateVDIFHeader(
         vm->vf[p].iscomplex         = 1;   // (it is complex data)
         vm->vf[p].nchan             = 2;   // I am hardcoding this to 2 channels per thread - one per pol
         vm->vf[p].samples_per_frame = 128; // Hardcoding to 128 time-samples per frame
-        vm->vf[p].sample_rate       = sample_rate * vm->vcs_metadata->num_fine_chans_per_coarse; // For coarse channelised data
+        vm->vf[p].sample_rate       = vm->fine_sample_rate * vm->nfine_chan; // For coarse channelised data
         vm->vf[p].BW                = vm->obs_metadata->coarse_chan_width_hz / 1e6;  // (MHz)
 
         vm->vf[p].dataarraylength = (vm->vf[p].nchan * (vm->vf[p].iscomplex+1) * vm->vf[p].samples_per_frame); // = 512
@@ -136,7 +133,7 @@ void vmPopulateVDIFHeader(
         vm->vf[p].threadid      = 0;
         sprintf( vm->vf[p].stationid, "mw" );
 
-        vm->vf[p].frame_rate = sample_rate;                                                        // = 10000
+        vm->vf[p].frame_rate = vm->fine_sample_rate;                                                      // = 10000
         vm->vf[p].block_size = vm->vf[p].frame_length * vm->vf[p].frame_rate;                              // = 5440000
 
         // A single frame (128 samples). Remember vf.nchan is kludged to npol

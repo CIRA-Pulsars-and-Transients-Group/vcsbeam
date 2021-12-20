@@ -347,7 +347,7 @@ void cu_form_incoh_beam(
 
 void vmApplyJChunk( vcsbeam_context *vm )
 {
-    dim3 chan_samples( vm->nchan, vm->sample_rate / vm->chunks_per_second );
+    dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
     dim3 stat( vm->obs_metadata->num_ants );
 
     // J times v
@@ -368,7 +368,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
     uintptr_t shared_array_size = 11 * vm->obs_metadata->num_ants * sizeof(double);
     // (To see how the 11*STATION double arrays are used, go to this code tag: 11NSTATION)
 
-    dim3 chan_samples( vm->nchan, vm->sample_rate / vm->chunks_per_second );
+    dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
     dim3 stat( vm->obs_metadata->num_ants );
 
     // Get the "chunk" number
@@ -384,7 +384,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 vm->gdelays.d_phi,
                 1.0/(double)vm->num_not_flagged,
                 p,
-                chunk*vm->sample_rate/vm->chunks_per_second,
+                chunk*vm->fine_sample_rate/vm->chunks_per_second,
                 vm->chunks_per_second,
                 vm->d_e,
                 (float *)vm->d_S,
@@ -398,20 +398,39 @@ void vmBeamformChunk( vcsbeam_context *vm )
 
 void vmBeamformSecond( vcsbeam_context *vm )
 {
-    logger_start_stopwatch( vm->log, "calc", true );
-
     // Processing a second's worth of "chunks"
     int chunk;
     for (chunk = 0; chunk < vm->chunks_per_second; chunk++)
     {
-        vmPushChunk( vm );
+        if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+        {
+            vmPushChunk( vm );
+        }
+        else
+        {
+            // Do the forward PFB (see pfb.cu for better commented copy)
+            vmUploadForwardPFBChunk( vm );
+
+            logger_start_stopwatch( vm->log, "pfb", chunk == 0 ); // (report only on first round)
+
+            vmWOLAChunk( vm );
+            vmFPGARoundingChunk( vm );
+            vmFFTChunk( vm );
+            vmPackChunk( vm );
+
+            logger_stop_stopwatch( vm->log, "pfb" );
+        }
+
+        logger_start_stopwatch( vm->log, "calc", chunk == 0 ); // (report only on first round)
+
         vmApplyJChunk( vm );
         vmBeamformChunk( vm );
+
+        logger_stop_stopwatch( vm->log, "calc" );
+
         vm->chunk_to_load++;
     }
     gpuErrchk( cudaDeviceSynchronize() );
-
-    logger_stop_stopwatch( vm->log, "calc" );
 
     // Unlock the buffer for reading
     // TODO: generalise this for arbitrary pipelines
@@ -435,7 +454,7 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm )
 {
     // Get shortcut variables
-    uintptr_t nchan  = vm->nchan;
+    uintptr_t nchan  = vm->nfine_chan;
     uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
     int file_no = vm->chunk_to_load / vm->chunks_per_second;
 
@@ -443,16 +462,16 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
     // Make sure we put it back into the correct half of the array, depending
     // on whether this is an even or odd second.
     int offset, i;
-    offset = file_no % 2 * vm->sample_rate;
+    offset = file_no % 2 * vm->fine_sample_rate;
 
     // TODO: turn detected_beam into a 1D array
     int p, ch, s, pol;
     for (p   = 0; p   < vm->npointing  ; p++  )
-    for (s   = 0; s   < vm->sample_rate; s++  )
+    for (s   = 0; s   < vm->fine_sample_rate; s++  )
     for (ch  = 0; ch  < nchan      ; ch++ )
     for (pol = 0; pol < npol       ; pol++)
     {
-        i = p  * (npol*nchan*vm->sample_rate) +
+        i = p  * (npol*nchan*vm->fine_sample_rate) +
             s  * (npol*nchan)                   +
             ch * (npol)                         +
             pol;
@@ -464,8 +483,8 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
 {
     // Flatten the bandpass
-    dim3 chan_stokes(vm->nchan, NSTOKES);
-    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_S, vm->sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
+    dim3 chan_stokes(vm->nfine_chan, NSTOKES);
+    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_S, vm->fine_sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
 
@@ -476,9 +495,9 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
     unsigned int p;
     for (p = 0; p < vm->npointing; p++)
     {
-        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(vm->offsets[p*vm->nchan*NSTOKES]), vm->nchan*NSTOKES*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(vm->scales[p*vm->nchan*NSTOKES]), vm->nchan*NSTOKES*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->sample_rate*vm->nchan*NSTOKES]), vm->sample_rate*vm->nchan*NSTOKES );
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(vm->offsets[p*vm->nfine_chan*NSTOKES]), vm->nfine_chan*NSTOKES*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(vm->scales[p*vm->nfine_chan*NSTOKES]), vm->nfine_chan*NSTOKES*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->fine_sample_rate*vm->nfine_chan*NSTOKES]), vm->fine_sample_rate*vm->nfine_chan*NSTOKES );
     }
 
 }

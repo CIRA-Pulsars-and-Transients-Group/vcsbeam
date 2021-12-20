@@ -341,10 +341,12 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
     if (flags & PFB_COMPLEX_INT4)
     {
         fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
+        vm->datatype = VM_INT4;
     }
     else // i.e., default is cuDoubleComplex
     {
         fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(cuDoubleComplex);
+        vm->datatype = VM_DBL;
     }
 
     fpfb->d_vcs_size = fpfb->vcs_size / vm->chunks_per_second;
@@ -400,6 +402,9 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
         fprintf( stderr, "CUFFT error: Plan creation failed with error code %d\n", res );
         exit(EXIT_FAILURE);
     }
+
+    vm->fine_sample_rate = fpfb->nspectra;
+    vm->nfine_chan       = fpfb->K;
 }
 
 void vmFreeForwardPFB( forward_pfb *fpfb )

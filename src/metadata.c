@@ -186,6 +186,18 @@ void vmBindObsData(
 
     vm->nchan = vm->obs_metadata->num_volt_fine_chans_per_coarse;
 
+    if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+    {
+        vm->fine_sample_rate = vm->sample_rate;
+        vm->nfine_chan       = vm->nchan;
+    }
+    else
+    {
+        // (These will get set if doing a forward PFB)
+        vm->fine_sample_rate = 0;
+        vm->nfine_chan       = 0;
+    }
+
     // Assume that the whole GPU is available
     uintptr_t nant      = vm->obs_metadata->num_ants;
     uintptr_t nvispol   = vm->obs_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
@@ -364,16 +376,46 @@ void vmFreeVHost( vcsbeam_context *vm )
     vmFreeReadBuffer( vm->v );
 }
 
+/**
+ * vmMallocVDevice
+ * ===============
+ *
+ * Allocates device memory for the input voltages for the beamformer.
+ * If the observation is legacy, then allocates new memory.
+ * If the observation is MWAX, then just point to the assumed
+ * already existing memory allocated in VM->FPFB.
+ */
 void vmMallocVDevice( vcsbeam_context *vm )
 {
-    cudaMalloc( (void **)&vm->d_v,  vm->d_v_size_bytes );
-    cudaCheckErrors( "vmMallocVDevice: cudaMalloc failed" );
+    if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+    {
+        cudaMalloc( (void **)&vm->d_v,  vm->d_v_size_bytes );
+        cudaCheckErrors( "vmMallocVDevice: cudaMalloc failed" );
+    }
+    else // if (vm->obs_metadata->mwa_version == VCSMWAXv2)
+    {
+        vm->d_v            = vm->fpfb->d_vcs_data;
+        vm->d_v_size_bytes = vm->fpfb->d_vcs_size;
+        // TODO: ^^^ Check that these are already the same thing
+    }
 }
 
+/**
+ * vmFreeVDevice
+ * =============
+ *
+ * Frees the memory allocated with vmMallocVDevice.
+ * If the observation is legacy, then free the memory.
+ * If the observation is MWAX, then do nothing; the memory
+ * should be freed via a call to vmFreeForwardPFB.
+ */
 void vmFreeVDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_v );
-    cudaCheckErrors( "vmFreeVDevice: cudaFree failed" );
+    if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+    {
+        cudaFree( vm->d_v );
+        cudaCheckErrors( "vmFreeVDevice: cudaFree failed" );
+    }
 }
 
 void vmMallocJVHost( vcsbeam_context *vm )
@@ -845,41 +887,21 @@ void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint6
  */
 void vmGetLegacyVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint64_t gps_second, char *filename )
 {
-    // TODO: This is currently wasteful if this function is called a lot,
-    // because it creates a new mwalib metafits context (and destroys it)
-    // with every call. Better to do this only once.
+    uint64_t t0_gps_second = vm->obs_metadata->metafits_timesteps[0].gps_time_ms/1000;
+    uintptr_t timestep_idx = gps_second - t0_gps_second;
 
-    // If the observation is already legacy, then just call vmGetVoltFilename like normal
-    if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+    if (mwalib_metafits_get_expected_volt_filename(
+                vm->obs_context_legacy,
+                timestep_idx,
+                coarse_chan_idx,
+                filename,
+                MAX_COMMAND_LENGTH,
+                vm->error_message,
+                ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
-        vmGetVoltFilename( vm, coarse_chan_idx, gps_second, filename );
-        return;
+        fprintf( stderr, "error (mwalib): vmGetVoltFilename: %s\n", vm->error_message );
+        exit(EXIT_FAILURE);
     }
-
-    // Otherwise, we have to construct a temporary mwalib context that is forced to be legacy
-    MetafitsContext *tmp_context;
-    mwalib_metafits_context_new( vm->obs_metadata->metafits_filename,
-            VCSLegacyRecombined,
-            &tmp_context,
-            vm->error_message,
-            ERROR_MESSAGE_LEN );
-
-    // Save the old version and forcibly change the version to legacy
-    MetafitsContext *old_context = vm->obs_context;
-    vm->obs_context = tmp_context;
-
-    unsigned int old_seconds_per_file = vm->seconds_per_file;
-    vm->seconds_per_file = 1;
-
-    // Get the filename
-    vmGetVoltFilename( vm, coarse_chan_idx, gps_second, filename );
-
-    // Change the version back to what it was before
-    vm->obs_context      = old_context;
-    vm->seconds_per_file = old_seconds_per_file;
-
-    // Delete the temporary context
-    mwalib_metafits_context_free( tmp_context );
 }
 
 void vmDestroyFilenames( vcsbeam_context *vm )
@@ -899,9 +921,17 @@ void vmDestroyFilenames( vcsbeam_context *vm )
 void vmLoadObsMetafits( vcsbeam_context *vm, char *filename )
 {
     // Create OBS_CONTEXT
-    if (mwalib_metafits_context_new2( filename, &vm->obs_context, vm->error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
+    if (mwalib_metafits_context_new2( filename, &vm->obs_context, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", vm->error_message );
+        exit(EXIT_FAILURE);
+    }
+
+    // Create OBS_CONTEXT_LEGACY
+    if (mwalib_metafits_context_new( filename, VCSLegacyRecombined, &vm->obs_context_legacy,
+            vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): cannot create legacy metafits context: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
 

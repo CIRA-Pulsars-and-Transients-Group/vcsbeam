@@ -46,8 +46,6 @@ void read_step( VoltageContext *vcs_context, uint64_t gps_second, uintptr_t
         coarse_chan_idx, uint8_t *data, uintptr_t data_size, logger *log );
 void write_step( mpi_psrfits *mpf, logger *log );
 
-const uintptr_t outpol_incoh = 1;  // ("I")
-
 /********
  * MAIN *
  *******/
@@ -108,18 +106,9 @@ int main(int argc, char **argv)
     calc_beam_geom( ra_hours, dec_degs, mjd, &beam_geom_vals );
 
     mpi_psrfits mpf;
-    init_mpi_psrfits(
-        &mpf,
-        vm->obs_metadata,
-        vm->vcs_metadata,
-        vm->ncoarse_chans,
-        vm->coarse_chan_idx,
-        opts.max_sec_per_file,
-        outpol_incoh,
-        &beam_geom_vals,
-        opts.outfile,
-        vm->writer,
-        false );
+    int nstokes = 1;
+    vmInitMPIPsrfits( vm, &mpf, opts.max_sec_per_file, nstokes,
+            &beam_geom_vals, opts.outfile, false );
 
     // Begin the main loop: go through data one second at a time
 

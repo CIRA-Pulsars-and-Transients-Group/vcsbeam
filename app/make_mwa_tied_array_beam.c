@@ -49,6 +49,7 @@ struct make_tied_array_beam_opts {
     bool               use_bandpass;     // Use the Bandpass solutions
 
     // Other options
+    char              *analysis_filter;  // Which analysis filter to use
     char              *synth_filter;     // Which synthesis filter to use
     int                max_sec_per_file; // Number of seconds per fits files
     float              gpu_mem_GB;       // Default = 0.0. If 0.0 use all GPU mem
@@ -90,6 +91,27 @@ int main(int argc, char **argv)
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
 
+    // If explicit output flags are given, set the output channelisation
+    // accordingly
+    if (opts.out_fine || opts.out_coarse)
+    {
+        vmSetOutputChannelisation( vm, opts.out_fine, opts.out_coarse );
+    }
+
+    // If we need to, set up the forward PFB
+    vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
+    if (vm->do_forward_pfb)
+    {
+        // Load the filter
+        int K = 128; // The number of desired output channels
+        vmLoadFilter( vm, opts.analysis_filter, ANALYSIS_FILTER, K );
+
+        // Create and init the PFB struct
+        int M = K; // The filter stride (M = K <=> "critically sampled PFB")
+        //vm->chunks_per_second = ?
+        vmInitForwardPFB( vm, M, PFB_SMART );
+    }
+
     vm->cal.metafits     = strdup( opts.cal_metafits );
     vm->cal.ref_ant      = strdup( opts.ref_ant );
     vm->cal.phase_offset = opts.phase_offset;
@@ -104,23 +126,8 @@ int main(int argc, char **argv)
             mwalib_version );
     logger_timed_message( vm->log, vm->log_message );
 
-    // If explicit output flags are given, set the output channelisation
-    // accordingly
-    if (opts.out_fine || opts.out_coarse)
-    {
-        vmSetOutputChannelisation( vm, opts.out_fine, opts.out_coarse );
-    }
-
-    // Create some "shorthand" variables for code brevity
-    uintptr_t nchans         = vm->obs_metadata->num_volt_fine_chans_per_coarse;
-    uintptr_t npols          = vm->obs_metadata->num_ant_pols;   // (X,Y)
-    unsigned int nsamples    = vm->sample_rate;
-
     // Parse input pointings
     vmParsePointingFile( vm, opts.pointings_file );
-
-    // Allocate memory for various data products
-    cuDoubleComplex  ****detected_beam = create_detected_beam( vm->npointing, 2*nsamples, nchans, npols );
 
     // Get pointing geometry information
     beam_geom beam_geom_vals[vm->npointing];
@@ -131,13 +138,25 @@ int main(int argc, char **argv)
     for (p = 0; p < vm->npointing; p++)
         calc_beam_geom( vm->ras_hours[p], vm->decs_degs[p], mjd, &beam_geom_vals[p] );
 
-    // Load the (synthesis) PFB filter
+    // Some shorthand variables (only needed for things relating to the inverse PFB)
+    uintptr_t nchans         = vm->nfine_chan;
+    uintptr_t npols          = vm->obs_metadata->num_ant_pols;
+    unsigned int nsamples    = vm->fine_sample_rate;
 
-    // Adjust by the scaling that was introduced by the forward PFB,
-    // along with any other scaling that I, Lord and Master of the inverse
-    // PFB, feel is appropriate.
-    vmLoadFilter( vm, opts.synth_filter, SYNTHESIS_FILTER, nchans );
-    vmScaleFilterCoeffs( vm, SYNTHESIS_FILTER, 15.0/7.2 ); // (1/7.2) = 16384/117964.8
+    cuDoubleComplex  ****detected_beam;
+
+    if (vm->do_inverse_pfb)
+    {
+        // Load the (synthesis) PFB filter:
+        // Adjust by the scaling that was introduced by the forward PFB,
+        // along with any other scaling that I, Lord and Master of the inverse
+        // PFB, feel is appropriate.
+        vmLoadFilter( vm, opts.synth_filter, SYNTHESIS_FILTER, nchans );
+        vmScaleFilterCoeffs( vm, SYNTHESIS_FILTER, 15.0/7.2 ); // (1/7.2) = 16384/117964.8
+
+        // Allocate memory for various data products
+        detected_beam = create_detected_beam( vm->npointing, 2*nsamples, nchans, npols );
+    }
 
     /*********************
      * Memory Allocation *
@@ -145,7 +164,6 @@ int main(int argc, char **argv)
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
-    vmSetMaxGPUMem( vm, (uintptr_t)(opts.gpu_mem_GB * 1024*1024*1024) );
     vmMallocVDevice( vm );
     vmMallocJVDevice( vm );
     vmMallocEHost( vm );
@@ -181,18 +199,8 @@ int main(int argc, char **argv)
     {
         for (p = 0; p < vm->npointing; p++)
         {
-            init_mpi_psrfits(
-                    &(mpfs[p]),
-                    vm->obs_metadata,
-                    vm->vcs_metadata,
-                    vm->ncoarse_chans,
-                    vm->coarse_chan_idx,
-                    opts.max_sec_per_file,
-                    NSTOKES,
-                    &(beam_geom_vals[p]),
-                    NULL,
-                    vm->writer,
-                    true );
+            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, NSTOKES,
+                    &(beam_geom_vals[p]), NULL, true );
         }
     }
 
@@ -248,7 +256,7 @@ int main(int argc, char **argv)
             write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif );
         }
 
-        // Form the beams
+        // Do the forward PFB (if needed), and form the beams
         vmBeamformSecond( vm );
 
         // Invert the PFB, if requested
@@ -308,7 +316,10 @@ int main(int argc, char **argv)
     // Free up memory
     logger_timed_message( vm->log, "Starting clean-up" );
 
-    destroy_detected_beam( detected_beam, vm->npointing, 2*nsamples, nchans );
+    if (vm->do_inverse_pfb)
+    {
+        destroy_detected_beam( detected_beam, vm->npointing, 2*nsamples, nchans );
+    }
 
     if (vm->do_inverse_pfb)
     {
@@ -338,7 +349,6 @@ int main(int argc, char **argv)
     vmFreeDDevice( vm );
     vmFreePQIdxsDevice( vm );
     vmFreePQIdxsHost( vm );
-
 
     if (vm->do_inverse_pfb)
     {
@@ -370,6 +380,7 @@ void usage()
           );
 
     printf( "\nOPTIONAL OPTIONS\n\n"
+            "\t-A, --analysis_filter=FILTER  Apply the named filter during fine channelisation (for MWAX only).\n"
             "\t-b, --begin=GPSTIME        Begin time of observation, in GPS seconds\n"
             "\t                           If GPSTIME starts with a '+' or a '-', then the time\n"
             "\t                           is taken relative to the start or end of the observation\n"
@@ -444,6 +455,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->out_fine             = false; // Output fine channelised data (PSRFITS)
     opts->out_coarse           = false; // Output coarse channelised data (VDIF)
     opts->emulate_legacy       = false; // Emulate the legacy VCS system using the offline fine PFB
+    opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
     opts->gpu_mem_GB           = 0.0;
@@ -471,6 +483,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"out-coarse",      no_argument,       0, 'v'},
                 {"emulate_legacy",  no_argument,       0, 'e'},
                 {"max_t",           required_argument, 0, 't'},
+                {"analysis_filter", required_argument, 0, 'A'},
                 {"synth_filter",    required_argument, 0, 'S'},
                 {"nseconds",        required_argument, 0, 'T'},
                 {"pointings",       required_argument, 0, 'P'},
@@ -491,13 +504,17 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:Bc:C:d:e:f:F:g:hm:OpP:R:S:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:g:hm:OpP:R:S:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
 
             switch(c)
             {
+                case 'A':
+                    opts->analysis_filter = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->analysis_filter, optarg );
+                    break;
                 case 'b':
                     opts->begin_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->begin_str, optarg );
@@ -624,6 +641,12 @@ void make_tied_array_beam_parse_cmdline(
     {
         opts->coarse_chan_str = (char *)malloc( 3 );
         strcpy( opts->coarse_chan_str, "+0" );
+    }
+
+    if (opts->analysis_filter == NULL)
+    {
+        opts->analysis_filter = (char *)malloc( 8 );
+        strcpy( opts->analysis_filter, "FINEPFB" );
     }
 
     if (opts->synth_filter == NULL)

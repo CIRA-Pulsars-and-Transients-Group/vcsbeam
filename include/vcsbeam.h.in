@@ -400,8 +400,6 @@ typedef struct mpi_psrfits_t
     MPI_Request     request_offsets;
     MPI_Request     request_scales;
 
-    int             ncoarse_chans;
-
     struct psrfits  coarse_chan_pf;
     struct psrfits  spliced_pf;
 
@@ -462,16 +460,19 @@ typedef enum pfb_flags_t
 
     PFB_EMULATE_FPGA         = 0x200,
 
-    PFB_SMART                = 0x21D  // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
+    // Some summary flag settings:
+    PFB_SMART                = 0x21D, // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
                                       //   PFB_EMULATE_FPGA | PFB_COMPLEX_INT4
+    PFB_FULL_PRECISION       = 0x2D   // = PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT |
+                                      //   PFB_COMPLEX_FLOAT64
 } pfb_flags;
 
 typedef struct forward_pfb_t
 {
     char2            *d_htr_data;             // Same as above, on device
 
-    uint8_t          *vcs_data;               // The output data, fine channelised and packed into the VCS recombined format
-    uint8_t          *d_vcs_data;             // Same as above, on device
+    void             *vcs_data;               // The output data, fine channelised and packed into the VCS recombined format
+    void             *d_vcs_data;             // Same as above, on device
 
     size_t            d_htr_size;             // The size (in bytes) of d_htr_data
     size_t            htr_stride;             // Stride for chunks
@@ -528,6 +529,8 @@ typedef struct vcsbeam_context_t
 
     MetafitsContext  *cal_context;    // The mwalib context derived from the calibration observation's metafits file
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
+
+    MetafitsContext  *obs_context_legacy; // The same as obs_context, but forced to be legacy
 
     char *datadir;                    // The directory containing the input data
     char **filenames;                 // The input filenames
@@ -607,9 +610,11 @@ typedef struct vcsbeam_context_t
     // These can be worked out from the other fields, but are computed here
     // for convenience.
     int sample_rate;                  // Number of samples per second
+    int fine_sample_rate;             // Number of samples per second for fine channelised data
     int bytes_per_second;             // Bytes per second of data
     int num_not_flagged;              // Number of RF inputs that are not flagged
-    int nchan;                        // Number of fine channels
+    int nchan;                        // Number of channels
+    int nfine_chan;                   // Number of fine channels
 
     // VDIF output
     vdif_header      vhdr;
@@ -889,13 +894,18 @@ double parse_ra( char* );  // "01:23:45.67" --> RA  in degrees
 
 void vmScaleFilterCoeffs( vcsbeam_context *vm, filter_type type, double scale_factor );
 
-void vmFreeForwardPFB( forward_pfb *fpfb );
-
 void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags );
-    
+void vmUploadForwardPFBChunk( vcsbeam_context *vm );
+void vmWOLAChunk( vcsbeam_context *vm );
+void vmFPGARoundingChunk( vcsbeam_context *vm );
+void vmFFTChunk( vcsbeam_context *vm );
+void vmPackChunk( vcsbeam_context *vm );
+void vmDownloadForwardPFBChunk( vcsbeam_context *vm );
 void vmExecuteForwardPFB( vcsbeam_context *vm );
 
 void vmWritePFBOutputToFile( vcsbeam_context *vm );
+
+void vmFreeForwardPFB( forward_pfb *fpfb );
 
 void vmReportPerformanceStats( vcsbeam_context *vm );
 
@@ -1025,10 +1035,8 @@ extern "C" {
 #endif
 
 void populate_psrfits_header(
+        vcsbeam_context  *vm,
         struct psrfits   *pf,
-        MetafitsMetadata *obs_metadata,
-        VoltageMetadata  *vcs_metadata,
-        int               coarse_chan_idx,
         int               max_sec_per_file,
         int               outpol,
         beam_geom        *beam_geom_vals,
@@ -1036,32 +1044,25 @@ void populate_psrfits_header(
         bool              is_coherent );
 
 void populate_spliced_psrfits_header(
+        vcsbeam_context  *vm,
         struct psrfits   *pf,
-        MetafitsMetadata *obs_metadata,
-        VoltageMetadata  *vcs_metadata,
-        int               first_coarse_chan_idx,
-        int               ncoarse_chans,
         int               max_sec_per_file,
         int               outpol,
         beam_geom        *beam_geom_vals,
-        char             *incoh_basename,
+        char             *basename,
         bool              is_coherent );
 
 void free_psrfits( struct psrfits *pf );
 
 float *create_data_buffer_psrfits( size_t size );
 
-void init_mpi_psrfits(
+void vmInitMPIPsrfits(
+        vcsbeam_context *vm,
         mpi_psrfits *mpf,
-        MetafitsMetadata *obs_metadata,
-        VoltageMetadata *vcs_metadata,
-        int world_size,
-        int world_rank,
         int max_sec_per_file,
         int nstokes,
         beam_geom *bg,
         char *outfile,
-        int writer_id,
         bool is_coherent );
 
 void free_mpi_psrfits( mpi_psrfits *mpf );
