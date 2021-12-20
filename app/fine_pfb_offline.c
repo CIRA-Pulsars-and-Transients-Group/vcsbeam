@@ -41,21 +41,6 @@ int main( int argc, char *argv[] )
     struct fine_pfb_offline_opts opts;
     fine_pfb_offline_parse_cmdline( argc, argv, &opts );
 
-    // Start a logger for output messages and time-keeping
-    logger *log = create_logger( stdout, PERFORMANCE_NO_MPI );
-    logger_add_stopwatch( log, "init",     "Initialising the offline forward PFB" );
-    logger_add_stopwatch( log, "read",     "Reading in data" );
-    logger_add_stopwatch( log, "upload",   "Uploading the data to the device" );
-    logger_add_stopwatch( log, "wola",     "Weighted overlap-add" );
-    logger_add_stopwatch( log, "fft",      "Performing the FFT" );
-    logger_add_stopwatch( log, "pfb",      "Performing the PFB" );
-    logger_add_stopwatch( log, "pack",     "Packing the data into the recombined format" );
-    logger_add_stopwatch( log, "download", "Downloading the data to the host" );
-    logger_add_stopwatch( log, "write",    "Writing out data to file" );
-    //char log_message[MAX_COMMAND_LENGTH];
-
-    logger_start_stopwatch( log, "init", true );
-
     // Set up the VCS metadata struct
     bool use_mpi = false;
     vcsbeam_context *vm = vmInit( use_mpi );
@@ -65,6 +50,8 @@ int main( int argc, char *argv[] )
         opts.coarse_chan_str, 1, 0,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
+
+    logger_timed_message( vm->log, "Initialising the offline forward PFB" );
 
     // This only works for new-style (coarse-channelised) MWAX data
     if (vm->obs_metadata->mwa_version != VCSMWAXv2)
@@ -83,23 +70,16 @@ int main( int argc, char *argv[] )
     int M = K; // The filter stride (M = K <=> "critically sampled PFB")
     vmInitForwardPFB( vm, M, opts.nchunks, PFB_SMART | PFB_MALLOC_HOST_OUTPUT );
 
-    logger_stop_stopwatch( log, "init" );
-
     // Let's try it out on one second of data
     char filename[128];
     vm_error status;
-    logger_start_stopwatch( log, "read", true );
     while ((status = vmReadNextSecond( vm )) == VM_SUCCESS)
     {
-        logger_stop_stopwatch( log, "read" );
-
         // Actually do the PFB
-        logger_start_stopwatch( log, "pfb", false );
-        cu_forward_pfb( vm, true, log );
-        logger_stop_stopwatch( log, "pfb" );
+        vmExecuteForwardPFB( vm, true );
 
         // Write out the answer to a file
-        logger_start_stopwatch( log, "write", true );
+        logger_start_stopwatch( vm->log, "write", true );
 
         sprintf( filename, "%010u_%010u_ch%03lu.dat",
                 vm->obs_metadata->obs_id,
@@ -111,16 +91,10 @@ int main( int argc, char *argv[] )
         fwrite( vm->fpfb->vcs_data, vm->fpfb->vcs_size, sizeof(uint8_t), f );
         fclose( f );
 
-        logger_stop_stopwatch( log, "write" );
-
-        // Start the read timer again in prep for the next read
-        logger_start_stopwatch( log, "read", true );
+        logger_stop_stopwatch( vm->log, "write" );
     }
-    logger_stop_stopwatch( log, "read" );
 
     // Free memory
-    logger_timed_message( log, "... j/k. I'm out of files to read. Freeing memory buffers" );
-
     destroy_vcsbeam_context( vm );
 
     // Exit gracefully
