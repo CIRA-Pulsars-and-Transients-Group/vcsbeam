@@ -155,7 +155,6 @@ void logger_message( logger *log, const char *message );
 void logger_stopwatch_report_stats( logger *log, const char *stopwatch_name );
 void logger_report_all_stats( logger *log );
 
-
 #ifdef __cplusplus
 } // End extern "C"
 #endif
@@ -896,6 +895,8 @@ void free_forward_pfb( forward_pfb *fpfb );
 void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags );
     
 void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host );
+
+void vmReportPerformanceStats( vcsbeam_context *vm );
 
 #ifdef __cplusplus
 }

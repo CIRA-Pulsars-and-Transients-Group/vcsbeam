@@ -299,8 +299,8 @@ int main(int argc, char **argv)
         }
     }
 
-    logger_report_all_stats( vm->log );
-    logger_message( vm->log, "" );
+    // Report performace statistics
+    vmReportPerformanceStats( vm );
 
     // Free up memory
     logger_timed_message( vm->log, "Starting clean-up" );

@@ -1117,3 +1117,7 @@ void vmParsePointingFile( vcsbeam_context *vm, const char *filename )
     vmCreateCudaStreams( vm );
 }
 
+void vmReportPerformanceStats( vcsbeam_context *vm )
+{
+    logger_report_all_stats( vm->log );
+}

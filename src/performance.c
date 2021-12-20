@@ -41,6 +41,22 @@ int get_stopwatch_idx( logger *log, const char *stopwatch_name )
     return PERFORMANCE_NO_STOPWATCH_FOUND;
 }
 
+int get_stopwatch_max_name_length( logger *log )
+/* Find the maximum length of stopwatch names
+ */
+{
+    int length, max_length = 0;
+    int idx;
+    for (idx = 0; idx < log->nstopwatches; idx++)
+    {
+        length = strlen( log->stopwatches[idx].name );
+        if (length > max_length)
+            max_length = length;
+    }
+
+    return max_length;
+}
+
 double calc_stopwatch_mean( logger_stopwatch *sw )
 {
     return sw->total / (double)sw->nstart_stops;
@@ -52,11 +68,15 @@ double calc_stopwatch_std( logger_stopwatch *sw )
     return sqrt(sw->total_sq / (double)sw->nstart_stops - mean*mean);
 }
 
-void write_stopwatch_stats_str( logger *log, logger_stopwatch *sw )
+void write_stopwatch_stats_str( logger *log, logger_stopwatch *sw, int pad_size )
 {
+    if (pad_size == 0)
+        pad_size = strlen( sw->name );
+
     char report[56 + strlen(sw->name)];
-    sprintf( report, "Stopwatch \"%s\": "
+    sprintf( report, "Stopwatch %-*s: "
             "Total = %.3lf s,  Mean = %.3lf +/- %.3lf",
+            pad_size,
             sw->name,
             sw->total,
             calc_stopwatch_mean( sw ),
@@ -268,15 +288,16 @@ void logger_stopwatch_report_stats( logger *log, const char *stopwatch_name )
 
     // Only write something if this stopwatch was actually used
     if (sw->nstart_stops > 0)
-        write_stopwatch_stats_str( log, sw );
+        write_stopwatch_stats_str( log, sw, 0 );
 }
 
 void logger_report_all_stats( logger *log )
 {
+    int max_length = get_stopwatch_max_name_length( log );
     int i;
     for (i = 0; i < log->nstopwatches; i++)
     {
         if (log->stopwatches[i].nstart_stops > 0)
-            write_stopwatch_stats_str( log, &(log->stopwatches[i]) );
+            write_stopwatch_stats_str( log, &(log->stopwatches[i]), max_length );
     }
 }
