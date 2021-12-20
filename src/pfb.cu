@@ -536,6 +536,20 @@ void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host )
     logger_stop_stopwatch( vm->log, "pfb" );
 }
 
+void vmWritePFBOutputToFile( vcsbeam_context *vm )
+{
+    logger_start_stopwatch( vm->log, "write", true );
+
+    char filename[128];
+    vmGetLegacyVoltFilename( vm, vm->coarse_chan_idxs_to_process[0], vm->gps_seconds_to_process[0], filename );
+
+    FILE *f = fopen( filename, "w" );
+    fwrite( vm->fpfb->vcs_data, vm->fpfb->vcs_size, sizeof(uint8_t), f );
+    fclose( f );
+
+    logger_stop_stopwatch( vm->log, "write" );
+}
+
 /**********************************
  * BACKWARDS (SYNTHESIS) FINE PFB *
  **********************************/

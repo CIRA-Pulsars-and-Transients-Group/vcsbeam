@@ -750,9 +750,6 @@ void vmCreateFilenames( vcsbeam_context *vm )
     uintptr_t         coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
     int               ncoarse_chans   = vm->num_coarse_chans_to_process;
 
-    // Buffer for mwalib error messages
-    char error_message[ERROR_MESSAGE_LEN];
-
     // Check that the number of seconds is non-negative
     if (nseconds <= 0)
     {
@@ -770,15 +767,13 @@ void vmCreateFilenames( vcsbeam_context *vm )
     }
 
     // Work out the number of files
-    int timestep_duration_sec      = (vm->obs_metadata->mwa_version == VCSMWAXv2 ? 8 : 1); // <-- Raise an issue with mwalib (I shouldn't have to do this)
-    uint64_t end_gps               = begin_gps + nseconds - 1;
-    uint64_t t0_timestep_second    = vm->obs_metadata->metafits_timesteps[0].gps_time_ms/1000;
-    uint64_t start_timestep_second = begin_gps - (begin_gps % timestep_duration_sec);
-    uint64_t end_timestep_second   = end_gps - (end_gps % timestep_duration_sec);
-    unsigned int ntimesteps        = (end_timestep_second - start_timestep_second)/timestep_duration_sec + 1;
-    unsigned int t0_idx            = (start_timestep_second - t0_timestep_second)/timestep_duration_sec;
+    uint64_t end_gps = begin_gps + nseconds - 1;
+    uint64_t file_start_timestep_second = begin_gps - (begin_gps % vm->seconds_per_file);
+    uint64_t file_end_timestep_second   = end_gps - (end_gps % vm->seconds_per_file);
+    vm->nfiletimes = (file_end_timestep_second - file_start_timestep_second)/vm->seconds_per_file + 1;
+    vm->nfiles = ncoarse_chans * vm->nfiletimes;
 
-    vm->nfiles = ncoarse_chans * ntimesteps;
+    uint64_t gps_second;
 
     // Allocate memory for the file name list
     char filename[MAX_COMMAND_LENGTH]; // Just the mwalib-generated filename (without the path)
@@ -787,31 +782,98 @@ void vmCreateFilenames( vcsbeam_context *vm )
     // Allocate memory and write filenames
     unsigned int t_idx, f_idx;
     uintptr_t c_idx;
-    for (t_idx = 0; t_idx < ntimesteps; t_idx++)
+    for (t_idx = 0; t_idx < vm->nfiletimes; t_idx++)
     {
+        // Get the GPS second for this time index
+        gps_second = file_start_timestep_second + t_idx*vm->seconds_per_file;
+
         for (c_idx = coarse_chan_idx; c_idx < coarse_chan_idx + ncoarse_chans; c_idx++)
         {
             //f_idx = second*ncoarse_chans + c_idx - coarse_chan_idx; // <-- this order seems to break mwalib (v0.9.4)
-            f_idx = (c_idx - coarse_chan_idx)*ntimesteps + t_idx;
+            f_idx = (c_idx - coarse_chan_idx)*vm->nfiletimes + t_idx;
             vm->filenames[f_idx] = (char *)malloc( MAX_COMMAND_LENGTH );
             memset( filename, 0, MAX_COMMAND_LENGTH );
 
-            if (mwalib_metafits_get_expected_volt_filename(
-                        vm->obs_context,
-                        t_idx + t0_idx,
-                        c_idx,
-                        filename,
-                        MAX_COMMAND_LENGTH,
-                        error_message,
-                        ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-            {
-                fprintf( stderr, "error (mwalib): cannot create filenames: %s\n", error_message );
-                exit(EXIT_FAILURE);
-            }
+            vmGetVoltFilename( vm, c_idx, gps_second, filename );
+
             sprintf( vm->filenames[f_idx], "%s/%s",
                     vm->datadir, filename );
         }
     }
+}
+
+/**
+ * vmGetVoltFilename
+ * =================
+ *
+ * Returns the filename for the given channel index and GPS second,
+ * assuming the observation specified by VM->OBS_CONTEXT.
+ * Expects VM->SECONDS_PER_FILE to be set (via vmLoadObsMetafits).
+ * Result put into FILENAME (assumed already allocated).
+ */
+void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint64_t gps_second, char *filename )
+{
+    uint64_t t0_gps_second = vm->obs_metadata->metafits_timesteps[0].gps_time_ms/1000;
+    uintptr_t timestep_idx = (gps_second - t0_gps_second) / vm->seconds_per_file;
+
+    if (mwalib_metafits_get_expected_volt_filename(
+                vm->obs_context,
+                timestep_idx,
+                coarse_chan_idx,
+                filename,
+                MAX_COMMAND_LENGTH,
+                vm->error_message,
+                ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): vmGetVoltFilename: %s\n", vm->error_message );
+        exit(EXIT_FAILURE);
+    }
+}
+
+/**
+ * vmGetLegacyVoltFilename
+ * =======================
+ *
+ * Same as vmGetVoltFilename, but return the filename as if the observation
+ * were really a legacy VCS observation.
+ */
+void vmGetLegacyVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint64_t gps_second, char *filename )
+{
+    // TODO: This is currently wasteful if this function is called a lot,
+    // because it creates a new mwalib metafits context (and destroys it)
+    // with every call. Better to do this only once.
+
+    // If the observation is already legacy, then just call vmGetVoltFilename like normal
+    if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
+    {
+        vmGetVoltFilename( vm, coarse_chan_idx, gps_second, filename );
+        return;
+    }
+
+    // Otherwise, we have to construct a temporary mwalib context that is forced to be legacy
+    MetafitsContext *tmp_context;
+    mwalib_metafits_context_new( vm->obs_metadata->metafits_filename,
+            VCSLegacyRecombined,
+            &tmp_context,
+            vm->error_message,
+            ERROR_MESSAGE_LEN );
+
+    // Save the old version and forcibly change the version to legacy
+    MetafitsContext *old_context = vm->obs_context;
+    vm->obs_context = tmp_context;
+
+    unsigned int old_seconds_per_file = vm->seconds_per_file;
+    vm->seconds_per_file = 1;
+
+    // Get the filename
+    vmGetVoltFilename( vm, coarse_chan_idx, gps_second, filename );
+
+    // Change the version back to what it was before
+    vm->obs_context      = old_context;
+    vm->seconds_per_file = old_seconds_per_file;
+
+    // Delete the temporary context
+    mwalib_metafits_context_free( tmp_context );
 }
 
 void vmDestroyFilenames( vcsbeam_context *vm )
@@ -843,6 +905,9 @@ void vmLoadObsMetafits( vcsbeam_context *vm, char *filename )
         fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
+
+    vm->seconds_per_file = (vm->obs_metadata->mwa_version == VCSMWAXv2 ? 8 : 1);
+                        // ^-- Raise an issue with mwalib (I shouldn't have to do this)
 }
 
 void vmLoadCalMetafits( vcsbeam_context *vm, char *filename )

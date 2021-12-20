@@ -532,6 +532,8 @@ typedef struct vcsbeam_context_t
     char *datadir;                    // The directory containing the input data
     char **filenames;                 // The input filenames
     int nfiles;                       // The number of filenames
+    unsigned int nfiletimes;          // The number of "file" timesteps
+    unsigned int seconds_per_file;    // The number of seconds in one file
 
     // Calibration
     calibration cal;                  // Calibration specification
@@ -756,6 +758,8 @@ void vmLoadRTSSolution( vcsbeam_context *vm );
 void vmLoadOffringaSolution( vcsbeam_context *vm );
 
 void vmCreateFilenames( vcsbeam_context *vm );
+void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint64_t gps_second, char *filename );
+void vmGetLegacyVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint64_t gps_second, char *filename );
 void vmDestroyFilenames( vcsbeam_context *vm );
 
 void vmLoadObsMetafits( vcsbeam_context *vm, char *filename );
@@ -888,6 +892,8 @@ void free_forward_pfb( forward_pfb *fpfb );
 void vmInitForwardPFB( vcsbeam_context *vm, int M, int nchunks, pfb_flags flags );
     
 void vmExecuteForwardPFB( vcsbeam_context *vm, bool copy_result_to_host );
+
+void vmWritePFBOutputToFile( vcsbeam_context *vm );
 
 void vmReportPerformanceStats( vcsbeam_context *vm );
 

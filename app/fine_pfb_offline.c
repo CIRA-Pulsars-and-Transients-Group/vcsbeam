@@ -79,19 +79,7 @@ int main( int argc, char *argv[] )
         vmExecuteForwardPFB( vm, true );
 
         // Write out the answer to a file
-        logger_start_stopwatch( vm->log, "write", true );
-
-        sprintf( filename, "%010u_%010u_ch%03lu.dat",
-                vm->obs_metadata->obs_id,
-                vm->gps_seconds_to_process[vm->current_gps_idx - 1],
-                vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number
-               );
-
-        FILE *f = fopen( filename, "w" );
-        fwrite( vm->fpfb->vcs_data, vm->fpfb->vcs_size, sizeof(uint8_t), f );
-        fclose( f );
-
-        logger_stop_stopwatch( vm->log, "write" );
+        vmWritePFBOutputToFile( vm );
     }
 
     // Report performance statistics
