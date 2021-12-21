@@ -132,7 +132,7 @@ void populate_spliced_psrfits_header(
     {
         iC = i / vm->nfine_chan + first_coarse_chan_idx;
         iF = (iC * vm->nfine_chan) + (i % vm->nfine_chan);
-        pf->sub.dat_freqs[i] = start_hz + iF*fine_chan_width;
+        pf->sub.dat_freqs[i] = (start_hz + iF*fine_chan_width)*1e-6;
         pf->sub.dat_weights[i] = 1.0;
     }
 
