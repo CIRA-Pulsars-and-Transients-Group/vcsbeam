@@ -20,10 +20,24 @@
  * Creates arrays of indexes for antennas and polarisation according to the
  * ordering used in legacy VCS observations.
  *
- * The index arrays are needed for pairing the antenna metadata
- * the data for the P and Q polarisations,
- * ordered by antenna number. Assumption: polQ_idxs and polP_idxs have
- * sufficient allocated memory.
+ * @retval Pidxs An index array for the \f$P\f$ polarisation (`vm&rarr;polP_idxs`),
+ *         which corresponds to the metafits label 'Y'.
+ * @retval Qidxs An index array for the \f$Q\f$ polarisation (`vm&rarr;polQ_idxs`),
+ *         which corresponds to the metafits label 'X'.
+ *
+ * The index arrays are needed for pairing the antenna metadata with the
+ * voltage samples, which historically were ordered in a different way.
+ * Fortunately, the metafits file contains the VCS ordering in the "VCSOrder"
+ * field. This function converts these indexes into a lookup array that can
+ * be conveniently passed to GPU kernels at runtime. A separate array is
+ * made for each polarisation, with the indexes into the arrays being the
+ * metafits "Antenna" number, and the value stored in that array position
+ * being the "VCSOrder".
+ *
+ * The metafits information is drawn from `vm&rarr;obs_metadata`.
+ *
+ * No memory is allocated by this function. It is assumed that all arrays
+ * have been previously allocated, and are sufficiently large.
  */
 void vmSetPolIdxLists( vcsbeam_context *vm )
 {
@@ -56,9 +70,9 @@ void vmSetPolIdxLists( vcsbeam_context *vm )
  *
  * @param D The instrumental calibration solution (in `vm&rarr;D`)
  * @param B The beam model (in each pointing direction) (in `vm&rarr;pb.B`)
- * @return The Jones matrix to be left-multiplied to the voltages (in `vm&rarr;J`)
+ * @retval Jinv The Jones matrix (\f${\bf J}^{-1}\f$) to be left-multiplied to the voltages (in `vm&rarr;J`)
  *
- * \f${\bf J}\f$ has dimensions \f$(N_a \times N_f \times N_p \times N_p)\f$,
+ * \f${\bf J}^{-1}\f$ has dimensions \f$(N_a \times N_f \times N_p \times N_p)\f$,
  * where
  *  - \f$N_a\f$ is the number of antennas (`vm&rarr;obs_metadata&rarr;num_ants`)
  *  - \f$N_f\f$ is the number of frequencies (`vm&rarr;vm&rarr;nfine_chan`)
@@ -70,6 +84,8 @@ void vmSetPolIdxLists( vcsbeam_context *vm )
  * \f[\begin{bmatrix} QQ & QP \\ PQ & QQ \end{bmatrix}.\f]
  *
  * **Note that** `vm&rarr;J` **refers to the** ***inverse*** \f${\bf J}^{-1}\f$.
+ *
+ * @todo <a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/issues/9">Issue #9</a>
  */
 void vmCalcJ( vcsbeam_context *vm )
 {
@@ -131,7 +147,16 @@ if (ch == 50 && ant == 0)
     } // end loop through pointings (p)
 }
 
-
+/**
+ * Wrapper function for vmCalcPhi(), vmCalcB(), and vmCalcJ().
+ *
+ * @param ras_hours An array of right ascensions, in decimal hours, one for each pointing.
+ * @param decs_degs An array of declinations, in decimal degrees, one for each pointing.
+ * @param beam_geom_vals An array of beam geometries, one for each pointing.
+ *
+ * For each pointing, the quantities \f$e^{i\phi}\f$, \f${\bf B}\f$, and \f${\bf J}^{-1}\f$ are calculated.
+ * (\f${\bf D}\f$ is not recalculated, but is used in the calculation of \f${\bf J}^{-1}\f$).
+ */
 void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals )
 {
     logger_start_stopwatch( vm->log, "delay", true );
@@ -157,6 +182,12 @@ void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_
  * Generic matrix operations *
  *****************************/
 
+/**
+ * Copies a \f$2\times2\f$ complex-valued matrix.
+ *
+ * @param Min The source matrix, \f${\bf M}_\text{in}\f$.
+ * @retval Mout The destination matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}\f$.
+ */
 void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 {
     Mout[0] = Min[0];
@@ -165,18 +196,35 @@ void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
     Mout[3] = Min[3];
 }
 
-
+/**
+ * Computes the reciprocal of a complex number.
+ *
+ * @param z A complex number
+ * @return \f$\dfrac{1}{z}\f$
+ */
 cuDoubleComplex reciprocal_complex( cuDoubleComplex z )
 {
     double scale = 1.0/(z.x*z.x + z.y*z.y);
     return make_cuDoubleComplex( scale*z.x, -scale*z.y );
 }
 
+/**
+ * Computes the negative of a complex number.
+ *
+ * @param z A complex number
+ * @return \f$-z\f$
+ */
 cuDoubleComplex negate_complex( cuDoubleComplex z )
 {
     return make_cuDoubleComplex( -z.x, -z.y );
 }
 
+/**
+ * Computes the inverse of a \f$2\times2\f$ complex-valued matrix.
+ *
+ * @param Min The input matrix, \f${\bf M}_\text{in}\f$.
+ * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$
+ */
 void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 {
     cuDoubleComplex m00 = Min[0];
@@ -196,6 +244,12 @@ void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
     Mout[3] = cuCmul(       inv_det,  m00 );
 }
 
+/**
+ * Computes the inverse of a \f$2\times2\f$ real-valued matrix.
+ *
+ * @param Min The input matrix, \f${\bf M}_\text{in}\f$
+ * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$.
+ */
 void inv2x2d(double *Min, double *Mout)
 {
     double m00 = Min[0];
@@ -216,6 +270,17 @@ void inv2x2d(double *Min, double *Mout)
 }
 
 
+/**
+ * Computes the inverse of a \f$2\times2\f$ complex-valued matrix.
+ *
+ * @param Min The input matrix, \f${\bf M}_\text{in}\f$
+ * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$
+ *
+ * \see inv2x2()
+ *
+ * @todo Does this do the same thing as inv2x2()? Check the code, and delete
+ *       if not needed.
+ */
 void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 // Same as inv2x2(), but the output is a 2x2 2D array, instead of a 4-element
 // 1D array
@@ -231,6 +296,13 @@ void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 }
 
 
+/**
+ * Performs a matrix multiplication of two \f$2\times2\f$ complex-valued matrices.
+ *
+ * @param M1 The first input matrix, \f${\bf M}_1\f$
+ * @param M2 The second input matrix, \f${\bf M}_2\f$
+ * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
+ */
 void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
 {
     cuDoubleComplex m00 = cuCmul( M1[0], M2[0] );
@@ -247,9 +319,15 @@ void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
     Mout[3] = cuCadd( m21, m33 );
 }
 
-void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
-/* Mout = M1 x M2
+/**
+ * Performs a matrix multiplication of a \f$2\times2\f$ real-valued matrix
+ * (on the left) with a \f$2\times2\f$ complex-valued matrix (on the right).
+ *
+ * @param M1 The first input matrix (real-valued), \f${\bf M}_1\f$
+ * @param M2 The second input matrix (complex-valued), \f${\bf M}_2\f$
+ * @retval Mout The output matrix (complex-valued), \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
  */
+void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
 {
     cuDoubleComplex m00 = make_cuDoubleComplex( M1[0]*cuCreal(M2[0]), M1[0]*cuCimag(M2[0]) );
     cuDoubleComplex m12 = make_cuDoubleComplex( M1[1]*cuCreal(M2[2]), M1[1]*cuCimag(M2[2]) );
@@ -265,9 +343,15 @@ void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
     Mout[3] = cuCadd( m21, m33 );
 }
 
-void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout )
-/* Mout = M1 x M2
+/**
+ * Performs a matrix multiplication of a \f$2\times2\f$ complex-valued matrix
+ * (on the left) with a \f$2\times2\f$ real-valued matrix (on the right).
+ *
+ * @param M1 The first input matrix (complex-valued), \f${\bf M}_1\f$
+ * @param M2 The second input matrix (real-valued), \f${\bf M}_2\f$
+ * @retval Mout The output matrix (complex-valued), \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
  */
+void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout )
 {
     cuDoubleComplex m00 = make_cuDoubleComplex( cuCreal(M1[0])*M2[0], cuCimag(M1[0])*M2[0] );
     cuDoubleComplex m12 = make_cuDoubleComplex( cuCreal(M1[1])*M2[2], cuCimag(M1[1])*M2[2] );
@@ -283,10 +367,15 @@ void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout )
     Mout[3] = cuCadd( m21, m33 );
 }
 
-void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
-/* Calculate the conjugate of a matrix
- * It is safe for M and Mout to point to the same matrix
+/**
+ * Computes the conjugate of a \f$2\times2\f$ complex-valued matrix.
+ *
+ * @param M The input matrix, \f${\bf M}\f$.
+ * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}^\ast\f$.
+ *
+ * It is safe for `M` and `Mout` to point to the same matrix.
  */
+void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 {
     int i;
     for (i = 0; i < 4; i++)
@@ -294,10 +383,15 @@ void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 }
 
 
-double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
-/* Normalise a 2x2 matrix via the Frobenius norm
- * It is safe for M and Mout to point to the same matrix.
+/**
+ * Normalises a \f$2\times2\f$ matrix via the Frobenius norm.
+ *
+ * @param M The input matrix, \f${\bf M}\f$.
+ * @retval Mout The output matrix, \f${\bf M}_\text{out} = |{\bf M}_\text{in}|\f$.
+ *
+ * It is safe for `M` and `Mout` to point to the same matrix.
  */
+double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 {
     // Calculate the normalising factor
     double Fnorm = 0.0;
@@ -320,10 +414,19 @@ double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 }
 
 
-void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
-/* [0 1]  -->  [3 2]
- * [2 3]       [1 0]
+/**
+ * Reverses the elements of a \f$2\times2\f$ matrix.
+ *
+ * @param M The input matrix, \f${\bf M}\f$.
+ * @retval Mout The output matrix, \f${\bf M}_\text{out}\f$.
+ *
+ * \f[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix}
+ * \rightarrow
+ * \begin{bmatrix} 3 & 2 \\ 1 & 0 \end{bmatrix}\f]
+ *
+ * It is safe for `M` and `Mout` to point to the same matrix.
  */
+void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
 {
     cuDoubleComplex m0 = M[0];
     cuDoubleComplex m1 = M[1];
@@ -336,10 +439,19 @@ void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
     Mout[3] = m0;
 }
 
-void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
-/* [0 1]  -->  [2 3]
- * [2 3]       [0 1]
+/**
+ * Swaps the rows of a \f$2\times2\f$ matrix.
+ *
+ * @param M The input matrix, \f${\bf M}\f$.
+ * @retval Mout The output matrix, \f${\bf M}_\text{out}\f$.
+ *
+ * \f[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix}
+ * \rightarrow
+ * \begin{bmatrix} 2 & 3 \\ 0 & 1 \end{bmatrix}\f]
+ *
+ * It is safe for `M` and `Mout` to point to the same matrix.
  */
+void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
 {
     cuDoubleComplex m0 = M[0];
     cuDoubleComplex m1 = M[1];
@@ -352,10 +464,19 @@ void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
     Mout[3] = m1;
 }
 
-void swapcols2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
-/* [0 1]  -->  [1 0]
- * [2 3]       [3 2]
+/**
+ * Swaps the columns of a \f$2\times2\f$ matrix.
+ *
+ * @param M The input matrix, \f${\bf M}\f$.
+ * @retval Mout The output matrix, \f${\bf M}_\text{out}\f$.
+ *
+ * \f[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix}
+ * \rightarrow
+ * \begin{bmatrix} 1 & 0 \\ 3 & 2 \end{bmatrix}\f]
+ *
+ * It is safe for `M` and `Mout` to point to the same matrix.
  */
+void swapcols2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
 {
     cuDoubleComplex m0 = M[0];
     cuDoubleComplex m1 = M[1];
@@ -368,9 +489,12 @@ void swapcols2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
     Mout[3] = m2;
 }
 
-bool is2x2zero( cuDoubleComplex *M )
-/* Returns true iff all elements of M are identically zero
+/**
+ * Returns true if and only if all elements of a \f$2\times2\f$ complex-valued matrix are identically zero.
+ *
+ * @param M The matrix to be tested, \f${\bf M}\f$.
  */
+bool is2x2zero( cuDoubleComplex *M )
 {
     return (cuCreal(M[0]) == 0.0 &&
             cuCimag(M[0]) == 0.0 &&
@@ -382,9 +506,15 @@ bool is2x2zero( cuDoubleComplex *M )
             cuCimag(M[3]) == 0.0);
 }
 
-void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
-/* Calculate H = M^H, where "^H" is the hermitian operation
+/**
+ * Computes the Hermitian (i.e. conjugate transpose) of a \f$2\times2\f$ complex-valued matrix.
+ *
+ * @param M The input matrix, \f${\bf M}\f$.
+ * @retval H The output matrix, \f${\bf H} = {\bf M}^\dagger\f$.
+ *
+ * It is safe for `M` and `H` to point to the same matrix.
  */
+void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
 {
     // Put in temporary matrix, so that H may point to the same memory
     // address as M
@@ -397,6 +527,14 @@ void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
     cp2x2( tmp, H );
 }
 
+/**
+ * Computes the coherency matrix of a \f$2\times2\f$ complex-valued matrix.
+ *
+ * @param M The input matrix, \f${\bf M}\f$.
+ * @retval H The output matrix, \f${\bf C} = {\bf M}{\bf M}^\dagger\f$.
+ *
+ * It is safe for `M` and `C` to point to the same matrix.
+ */
 void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *C )
 /* Compute C = M x M^H, where "^H" is the hermitian operation
  */
@@ -407,6 +545,18 @@ void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *C )
 }
 
 
+/**
+ * Prints a \f$2\times2\f$ complex-valued matrix.
+ *
+ * @param fout The file stream to output to
+ * @param M The matrix to print
+ *
+ * The output format is
+ *
+ * `[ a+b*i, c+d*i; e+f*i, g+h*i ]`
+ *
+ * and a newline is printed at the end.
+ */
 void fprintf_complex_matrix( FILE *fout, cuDoubleComplex *M )
 {
     fprintf( fout, "[ %lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i ]\n",
