@@ -763,8 +763,8 @@ void vmDestroyCudaStreams( vcsbeam_context *vm );
 void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs );
 void vmDestroyStatistics( vcsbeam_context *vm );
 
-void vmSetPolIdxLists( vcsbeam_context *vm ); // (defined in jones.c)
-void vmCalcJ( vcsbeam_context *vm ); // (defined in jones.c)
+void vmSetPolIdxLists( vcsbeam_context *vm );
+void vmCalcJ( vcsbeam_context *vm );
 void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals );
 
 void vmParsePointingFile( vcsbeam_context *vm, const char *filename );

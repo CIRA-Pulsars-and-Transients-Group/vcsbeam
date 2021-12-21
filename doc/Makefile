@@ -1,6 +1,6 @@
 TARGETS = vcsbeam_documentation.pdf
 
-all: $(TARGETS)
+all: $(TARGETS) doxygen
 
 %.pdf: %.tex
 	pdflatex $(basename $<)
@@ -8,3 +8,6 @@ all: $(TARGETS)
 	bibtex $(basename $<)
 	pdflatex $(basename $<)
 	pdflatex $(basename $<)
+
+doxygen:
+	doxygen && make -C latex

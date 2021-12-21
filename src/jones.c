@@ -16,11 +16,16 @@
 
 #include "vcsbeam.h"
 
-void vmSetPolIdxLists( vcsbeam_context *vm )
-/* Creates a list of indexes into the data for the P and Q polarisations,
+/**
+ * Creates arrays of indexes for antennas and polarisation according to the
+ * ordering used in legacy VCS observations.
+ *
+ * The index arrays are needed for pairing the antenna metadata
+ * the data for the P and Q polarisations,
  * ordered by antenna number. Assumption: polQ_idxs and polP_idxs have
  * sufficient allocated memory.
  */
+void vmSetPolIdxLists( vcsbeam_context *vm )
 {
     // Go through the rf_inputs and construct the lookup table for the antennas
     unsigned int ninputs = vm->obs_metadata->num_rf_inputs;
@@ -47,7 +52,24 @@ void vmSetPolIdxLists( vcsbeam_context *vm )
 }
 
 /**
- * Compute the Jones matrix J = DB (and its inverse)
+ * Computes the (inverse) Jones matrix \f${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}\f$.
+ *
+ * @param D The instrumental calibration solution (in `vm&rarr;D`)
+ * @param B The beam model (in each pointing direction) (in `vm&rarr;pb.B`)
+ * @return The Jones matrix to be left-multiplied to the voltages (in `vm&rarr;J`)
+ *
+ * \f${\bf J}\f$ has dimensions \f$(N_a \times N_f \times N_p \times N_p)\f$,
+ * where
+ *  - \f$N_a\f$ is the number of antennas (`vm&rarr;obs_metadata&rarr;num_ants`)
+ *  - \f$N_f\f$ is the number of frequencies (`vm&rarr;vm&rarr;nfine_chan`)
+ *  - \f$N_p\f$ is the number of polarisation (`vm&rarr;obs_metadata&rarr;num_ant_pols`)
+ *
+ * The antenna ordering is given by the "Antenna" keyword in the observation's
+ * metafits file. The frequencies are ordered from lowest to highest. The polarisations
+ * are in the order
+ * \f[\begin{bmatrix} QQ & QP \\ PQ & QQ \end{bmatrix}.\f]
+ *
+ * **Note that** `vm&rarr;J` **refers to the** ***inverse*** \f${\bf J}^{-1}\f$.
  */
 void vmCalcJ( vcsbeam_context *vm )
 {
