@@ -1060,8 +1060,6 @@ void populate_spliced_psrfits_header(
 
 void free_psrfits( struct psrfits *pf );
 
-float *create_data_buffer_psrfits( size_t size );
-
 void vmInitMPIPsrfits(
         vcsbeam_context *vm,
         mpi_psrfits *mpf,
@@ -1141,19 +1139,7 @@ void vmPopulateVDIFHeader(
         vcsbeam_context  *vm,
         beam_geom        *beam_geom_vals );
 
-cuFloatComplex get_std_dev_complex( cuFloatComplex *input, int nsamples );
-
-void set_level_occupancy( cuFloatComplex *input, int nsamples,
-                          float *new_gain );
-
-void get_mean_complex( cuFloatComplex *input, int nsamples, float *rmean,
-                       float *imean, cuFloatComplex *cmean );
-
-void normalise_complex( cuFloatComplex *input, int nsamples, float scale );
-
 void to_offset_binary( int8_t *i, int n );
-
-float *create_data_buffer_vdif( size_t size );
 
 
 #ifdef __cplusplus

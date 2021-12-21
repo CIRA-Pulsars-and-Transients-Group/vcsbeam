@@ -18,6 +18,23 @@
 
 #include "vcsbeam.h"
 
+/**
+ * Populates a PSRFITS struct with data derived from the observation.
+ *
+ * @param pf The PSRFITS struct to be populated
+ * @param max_sec_per_file The number of seconds written to each output
+ *        PSRFITS file
+ * @param outpol Either 1 (for Stokes I only) or 4 (for full Stokes)
+ * @param beam_geom_vals A `beam_geom` struct containing pointing information
+ * @param basename The prefix for the output PSRFITS files
+ * @param is_coherent `true` for tied-array beamforming, `false` for
+ *        incoherent beamforming
+ *
+ * This function is designed for PSRFITS files containing multiple
+ * coarse channels.
+ *
+ * @todo Change the name to conform to standard.
+ */
 void populate_spliced_psrfits_header(
         vcsbeam_context  *vm,
         struct psrfits   *pf,
@@ -218,6 +235,26 @@ void populate_spliced_psrfits_header(
     }
 }
 
+/**
+ * Populates a PSRFITS struct with data derived from the observation.
+ *
+ * @param pf The PSRFITS struct to be populated
+ * @param max_sec_per_file The number of seconds written to each output
+ *        PSRFITS file
+ * @param outpol Either 1 (for Stokes I only) or 4 (for full Stokes)
+ * @param beam_geom_vals A `beam_geom` struct containing pointing
+ *        information
+ * @param basename The prefix for the output PSRFITS files (only for
+ *        incoherent beamforming)
+ * @param is_coherent `true` for tied-array beamforming, `false` for
+ *        incoherent beamforming
+ *
+ * This function is designed for PSRFITS files containing a single
+ * coarse channel.
+ *
+ * @todo Merge with populate_spliced_psrfits_header() to avoid code
+ * duplication.
+ */
 void populate_psrfits_header(
         vcsbeam_context  *vm,
         struct psrfits   *pf,
@@ -395,7 +432,13 @@ void populate_psrfits_header(
     }
 }
 
-
+/**
+ * Frees the memory associated with a PSRFITS struct.
+ *
+ * @param pf The PSRFITS struct to be freed.
+ *
+ * This only frees the member variables (arrays), *not* the struct itself.
+ */
 void free_psrfits( struct psrfits *pf )
 {
     free( pf->sub.data        );
@@ -406,12 +449,19 @@ void free_psrfits( struct psrfits *pf )
 }
 
 
-float *create_data_buffer_psrfits( size_t size )
-{
-    float *ptr = (float *)malloc( size * sizeof(float) );
-    return ptr;
-}
-
+/**
+ * Initialises a struct for managing multiple PSRFITS files via MPI processes.
+ *
+ * @param mpf A pointer to the new struct to be initialised
+ * @param max_sec_per_file The number of seconds written to each output
+ *        PSRFITS file
+ * @param nstokes Either 1 (for Stokes I only) or 4 (for full Stokes)
+ * @param bg A `beam_geom` struct containing pointing
+ *        information
+ * @param outfile The prefix for the output PSRFITS files
+ * @param is_coherent `true` for tied-array beamforming, `false` for
+ *        incoherent beamforming
+ */
 void vmInitMPIPsrfits(
         vcsbeam_context *vm,
         mpi_psrfits *mpf,
@@ -452,6 +502,14 @@ void vmInitMPIPsrfits(
     MPI_Type_commit( &(mpf->spliced_type) );
 }
 
+/**
+ * Frees the memory associated with an `mpi_psrfits` struct
+ *
+ * @param mpf A pointer to the struct to be freed.
+ *
+ * Only the memory associated with member variables are freed.
+ * The `mpi_psrfits` itself is not freed.
+ */
 void free_mpi_psrfits( mpi_psrfits *mpf )
 {
     MPI_Type_free( &(mpf->spliced_type) );
@@ -468,6 +526,13 @@ void free_mpi_psrfits( mpi_psrfits *mpf )
     }
 }
 
+/**
+ * Splices the data for multiple coarse channels managed by an `mpi_psrfits`
+ * struct together into a single PSRFITS buffer ready for writing.
+ *
+ * @param mpf A pointer to the `mpi_psrfits` struct that is managing which
+ *            MPI process is associated with which frequency.
+ */
 void gather_splice_psrfits( mpi_psrfits *mpf )
 {
     int nsamples = mpf->coarse_chan_pf.hdr.nsblk;
@@ -490,6 +555,13 @@ void gather_splice_psrfits( mpi_psrfits *mpf )
             mpf->writer_id, MPI_COMM_WORLD, &(mpf->request_scales) );
 }
 
+/**
+ * Causes the master MPI thread to wait until the preceding MPI_GATHER
+ * operation is complete.
+ *
+ * @param mpf A pointer to the `mpi_psrfits` struct that is managing which
+ *            MPI process is associated with which frequency.
+ */
 void wait_splice_psrfits( mpi_psrfits *mpf )
 {
     MPI_Wait( &(mpf->request_data),    MPI_STATUS_IGNORE );

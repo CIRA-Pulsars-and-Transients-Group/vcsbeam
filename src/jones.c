@@ -531,7 +531,7 @@ void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
  * Computes the coherency matrix of a \f$2\times2\f$ complex-valued matrix.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @retval H The output matrix, \f${\bf C} = {\bf M}{\bf M}^\dagger\f$.
+ * @retval C The output matrix, \f${\bf C} = {\bf M}{\bf M}^\dagger\f$.
  *
  * It is safe for `M` and `C` to point to the same matrix.
  */

@@ -18,7 +18,15 @@
 #include "mwa_header.h"
 #include "ascii_header.h"
 
-
+/**
+ * Converts floats to 8-bit integers.
+ *
+ * @params f The (source) buffer of floats
+ * @params n The number of floats in `f`
+ * @params min The smallest allowed float
+ * @params max The largest allowed float
+ * @retval i The (destination) buffer of 8-bit integers
+ */
 void float2int8_trunc(float *f, int n, float min, float max, int8_t *i)
 {
     int j;
@@ -30,7 +38,18 @@ void float2int8_trunc(float *f, int n, float min, float max, int8_t *i)
     }
 }
 
-
+/**
+ * Writes a second's worth of data to a VDIF file
+ *
+ * @param vf A struct containing metadata about the target VDIF file
+ * @param vhdr A pointer to the VDIF frame header buffer
+ * @param data_buffer_vdif The data to be written out
+ *
+ * The data to be written out are first normalised and scaled to fit
+ * in the range -126 to 127 and demoted to integers.
+ * "Blocks" of data are then written to file, along with the appropriate
+ * binary headers for each "frame", via the function vdif_write_data().
+ */
 void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
                         float *data_buffer_vdif )
 {
@@ -64,6 +83,15 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
     free( out_buffer_8_vdif );
 }
 
+/**
+ * Write VDIF data to file.
+ *
+ * @param vf A struct containing metadata about the target VDIF file
+ * @param output The buffer to be written to file
+ *
+ * @todo Make sure that the header file is unneccesarily re-written each time
+ * this function is called. If so, put this bit somewhere more sensible.
+ */
 void vdif_write_data( struct vdifinfo *vf, int8_t *output )
 {
     // form the filename
@@ -97,7 +125,11 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
 
 }
 
-
+/**
+ * Populates a VDIF header with data derived from the observation.
+ *
+ * @param beam_geom_vals A `beam_geom` struct containing pointing information
+ */
 void vmPopulateVDIFHeader(
         vcsbeam_context  *vm,
         beam_geom        *beam_geom_vals )
@@ -187,98 +219,12 @@ void vmPopulateVDIFHeader(
     }
 }
 
-
-cuFloatComplex get_std_dev_complex(cuFloatComplex *input, int nsamples)
-{
-    // assume zero mean
-    float rtotal = 0;
-    float itotal = 0;
-    float isigma = 0;
-    float rsigma = 0;
-
-    int i;
-    for (i = 0; i < nsamples; i++)
-    {
-         rtotal = rtotal+(cuCrealf(input[i])*cuCrealf(input[i]));
-         itotal = itotal+(cuCimagf(input[i])*cuCimagf(input[i]));
-    }
-    rsigma = sqrtf((1.0/(nsamples-1))*rtotal);
-    isigma = sqrtf((1.0/(nsamples-1))*itotal);
-
-    return make_cuFloatComplex( rsigma, isigma );
-}
-
-void set_level_occupancy(cuFloatComplex *input, int nsamples, float *new_gain)
-{
-    //float percentage = 0.0;
-    //float occupancy = 17.0;
-    //float limit = 0.00001;
-    //float step = 0.001;
-    int i = 0;
-    float gain = *new_gain;
-
-    float percentage_clipped = 100;
-    //while (percentage_clipped > 0 && percentage_clipped > limit) {
-        int clipped = 0;
-        for (i = 0; i < nsamples; i++) {
-            if (isnan(cuCrealf(input[i])) || isnan(cuCimagf(input[i])))
-            {
-                fprintf( stderr, "error: set_level_occupancy: input[%d] = "
-                                 "NaN\n", i );
-                exit(EXIT_FAILURE);
-            }
-            if (fabs(gain*cuCrealf(input[i])) > 127 || fabs(gain*cuCimagf(input[i])) > 127 )
-            {
-                clipped++;
-            }
-        }
-        percentage_clipped = ((float) clipped/nsamples) * 100;
-        //The reduction in the gain was commented out until we work our a robust solution
-        //if (percentage_clipped > limit) {
-        //    gain = gain - step;
-        //}
-        if (clipped > 0)
-        {
-            fprintf(stdout,"warning: percentage samples clipped %f percent\n",percentage_clipped);
-        }
-    //}
-    *new_gain = gain;
-}
-
-
-void get_mean_complex( cuFloatComplex *input, int nsamples, float *rmean,
-                       float *imean, cuFloatComplex *cmean)
-{
-    int i;
-
-    float rtotal = 0;
-    float itotal = 0 ;
-
-    cuFloatComplex ctotal = make_cuFloatComplex( 0.0, 0.0 );
-
-    for (i = 0; i < nsamples; i++)
-    {
-//if (isnan(cuCrealf(input[i])) || isnan(cuCimagf(input[i]))) { fprintf(stderr, "\ninput[%d] = %e + %e*I\n\n", i, cuCrealf(input[i]), cuCimagf(input[i])); exit(1); }
-        rtotal += cuCrealf( input[i] );
-        itotal += cuCimagf( input[i] );
-        ctotal  = cuCaddf( ctotal, input[i] );
-    }
-
-    *rmean = rtotal / nsamples;
-    *imean = itotal / nsamples;
-    *cmean = make_cuFloatComplex( cuCrealf(ctotal)/(float)nsamples, cuCimagf(ctotal)/(float)nsamples );
-}
-
-void normalise_complex(cuFloatComplex *input, int nsamples, float scale)
-{
-    int i;
-    for (i = 0; i < nsamples; i++)
-    {
-        input[i] = make_cuFloatComplex( cuCrealf(input[i])*scale, cuCimagf(input[i])*scale );
-    }
-}
-
-
+/**
+ * Convert from two's complement to "offset binary" (??)
+ *
+ * @params i An array of integers to be converted
+ * @params n The number of integers in `i`
+ */
 void to_offset_binary(int8_t *i, int n)
 {
     int j;
@@ -286,11 +232,4 @@ void to_offset_binary(int8_t *i, int n)
         i[j] = i[j] ^ 0x80;
     }
 }
-
-float *create_data_buffer_vdif( size_t size )
-{
-    float *ptr  = (float *)malloc( size * sizeof(float) );
-    return ptr;
-}
-
 
