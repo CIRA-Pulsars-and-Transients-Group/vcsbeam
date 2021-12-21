@@ -818,22 +818,20 @@ void vmParseFlaggedTilenamesFile( char *filename, calibration *cal )
     }
 
     // Count the number of tiles in the list
-    char tilename[16]; // More than enough space for tilenames
+    char tilename[MAX_COMMAND_LENGTH]; // More than enough space for tilenames
     cal->nflags = 0;
     while (fscanf( f, "%s", tilename ) != EOF)
         cal->nflags++;
 
     // Allocate memory for the list of tilenames in the calibration struct
     cal->flagged_tilenames = (char **)malloc( cal->nflags * sizeof(char *) );
-    int i;
-    for (i = 0; i < cal->nflags; i++)
-        cal->flagged_tilenames[i] = (char *)malloc( 16 * sizeof(char) );
 
     // Rewind to the beginning of the file, and this time read them into
     // the calibration struct
     rewind( f );
+    int i;
     for (i = 0; i < cal->nflags; i++)
-        fscanf( f, "%s", cal->flagged_tilenames[i] );
+        fscanf( f, "%ms", &(cal->flagged_tilenames[i]) );
 
     // Close the file
     fclose( f );
@@ -890,6 +888,15 @@ void vmSetCustomTileFlags( vcsbeam_context *vm )
 
         // Find the corresponding antenna in the observation
         Ant = find_antenna_by_name( vm->obs_metadata, tilename );
+        if (Ant == NULL)
+        {
+            // No antenna with that name was found, so issue a warning
+            // and continue
+            sprintf( vm->log_message, "Warning: Tile '%s' (listed in '%s') "
+                    "not found\n", tilename, vm->cal.flags_file );
+            logger_message( vm->log, vm->log_message );
+            continue;
+        }
         ant = Ant->ant;
 
         // Loop through the fine channels
