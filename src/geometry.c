@@ -121,12 +121,17 @@ void vmCreateGeometricDelays( vcsbeam_context *vm )
     // in case we have done the fine channelisation ourselves (e.g. via a fine PFB)
     vm->gdelays.chan_freqs_hz = (double *)malloc( vm->nfine_chan * sizeof(double) );
 
+    int coarse_chan_idx      = vm->coarse_chan_idxs_to_process[0];
+    CoarseChannel C          = vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx];
     uint32_t fine_chan_width = vm->obs_metadata->coarse_chan_width_hz / vm->nfine_chan;
-    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_start_hz;
+    uint32_t start_hz        = C.chan_start_hz;
 
     int c;
     for (c = 0; c < vm->nfine_chan; c++)
+    {
         vm->gdelays.chan_freqs_hz[c] = start_hz + fine_chan_width*c;
+fprintf( stderr, "ch %3d = %lf Hz\n", c, vm->gdelays.chan_freqs_hz[c] );
+    }
 
     // Allocate memory
     size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(cuDoubleComplex);

@@ -712,12 +712,13 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
     // Now lock the buffer!
     vm->v->locked = true;
 
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
     sprintf( vm->log_message, "--- Processing GPS second %ld [%lu/%lu], Coarse channel %lu [%d/%d] ---",
                 gps_second,
                 timestep_idx+1,
                 ntimesteps,
-                vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idxs_to_process[0]].rec_chan_number,
-                vm->coarse_chan_idxs_to_process[0],
+                vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
+                coarse_chan_idx,
                 vm->num_coarse_chans_to_process );
     logger_timed_message( vm->log, vm->log_message );
 
@@ -729,7 +730,7 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
                 vm->vcs_context,
                 gps_second,
                 1,
-                vm->coarse_chan_idxs_to_process[0],
+                coarse_chan_idx,
                 vm->v->read_ptr,
                 vm->v->read_size,
                 vm->error_message,

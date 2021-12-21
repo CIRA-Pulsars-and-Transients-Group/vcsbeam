@@ -41,7 +41,8 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     const char *caldir       = vm->cal.caldir;
 
     // Find the "GPUBox" number for this coarse channel
-    uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[vm->coarse_chan_idx].corr_chan_number + 1;
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1;
 
     // With the gpubox number in hand, construct the filenames for the
     // DI_Jones and Bandpass files
@@ -65,7 +66,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     if (vm->log)
     {
         sprintf( vm->log_message, "Receiver channel #%lu --> GPUBox #%lu",
-                vm->cal_metadata->metafits_coarse_chans[vm->coarse_chan_idx].rec_chan_number,
+                vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
                 gpubox_number );
         logger_timed_message( vm->log, vm->log_message );
     }
@@ -436,7 +437,7 @@ void read_bandpass_file(
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    int coarse_chan_idx = vm->coarse_chan_idx;
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
 
     // Open the calibration file for reading
     FILE *fp = NULL;
@@ -676,6 +677,8 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
  *   (3) Apply a phase slope to the QQ terms
  */
 {
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+
     // Three locally defined booleans for whether to do the corrections
     bool apply_ref_ant         = true; // Whether this should be true is checked below
     bool apply_zero_PQ_and_QP  = !(vm->cal.keep_cross_terms);
@@ -736,7 +739,7 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
     cuDoubleComplex z;   // complex phase
 
     long int freq_ch; // Hz
-    long int frequency  = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_start_hz; // Hz
+    long int frequency  = vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_start_hz; // Hz
     int      chan_width = vm->obs_metadata->coarse_chan_width_hz / vm->nfine_chan;
 
     uintptr_t d_idx, dref_idx;
