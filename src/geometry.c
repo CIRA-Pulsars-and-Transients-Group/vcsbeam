@@ -130,7 +130,6 @@ void vmCreateGeometricDelays( vcsbeam_context *vm )
     for (c = 0; c < vm->nfine_chan; c++)
     {
         vm->gdelays.chan_freqs_hz[c] = start_hz + fine_chan_width*c;
-fprintf( stderr, "ch %3d = %lf Hz\n", c, vm->gdelays.chan_freqs_hz[c] );
     }
 
     // Allocate memory

@@ -51,6 +51,7 @@ struct make_tied_array_beam_opts {
     // Other options
     char              *analysis_filter;  // Which analysis filter to use
     char              *synth_filter;     // Which synthesis filter to use
+    bool               smart;            // Use legacy settings for PFB
     int                max_sec_per_file; // Number of seconds per fits files
     //float              gpu_mem_GB;       // Default = 0.0. If 0.0 use all GPU mem
     int                nchunks;          // Split each second into this many processing chunks
@@ -109,7 +110,7 @@ int main(int argc, char **argv)
 
         // Create and init the PFB struct
         int M = K; // The filter stride (M = K <=> "critically sampled PFB")
-        vmInitForwardPFB( vm, M, PFB_SMART );
+        vmInitForwardPFB( vm, M, (opts.smart ? PFB_SMART : PFB_FULL_PRECISION) );
     }
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
@@ -401,10 +402,11 @@ void usage()
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
             "\t-v, --out-coarse           Output coarse-channelised, 2-pol (XY) data (VDIF)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
-            "\t-t, --max_t                Maximum number of seconds per output fits file. [default: 200]\n"
+            "\t-s, --smart                Use legacy settings for fine channelisation [default: off]\n"
             "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
             "\t                           filter can be MIRROR or LSQ12.\n"
             "\t                           [default: LSQ12]\n"
+            "\t-t, --max_t                Maximum number of seconds per output fits file. [default: 200]\n"
             "\t-T, --nseconds=VAL         Process VAL seconds of data [default: as many as possible]\n"
           );
 
@@ -463,6 +465,7 @@ void make_tied_array_beam_parse_cmdline(
     //opts->gpu_mem_GB           = 0.0;
     opts->custom_flags         = NULL;
     opts->nchunks              = 1;
+    opts->smart                = false;
 
     opts->cal_metafits         = NULL;  // filename of the metafits file for the calibration observation
     opts->caldir               = NULL;  // The path to where the calibration solutions live
@@ -502,13 +505,14 @@ void make_tied_array_beam_parse_cmdline(
                 {"offringa",        no_argument      , 0, 'O'},
                 //{"gpu-mem",         required_argument, 0, 'g'},
                 {"nchunks",         required_argument, 0, 'n'},
+                {"smart",           no_argument,       0, 's'},
                 {"help",            required_argument, 0, 'h'},
                 {"version",         required_argument, 0, 'V'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:hm:n:OpP:R:S:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:hm:n:OpP:R:sS:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -575,6 +579,9 @@ void make_tied_array_beam_parse_cmdline(
                 case 'R':
                     opts->ref_ant = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->ref_ant, optarg );
+                    break;
+                case 's':
+                    opts->smart = true;
                     break;
                 case 'S':
                     opts->synth_filter = (char *)malloc( strlen(optarg) + 1 );

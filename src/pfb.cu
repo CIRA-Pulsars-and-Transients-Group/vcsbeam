@@ -601,7 +601,10 @@ void vmWritePFBOutputToFile( vcsbeam_context *vm )
     logger_start_stopwatch( vm->log, "write", true );
 
     char filename[128];
-    vmGetLegacyVoltFilename( vm, vm->coarse_chan_idxs_to_process[0], vm->gps_seconds_to_process[0], filename );
+    vmGetLegacyVoltFilename( vm,
+            vm->coarse_chan_idxs_to_process[0],
+            vm->gps_seconds_to_process[vm->current_gps_idx-1],
+            filename );
 
     FILE *f = fopen( filename, "w" );
     fwrite( vm->fpfb->vcs_data, vm->fpfb->vcs_size, sizeof(uint8_t), f );
