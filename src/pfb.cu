@@ -251,17 +251,17 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
     {
         uint8_t *X = (uint8_t *)outdata;
         if (flags & PFB_IMAG_PART_FIRST)
-            X[X_idx] = PACK_NIBBLES(im, re);
-        else
             X[X_idx] = PACK_NIBBLES(re, im);
+        else
+            X[X_idx] = PACK_NIBBLES(im, re);
     }
     else // Currently, default is cuDoubleComplex
     {
         cuDoubleComplex *X = (cuDoubleComplex *)outdata;
         if (flags & PFB_IMAG_PART_FIRST)
-            X[X_idx] = make_cuDoubleComplex( im, re );
-        else
             X[X_idx] = make_cuDoubleComplex( re, im );
+        else
+            X[X_idx] = make_cuDoubleComplex( im, re );
     }
 
     __syncthreads();
