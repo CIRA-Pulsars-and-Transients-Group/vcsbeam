@@ -81,12 +81,16 @@ $(function() {
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a38bd1e48168322ad16c12b71869025d2"><td class="memItemLeft" align="right" valign="top">cuDoubleComplex *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="filter_8c.html#a38bd1e48168322ad16c12b71869025d2">roots_of_unity</a> (int N)</td></tr>
+<tr class="memdesc:a38bd1e48168322ad16c12b71869025d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates complex roots of unity.  <a href="filter_8c.html#a38bd1e48168322ad16c12b71869025d2">More...</a><br /></td></tr>
 <tr class="separator:a38bd1e48168322ad16c12b71869025d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2fac816547ca5054dea3e1a501d4408c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="filter_8c.html#a2fac816547ca5054dea3e1a501d4408c">vmLoadFilter</a> (vcsbeam_context *vm, char *filtername, filter_type type, int nchans)</td></tr>
+<tr class="memdesc:a2fac816547ca5054dea3e1a501d4408c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load a set of filter coefficients.  <a href="filter_8c.html#a2fac816547ca5054dea3e1a501d4408c">More...</a><br /></td></tr>
 <tr class="separator:a2fac816547ca5054dea3e1a501d4408c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4be2f57b91903f90f31cffbfd9c006e4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="filter_8c.html#a4be2f57b91903f90f31cffbfd9c006e4">vmScaleFilterCoeffs</a> (vcsbeam_context *vm, filter_type type, double scale_factor)</td></tr>
+<tr class="memdesc:a4be2f57b91903f90f31cffbfd9c006e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale the filter coefficients by constant factor.  <a href="filter_8c.html#a4be2f57b91903f90f31cffbfd9c006e4">More...</a><br /></td></tr>
 <tr class="separator:a4be2f57b91903f90f31cffbfd9c006e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50e9ac83292ca80834e7f2ded02eba42"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="filter_8c.html#a50e9ac83292ca80834e7f2ded02eba42">free_pfb_filter</a> (pfb_filter *filter)</td></tr>
+<tr class="memdesc:a50e9ac83292ca80834e7f2ded02eba42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Free the memory associated with a PFB filter.  <a href="filter_8c.html#a50e9ac83292ca80834e7f2ded02eba42">More...</a><br /></td></tr>
 <tr class="separator:a50e9ac83292ca80834e7f2ded02eba42"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
@@ -106,6 +110,15 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Free the memory associated with a PFB filter. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">filter</td><td>The filter to be freed/</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This function frees both the member variables and the filter itself. </p>
+
 </div>
 </div>
 <a id="a38bd1e48168322ad16c12b71869025d2" name="a38bd1e48168322ad16c12b71869025d2"></a>
@@ -123,6 +136,15 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Calculates complex roots of unity. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">N</td><td>The number of roots to calculate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A list of all complex numbers <img class="formulaInl" alt="$z$" src="form_62.png"/> such that <img class="formulaInl" alt="$z^N = 1$" src="form_63.png"/>. </dd></dl>
 
 </div>
 </div>
@@ -164,6 +186,17 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Load a set of filter coefficients. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">filtername</td><td>String specifying a filter. There should be a corresponding file in the RUNTIME_DIR called &lt;filtername&gt;.dat. </td></tr>
+    <tr><td class="paramname">type</td><td>Either ANALYSIS_FILTER or SYNTHESIS_FILTER </td></tr>
+    <tr><td class="paramname">nchans</td><td>The number of channels that this filter will be applied to. For both ANALYSIS and SYNTHESIS filters, this should be the number of ANALYSIS channels.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000004">Todo:</a></b></dt><dd>Change nchans so that it uses <code>vm&rarr;nfine_chans</code> </dd></dl>
+
 </div>
 </div>
 <a id="a4be2f57b91903f90f31cffbfd9c006e4" name="a4be2f57b91903f90f31cffbfd9c006e4"></a>
@@ -197,6 +230,15 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Scale the filter coefficients by constant factor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">type</td><td>Either ANALYSIS_FILTER or SYNTHESIS_FILTER </td></tr>
+    <tr><td class="paramname">scale_factor</td><td>The scaling factor </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
