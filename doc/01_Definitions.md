@@ -84,7 +84,16 @@ The latitude of the MWA is \f$\lambda_\text{MWA} = -0.4660608448386394\f$ rad, d
 
 | Document           |         |         |              |            |         |         |
 | :----------------- | :-----: | :-----: | :----------: | :--------: | :-----: | :-----: |
-| This document      | \f$p\f$ | \f$q\f$ | \f$\theta\f$ | \f$\phi\f$ | \f$x\f$ | \f$y\f$ |
+| *This document*    | \f$p\f$ | \f$q\f$ | \f$\theta\f$ | \f$\phi\f$ | \f$x\f$ | \f$y\f$ |
 | MWA metafits files | Y       | X       | -            | -          | -       | -       |
 
 ### Jones matrices
+
+[Sokolowski2017]: https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476
+[Ord2019]: https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E
+
+| Document                                    |               |               |               |
+| :------------------------------------------ | :-----------: | :-----------: | :-----------: |
+| *This document*                             | \f${\bf J}\f$ | \f${\bf D}\f$ | \f${\bf B}\f$ |
+| [Sokolowski et al., (2017)][Sokolowski2017] | \f${\bf J}\f$ | \f${\bf G}\f$ | \f${\bf E}\f$ |
+| [Ord et al., (2019)][Ord2019]               | \f${\bf J}\f$ | \f${\bf D}\f$ | \f${\bf B}\f$ |
