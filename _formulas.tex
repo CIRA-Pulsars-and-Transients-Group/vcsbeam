@@ -1,0 +1,273 @@
+\documentclass{article}
+\usepackage{ifthen}
+\usepackage{epsfig}
+\usepackage[utf8]{inputenc}
+% Packages requested by user
+\usepackage{amsmath}
+
+\usepackage{newunicodechar}
+  \newunicodechar{⁻}{${}^{-}$}% Superscript minus
+  \newunicodechar{²}{${}^{2}$}% Superscript two
+  \newunicodechar{³}{${}^{3}$}% Superscript three
+
+\pagestyle{empty}
+\begin{document}
+$p$
+\pagebreak
+
+$q$
+\pagebreak
+
+$\theta$
+\pagebreak
+
+$\phi$
+\pagebreak
+
+$x$
+\pagebreak
+
+$y$
+\pagebreak
+
+$P$
+\pagebreak
+
+$Q$
+\pagebreak
+
+$\theta = 0$
+\pagebreak
+
+$\theta = \pi/2$
+\pagebreak
+
+$\phi = 0$
+\pagebreak
+
+$\tilde{\theta}$
+\pagebreak
+
+\[ \tilde{\theta} = \frac{\pi}{2} - \theta. \]
+\pagebreak
+
+${\bf P}$
+\pagebreak
+
+$(a,b)$
+\pagebreak
+
+$(c,d)$
+\pagebreak
+
+\[ {\bf P}_{(c,d)\leftarrow(a,b)} \equiv \begin{bmatrix} \frac{\partial c}{\partial a} & \frac{\partial c}{\partial b} \\[5 pt] \frac{\partial d}{\partial a} & \frac{\partial d}{\partial b} \end{bmatrix} \]
+\pagebreak
+
+$\chi$
+\pagebreak
+
+$(x,y)\rightarrow(\theta,\phi)$
+\pagebreak
+
+$\pi - \chi$
+\pagebreak
+
+\[ {\bf P}_\text{pa} = \begin{bmatrix} \cos\left(\pi - \chi\right) & -\sin\left(\pi - \chi\right) \\ \sin\left(\pi - \chi\right) & \cos\left(\pi - \chi\right) \end{bmatrix} = \begin{bmatrix} -\cos\chi & -\sin\chi \\ \sin\chi & -\cos\chi \end{bmatrix}. \]
+\pagebreak
+
+\[ \tan \chi = \frac{\cos \lambda \sin H}{\sin\lambda \cos x - \cos \lambda \sin x \cos H}, \]
+\pagebreak
+
+$\lambda$
+\pagebreak
+
+$H$
+\pagebreak
+
+$\lambda_\text{MWA} = -0.4660608448386394$
+\pagebreak
+
+${\bf J}$
+\pagebreak
+
+${\bf D}$
+\pagebreak
+
+${\bf B}$
+\pagebreak
+
+${\bf G}$
+\pagebreak
+
+${\bf E}$
+\pagebreak
+
+$2\times2$
+\pagebreak
+
+${\bf e}$
+\pagebreak
+
+${\bf v}$
+\pagebreak
+
+\[ {\bf v} = {\bf J}{\bf e}. \]
+\pagebreak
+
+\[ \begin{bmatrix} v_q \\ v_p \end{bmatrix} = \begin{bmatrix} J_{qx} & J_{qy} \\ J_{px} & J_{py} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]
+\pagebreak
+
+\[ {\bf e} = {\bf J}^{-1}{\bf v}. \]
+\pagebreak
+
+${\bf J}_d$
+\pagebreak
+
+${\bf B}_\text{cal}$
+\pagebreak
+
+${\bf J}_b$
+\pagebreak
+
+\begin{align*} {\bf J}_d &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, & {\bf J}_b &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, & {\bf B}_\text{cal} &= \begin{bmatrix} B_{px} & B_{py} \\ B_{qx} & B_{qy} \end{bmatrix}. \end{align*}
+\pagebreak
+
+\[ {\bf J} = {\bf J}_d \]
+\pagebreak
+
+\[ {\bf J} = {\bf J}_d {\bf J}_b \]
+\pagebreak
+
+\[ {\bf D} = {\bf J}{\bf B}_\text{cal}^{-1}. \]
+\pagebreak
+
+\[ {\bf D} = \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}. \]
+\pagebreak
+
+\[ {\bf D} = \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}. \]
+\pagebreak
+
+\[ {\bf B}_\text{hb} = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}. \]
+\pagebreak
+
+$(x,y)$
+\pagebreak
+
+$(q,p)$
+\pagebreak
+
+${\bf B}_\text{hb}$
+\pagebreak
+
+\[ {\bf B} = {\bf B}_\text{hb}{\bf P}_\text{pa} = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix} = \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix} \]
+\pagebreak
+
+\[ \begin{aligned} {\bf v} &= {\bf J}{\bf e} \\ {\bf v} &= {\bf D} {\bf B}_\text{hb} {\bf P}_\text{pa} {\bf e} \\ \begin{bmatrix} v_q \\ v_p \end{bmatrix} &= \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix} \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix} \end{aligned} \]
+\pagebreak
+
+\[ \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}. \]
+\pagebreak
+
+\[ \begin{aligned} \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix} &\rightarrow \begin{bmatrix} 4 & 3 \\ 2 & 1 \end{bmatrix} \\ \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix} &\rightarrow \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix} \end{aligned} \]
+\pagebreak
+
+${\bf B}_\text{hp}$
+\pagebreak
+
+$(\theta,\phi)\rightarrow(q,p)$
+\pagebreak
+
+$a$
+\pagebreak
+
+$f$
+\pagebreak
+
+\[ {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}, \]
+\pagebreak
+
+$\varphi_f$
+\pagebreak
+
+$D$
+\pagebreak
+
+$(Q,P)$
+\pagebreak
+
+\[\begin{bmatrix} QQ & QP \\ PQ & QQ \end{bmatrix}.\]
+\pagebreak
+
+${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$
+\pagebreak
+
+${\bf J}^{-1}$
+\pagebreak
+
+$(N_a \times N_f \times N_p \times N_p)$
+\pagebreak
+
+$N_a$
+\pagebreak
+
+$N_f$
+\pagebreak
+
+$N_p$
+\pagebreak
+
+$e^{i\varphi}$
+\pagebreak
+
+${\bf M}_\text{in}$
+\pagebreak
+
+${\bf M}_\text{out} = {\bf M}_\text{in}$
+\pagebreak
+
+$\dfrac{1}{z}$
+\pagebreak
+
+$-z$
+\pagebreak
+
+${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$
+\pagebreak
+
+${\bf M}_1$
+\pagebreak
+
+${\bf M}_2$
+\pagebreak
+
+${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$
+\pagebreak
+
+${\bf M}$
+\pagebreak
+
+${\bf M}_\text{out} = {\bf M}^\ast$
+\pagebreak
+
+${\bf M}_\text{out} = |{\bf M}_\text{in}|$
+\pagebreak
+
+${\bf M}_\text{out}$
+\pagebreak
+
+\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 3 & 2 \\ 1 & 0 \end{bmatrix}\]
+\pagebreak
+
+\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 2 & 3 \\ 0 & 1 \end{bmatrix}\]
+\pagebreak
+
+\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 1 & 0 \\ 3 & 2 \end{bmatrix}\]
+\pagebreak
+
+${\bf H} = {\bf M}^\dagger$
+\pagebreak
+
+${\bf C} = {\bf M}{\bf M}^\dagger$
+\pagebreak
+
+\end{document}
