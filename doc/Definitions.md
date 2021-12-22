@@ -15,7 +15,7 @@ They are illustrated in the following figure:
 
 This is a Cartesian coordinate system aligned with local (ground) compass directions.
 Positive \f$p\f$ points towards local North, and positive \f$q\f$ towards local East.
-The "\f$P\f$ polarisation" refers to the physical set of dipoles parallel to the N-S line; the "\f$Q\f$ polarisation", to the E-W line.
+The \f$P\f$ polarisation refers to the physical set of dipoles parallel to the N-S line; the \f$Q\f$ polarisation, to the E-W line.
 
 ### Local sky coordinates
 
@@ -38,10 +38,10 @@ All coordinate transformations can be effected by applying the appropriate Jacob
 In this documentation, a boldface \f${\bf P}\f$ will always be used to denote transformation matrices.
 For general coordinates \f$(a,b)\f$ and \f$(c,d)\f$,
 \f[
-    \transmat{a}{b}{c}{d} =
+    {\bf P}_{(c,d)\leftarrow(a,b)} \equiv
     \begin{bmatrix}
-        \pd{c}{a} & \pd{c}{b} \\[5 pt]
-        \pd{d}{a} & \pd{d}{b}
+        \frac{\partial c}{\partial a} & \frac{\partial c}{\partial b} \\[5 pt]
+        \frac{\partial d}{\partial a} & \frac{\partial d}{\partial b}
     \end{bmatrix}
 \f]
 Among these, the only transformation that is explicitly used in VCSBeam is the transformation between local sky coordinates and celestial sky coordinates, which is a single rotation within the sky plane by the parallactic angle.
