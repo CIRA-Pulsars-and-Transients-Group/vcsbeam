@@ -244,7 +244,7 @@ void populate_spliced_psrfits_header(
  * @param outpol Either 1 (for Stokes I only) or 4 (for full Stokes)
  * @param beam_geom_vals A `beam_geom` struct containing pointing
  *        information
- * @param basename The prefix for the output PSRFITS files (only for
+ * @param incoh_basename The prefix for the output PSRFITS files (only for
  *        incoherent beamforming)
  * @param is_coherent `true` for tied-array beamforming, `false` for
  *        incoherent beamforming

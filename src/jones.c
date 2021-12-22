@@ -20,9 +20,9 @@
  * Creates arrays of indexes for antennas and polarisation according to the
  * ordering used in legacy VCS observations.
  *
- * @retval Pidxs An index array for the \f$P\f$ polarisation (`vm&rarr;polP_idxs`),
+ * @param[out] Pidxs An index array for the \f$P\f$ polarisation (`vm&rarr;polP_idxs`),
  *         which corresponds to the metafits label 'Y'.
- * @retval Qidxs An index array for the \f$Q\f$ polarisation (`vm&rarr;polQ_idxs`),
+ * @param[out] Qidxs An index array for the \f$Q\f$ polarisation (`vm&rarr;polQ_idxs`),
  *         which corresponds to the metafits label 'X'.
  *
  * The index arrays are needed for pairing the antenna metadata with the
@@ -68,9 +68,22 @@ void vmSetPolIdxLists( vcsbeam_context *vm )
 /**
  * Computes the (inverse) Jones matrix \f${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}\f$.
  *
- * @param D The instrumental calibration solution (in `vm&rarr;D`)
- * @param B The beam model (in each pointing direction) (in `vm&rarr;pb.B`)
- * @retval Jinv The Jones matrix (\f${\bf J}^{-1}\f$) to be left-multiplied to the voltages (in `vm&rarr;J`)
+ * \f${\bf J}^{-1}\f$ is the Jones matrix that converts from instrumental
+ * voltages to sky voltages, according to
+ * \f[
+ * \begin{aligned}
+ *     {\bf e} &= {\bf J}^{-1} {\bf v}, \\
+ *     \begin{bmatrix} e_x \\ e_y \end{bmatrix} &=
+ *     \begin{bmatrix} J_{xq} & J_{xp} \\ J_{yq} & J_{yp} \end{bmatrix}
+ *     \begin{bmatrix} v_q \\ v_p \end{bmatrix}.
+ * \end{aligned}
+ * \f]
+ * It is computed by multiplying the instrumental calibration Jones matrix
+ * with the beam model matrix, and taking the inverse
+ * \f[{\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1},\f]
+ * where \f${\bf D}\f$ is taken from `vm&rarr;D`, and \f${\bf B}\f$ from
+ * `vm&rarr;pb.B`.
+ * The result is stored in `vm&rarr;J`.
  *
  * \f${\bf J}^{-1}\f$ has dimensions \f$(N_a \times N_f \times N_p \times N_p)\f$,
  * where
@@ -79,11 +92,7 @@ void vmSetPolIdxLists( vcsbeam_context *vm )
  *  - \f$N_p\f$ is the number of polarisation (`vm&rarr;obs_metadata&rarr;num_ant_pols`)
  *
  * The antenna ordering is given by the "Antenna" keyword in the observation's
- * metafits file. The frequencies are ordered from lowest to highest. The polarisations
- * are in the order
- * \f[\begin{bmatrix} QQ & QP \\ PQ & QQ \end{bmatrix}.\f]
- *
- * **Note that** `vm&rarr;J` **refers to the** ***inverse*** \f${\bf J}^{-1}\f$.
+ * metafits file. The frequencies are ordered from lowest to highest.
  *
  * @todo <a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/issues/9">Issue #9</a>
  */
@@ -186,7 +195,7 @@ void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_
  * Copies a \f$2\times2\f$ complex-valued matrix.
  *
  * @param Min The source matrix, \f${\bf M}_\text{in}\f$.
- * @retval Mout The destination matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}\f$.
+ * @param[out] Mout The destination matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}\f$.
  */
 void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 {
@@ -223,7 +232,7 @@ cuDoubleComplex negate_complex( cuDoubleComplex z )
  * Computes the inverse of a \f$2\times2\f$ complex-valued matrix.
  *
  * @param Min The input matrix, \f${\bf M}_\text{in}\f$.
- * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$
  */
 void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
 {
@@ -248,7 +257,7 @@ void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
  * Computes the inverse of a \f$2\times2\f$ real-valued matrix.
  *
  * @param Min The input matrix, \f${\bf M}_\text{in}\f$
- * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$.
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$.
  */
 void inv2x2d(double *Min, double *Mout)
 {
@@ -274,7 +283,7 @@ void inv2x2d(double *Min, double *Mout)
  * Computes the inverse of a \f$2\times2\f$ complex-valued matrix.
  *
  * @param Min The input matrix, \f${\bf M}_\text{in}\f$
- * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$
  *
  * \see inv2x2()
  *
@@ -301,7 +310,7 @@ void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex *Mout)
  *
  * @param M1 The first input matrix, \f${\bf M}_1\f$
  * @param M2 The second input matrix, \f${\bf M}_2\f$
- * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
  */
 void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
 {
@@ -325,7 +334,7 @@ void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
  *
  * @param M1 The first input matrix (real-valued), \f${\bf M}_1\f$
  * @param M2 The second input matrix (complex-valued), \f${\bf M}_2\f$
- * @retval Mout The output matrix (complex-valued), \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
+ * @param[out] Mout The output matrix (complex-valued), \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
  */
 void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
 {
@@ -349,7 +358,7 @@ void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
  *
  * @param M1 The first input matrix (complex-valued), \f${\bf M}_1\f$
  * @param M2 The second input matrix (real-valued), \f${\bf M}_2\f$
- * @retval Mout The output matrix (complex-valued), \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
+ * @param[out] Mout The output matrix (complex-valued), \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
  */
 void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout )
 {
@@ -371,7 +380,7 @@ void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout )
  * Computes the conjugate of a \f$2\times2\f$ complex-valued matrix.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @retval Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}^\ast\f$.
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}^\ast\f$.
  *
  * It is safe for `M` and `Mout` to point to the same matrix.
  */
@@ -387,7 +396,7 @@ void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
  * Normalises a \f$2\times2\f$ matrix via the Frobenius norm.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @retval Mout The output matrix, \f${\bf M}_\text{out} = |{\bf M}_\text{in}|\f$.
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = |{\bf M}_\text{in}|\f$.
  *
  * It is safe for `M` and `Mout` to point to the same matrix.
  */
@@ -418,7 +427,7 @@ double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
  * Reverses the elements of a \f$2\times2\f$ matrix.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @retval Mout The output matrix, \f${\bf M}_\text{out}\f$.
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out}\f$.
  *
  * \f[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix}
  * \rightarrow
@@ -443,7 +452,7 @@ void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
  * Swaps the rows of a \f$2\times2\f$ matrix.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @retval Mout The output matrix, \f${\bf M}_\text{out}\f$.
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out}\f$.
  *
  * \f[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix}
  * \rightarrow
@@ -468,7 +477,7 @@ void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
  * Swaps the columns of a \f$2\times2\f$ matrix.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @retval Mout The output matrix, \f${\bf M}_\text{out}\f$.
+ * @param[out] Mout The output matrix, \f${\bf M}_\text{out}\f$.
  *
  * \f[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix}
  * \rightarrow
@@ -510,7 +519,7 @@ bool is2x2zero( cuDoubleComplex *M )
  * Computes the Hermitian (i.e. conjugate transpose) of a \f$2\times2\f$ complex-valued matrix.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @retval H The output matrix, \f${\bf H} = {\bf M}^\dagger\f$.
+ * @param[out] H The output matrix, \f${\bf H} = {\bf M}^\dagger\f$.
  *
  * It is safe for `M` and `H` to point to the same matrix.
  */
@@ -531,7 +540,7 @@ void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
  * Computes the coherency matrix of a \f$2\times2\f$ complex-valued matrix.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @retval C The output matrix, \f${\bf C} = {\bf M}{\bf M}^\dagger\f$.
+ * @param[out] C The output matrix, \f${\bf C} = {\bf M}{\bf M}^\dagger\f$.
  *
  * It is safe for `M` and `C` to point to the same matrix.
  */
