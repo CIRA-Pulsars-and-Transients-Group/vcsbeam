@@ -26,9 +26,9 @@ In practise, of course, the inverse operations are used to reconstruct the elect
 \f]
 
 Following [Sokolowski et al., 2017](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#), \f${\bf J}\f$ is calculated as the matrix product of two different matrices,
-\begin{equation}
+\f[
     {\bf J} = {\bf D}{\bf B},
-\end{equation}
+\f]
 where
  - \f${\bf D}\f$ represents the (direction independent) instrumental gains, and
  - \f${\bf B}\f$ represents the (direction dependent) tile beam response.

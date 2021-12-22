@@ -35,6 +35,15 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
 
+/**
+ * CUDA kernel for computing an incoherent beam.
+ *
+ * The incoherent beam is the expression
+ * \f[
+ * I = \sum_a {\bf v}_a^\dagger {\bf v}_a,
+ * \f]
+ * where \f${\bf v}\f$ are the instrumental voltages for antenna \f$a\f$.
+ */
 __global__ void incoh_beam( uint8_t *data, float *incoh )
 /* <<< (nchan,nsample), ninput >>>
  */
