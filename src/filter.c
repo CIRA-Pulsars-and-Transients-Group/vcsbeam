@@ -12,7 +12,12 @@
 
 #include "vcsbeam.h"
 
-
+/**
+ * Calculates complex roots of unity.
+ *
+ * @param N The number of roots to calculate
+ * @return A list of all complex numbers \f$z\f$ such that \f$z^N = 1\f$.
+ */
 cuDoubleComplex *roots_of_unity( int N )
 /* Creates a complex-valued array containing the N roots of unity.
  * The caller must free this memory (by passing the returned pointer to
@@ -43,16 +48,19 @@ cuDoubleComplex *roots_of_unity( int N )
 }
 
 
-void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int nchans )
-/* Load a set of filter coefficients
- * Inputs:
- *   FILTERNAME - string specifying a filter. There should be a corresponding
- *                file in the RUNTIME_DIR called FILTERNAME.dat.
- *   TYPE       - Whether it's an ANALYSIS_FILTER or a SYNTHESIS_FILTER
- *   NCHANS     - the number of channels that this filter will be applied to.
+/**
+ * Load a set of filter coefficients
+ *
+ * @param filtername String specifying a filter. There should be a corresponding
+ *                file in the RUNTIME_DIR called <filtername>.dat.
+ * @param type    Either ANALYSIS_FILTER or SYNTHESIS_FILTER
+ * @param nchans  The number of channels that this filter will be applied to.
  *                For both ANALYSIS and SYNTHESIS filters, this should be
  *                the number of ANALYSIS channels.
+ *
+ * @todo Change nchans so that it uses `vm&rarr;nfine_chans`
  */
+void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int nchans )
 {
     // Make sure function arguments are not NULL
     if (filtername == NULL)
@@ -141,6 +149,12 @@ void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int 
     fclose( f );
 }
 
+/**
+ * Scale the filter coefficients by constant factor.
+ *
+ * @param type         Either ANALYSIS_FILTER or SYNTHESIS_FILTER
+ * @param scale_factor The scaling factor
+ */
 void vmScaleFilterCoeffs( vcsbeam_context *vm, filter_type type, double scale_factor )
 {
     // Get the requested filter
@@ -160,6 +174,13 @@ void vmScaleFilterCoeffs( vcsbeam_context *vm, filter_type type, double scale_fa
         filter->coeffs[i] *= scale_factor;
 }
 
+/**
+ * Free the memory associated with a PFB filter.
+ *
+ * @param filter The filter to be freed/
+ *
+ * This function frees both the member variables and the filter itself.
+ */
 void free_pfb_filter( pfb_filter *filter )
 /* Free the memory allocated in vmLoadFilter()
  */

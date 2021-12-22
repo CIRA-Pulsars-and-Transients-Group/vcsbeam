@@ -74,9 +74,10 @@ Alternatives
 ------
 A Docker image containing (a possibly deprecated version of) similar beamforming code can be found [here](https://cloud.docker.com/u/cirapulsarsandtransients/repository/docker/cirapulsarsandtransients/vcstools)
 
-Help
+Documentation
 ------
-**(In progress)** [Documentation](https://wiki.mwatelescope.org/display/MP/Processing+high+time+resolution+data+with+VCSBeam)
+ - [High-level description and examples of use on Garrawarla](https://wiki.mwatelescope.org/display/MP/Processing+high+time+resolution+data+with+VCSBeam)
+ - [Doxygen-generated reference documentation](https://cira-pulsars-and-transients-group.github.io/vcsbeam/).
 
 Credit
 ------
