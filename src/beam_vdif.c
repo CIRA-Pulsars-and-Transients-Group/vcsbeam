@@ -21,10 +21,10 @@
 /**
  * Converts floats to 8-bit integers.
  *
- * @params f The (source) buffer of floats
- * @params n The number of floats in `f`
- * @params min The smallest allowed float
- * @params max The largest allowed float
+ * @param f The (source) buffer of floats
+ * @param n The number of floats in `f`
+ * @param min The smallest allowed float
+ * @param max The largest allowed float
  * @retval i The (destination) buffer of 8-bit integers
  */
 void float2int8_trunc(float *f, int n, float min, float max, int8_t *i)
@@ -222,8 +222,8 @@ void vmPopulateVDIFHeader(
 /**
  * Convert from two's complement to "offset binary" (??)
  *
- * @params i An array of integers to be converted
- * @params n The number of integers in `i`
+ * @param i An array of integers to be converted
+ * @param n The number of integers in `i`
  */
 void to_offset_binary(int8_t *i, int n)
 {
