@@ -873,6 +873,8 @@ WARN_LOGFILE           =
 
 INPUT                  = 01_Definitions.md \
                          02_Calibration.md \
+                         03_Beamforming.md \
+                         04_FileFormats.md \
                          ../src
 
 # This tag can be used to specify the character encoding of the source files

@@ -77,3 +77,14 @@ In VCSBeam, the parallactic angle is calculated (via the function `palPa`) in th
 \f]
 where \f$\lambda\f$ is the latitude of the observer, \f$H\f$ is the hour angle of the source, and \f$x\f$ is the declination.
 The latitude of the MWA is \f$\lambda_\text{MWA} = -0.4660608448386394\f$ rad, defined in the [mwalib](https://github.com/MWATelescope/mwalib) library.
+
+## Comparison of notation in other documents
+
+### Coordinate systems
+
+| Document           |         |         |              |            |         |         |
+| :----------------- | :-----: | :-----: | :----------: | :--------: | :-----: | :-----: |
+| This document      | \f$p\f$ | \f$q\f$ | \f$\theta\f$ | \f$\phi\f$ | \f$x\f$ | \f$y\f$ |
+| MWA metafits files | Y       | X       | -            | -          | -       | -       |
+
+### Jones matrices

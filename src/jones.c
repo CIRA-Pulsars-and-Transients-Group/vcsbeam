@@ -154,7 +154,7 @@ if (ch == 50 && ant == 0)
  * @param decs_degs An array of declinations, in decimal degrees, one for each pointing.
  * @param beam_geom_vals An array of beam geometries, one for each pointing.
  *
- * For each pointing, the quantities \f$e^{i\phi}\f$, \f${\bf B}\f$, and \f${\bf J}^{-1}\f$ are calculated.
+ * For each pointing, the quantities \f$e^{i\varphi}\f$, \f${\bf B}\f$, and \f${\bf J}^{-1}\f$ are calculated.
  * (\f${\bf D}\f$ is not recalculated, but is used in the calculation of \f${\bf J}^{-1}\f$).
  */
 void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals )
