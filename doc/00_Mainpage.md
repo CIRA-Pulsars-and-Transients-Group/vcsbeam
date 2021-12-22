@@ -4,4 +4,4 @@ This documentation describes VCSBeam, a software package designed for processing
 
 ## Source code
 
-The source code for this software can be found [here]{https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam}
+The source code for this software can be found [here](https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam)
