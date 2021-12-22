@@ -66,9 +66,9 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#autotoc_md10">Applying the calibration solutions</a></li>
-<li class="level1"><a href="#autotoc_md11">Phasing up</a></li>
-<li class="level1"><a href="#autotoc_md12">Summing the voltages</a></li>
+<ul><li class="level1"><a href="#autotoc_md12">Applying the calibration solutions</a></li>
+<li class="level1"><a href="#autotoc_md13">Phasing up</a></li>
+<li class="level1"><a href="#autotoc_md14">Summing the voltages</a></li>
 </ul>
 </div>
 <div class="textblock"><p ><a class="anchor" id="md_03_Beamforming"></a></p>
@@ -77,7 +77,7 @@ $(function() {
 <li>Shifting the signals from each tile in time to account for the signal delay from the look-direction to each tile, due to the geometric layout of the MWA tiles ("phasing up"),</li>
 <li>Summing the voltages from all the tiles together. These steps are described more fully in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E">Ord et al., 2019</a>, but are discussed further in the following subsections.</li>
 </ol>
-<h1><a class="anchor" id="autotoc_md10"></a>
+<h1><a class="anchor" id="autotoc_md12"></a>
 Applying the calibration solutions</h1>
 <p >In VCSBeam, the following bases are used: </p><p class="formulaDsp">
 <img class="formulaDsp" alt="\[ \begin{aligned} {\bf v} &amp;= {\bf J}{\bf e} \\ {\bf v} &amp;= {\bf D} {\bf B}_\text{hb} {\bf P}_\text{pa} {\bf e} \\ \begin{bmatrix} v_q \\ v_p \end{bmatrix} &amp;= \begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix} \begin{bmatrix} B_{q\theta} &amp; B_{q\phi} \\ B_{p\theta} &amp; B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} &amp; B_{\theta y} \\ B_{\phi x} &amp; B_{\phi y} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix} \end{aligned} \]" src="form_50.png"/>
@@ -90,10 +90,10 @@ Applying the calibration solutions</h1>
 </p>
 <p >Currently, only Hyperbeam is used for the FEE beam model, and so the <img class="formulaInl" alt="${\bf B}_\text{hp}$" src="form_53.png"/> is already given in the correct basis, <img class="formulaInl" alt="$(\theta,\phi)\rightarrow(q,p)$" src="form_54.png"/>.</p>
 <p >Finally, the parallactic angle correction matrix is calculated by VCSBeam in the <img class="formulaInl" alt="$(x,y)\rightarrow(\theta,\phi)$" src="form_18.png"/> basis, as desired.</p>
-<h1><a class="anchor" id="autotoc_md11"></a>
+<h1><a class="anchor" id="autotoc_md13"></a>
 Phasing up</h1>
 <p >If the channelisation is fine enough, and if the tile separations (baselines) are not too long, then a time shift can be accurately effected by applying a phase ramp across frequency.</p>
-<h1><a class="anchor" id="autotoc_md12"></a>
+<h1><a class="anchor" id="autotoc_md14"></a>
 Summing the voltages</h1>
 <p >If we use subscripts <img class="formulaInl" alt="$a$" src="form_55.png"/> and <img class="formulaInl" alt="$f$" src="form_56.png"/> to represent tiles (i.e. "_a_ntennas") and frequencies respectively, then the complete beamforming operation is </p><p class="formulaDsp">
 <img class="formulaDsp" alt="\[ {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}, \]" src="form_57.png"/>
