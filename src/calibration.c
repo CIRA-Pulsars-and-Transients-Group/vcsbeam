@@ -15,23 +15,23 @@
 #include "vcsbeam.h"
 
 /**
- * vmLoadRTSSolution
- * =================
+ * Loads a Real Time System (RTS) calibration solution.
  *
- * Read in the RTS solution from the DI_Jones and Bandpass files in the
- * VM->CAL.CALDIR directory. It only reads the solution for the coarse channel
- * specified in VM->COARSE_CHAN_IDX. The output is a set of Jones matrices (D)
- * for each antenna and (non-flagged) fine channel.
+ * @retval D Array of Jones matrices (`vm&rarr;D`)
  *
- * The Jones matrices (D) are output in the (Q,P) basis, i.e.
- * [ 1  2 ] = [ QQ  QP ]
- * [ 3  4 ] = [ PQ  PP ]
+ * Reads in the RTS solution from the DI_Jones and Bandpass files in the
+ * `vm&rarr;cal.caldir` directory. It only reads the solution for the coarse
+ * channel specified in `vm&rarr;coarse_chan_idxs_to_process[0]`. Flagged
+ * channels and flagged antennas are set to zero.
  *
- * The RTS bandpass solutions are used if VM->CAL.USE_BANDPASS is set,
- * otherwise only the coarse channel solutions are used. (This has no effect
- * for Offringa-style solutions.)
+ * The Jones matrices, \f$D\f$, are output in the \f$(Q,P)\f$ basis:
+ * \f[\begin{bmatrix} QQ & QP \\ PQ & QQ \end{bmatrix}.\f]
  *
- * This function assumes that a buffer for the D matrices has already been
+ * The RTS bandpass solutions ("Bandpass...") are included if
+ * `vm&rarr;cal.use_bandpass` is set, otherwise only the coarse channel
+ * solutions ("DI_Jones...") are used.
+ *
+ * This function assumes that a buffer for `vm&rarr;D` has already been
  * allocated.
  */
 void vmLoadRTSSolution( vcsbeam_context *vm )
