@@ -33,6 +33,8 @@
  *
  * This function assumes that a buffer for `vm&rarr;D` has already been
  * allocated.
+ *
+ * \see [RTS](@ref rts)
  */
 void vmLoadRTSSolution( vcsbeam_context *vm )
 {

@@ -1,5 +1,7 @@
 # Definitions
 
+[TOC]
+
 ## Coordinate systems
 
 There are three coordinate systems in use throughout VCSBeam:
@@ -46,3 +48,32 @@ For general coordinates \f$(a,b)\f$ and \f$(c,d)\f$,
 \f]
 Among these, the only transformation that is explicitly used in VCSBeam is the transformation between local sky coordinates and celestial sky coordinates, which is a single rotation within the sky plane by the parallactic angle.
 
+### Parallactic angle correction {#parallacticangle}
+
+The parallactic angle correction is a transformation between local sky coordinates and celestial sky coordinates.
+The parallactic angle itself, \f$\chi\f$, is defined as the position angle of local zenith with respect to the North Celestial Pole as subtended at a given source, illustrated in the following figure.
+
+\image html skyangles.png width=300
+\image latex skyangles.png width=0.4\textwidth
+
+The transformation \f$(x,y)\rightarrow(\theta,\phi)\f$ is therefore a counterclockwise rotation by \f$\pi - \chi\f$.
+(A counterclockwise rotation of a given vector is equivalent to a clockwise rotation of the coordinate axes.)
+This is the rotation
+\f[
+    {\bf P}_\text{pa}
+        = \begin{bmatrix}
+            \cos\left(\pi - \chi\right) & -\sin\left(\pi - \chi\right) \\
+            \sin\left(\pi - \chi\right) &  \cos\left(\pi - \chi\right)
+        \end{bmatrix}
+        = \begin{bmatrix}
+            -\cos\chi & -\sin\chi \\
+             \sin\chi & -\cos\chi
+        \end{bmatrix}.
+\f]
+
+In VCSBeam, the parallactic angle is calculated (via the function `palPa`) in the [Starlink/pal library](https://github.com/Starlink/pal) by the spherical triangle identity
+\f[
+    \tan \chi = \frac{\cos \lambda \sin H}{\sin\lambda \cos x - \cos \lambda \sin x \cos H},
+\f]
+where \f$\lambda\f$ is the latitude of the observer, \f$H\f$ is the hour angle of the source, and \f$x\f$ is the declination.
+The latitude of the MWA is \f$\lambda_\text{MWA} = -0.4660608448386394\f$ rad, defined in the [mwalib](https://github.com/MWATelescope/mwalib) library.
