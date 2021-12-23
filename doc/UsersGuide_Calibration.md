@@ -2,6 +2,9 @@
 
 [TOC]
 
+Which calibration software to use (RTS vs Hyperdrive) depends on whether the data is Legacy or MWAX, and whether you are doing in-beam calibration or using a dedicated calibration observation.
+The following table summarises the possibilities:
+
 |        | In-beam (voltages) | Dedicated calibration (calibrated voltages) |
 | ------ | ------------------ | ------------------------------------------- |
 | Legacy | RTS                | RTS, Hyperdrive                             |

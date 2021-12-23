@@ -8,12 +8,14 @@ The source code for this software can be found [here](https://github.com/CIRA-Pu
 
 ## Contents
 
- - Description
+ - Mathematical description
    + [Definitions](@ref definitions) - Notation, coordinate systems
    + [Calibration](@ref calibration) - RTS, Hyperdrive, Hyperbeam
    + [Beamforming](@ref beamforming) - Applying calibration, phasing up the array, summing antennas
  - User's Guide
    + [Overview](@ref usersguideoverview)
    + [Calibration](@ref usersguidecalibration)
+   + Beamforming
+   + [Examples](@ref usersguideexamples)
  - Appendices
    + [File formats](@ref fileformats) - RTS, Offringa
