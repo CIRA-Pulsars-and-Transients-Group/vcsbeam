@@ -40,7 +40,12 @@ All coordinate transformations can be effected by applying the appropriate Jacob
 In this documentation, a boldface \f${\bf P}\f$ will always be used to denote transformation matrices.
 For general coordinates \f$(a,b)\f$ and \f$(c,d)\f$,
 \f[
-    {\bf P}_{(c,d)\leftarrow(a,b)} \equiv
+    {\bf P}_{(a,b)\rightarrow(c,d)} \equiv
+    \begin{bmatrix}
+        P_{ca} & P_{cb} \\
+        P_{da} & P_{db}
+    \end{bmatrix}
+    \equiv
     \begin{bmatrix}
         \frac{\partial c}{\partial a} & \frac{\partial c}{\partial b} \\[5 pt]
         \frac{\partial d}{\partial a} & \frac{\partial d}{\partial b}
@@ -61,6 +66,10 @@ The transformation \f$(x,y)\rightarrow(\theta,\phi)\f$ is therefore a counterclo
 This is the rotation
 \f[
     {\bf P}_\text{pa}
+        = \begin{bmatrix}
+            P_{\theta x} & P_{\theta y} \\
+            P_{\phi x}   & P_{\phi y}
+        \end{bmatrix}
         = \begin{bmatrix}
             \cos\left(\pi - \chi\right) & -\sin\left(\pi - \chi\right) \\
             \sin\left(\pi - \chi\right) &  \cos\left(\pi - \chi\right)
