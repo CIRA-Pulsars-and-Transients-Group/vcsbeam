@@ -871,12 +871,13 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = 00_Mainpage.md \
-                         01_Definitions.md \
-                         02_Calibration.md \
-                         03_Beamforming.md \
-                         04_FileFormats.md \
-                         05_UsersGuide.md \
+INPUT                  = Mainpage.md \
+                         Definitions.md \
+                         Calibration.md \
+                         Beamforming.md \
+                         FileFormats.md \
+                         UsersGuide_Overview.md \
+                         UsersGuide_Calibration.md \
                          ../src
 
 # This tag can be used to specify the character encoding of the source files
@@ -1075,7 +1076,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = 00_Mainpage.md
+USE_MDFILE_AS_MAINPAGE = Mainpage.md
 
 #---------------------------------------------------------------------------
 # Configuration options related to source browsing
