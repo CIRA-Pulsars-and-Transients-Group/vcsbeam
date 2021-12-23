@@ -35,7 +35,7 @@ where
 \f${\bf D}\f$ is obtained either from the Real Time System, or Hyperdrive.
 \f${\bf B}\f$ is obtained from Hyperbeam.
 
-## Real Time System (RTS) -- [deprecated] {#rts}
+## Real Time System (RTS) {#rts}
 
 The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation.
 The solutions are given in two sets of files, called "DI_JonesMatrices_nodeCCC.dat" (hereafter, DIJones) and ``BandpassCalibration_nodeCCC.dat'' (hereafter, Bandpass), where CCC represents a coarse channel index.
