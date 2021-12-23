@@ -1,8 +1,20 @@
-# File Formats
+# File Formats {#fileformats}
 
 [TOC]
 
-## RTS DI\_JonesMatrix file format
+## Data files
+
+### Legacy recombined files
+
+@todo Write description of the legacy recombined file format
+
+### MWAX files
+
+A full description of the MWAX hight time resolution format can be found on [this MWA Telescope Wiki page](https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System).
+
+## Calibration solutions
+
+### RTS DI\_JonesMatrix file format
 
 ```
 Franz Kirsten <franz.kirsten@curtin.edu.au>	17 June 2016 at 17:42
@@ -51,7 +63,7 @@ By the model primary beam Jones matrix (from the second line). If that is called
 No.
 ```
 
-## RTS BandpassCalibration file format
+### RTS BandpassCalibration file format
 
 ```
 Sammy McSweeney <sammy.mcsweeney@gmail.com>	21 March 2017 at 12:09
@@ -90,7 +102,7 @@ Cheers,
 Mitch
 ```
 
-## Offringa/Hyperdrive calibration file format {#offringa}
+### Offringa/Hyperdrive calibration file format {#offringa}
 
 ```
 Offringa's own documentation for the format of these binary files (copied from an email
