@@ -17,7 +17,7 @@
 /**
  * Loads a Real Time System (RTS) calibration solution.
  *
- * @retval D Array of Jones matrices (`vm&rarr;D`)
+ * @return An array of Jones matrices (`vm&rarr;D`)
  *
  * Reads in the RTS solution from the DI_Jones and Bandpass files in the
  * `vm&rarr;cal.caldir` directory. It only reads the solution for the coarse
@@ -25,7 +25,7 @@
  * channels and flagged antennas are set to zero.
  *
  * The Jones matrices, \f$D\f$, are output in the \f$(Q,P)\f$ basis:
- * \f[\begin{bmatrix} QQ & QP \\ PQ & QQ \end{bmatrix}.\f]
+ * \f[\begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}.\f]
  *
  * The RTS bandpass solutions ("Bandpass...") are included if
  * `vm&rarr;cal.use_bandpass` is set, otherwise only the coarse channel
@@ -34,7 +34,18 @@
  * This function assumes that a buffer for `vm&rarr;D` has already been
  * allocated.
  *
+ * The RTS matrices are actually given in the \f$(P,Q)\f$, and this
+ * function reorders the matrices to be in the \f$(Q,P)\f$ basis, required
+ * by VCSBeam.
+ * This reording is a "reversal" of the matrix elements, i.e.
+ * \f[
+ * \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}
+ *      \rightarrow
+ * \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}
+ * \f]
+ *
  * \see [RTS](@ref rts)
+ * \see [RTS file format](@ref rtsfileformat)
  */
 void vmLoadRTSSolution( vcsbeam_context *vm )
 {

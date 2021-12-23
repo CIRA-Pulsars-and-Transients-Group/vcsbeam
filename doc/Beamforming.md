@@ -7,30 +7,28 @@ Beamforming is expressed mathematically by the expression
     {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f},
 \f]
 where
+
  - \f$a\f$ represents tiles (i.e. "antennas")
- - \f$f\f$ represents frequencies
+ - \f$f\f$ represents frequency channels
+ - \f$\varphi\f$ is the delay phase,
  - \f${\bf v}\f$ is the Jones vector describing the instrumental voltages
  - \f${\bf J}\f$ is the Jones matrix describing the instrumental response to an incident electric field
- - \f${\bf e}\f$ is the Jones vector describing the incident electric field
-Conceptually, we describe beamforming as consisting of three distinct steps:
-  1. Applying the calibration Jones matrices to the voltages measured at each tile, (i.e. multiplying \f${\bf J}_{a,f}^{-1}\f$ to \f${\bf v}_{a,f}\f$),
+ - \f${\bf e}\f$ is the Jones vector describing the (recovered) incident electric field
+
+Conceptually, we describe beamforming as consisting of the following distinct steps:
+  1. Generating and applying the calibration Jones matrices to the voltages measured at each tile, (i.e. multiplying \f${\bf J}_{a,f}^{-1}\f$ to \f${\bf v}_{a,f}\f$),
   2. Shifting the signals from each tile in time to account for the signal delay from the look-direction to each tile, due to the geometric layout of the MWA tiles ("phasing up"), (i.e. multiplying \f$e^{i\varphi_{a,f}})\f$, and
   3. Summing over the tiles.
+
+For some operating modes, VCSBeam also performs *detection*, which means forming Stokes parameters, also described below.
+
 These steps are described more fully in [Ord et al., 2019](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E), but are discussed further in the following subsections.
 
 ## Applying the calibration solutions
 
-In VCSBeam, the following bases are used:
+The Jones matrix consists of a *direction independent* component, \f${\bf D}\f$, and a *direction dependent* component, \f${\bf B}\f$, such that
 \f[
-\begin{aligned}
-    {\bf v} &= {\bf J}{\bf e} \\
-    {\bf v} &= {\bf D} {\bf B}_\text{hb} {\bf P}_\text{pa} {\bf e} \\
-    \begin{bmatrix} v_q \\ v_p \end{bmatrix}
-        &= \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}
-           \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}
-           \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix}
-           \begin{bmatrix} e_x \\ e_y \end{bmatrix}
-\end{aligned}
+    {\bf J}_{a,f} = {\bf D}_a {\bf B}_{a,f}
 \f]
 
 The \f${\bf D}\f$ matrix, if obtained using Hyperdrive, is already in the correct basis, and can be used as is.
