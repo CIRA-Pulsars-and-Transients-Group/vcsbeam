@@ -12,3 +12,4 @@ The source code for this software can be found [here](https://github.com/CIRA-Pu
  - [Calibration](@ref calibration) - RTS, Hyperdrive, Hyperbeam
  - [Beamforming](@ref beamforming) - Applying calibration, phasing up the array, summing antennas
  - [File formats](@ref fileformats) - RTS, Offringa
+ - [User's Guide](@ref usersguide)

@@ -876,6 +876,7 @@ INPUT                  = 00_Mainpage.md \
                          02_Calibration.md \
                          03_Beamforming.md \
                          04_FileFormats.md \
+                         05_UsersGuide.md \
                          ../src
 
 # This tag can be used to specify the character encoding of the source files
