@@ -16,6 +16,7 @@ where
  - \f${\bf e}\f$ is the Jones vector describing the (recovered) incident electric field
 
 Conceptually, we describe beamforming as consisting of the following distinct steps:
+
   1. Generating and applying the calibration Jones matrices to the voltages measured at each tile, (i.e. multiplying \f${\bf J}_{a,f}^{-1}\f$ to \f${\bf v}_{a,f}\f$),
   2. Shifting the signals from each tile in time to account for the signal delay from the look-direction to each tile, due to the geometric layout of the MWA tiles ("phasing up"), (i.e. multiplying \f$e^{i\varphi_{a,f}})\f$, and
   3. Summing over the tiles.
@@ -24,44 +25,54 @@ For some operating modes, VCSBeam also performs *detection*, which means forming
 
 These steps are described more fully in [Ord et al., 2019](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E), but are discussed further in the following subsections.
 
-## Applying the calibration solutions
+## Generating and applying the calibration solutions
 
-The Jones matrix consists of a *direction independent* component, \f${\bf D}\f$, and a *direction dependent* component, \f${\bf B}\f$, such that
+The Jones matrix consists of a *direction independent* component, \f${\bf D}_a\f$, and a *direction dependent* component, \f${\bf B}_{a,f}\f$, such that
 \f[
     {\bf J}_{a,f} = {\bf D}_a {\bf B}_{a,f}
 \f]
+\f${\bf D}_a\f$, which only depends on the antenna, is the *instrumental calibration solution*.
+It is obtained using separate, dedicated calibration software, and VCSBeam currently supports solutions in two formats:
 
-The \f${\bf D}\f$ matrix, if obtained using Hyperdrive, is already in the correct basis, and can be used as is.
-However, if the RTS is used, the matrix must be permuted first.
-In memory, matrices are represented as an array of `cuDoubleComplex`s (from the CUDA library), in the following order:
-\f[
-    \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}.
-\f]
-Therefore, the required permutation to get the \f${\bf D}\f$ matrix in the correct order is a "reversal" of the matrix elements in memory:
-\f[
-\begin{aligned}
-    \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}
-        &\rightarrow
-        \begin{bmatrix} 4 & 3 \\ 2 & 1 \end{bmatrix} \\
-    \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}
-        &\rightarrow
-        \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}
-\end{aligned}
-\f]
+  1. The [RTS format](@ref rtsfileformat), and
+  2. The [Offringa file format](@ref offringafileformat).
 
-Currently, only Hyperbeam is used for the FEE beam model, and so the \f${\bf B}_\text{hp}\f$ is already given in the correct basis, \f$(\theta,\phi)\rightarrow(q,p)\f$.
+\f${\bf B}_{a,f}\f$, which formally depends on both antenna *and* frequency, is the *beam model*.
+If all antennas were identical, the beam model would only depend on frequency, and we could write simply \f${\bf B}_f\f$.
+In reality, antennas can differ because individual dipole elements can fail at different times.
+These failures, when detected, are recorded in an observation's metadata, and are used by VCSBeam to obtain beam models for every configuration of live/dead dipoles that are present in a given observation.
 
-Finally, the parallactic angle correction matrix is calculated by VCSBeam in the \f$(x,y)\rightarrow(\theta,\phi)\f$ basis, as desired.
+The beam models themselves are calculated using [Hyperbeam](https://github.com/MWATelescope/mwa_hyperdrive), which implements the FEE beam model described in [Sokolowski et al. (2017)](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#).
 
 ## Phasing up
 
-If the channelisation is fine enough, and if the tile separations (baselines) are not too long, then a time shift can be accurately effected by applying a phase ramp across frequency.
+Phasing up refers to the process of accounting for the fact that each antenna will "see" an astrophysical signal arriving at a different time due to
+
+  1. Its location relative to the source, and
+  2. The different lengths of the cables that connect the antennas to the rest of the system.
+
+Accounting for these time differences can be achieved either by a simple shift in the time domain, or, equivalently, the application of a phase ramp in the frequency domain, via the shift theorem.
+The latter is what's implemented in VCSBeam, as indicated by the \f$e^{i\phi}\f$ term in the expression above.
 
 ## Summing the voltages
 
-If we use subscripts \f$a\f$ and \f$f\f$ to represent tiles (i.e. "_a_ntennas") and frequencies respectively, then the complete beamforming operation is
-\f[
-    {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f},
-\f]
-where \f$\varphi_f\f$ is the frequency-dependent phase difference between the arrival of a signal at a given tile relative to an arbitrary reference point, or "array phase centre".
+The final step is simply summing the voltages over all antennas.
+As long as the correct delays have been applied, summing the voltages will coherently combine any astrophysical signal arriving from the specified look-direction.
 
+## Detection (forming Stokes parameters)
+
+VCSBeam converts the summed voltages into Stokes parameters if the PSRFITS output format is requested.
+This is achieved by forming the *coherency matrix*:
+\f[
+    {\bf e}{\bf e}^\dagger
+      = \begin{bmatrix}
+            e_x e_x^\ast & e_x e_y^\ast \\
+            e_y e_x^\ast & e_y e_y^\ast
+        \end{bmatrix}
+      = \frac12 \begin{bmatrix}
+            I + Q & U + Vi \\
+            U - Vi & I - Q
+        \end{bmatrix}
+\f]
+
+However, as described in [Ord et al. (2019)](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E), VCSBeam also subtracts the autocorrelations, which for noise-dominated signals, improves the signal-to-noise ratio.

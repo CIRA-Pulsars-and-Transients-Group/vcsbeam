@@ -102,7 +102,7 @@ Cheers,
 Mitch
 ```
 
-### Offringa/Hyperdrive calibration file format {#offringa}
+### Offringa/Hyperdrive calibration file format {#offringafileformat}
 
 ```
 Offringa's own documentation for the format of these binary files (copied from an email

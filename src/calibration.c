@@ -36,13 +36,14 @@
  *
  * The RTS matrices are actually given in the \f$(P,Q)\f$, and this
  * function reorders the matrices to be in the \f$(Q,P)\f$ basis, required
- * by VCSBeam.
- * This reording is a "reversal" of the matrix elements, i.e.
+ * by VCSBeam:
  * \f[
  * \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}
  *      \rightarrow
  * \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}
  * \f]
+ * This reording is a "reversal" of the matrix elements (i.e. if one reads
+ * the elements from left to right, top to bottom).
  *
  * \see [RTS](@ref rts)
  * \see [RTS file format](@ref rtsfileformat)
