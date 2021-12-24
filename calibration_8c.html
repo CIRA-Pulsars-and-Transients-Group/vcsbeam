@@ -349,7 +349,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md18"></a>
+<h1><a class="anchor" id="autotoc_md46"></a>
 vmLoadOffringaSolution</h1>
 <p>Offringa's own documentation for the format of these binary files (copied from an email dated 4 May 2016 from <a href="#" onclick="location.href='mai'+'lto:'+'fra'+'nz'+'.ki'+'rs'+'ten'+'@c'+'urt'+'in'+'.ed'+'u.'+'au'; return false;">franz<span style="display: none;">.nosp@m.</span>.kir<span style="display: none;">.nosp@m.</span>sten@<span style="display: none;">.nosp@m.</span>curt<span style="display: none;">.nosp@m.</span>in.ed<span style="display: none;">.nosp@m.</span>u.au</a> to <a href="#" onclick="location.href='mai'+'lto:'+'sam'+'my'+'.mc'+'sw'+'een'+'ey'+'@gm'+'ai'+'l.c'+'om'; return false;">sammy<span style="display: none;">.nosp@m.</span>.mcs<span style="display: none;">.nosp@m.</span>weene<span style="display: none;">.nosp@m.</span>y@gm<span style="display: none;">.nosp@m.</span>ail.c<span style="display: none;">.nosp@m.</span>om</a>). This is itself copied from Andre Offringa's original C++ code, in his Anoko repository, in mwa-reduce/solutionfile.h:</p>
 <p>The solution file is used for storing calibration Jones matrices. The format is as follows: Bytes | Description ----&mdash;+------------&mdash; 0- 7 | string intro ; 8-byte null terminated string "MWAOCAL" 8-11 | int fileType ; always 0, reserved for indicating something other than complex Jones solutions 12-15 | int structureType ; always 0, reserved for indicating different ordering 16-19 | int intervalCount ; Number of solution intervals in file 20-23 | int antennaCount ; Number of antennas that were in the measurement set (but were not necessary all solved for) 24-27 | int channelCount ; Number of channels in the measurement set 28-31 | int polarizationCount ; Number of polarizations solved for &ndash; always four. 32-39 | double startTime ; Start time of solutions (AIPS time) 40-47 | double endTime ; End time of solutions (AIPS time) ----&mdash;+----------------&mdash; After the header follow 2 x nSolution doubles, with</p>
@@ -380,19 +380,20 @@ vmLoadOffringaSolution</h1>
 </div><div class="memdoc">
 
 <p>Loads a Real Time System (RTS) calibration solution. </p>
-<dl class="retval"><dt>Return values</dt><dd>
-  <table class="retval">
-    <tr><td class="paramname">D</td><td>Array of Jones matrices (<code>vm&rarr;D</code>)</td></tr>
-  </table>
-  </dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>An array of Jones matrices (<code>vm&rarr;D</code>)</dd></dl>
 <p>Reads in the RTS solution from the DI_Jones and Bandpass files in the <code>vm&rarr;cal.caldir</code> directory. It only reads the solution for the coarse channel specified in <code>vm&rarr;coarse_chan_idxs_to_process[0]</code>. Flagged channels and flagged antennas are set to zero.</p>
-<p>The Jones matrices, <img class="formulaInl" alt="$D$" src="form_59.png" width="10" height="10"/>, are output in the <img class="formulaInl" alt="$(Q,P)$" src="form_60.png" width="34" height="14"/> basis: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[\begin{bmatrix} QQ &amp; QP \\ PQ &amp; QQ \end{bmatrix}.\]" src="form_61.png" width="68" height="31"/>
+<p>The Jones matrices, <img class="formulaInl" alt="$D$" src="form_66.png" width="10" height="10"/>, are output in the <img class="formulaInl" alt="$(Q,P)$" src="form_67.png" width="34" height="14"/> basis: </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[\begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix}.\]" src="form_68.png" width="71" height="31"/>
 </p>
 <p>The RTS bandpass solutions ("Bandpass...") are included if <code>vm&rarr;cal.use_bandpass</code> is set, otherwise only the coarse channel solutions ("DI_Jones...") are used.</p>
 <p>This function assumes that a buffer for <code>vm&rarr;D</code> has already been allocated.</p>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="md_02_Calibration.html#rts">RTS</a> </dd></dl>
+<p>The RTS matrices are actually given in the <img class="formulaInl" alt="$(P,Q)$" src="form_69.png" width="33" height="14"/>, and this function reorders the matrices to be in the <img class="formulaInl" alt="$(Q,P)$" src="form_67.png" width="34" height="14"/> basis, required by VCSBeam: </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \begin{bmatrix} D_{pp} &amp; D_{pq} \\ D_{qp} &amp; D_{qq} \end{bmatrix} \rightarrow \begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix} \]" src="form_70.png" width="150" height="31"/>
+</p>
+<p> This reording is a "reversal" of the matrix elements (i.e. if one reads the elements from left to right, top to bottom).</p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="calibration.html#rts">RTS</a> </dd>
+<dd>
+<a class="el" href="fileformats.html#rtsfileformat">RTS file format</a> </dd></dl>
 
 </div>
 </div>

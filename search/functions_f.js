@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['zero_5fpq_5fand_5fqp_337',['zero_PQ_and_QP',['../calibration_8c.html#a8075cee8c51e05b8157a772f3fb10ebc',1,'calibration.c']]]
+  ['wait_5fsplice_5fpsrfits_425',['wait_splice_psrfits',['../beam__psrfits_8c.html#ac9d7bd55c02a32b68c1abda583bd9807',1,'beam_psrfits.c']]],
+  ['write_5fstopwatch_5fstats_5fstr_426',['write_stopwatch_stats_str',['../performance_8c.html#ab9cfde552b749d7e12645f10c2979d2f',1,'performance.c']]]
 ];

@@ -867,7 +867,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md21"></a>
+<h1><a class="anchor" id="autotoc_md49"></a>
 vmFreeVDevice</h1>
 <p>Frees the memory allocated with vmMallocVDevice. If the observation is legacy, then free the memory. If the observation is MWAX, then do nothing; the memory should be freed via a call to vmFreeForwardPFB. </p>
 
@@ -928,7 +928,7 @@ vmFreeVDevice</h1>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md24"></a>
+<h1><a class="anchor" id="autotoc_md52"></a>
 vmGetLegacyVoltFilename</h1>
 <p>Same as vmGetVoltFilename, but return the filename as if the observation were really a legacy VCS observation. </p>
 
@@ -989,7 +989,7 @@ vmGetLegacyVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md23"></a>
+<h1><a class="anchor" id="autotoc_md51"></a>
 vmGetVoltFilename</h1>
 <p>Returns the filename for the given channel index and GPS second, assuming the observation specified by VM-&gt;OBS_CONTEXT. Expects VM-&gt;SECONDS_PER_FILE to be set (via vmLoadObsMetafits). Result put into FILENAME (assumed already allocated). </p>
 
@@ -1300,7 +1300,7 @@ vmGetVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md20"></a>
+<h1><a class="anchor" id="autotoc_md48"></a>
 vmMallocVDevice</h1>
 <p>Allocates device memory for the input voltages for the beamformer. If the observation is legacy, then allocates new memory. If the observation is MWAX, then just point to the assumed already existing memory allocated in VM-&gt;FPFB. </p>
 
@@ -1495,7 +1495,7 @@ vmMallocVDevice</h1>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md22"></a>
+<h1><a class="anchor" id="autotoc_md50"></a>
 vmSetMaxGPUMem</h1>
 <p>Tries to cleverly figure out how many chunks are needed to fit everything on the GPU.</p>
 <p>LOGIC IS CURRENTLY FAULTY AND INCOMPLETE. DO NOT USE </p>

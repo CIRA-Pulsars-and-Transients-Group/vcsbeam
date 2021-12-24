@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['tilename_5fis_5fflagged_258',['tilename_is_flagged',['../calibration_8c.html#a2a543e51ef2f611d71f6ae13eef2f0b1',1,'calibration.c']]],
-  ['to_5foffset_5fbinary_259',['to_offset_binary',['../beam__vdif_8c.html#a5ca68e02518d1d793deb622af35b2ada',1,'beam_vdif.c']]]
+  ['swapcols2x2_326',['swapcols2x2',['../jones_8c.html#a6e4caad10da318cf70cad484c4993d8f',1,'jones.c']]],
+  ['swaprows2x2_327',['swaprows2x2',['../jones_8c.html#a719879385bcb10110a734b65cba146c1',1,'jones.c']]]
 ];

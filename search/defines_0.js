@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['ncomplexelements_343',['NCOMPLEXELEMENTS',['../primary__beam_8c.html#a7bf5e3c410dbaefc131df3c58fe269ce',1,'primary_beam.c']]]
+  ['gpuerrchk_433',['gpuErrchk',['../form__beam_8cu.html#a3f6ea8e9ef58125936d50d7e1181aa7a',1,'gpuErrchk():&#160;form_beam.cu'],['../pfb_8cu.html#a3f6ea8e9ef58125936d50d7e1181aa7a',1,'gpuErrchk():&#160;pfb.cu']]]
 ];
