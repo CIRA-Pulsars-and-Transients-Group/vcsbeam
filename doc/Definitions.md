@@ -87,6 +87,25 @@ In VCSBeam, the parallactic angle is calculated (via the function `palPa`) in th
 where \f$\lambda\f$ is the latitude of the observer, \f$H\f$ is the hour angle of the source, and \f$x\f$ is the declination.
 The latitude of the MWA is \f$\lambda_\text{MWA} = -0.4660608448386394\f$ rad, defined in the [mwalib](https://github.com/MWATelescope/mwalib) library.
 
+## Data dimensions {#datadimensions}
+
+All data are functions of time (*t*), frequency (*f*), antenna (*a*), and/or polarisation (*p*).
+Accordingly, the size of data arrays are expressed in terms of \f$N_t\f$, \f$N_f\f$, \f$N_a\f$, and \f$N_p\f$.
+The order of the dimensions indicates the layout of the data arrays in memory, with the first dimension being the slowest changing dimension, and so on until the last dimension, which is the fastest changing.
+For example, the instrumental calibration matrices (\f${\bf D}\f$) have dimensions
+\f[
+N_a \times N_f \times N_p \times N_p,
+\f]
+and a single element is specified with the index notation \f$D_{a,f,p_1,p_2}\f$.
+*Jones vectors*, indicated with a lower case Latin letter in **bold**, include a polarisation dimension implicitly, e.g.
+\f[ {\bf e} = \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \f]
+where \f$x\f$ and \f$y\f$ are examples of a specific polarisation basis.
+Similary, *Jones matrices*, represented with **bold** uppercase Latin letters, have two implied polarisation dimensions, e.g.
+\f[ {\bf J} = \begin{bmatrix} J_{xx} & J_{xy} \\ J_{yx} & J_{yy} \end{bmatrix}. \f]
+
+The exception to the above system is the data layout of the legacy recombined format, in which the combinations of antennas and polarisations are ordered in a "mixed" way, so that it cannot be said that either antennas or polarisations change faster than the other.
+For this case, we describe a particular antenna-polarisation combination as an "input", and denote it with the subscript \f$i\f$, with \f$N_i = N_a \times N_p\f$ (without the implied hierarchical ordering).
+
 ## Comparison of notation in other documents
 
 ### Coordinate systems

@@ -49,16 +49,9 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
  * where \f${\bf v}_a\f$ are the instrumental voltages for antenna \f$a\f$.
  *
  * The expected thread configuration is
- * \f$\langle\langle\langle(N_f, N_t), N_a \times N_p\rangle\rangle\rangle\f$,
- * where
- *  - \f$N_f\f$ is the number of frequencies,
- *  - \f$N_t\f$ is the number of time samples,
- *  - \f$N_a\f$ is the number of antennas,
- *  - \f$N_p\f$ is the number of polarisations.
- *
+ * \f$\langle\langle\langle(N_f, N_t), N_a \times N_p\rangle\rangle\rangle.\f$
  * The layout of the `data` array must be
- * \f$ N_t \times N_f \times (N_a \times N_p)\f$,
- * with \f$N_t\f$ being the slowest-changing dimension.
+ * \f$ N_t \times N_f \times (N_a \times N_p)\f$.
  * The brackets around the \f$ N_a \times N_p \f$ is a reminder that these
  * comprise a single dimension, where the order of the antennas and
  * polarisations is set by the "VCSORDER" field in the observation metadata.
