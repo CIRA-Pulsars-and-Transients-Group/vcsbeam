@@ -185,6 +185,37 @@ __global__ void vmApplyJ_kernel( void            *data,
 #endif
 }
 
+/**
+ * CUDA kernel for phasing up and summing the voltages over antenna.
+ *
+ * @param[in] Jv_Q The Q polarisation of the product \f${\bf J}^{-1}{\bf v}\f$,
+ *                 with layout \f$N_t \times N_f \times N_a\f$
+ * @param[in] Jv_P The P polarisation of the product \f${\bf J}^{-1}{\bf v}\f$,
+ *                 with layout \f$N_t \times N_f \times N_a\f$
+ * @param[in] phi  The delay phase, \f$\varphi\f$,
+ *                 with layout \f$N_a \times N_f\f$
+ * @param invw     The reciprocal of the number of non-flagged antennas
+ * @param p        The pointing index
+ * @param soffset  An offset number of samples into `e` for where to put the
+ *                 the answer
+ * @param e[out]   The recovered electric field, \f${\bf e}\f$,
+ *                 with layout \f$N_t \times N_f \times N_p\f$
+ * @param S[out]   The recovered Stokes parameters,
+ *                 with layout \f$N_t \times N_s \times N_f\f$
+ * @param npol     \f$N_p\f$
+ *
+ * This kernel performs the phasing up and the summing over antennas part of
+ * the beamforming operation (see [Beamforming](@ref beamforming)):
+ * \f[
+ *     {\bf e}_{t,f} = \frac{1}{N_a} \sum_a e^{i\varphi} \tilde{\bf e}_{t,f,a}.
+ * \f]
+ *
+ * It also computes the Stokes parameters, \f$S = [I, Q, U, V]\f$ (with the
+ * autocorrelations removed).
+ *
+ * The expected thread configuration is
+ * \f$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\f$
+ */
 __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                                  cuDoubleComplex *Jv_P,
                                  cuDoubleComplex *phi,
@@ -193,21 +224,8 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                                  int soffset,
                                  int nchunk,
                                  cuDoubleComplex *e,
-                                 float *C,
+                                 float *S,
                                  int npol )
-/* Layout for input arrays:
-*   Jv_Q  [nsamples] [nchan] [nant]               -- calibrated voltages
-*   Jv_P  [nsamples] [nchan] [nant]
-*   phi  [nant    ] [nchan]                      -- weights array
-*   invw                                         -- inverse atrix
-* Layout of input options
-*   p                                            -- pointing number
-*   soffset                                      -- sample offset (10000/nchunk)
-*   nchunk                                       -- number of chunks each second is split into
-* Layout for output arrays:
-*   e    [nsamples] [nchan]   [npol]             -- detected beam
-*   C    [nsamples] [nstokes] [nchan]            -- coherent full stokes
-*/
 {
     // Translate GPU block/thread numbers into meaningful names
     int c    = blockIdx.x;  /* The (c)hannel number */
@@ -299,10 +317,10 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                                     Nxy[0] );
 
         // Stokes I, Q, U, V:
-        C[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = invw*(bnXX + bnYY);
-        C[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = invw*(bnXX - bnYY);
-        C[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] =  2.0*invw*cuCreal( bnXY );
-        C[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
+        S[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = invw*(bnXX + bnYY);
+        S[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = invw*(bnXX - bnYY);
+        S[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] =  2.0*invw*cuCreal( bnXY );
+        S[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
 
         // The beamformed products
         e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = ex[0];

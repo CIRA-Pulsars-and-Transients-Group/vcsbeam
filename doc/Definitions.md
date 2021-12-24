@@ -106,6 +106,9 @@ Similary, *Jones matrices*, represented with **bold** uppercase Latin letters, h
 The exception to the above system is the data layout of the legacy recombined format, in which the combinations of antennas and polarisations are ordered in a "mixed" way, so that it cannot be said that either antennas or polarisations change faster than the other.
 For this case, we describe a particular antenna-polarisation combination as an "input", and denote it with the subscript \f$i\f$, with \f$N_i = N_a \times N_p\f$ (without the implied hierarchical ordering).
 
+Full Stokes parameters are the set \f$\{I, Q, U, V\}\f$.
+Accordingly, an array containing these "post-detection" products may include the dimension \f$N_s\f$, which always equals exactly 4.
+
 ## Comparison of notation in other documents
 
 ### Coordinate systems

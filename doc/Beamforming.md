@@ -4,7 +4,7 @@
 
 Beamforming is expressed mathematically by the expression
 \f[
-    {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f},
+    {\bf e}_f = \frac{1}{N_a} \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f},
 \f]
 where
 
@@ -14,12 +14,15 @@ where
  - \f${\bf v}\f$ is the Jones vector describing the instrumental voltages
  - \f${\bf J}\f$ is the Jones matrix describing the instrumental response to an incident electric field
  - \f${\bf e}\f$ is the Jones vector describing the (recovered) incident electric field
+ - \f$N_a\f$ is the number of antennas
+
+(The time dependence of these quantities is not shown here.)
 
 Conceptually, we describe beamforming as consisting of the following distinct steps:
 
   1. Generating and applying the calibration Jones matrices to the voltages measured at each tile, (i.e. multiplying \f${\bf J}_{a,f}^{-1}\f$ to \f${\bf v}_{a,f}\f$),
   2. Shifting the signals from each tile in time to account for the signal delay from the look-direction to each tile, due to the geometric layout of the MWA tiles ("phasing up"), (i.e. multiplying \f$e^{i\varphi_{a,f}})\f$, and
-  3. Summing over the tiles.
+  3. Averaging over the tiles.
 
 For some operating modes, VCSBeam also performs *detection*, which means forming Stokes parameters, also described below.
 
@@ -57,19 +60,19 @@ Phasing up refers to the process of accounting for the fact that each antenna wi
   2. The different lengths of the cables that connect the antennas to the rest of the system.
 
 Accounting for these time differences can be achieved either by a simple shift in the time domain, or, equivalently, the application of a phase ramp in the frequency domain, via the shift theorem.
-The latter is what's implemented in VCSBeam, as indicated by the \f$e^{i\phi}\f$ term in the expression above.
+The latter is what's implemented in VCSBeam, as indicated by the \f$e^{i\varphi}\f$ term in the expression above.
 Thus, the result of phasing up is
 \f[
-    {\bf e}_{a,f} = e^{i\phi_f} \tilde{\bf e}_{a,f}.
+    {\bf e}_{a,f} = e^{i\varphi_f} \tilde{\bf e}_{a,f}.
 \f]
 
-## Summing the voltages
+## Averaging the voltages
 
 The final step is simply summing the voltages over all antennas.
 As long as the correct delays have been applied, summing the voltages will coherently combine any astrophysical signal arriving from the specified look-direction.
 The result is
 \f[
-    {\bf e}_f = \sum_a \tilde{\bf e}_{a,f}.
+    {\bf e}_f = \frac{1}{N_a}\sum_a \tilde{\bf e}_{a,f}.
 \f]
 
 ## Detection (forming Stokes parameters)
