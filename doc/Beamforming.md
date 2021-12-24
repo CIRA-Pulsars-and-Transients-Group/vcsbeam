@@ -74,6 +74,7 @@ This is achieved by forming the *coherency matrix*:
             U - Vi & I - Q
         \end{bmatrix}
 \f]
+where the frequency dependence of all terms is implicit.
 
 However, as described in [Ord et al. (2019)](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E), VCSBeam also subtracts the autocorrelations, which for signals which are noise-dominated on a single-tile basis, improves the signal-to-noise ratio.
 Thus, the actual detection operation that is implemented in VCSBeam is

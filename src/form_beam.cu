@@ -15,12 +15,13 @@
 
 #include "vcsbeam.h"
 
+/* Wrapper function for GPU/CUDA error handling.
+ * 
+ * @todo Remove this function and replace all calls to it with calls to CUDA
+ *       error functions.
+ */
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
-    /* Wrapper function for GPU/CUDA error handling. Every CUDA call goes through
-      this function. It will return a message giving your the error string,
-      file name and line of the error. Aborts on error. */
-
     if (code != 0)
     {
         fprintf(stderr, "GPUAssert:: %s - %s (%d)\n", cudaGetErrorString(code), file, line);
@@ -38,11 +39,22 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 /**
  * CUDA kernel for computing an incoherent beam.
  *
+ * @param[in] data The voltage data
+ * @param[out] incoh The detected (Stokes I) powers
+ *
  * The incoherent beam is the expression
  * \f[
  * I = \sum_a {\bf v}_a^\dagger {\bf v}_a,
  * \f]
- * where \f${\bf v}\f$ are the instrumental voltages for antenna \f$a\f$.
+ * where \f${\bf v}_a\f$ are the instrumental voltages for antenna \f$a\f$.
+ *
+ * The expected thread configuration is
+ * \f$\langle\langle\langle(N_f, N_t), N_a \times N_p\rangle\rangle\rangle\f$,
+ * where
+ *  - \f$N_f\f$ is the number of frequencies,
+ *  - \f$N_t\f$ is the number of time samples,
+ *  - \f$N_a\f$ is the number of antennas,
+ *  - \f$N_p\f$ is the number of polarisation.
  */
 __global__ void incoh_beam( uint8_t *data, float *incoh )
 /* <<< (nchan,nsample), ninput >>>
