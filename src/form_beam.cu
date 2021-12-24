@@ -87,11 +87,11 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 
 
 /**
- * CUDA kernel for computing \f${\bf J}^{-1}{\bf v}\f$.
+ * CUDA kernel for multiplying Jones matrices to Jones vectors.
  *
  * @param[in] data The voltage data, \f$v\f$,
  *                 with layout \f$N_t \times N_f \times N_i\f$
- * @param[in] J The Jones matrices, \f${\bf J}\f$,
+ * @param[in] J The Jones matrices, \f${\bf J}^{-1}\f$,
  *              with layout \f$N_a \times N_f \times N_p \times N_p\f$
  * @param[out] Jv_Q The Q polarisation of the product \f${\bf J}^{-1}{\bf v}\f$,
  *             with layout \f$N_t \times N_f \times N_a\f$
@@ -102,8 +102,19 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
  * @param polP_idxs And array of the indices \f$i\f$ for the P polarisations of
  *                  the antennas
  * @param npol      \f$N_p\f$
- * @param datatype Either `VM_INT4` (if `data` are 4+4-bit complex integers)
-                   or `VM_DBL` (if `data` are complex doubles).
+ * @param datatype Either `VM_INT4` (if `data` contain 4+4-bit complex integers)
+ *                 or `VM_DBL` (if `data` contain complex doubles).
+ *
+ * Although this kernel is quite general, in the sense that it could be used
+ * to multiply any Jones matrices to any Jones vectors, it is used in particular
+ * for multiplying the Jones matrices \f${\bf J}^{-1}\f$ to the voltage data
+ * \f${\bf v}\f$:
+ * \f[
+ * \tilde{\bf e}_{t,f,a} = {\bf J}^{-1}_{a,f}{\bf v}_{t,f,a}.
+ * \f]
+ *
+ * The expected thread configuration is
+ * \f$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\f$
  */
 __global__ void vmApplyJ_kernel( void            *data,
                                  cuDoubleComplex *J,

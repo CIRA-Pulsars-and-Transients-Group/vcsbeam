@@ -44,6 +44,11 @@ These failures, when detected, are recorded in an observation's metadata, and ar
 
 The beam models themselves are calculated using [Hyperbeam](https://github.com/MWATelescope/mwa_hyperdrive), which implements the FEE beam model described in [Sokolowski et al. (2017)](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#).
 
+The product obtained by multiplying \f${\bf J}^{-1}\f$ to the voltage data is
+\f[
+    \tilde{\bf e}_{a,f} = {\bf J}^{-1}_{a,f} {\bf v}_{a,f}.
+\f]
+
 ## Phasing up
 
 Phasing up refers to the process of accounting for the fact that each antenna will "see" an astrophysical signal arriving at a different time due to
@@ -53,11 +58,19 @@ Phasing up refers to the process of accounting for the fact that each antenna wi
 
 Accounting for these time differences can be achieved either by a simple shift in the time domain, or, equivalently, the application of a phase ramp in the frequency domain, via the shift theorem.
 The latter is what's implemented in VCSBeam, as indicated by the \f$e^{i\phi}\f$ term in the expression above.
+Thus, the result of phasing up is
+\f[
+    {\bf e}_{a,f} = e^{i\phi_f} \tilde{\bf e}_{a,f}.
+\f]
 
 ## Summing the voltages
 
 The final step is simply summing the voltages over all antennas.
 As long as the correct delays have been applied, summing the voltages will coherently combine any astrophysical signal arriving from the specified look-direction.
+The result is
+\f[
+    {\bf e}_f = \sum_a \tilde{\bf e}_{a,f}.
+\f]
 
 ## Detection (forming Stokes parameters)
 
@@ -83,6 +96,5 @@ Thus, the actual detection operation that is implemented in VCSBeam is
         I + Q & U + Vi \\
         U - Vi & I - Q
     \end{bmatrix}
-    = {\bf e}{\bf e}^\dagger - \sum_a {\bf e}_a {\bf e}_a^\dagger,
+    = {\bf e}{\bf e}^\dagger - \sum_a {\bf e}_a {\bf e}_a^\dagger.
 \f]
-where \f${\bf e}_a = e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}\f$ are the phased-up voltages before being summed.
