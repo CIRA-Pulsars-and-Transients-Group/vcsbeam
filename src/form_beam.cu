@@ -39,22 +39,22 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 /**
  * CUDA kernel for computing an incoherent beam.
  *
- * @param[in] data The voltage data
- * @param[out] incoh The detected (Stokes I) powers
+ * @param[in] data The voltage data, \f$v\f$, with layout \f$N_t \times N_f \times N_i\f$.
+ * @param[out] incoh The detected (Stokes I) powers, \f$I\f$, with layout \f$N_t \times N_f\f$.
  *
  * The incoherent beam is the expression
  * \f[
- * I = \sum_a {\bf v}_a^\dagger {\bf v}_a,
+ * I_{t,f} = \sum_i v_{t,f,i}^\dagger v_{t,f,i}.
  * \f]
- * where \f${\bf v}_a\f$ are the instrumental voltages for antenna \f$a\f$.
  *
  * The expected thread configuration is
- * \f$\langle\langle\langle(N_f, N_t), N_a \times N_p\rangle\rangle\rangle.\f$
- * The layout of the `data` array must be
- * \f$ N_t \times N_f \times (N_a \times N_p)\f$.
- * The brackets around the \f$ N_a \times N_p \f$ is a reminder that these
- * comprise a single dimension, where the order of the antennas and
- * polarisations is set by the "VCSORDER" field in the observation metadata.
+ * \f$\langle\langle\langle(N_f, N_t), N_i\rangle\rangle\rangle.\f$
+ *
+ * Note that if the voltages were arranged into Jones vectors, the above could
+ * also be expressed in the more familiar form
+ * \f[
+ * I_{t,f} = \sum_a {\bf v}_{t,f,a}^\dagger {\bf v}_{t,f,a}.
+ * \f]
  */
 __global__ void incoh_beam( uint8_t *data, float *incoh )
 /* <<< (nchan,nsample), ninput >>>
@@ -86,6 +86,25 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
 }
 
 
+/**
+ * CUDA kernel for computing \f${\bf J}^{-1}{\bf v}\f$.
+ *
+ * @param[in] data The voltage data, \f$v\f$,
+ *                 with layout \f$N_t \times N_f \times N_i\f$
+ * @param[in] J The Jones matrices, \f${\bf J}\f$,
+ *              with layout \f$N_a \times N_f \times N_p \times N_p\f$
+ * @param[out] Jv_Q The Q polarisation of the product \f${\bf J}^{-1}{\bf v}\f$,
+ *             with layout \f$N_t \times N_f \times N_a\f$
+ * @param[out] Jv_P The P polarisation of the product \f${\bf J}^{-1}{\bf v}\f$,
+ *             with layout \f$N_t \times N_f \times N_a\f$
+ * @param polQ_idxs And array of the indices \f$i\f$ for the Q polarisations of
+ *                  the antennas
+ * @param polP_idxs And array of the indices \f$i\f$ for the P polarisations of
+ *                  the antennas
+ * @param npol      \f$N_p\f$
+ * @param datatype Either `VM_INT4` (if `data` are 4+4-bit complex integers)
+                   or `VM_DBL` (if `data` are complex doubles).
+ */
 __global__ void vmApplyJ_kernel( void            *data,
                                  cuDoubleComplex *J,
                                  cuDoubleComplex *Jv_Q,

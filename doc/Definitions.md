@@ -96,7 +96,7 @@ For example, the instrumental calibration matrices (\f${\bf D}\f$) have dimensio
 \f[
 N_a \times N_f \times N_p \times N_p,
 \f]
-and a single element is specified with the index notation \f$D_{a,f,p_1,p_2}\f$.
+and a single element is specified with the index notation, \f$D_{a,f,p_1,p_2}\f$.
 *Jones vectors*, indicated with a lower case Latin letter in **bold**, include a polarisation dimension implicitly, e.g.
 \f[ {\bf e} = \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \f]
 where \f$x\f$ and \f$y\f$ are examples of a specific polarisation basis.
