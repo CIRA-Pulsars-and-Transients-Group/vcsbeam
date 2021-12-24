@@ -75,4 +75,13 @@ This is achieved by forming the *coherency matrix*:
         \end{bmatrix}
 \f]
 
-However, as described in [Ord et al. (2019)](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E), VCSBeam also subtracts the autocorrelations, which for noise-dominated signals, improves the signal-to-noise ratio.
+However, as described in [Ord et al. (2019)](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E), VCSBeam also subtracts the autocorrelations, which for signals which are noise-dominated on a single-tile basis, improves the signal-to-noise ratio.
+Thus, the actual detection operation that is implemented in VCSBeam is
+\f[
+    \frac12 \begin{bmatrix}
+        I + Q & U + Vi \\
+        U - Vi & I - Q
+    \end{bmatrix}
+    = {\bf e}{\bf e}^\dagger - \sum_a {\bf e}_a {\bf e}_a^\dagger,
+\f]
+where \f${\bf e}_a = e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}\f$ are the phased-up voltages before being summed.
