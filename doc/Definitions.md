@@ -109,6 +109,18 @@ For this case, we describe a particular antenna-polarisation combination as an "
 Full Stokes parameters are the set \f$\{I, Q, U, V\}\f$.
 Accordingly, an array containing these "post-detection" products may include the dimension \f$N_s\f$, which always equals exactly 4.
 
+Multiple pointings can also be processed simultaneously, and some output arrays therefore include dimension \f$N_b\f$.
+
+The complete list, in alphabetical order of subscripts, is
+| Symbol    | Description                  |
+| :-------: | :--------------------------- |
+| \f$N_a\f$ | Number of tiles/antennas     |
+| \f$N_b\f$ | Number of beams/pointings    |
+| \f$N_f\f$ | Number of frequencies        |
+| \f$N_p\f$ | Number of polarisations      |
+| \f$N_s\f$ | Number of Stokes parameters  |
+| \f$N_t\f$ | Number of timesteps/samples  |
+
 ## Comparison of notation in other documents
 
 ### Coordinate systems

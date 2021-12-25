@@ -328,16 +328,40 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     }
 }
 
-__global__ void renormalise_channels_kernel( float *I, int nstep, float *offsets, float *scales, uint8_t *Iscaled )
+/**
+ * CUDA kernel for normalising Stokes parameters
+ *
+ * @param S[in]        The original Stokes parameters,
+ *                     with layout \f$N_t \times N_s \times N_f\f$
+ * @param nstep        \f$N_t\f$
+ * @param offsets[out] The amount of offset needed to recover the original
+ *                     values from the normalised ones
+ * @param scales[out]  The scaling needed to recover the original values
+ *                     from the normalised ones
+ * @param Sscaled[out] The normalised Stokes parameters
+ *
+ * This kernel shifts and normalises the Stokes parameters so that they fit
+ * into 8-bits integers without clipping (e.g. for output into the PSRFITS
+ * format). Each frequency is normalised independently, with the scales and
+ * offsets needed to recover the original values for that channel being
+ * recorded as well.
+ *
+ * If \f${\bf S}\f$ is the array of values to be normalised, then the normalisation
+ * is
+ * \f[
+ *     \hat{\bf S} = \frac{{\bf S} - \text{offset}}{\text{scale}},
+ * \f]
+ * where
+ * \f{align*}{
+ *     \text{scale} &= \frac{S_\text{max} - S_\text{min}}{256} \\
+ *     \text{offset} &= S_\text{min} + 0.5 \times \text{scale}.
+ * \f}
+ *
+ * The expected thread configuration is
+ * \f$\langle\langle\langle N_b,(N_f, N_s)\rangle\rangle\rangle.\f$
+ */
+__global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets, float *scales, uint8_t *Sscaled )
 {
-    // For just doing stokes I
-    // One block
-    // 128 threads; each thread will do one channel
-    // (we have already summed over all ant)
-
-    // For doing the C array (I,Q,U,V)
-    // ... figure it out later.
-
     // Translate GPU block/thread numbers into meaningful names
     int chan    = threadIdx.x; /* The (c)hannel number */
     int nchan   = blockDim.x;  /* The total number of channels */
@@ -351,14 +375,14 @@ __global__ void renormalise_channels_kernel( float *I, int nstep, float *offsets
     //float summed = 0.0;
 
     // Initialise min and max values to the first sample
-    float min = I[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
-    float max = I[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
+    float min = S[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
+    float max = S[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
 
     // Get the data statistics
     int i;
     for (i = 0; i < nstep; i++)
     {
-        val = I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)];
+        val = S[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)];
         min = (val < min ? val : min);
         max = (val > max ? val : max);
         //summed += fabsf(val);
@@ -370,8 +394,8 @@ __global__ void renormalise_channels_kernel( float *I, int nstep, float *offsets
 
     for (i = 0; i < nstep; i++)
     {
-        val = (I[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) / scale;
-        Iscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 0.5);
+        val = (S[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) / scale;
+        Sscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 0.5);
     }
 
     // Set the scales and offsets
