@@ -17,6 +17,25 @@
 
 #include "vcsbeam.h"
 
+/**
+ * Calculates the phase delays required for phasing up each antenna.
+ *
+ * @param[in]  beam_geom_vals Struct containing pointing information for the
+ *                            requested beams.
+ * @param[in]  freq_hz        The frequency in Hz
+ * @param[in]  obs_metadata   The observation metadata
+ * @param[out] phi            The calculated phase delays
+ *
+ * This function calculates the phase delays for the given look-direction
+ * and frequency, for each antenna. This consists of both a "geometric delay"
+ * component, related to the different times a planar wavefront coming from
+ * a particular direction arrives at each antenna, and a "cable delay"
+ * component, related to the physical lengths of the cables connecting the
+ * antennas to the rest of the system.
+ *
+ * The equations implemented here are the first three equations in
+ * [Ord et al. (2019)](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E).
+ */
 void calc_geometric_delays(
         beam_geom         *beam_geom_vals,
         uint32_t           freq_hz,
@@ -80,6 +99,14 @@ void calc_geometric_delays(
     }
 }
 
+/**
+ * Calculates the phase delays for all relevant frequencies and pointings.
+ *
+ * Calls calc_geometric_delays() for all frequencies in the relevant coarse
+ * channel, and for all requested pointings.
+ *
+ * @todo Incorporate the `beam_geom` struct into the `vm` struct.
+ */
 void vmCalcPhi(
         vcsbeam_context   *vm,
         beam_geom         *beam_geom_vals )
@@ -106,10 +133,12 @@ void vmCalcPhi(
     }
 }
 
-void vmCreateGeometricDelays( vcsbeam_context *vm )
-/* Allocates memory for the geometric delay arrays ("phi") on both host and device.
+/**
+ * Allocates memory for the delay phase arrays on both host and device.
+ *
  * Free with free_geometric_delays()
  */
+void vmCreateGeometricDelays( vcsbeam_context *vm )
 {
     vm->gdelays.npointings   = vm->npointing;
     vm->gdelays.nant         = vm->obs_metadata->num_ants;
@@ -142,6 +171,11 @@ void vmCreateGeometricDelays( vcsbeam_context *vm )
     cudaCheckErrors( "error: create_geometric_delays: cudaMalloc failed" );
 }
 
+/**
+ * Frees memory for the delay phase arrays on both host and device.
+ *
+ * @todo Convert free_geometric_delays() into a "vm" function.
+ */
 void free_geometric_delays( geometric_delays *gdelays )
 /* Free memory allocated with create_geometric_delays()
  */
@@ -155,6 +189,9 @@ void free_geometric_delays( geometric_delays *gdelays )
     cudaCheckErrors( "(free_geometric_delays) cudaFree failed" );
 }
 
+/**
+ * Copies the delay phase arrays from CPU memory to GPU memory.
+ */
 void vmPushPhi( vcsbeam_context *vm )
 /* Copy host memory block to device
  */
@@ -164,6 +201,32 @@ void vmPushPhi( vcsbeam_context *vm )
     cudaCheckErrors( "error: vmPushPhi: cudaMemcpyAsync failed" );
 }
 
+/**
+ * Populates a `beam_geom` struct with pointing information derived from a
+ * given set of RAs, Decs, and MJDs.
+ *
+ * @param[in]  ras_hours An array of RAs (in decimal hours)
+ * @param[in]  decs_degs An array of Decs (in decimal degrees)
+ * @param[in]  mjd       The Modified Julian Date
+ * @param[out] bg        The struct containing various geometric quantities
+ *
+ * The quantities which are calculated are
+ * | Quantity       | Description                    |
+ * | -------------- | ------------------------------ |
+ * | `bg->mean_ra`  | The mean RA of the pointing    |
+ * | `bg->mean_dec` | The mean Dec of the pointing   |
+ * | `bg->az`       | The azimuth of the pointing    |
+ * | `bg->el`       | The elevation of the pointing  |
+ * | `bg->lmst`     | The local mean sidereal time   |
+ * | `bg->fracmjd`  | The fractional part of the MJD |
+ * | `bg->intmjd`   | The integer part of the MJD    |
+ * | `bg->unit_N`   | The normalised projection of the look-direction onto local North |
+ * | `bg->unit_E`   | The normalised projection of the look-direction onto local East  |
+ * | `bg->unit_H`   | The normalised projection of the look-direction onto local "Up"  |
+ *
+ * @todo Put the table describing the beam_geom struct where it belongs: with
+ *       the documentation for the beam_geom struct!
+ */
 void calc_beam_geom(
         double            ras_hours,
         double            decs_degs,
@@ -226,7 +289,19 @@ void calc_beam_geom(
     bg->unit_H   = unit_H;
 }
 
-
+/**
+ * Converts a decimal RA to the format "HH:MM:SS.S".
+ *
+ * @param[out] out   A buffer for the output string
+ * @param[in]  in    The decimal RA
+ * @param      sflag Whether to include a leading '+'
+ *
+ * The `out` buffer must already be allocated.
+ *
+ * @todo Figure out whether dec2hms() is *actually* just for RAs, or whether
+ *       it is more general than that (and, if so, change the name to reflect
+ *       this).
+ */
 void dec2hms( char *out, double in, int sflag )
 {
     int sign  = 1;
@@ -271,7 +346,15 @@ void dec2hms( char *out, double in, int sflag )
 }
 
 
-
+/**
+ * Convert MJD to LST.
+ *
+ * @param[in]  mjd  The Modified Julian Date
+ * @param[out] lst  The Local Sidereal Time
+ *
+ * @todo Consider removing mjd2lst(), since it consists only of a single
+ *       call to a `pal` function.
+ */
 void mjd2lst(double mjd, double *lst)
 {
     // Greenwich Mean Sidereal Time to LMST
@@ -282,10 +365,13 @@ void mjd2lst(double mjd, double *lst)
 }
 
 
-double parse_ra( char* ra_hhmmss )
-/* Parse a string containing a right ascension in hh:mm:ss format into
- * a double in units of hours
+/**
+ * Parse an RA string.
+ *
+ * @param[in] ra_hhmmss A string representing an RA in the HH:MM:SS.S format
+ * @return The RA in decimal hours.
  */
+double parse_ra( char* ra_hhmmss )
 {
     if (ra_hhmmss == NULL)
         return 0.0;
@@ -306,10 +392,13 @@ double parse_ra( char* ra_hhmmss )
     return ra_rad*R2H;
 }
 
-double parse_dec( char* dec_ddmmss )
-/* Parse a string containing a declination in dd:mm:ss format into
- * a double in units of degrees
+/**
+ * Parse a Dec string.
+ *
+ * @param[in] dec_ddmmss A string representing a Dec in the DD:MM:SS.S format
+ * @return The Dec in decimal degrees.
  */
+double parse_dec( char* dec_ddmmss )
 {
     if (dec_ddmmss == NULL)
         return 0.0;

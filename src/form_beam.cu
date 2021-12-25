@@ -346,8 +346,8 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
  * offsets needed to recover the original values for that channel being
  * recorded as well.
  *
- * If \f${\bf S}\f$ is the array of values to be normalised, then the normalisation
- * is
+ * If \f${\bf S}\f$ is the array of values to be normalised, then the
+ * normalisation is
  * \f[
  *     \hat{\bf S} = \frac{{\bf S} - \text{offset}}{\text{scale}},
  * \f]
@@ -359,6 +359,9 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
  *
  * The expected thread configuration is
  * \f$\langle\langle\langle N_b,(N_f, N_s)\rangle\rangle\rangle.\f$
+ *
+ * @todo Optimise the renormalisation kernel (e.g. by removing the for loop
+ *       over timesteps.
  */
 __global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets, float *scales, uint8_t *Sscaled )
 {
@@ -404,7 +407,17 @@ __global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets
 }
 
 
-
+/**
+ * Form an incoherent beam.
+ *
+ * Forms an incoherent beam, detects it, and prepares it for writing to
+ * PSRFITS.
+ *
+ * @todo Either generalise the vmBeamformChunk() so that it can also produce
+ *       incoherent beams (and therefore do away with cu_form_incoh_beam(), or
+ *       keep cu_form_incoh_beam() and convert it into a bona fide "vm" style
+ *       fuction.
+ */
 void cu_form_incoh_beam(
         uint8_t *data, uint8_t *d_data, size_t data_size, // The input data
         float *d_incoh, // The data, summed
@@ -414,8 +427,7 @@ void cu_form_incoh_beam(
         uint8_t *Iscaled, uint8_t *d_Iscaled, size_t Iscaled_size // The scaled answer
         )
 /* Inputs:
-*   data    = host array of 4bit+4bit complex numbers. For data order, refer to the
-*             documentation.
+*   data    = host array of 4bit+4bit complex numbers.
 *   d_data  = device array of the above
 *   data_size    = size in bytes of data and d_data
 *   nsample = number of samples
@@ -450,6 +462,9 @@ void cu_form_incoh_beam(
     gpuErrchk(cudaMemcpy( Iscaled, d_Iscaled, Iscaled_size,        cudaMemcpyDeviceToHost ));
 }
 
+/**
+ * Computes \f${\bf J}^{-1} {\bf v}\f$.
+ */
 void vmApplyJChunk( vcsbeam_context *vm )
 {
     dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
@@ -468,6 +483,12 @@ void vmApplyJChunk( vcsbeam_context *vm )
     cudaCheckErrors( "vmApplyJChunk: vmApplyJ_kernel failed" );
 }
 
+/**
+ * Performs the phasing up, averaging over antennas, and detection operations
+ * on calibrated data.
+ *
+ * @todo Split the beamforming operations into separate steps/kernels.
+ */
 void vmBeamformChunk( vcsbeam_context *vm )
 {
     uintptr_t shared_array_size = 11 * vm->obs_metadata->num_ants * sizeof(double);
@@ -501,6 +522,9 @@ void vmBeamformChunk( vcsbeam_context *vm )
 
 }
 
+/**
+ * Performs all beamforming steps for 1 second's worth of data.
+ */
 void vmBeamformSecond( vcsbeam_context *vm )
 {
     // Processing a second's worth of "chunks"
@@ -542,6 +566,9 @@ void vmBeamformSecond( vcsbeam_context *vm )
     vm->v->locked = false;
 }
 
+/**
+ * Copies the beamformed voltages from GPU memory to CPU memory.
+ */
 void vmPullE( vcsbeam_context *vm )
 {
     // Copy the results back into host memory
@@ -549,12 +576,21 @@ void vmPullE( vcsbeam_context *vm )
     cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
 }
 
+/**
+ * Copies the detected Stokes parameters from GPU memory to CPU memory.
+ */
 void vmPullS( vcsbeam_context *vm )
 {
     cudaMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, cudaMemcpyDeviceToHost );
     cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
 }
 
+/**
+ * Copies the beamformed voltages into a different array to prepare for
+ * inverting the PFB.
+ *
+ * @todo Remove prepare_detected_beam() and use a "host buffer" instead.
+ */
 void prepare_detected_beam( cuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm )
 {
@@ -585,6 +621,12 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
     }
 }
 
+/**
+ * Renormalises the detected Stokes parameters and copies them into PSRFITS
+ * structs, ready for frequency splicing.
+ *
+ * @param mpfs The MPI PSRFITS struct that manages the splicing operation.
+ */
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
 {
     // Flatten the bandpass
@@ -607,6 +649,10 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
 
 }
 
+/**
+ * Copies the index arrays for antennas and polarisations from CPU memory to
+ * GPU memory.
+ */
 void vmPushPolIdxLists( vcsbeam_context *vm )
 {
     cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
@@ -615,6 +661,11 @@ void vmPushPolIdxLists( vcsbeam_context *vm )
     cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polP_idxs) failed" );
 }
 
+/**
+ * (Deprecated) Allocate memory on the GPU.
+ *
+ * @todo Remove the function create_pinned_data_buffer().
+ */
 float *create_pinned_data_buffer( size_t size )
 {
     float *ptr;
@@ -628,6 +679,11 @@ float *create_pinned_data_buffer( size_t size )
 }
 
 
+/**
+ * (Deprecated) Allocate memory on the CPU.
+ *
+ * @todo Remove the function create_detected_beam().
+ */
 cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
 // Allocate memory for complex weights matrices
 {
@@ -651,6 +707,11 @@ cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan
 }
 
 
+/**
+ * (Deprecated) Frees memory on the CPU.
+ *
+ * @todo Remove the function destroy_detected_beam().
+ */
 void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsamples, int nchan )
 {
     int p, s, ch;
@@ -670,6 +731,11 @@ void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsampl
     free( array );
 }
 
+/**
+ * (Deprecated) Allocates memory on the CPU and GPU simultaneously.
+ *
+ * @todo Remove the function allocate_input_output_arrays().
+ */
 void allocate_input_output_arrays( void **data, void **d_data, size_t size )
 {
     cudaMallocHost( data, size );
@@ -679,6 +745,11 @@ void allocate_input_output_arrays( void **data, void **d_data, size_t size )
     cudaCheckErrors( "cudaMalloc() failed" );
 }
 
+/**
+ * (Deprecated) Frees memory on the CPU and GPU simultaneously.
+ *
+ * @todo Remove the function free_input_output_arrays().
+ */
 void free_input_output_arrays( void *data, void *d_data )
 {
     cudaFreeHost( data );

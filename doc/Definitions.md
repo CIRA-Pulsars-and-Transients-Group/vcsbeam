@@ -112,14 +112,14 @@ Accordingly, an array containing these "post-detection" products may include the
 Multiple pointings can also be processed simultaneously, and some output arrays therefore include dimension \f$N_b\f$.
 
 The complete list, in alphabetical order of subscripts, is
-| Symbol    | Description                  |
-| :-------: | :--------------------------- |
-| \f$N_a\f$ | Number of tiles/antennas     |
-| \f$N_b\f$ | Number of beams/pointings    |
-| \f$N_f\f$ | Number of frequencies        |
-| \f$N_p\f$ | Number of polarisations      |
-| \f$N_s\f$ | Number of Stokes parameters  |
-| \f$N_t\f$ | Number of timesteps/samples  |
+| Symbol    | Description                               | Typical values |
+| :-------: | :---------------------------------------- | :------------: |
+| \f$N_a\f$ | Number of tiles/antennas                  | 128            |
+| \f$N_b\f$ | Number of beams/pointings                 | 1              |
+| \f$N_f\f$ | Number of frequencies per coarse channel  | 128            |
+| \f$N_p\f$ | Number of polarisations                   | 2              |
+| \f$N_s\f$ | Number of Stokes parameters               | 4              |
+| \f$N_t\f$ | Number of timesteps/samples per second    | 1000           |
 
 ## Comparison of notation in other documents
 
