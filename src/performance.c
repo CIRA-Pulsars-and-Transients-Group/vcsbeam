@@ -18,18 +18,27 @@
  * Helper functions not listed in vcsbeam.h *
  *******************************************/
 
-double now()
-/* Get the precise current time in seconds as a double
+/**
+ * Gets the precise current time.
+ *
+ * @return The current time in seconds
  */
+double now()
 {
     struct timespec t;
     clock_gettime( CLOCK_REALTIME, &t );
     return (double)t.tv_sec + (double)t.tv_nsec/1000000000L;
 }
 
-int get_stopwatch_idx( logger *log, const char *stopwatch_name )
-/* Find the stopwatch with the given name
+/**
+ * Finds the stopwatch with the given name.
+ *
+ * @param log The logger object to be searched
+ * @param[in] The string to be searched
+ * @return The index into `log&rarr;stopwatches` where the stopwatch name
+ *         matches `stopwatch_name`
  */
+int get_stopwatch_idx( logger *log, const char *stopwatch_name )
 {
     int idx;
     for (idx = 0; idx < log->nstopwatches; idx++)
@@ -41,9 +50,13 @@ int get_stopwatch_idx( logger *log, const char *stopwatch_name )
     return PERFORMANCE_NO_STOPWATCH_FOUND;
 }
 
-int get_stopwatch_max_name_length( logger *log )
-/* Find the maximum length of stopwatch names
+/**
+ * Finds the maximum length of stopwatch names.
+ *
+ * @param log A logger object with stopwatches
+ * @return The length of the longest name in the stopwatches in `log`
  */
+int get_stopwatch_max_name_length( logger *log )
 {
     int length, max_length = 0;
     int idx;
@@ -57,17 +70,40 @@ int get_stopwatch_max_name_length( logger *log )
     return max_length;
 }
 
+/**
+ * Calculates the mean duration of a stopwatch's runs.
+ *
+ * @param sw A stopwatch object
+ * @return The mean duration of the runs of `sw`
+ */
 double calc_stopwatch_mean( logger_stopwatch *sw )
 {
     return sw->total / (double)sw->nstart_stops;
 }
 
+/**
+ * Calculates the standard devation of a stopwatch's runs.
+ *
+ * @param sw A stopwatch object
+ * @return The standard deviation of the runs of `sw`
+ */
 double calc_stopwatch_std( logger_stopwatch *sw )
 {
     double mean = calc_stopwatch_mean( sw );
     return sqrt(sw->total_sq / (double)sw->nstart_stops - mean*mean);
 }
 
+/**
+ * Prints a stopwatch's statisticss (mean and std).
+ *
+ * @param log       A logger object
+ * @param sw        The stopwatch object whose statistics are to be printed
+ * @param pad_size  The field width for the stopwatch name (for alignment
+ *                  purposes)
+ *
+ * Setting `pad_size = 0` is the same as setting it to the number of
+ * characters in the stopwatch's name.
+ */
 void write_stopwatch_stats_str( logger *log, logger_stopwatch *sw, int pad_size )
 {
     if (pad_size == 0)
@@ -89,6 +125,17 @@ void write_stopwatch_stats_str( logger *log, logger_stopwatch *sw, int pad_size 
  * Functions for memory management and initialisation *
  ******************************************************/
 
+/**
+ * Creates a new logger object.
+ *
+ * @param fout        The file stream where to print logger messages
+ * @param world_rank  The rank of the current MPI process
+ * @return A pointer to a newly created logger object
+ *
+ * If `world_rank` is a non-negative integer, the value of `world_rank` will
+ * be included in log messages.
+ * To avoid printing the rank, set `world_rank` to `PERFORMANCE_NO_MPI`.
+ */
 logger *create_logger( FILE *fout, int world_rank )
 {
     // Allocate memory
@@ -114,7 +161,11 @@ logger *create_logger( FILE *fout, int world_rank )
     return log;
 }
 
-
+/**
+ * Destroys a logger object.
+ *
+ * @param log The logger object to be destroyed and its memory freed.
+ */
 void destroy_logger( logger *log )
 {
     int i;
@@ -133,6 +184,13 @@ void destroy_logger( logger *log )
  * Functions for manipulating user-defined stopwatches *
  *******************************************************/
 
+/**
+ * Adds a stopwatch to the logger object.
+ *
+ * @param log             The logger object to be added to
+ * @param stopwatch_name  A string specifying the new stopwatch's name
+ * @param description     A string specifying the new stopwatch's purpose
+ */
 void logger_add_stopwatch( logger *log, const char *stopwatch_name, const char *description )
 {
     // Stopwatch name cannot be NULL
@@ -177,7 +235,17 @@ void logger_add_stopwatch( logger *log, const char *stopwatch_name, const char *
     log->nstopwatches++;
 }
 
-
+/**
+ * Starts a stopwatch.
+ *
+ * @param log                The logger object containing the stopwatch to be
+ *                           started
+ * @param stopwatch_name     The name of the stopwatch to be started
+ * @param print_description  Print a timed message with the stopwatch's
+ *                           description
+ *
+ * If the stopwatch is already running, this has no effect.
+ */
 void logger_start_stopwatch( logger *log, const char *stopwatch_name, bool print_description )
 {
     int idx = get_stopwatch_idx( log, stopwatch_name );
@@ -194,11 +262,7 @@ void logger_start_stopwatch( logger *log, const char *stopwatch_name, bool print
 
     // Check to see if the stopwatch is already running
     if (log->stopwatches[idx].running)
-    {
-        fprintf( stderr, "warning: logger_start_stopwatch: "
-                "\"%s\" is already running\n", sw->name );
         return;
-    }
 
     // Check that we haven't exhausted the number of allowed runs
     if (log->stopwatches[idx].nstart_stops == PERFORMANCE_MAX_START_STOP)
@@ -219,7 +283,15 @@ void logger_start_stopwatch( logger *log, const char *stopwatch_name, bool print
     sw->running   = true;
 }
 
-
+/**
+ * Stops a stopwatch.
+ *
+ * @param log                The logger object containing the stopwatch to be
+ *                           stopped
+ * @param stopwatch_name     The name of the stopwatch to be stopped
+ *
+ * If the stopwatch is already stopped, this has no effect.
+ */
 void logger_stop_stopwatch( logger *log, const char *stopwatch_name )
 {
     int idx = get_stopwatch_idx( log, stopwatch_name );
@@ -236,11 +308,7 @@ void logger_stop_stopwatch( logger *log, const char *stopwatch_name )
 
     // Check to see if the stopwatch is running
     if (sw->running == false)
-    {
-        fprintf( stderr, "warning: logger_stop_stopwatch: "
-                "\"%s\" is not running\n", sw->name );
         return;
-    }
 
     // Record the time and increment the count
     int    n   = sw->nstart_stops;
@@ -258,6 +326,23 @@ void logger_stop_stopwatch( logger *log, const char *stopwatch_name )
  * Functions for writing out different kinds of messages to the log *
  ********************************************************************/
 
+/**
+ * Prints a timestamped log message.
+ *
+ * @param log      A logger object
+ * @param message  The message to be printed
+ *
+ * The message will be printed to the file stream `log->fout`.
+ *
+ * If `log->world_rank` is non-negative, the format of the message is
+ * ```
+ * [<timestamp>] [MPI:<world_rank>]  <message>
+ * ```
+ * Otherwise, the format is
+ * ```
+ * [timestamp]  <message>
+ * ```
+ */
 void logger_timed_message( logger *log, const char *message )
 {
     double current_time = now() - log->begintime;
@@ -267,11 +352,31 @@ void logger_timed_message( logger *log, const char *message )
         fprintf( log->fout, "[%f] [MPI:%2d]  %s\n", current_time, log->world_rank, message );
 }
 
+/**
+ * Prints a log message.
+ *
+ * @param log      A logger object
+ * @param message  The message to be printed
+ *
+ * The message is printed to `log->fout`, including a trailing newline
+ * character.
+ */
 void logger_message( logger *log, const char *message )
 {
     fprintf( log->fout, "%s\n", message );
 }
 
+/**
+ * Print a stopwatch's statistics.
+ *
+ * @param log            A logger object containing the stopwatch to be
+ *                       reported
+ * @param stopwatch_name The name of the stopwatch to be reported
+ *
+ * A wrapper for write_stopwatch_stats_str(), where `pad_size` is set to zero,
+ * and the statistics are only printed if there has been at least one run for
+ * the specified stopwatch.
+ */
 void logger_stopwatch_report_stats( logger *log, const char *stopwatch_name )
 {
     int idx = get_stopwatch_idx( log, stopwatch_name );
@@ -291,6 +396,23 @@ void logger_stopwatch_report_stats( logger *log, const char *stopwatch_name )
         write_stopwatch_stats_str( log, sw, 0 );
 }
 
+/**
+ * Print all stopwatches' statistics.
+ *
+ * @param log  the logger object whose stopwatches are to be reported
+ *
+ * This function prints the statistics of all stopwatches which have been run
+ * at least once.
+ * The output is aligned, with each stopwatch name being padded by the same
+ * amount.
+ *
+ * Example:
+ * ```
+ * TO DO
+ * ```
+ *
+ * @todo Fill in an example of stats output for logger_report_all_stats().
+ */
 void logger_report_all_stats( logger *log )
 {
     int max_length = get_stopwatch_max_name_length( log );
