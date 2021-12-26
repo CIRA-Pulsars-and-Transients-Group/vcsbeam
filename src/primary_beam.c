@@ -16,21 +16,49 @@
 
 #define NCOMPLEXELEMENTS 4
 
+/**
+ * The coherency matrix for a pure Stokes I sky.
+ */
 const double Isky[] = { 0.5, 0. , 0. ,  0. , 0. , 0. ,  0.5, 0. };
+/**
+ * The coherency matrix for a pure Stokes Q sky.
+ */
 const double Qsky[] = { 0.5, 0. , 0. ,  0. , 0. , 0. , -0.5, 0. };
+/**
+ * The coherency matrix for a pure Stokes U sky.
+ */
 const double Usky[] = { 0. , 0. , 0.5,  0. , 0.5, 0. ,  0. , 0. };
+/**
+ * The coherency matrix for a pure Stokes V sky.
+ */
 const double Vsky[] = { 0. , 0. , 0. , -0.5, 0  , 0.5,  0. , 0. };
+/**
+ * The set of coherency matrices for pure Stokes I, Q, U, and V skies.
+ */
 const double *sky[] = { Isky, Qsky, Usky, Vsky };
 
-void vmCalcB(
-        vcsbeam_context   *vm,
-        beam_geom         *beam_geom_vals )
-/* Calculate the required beam matrices for the given pointings. The
- * calculated Jones matrices are stored in pb->B
+/**
+ * Calculates the beam model Jones matrices for the given pointings.
+ *
+ * @param beam_geom_vals An array of beam_geom objects containing the pointing
+ *                       information
+ *
+ * This function uses Hyperbeam to calculate the beam model Jones matrices
+ * for each pointing in `beam_geom_vals`.
  *
  * Only those configurations of live (i.e. non-dead) dipoles which exist in
  * the array are calculated, in order to save calculation time.
+ *
+ * The parallactic angle correction is applied, so that the final matrices,
+ * which are stored in `pb&rarr;B`, are in the basis
+ * \f[
+ *     {\bf B} =
+ *         \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix}.
+ * \f]
  */
+void vmCalcB(
+        vcsbeam_context   *vm,
+        beam_geom         *beam_geom_vals )
 {
     // Shorthand variable for where to put the answer
     primary_beam *pb = &vm->pb;
@@ -103,13 +131,17 @@ void vmCalcB(
 #ifdef DEBUG
 if (config_idx == 0)
 {
-    fprintf( stderr, "B       = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
-    fprintf( stderr, "P       = " ); fprintf( stderr, "[ %lf, %lf; %lf, %lf ]\n", P[0], P[1], P[2], P[3]  );
+    fprintf( stderr, "Bhb     = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
+    fprintf( stderr, "Ppa     = " ); fprintf( stderr, "[ %lf, %lf; %lf, %lf ]\n", P[0], P[1], P[2], P[3]  );
 }
 #endif
                 mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );
-//fprintf( stderr, "after  pa correction: B = " );
-//fprintf_complex_matrix( stderr, configs[config_idx] );
+#ifdef DEBUG
+if (config_idx == 0)
+{
+    fprintf( stderr, "B       = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
+}
+#endif
             }
 
             // Copy the answer into the B matrix (for this antenna)
@@ -118,10 +150,13 @@ if (config_idx == 0)
     }
 }
 
-void vmCreatePrimaryBeam( vcsbeam_context *vm )
-/* Allocates memory for the primary beam matrices ("B")
- * (see Eq. (30) in Ord et al. (2019))
+/**
+ * Allocates memory for the beam model Jones matrices.
+ *
+ * The resulting array (`vm&rarr;B`) has dimensions
+ * \f$N_b \times N_a \times N_p \times N_p\f$.
  */
+void vmCreatePrimaryBeam( vcsbeam_context *vm )
 {
     // Calculate some array sizes
     vm->pb.npointings = vm->npointing;
@@ -143,9 +178,12 @@ void vmCreatePrimaryBeam( vcsbeam_context *vm )
     vm->pb.obs_metadata = vm->obs_metadata;
 }
 
-void free_primary_beam( primary_beam *pb )
-/* Frees the memory allocated in malloc_primary_beam()
+/**
+ * Frees the memory allocated in vmCreatePrimaryBeam()
+ *
+ * @todo Change name to vm...
  */
+void free_primary_beam( primary_beam *pb )
 {
     free( pb->B );
     free_delays_amps( pb->obs_metadata, pb->delays, pb->amps );
@@ -153,19 +191,25 @@ void free_primary_beam( primary_beam *pb )
 }
 
 
-void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, uint32_t ***delays, double ***amps )
-/* Costruct "delay" and "amp" arrays required by Hyperbeam.
+/**
+ * Constructs "delay" and "amp" arrays required by Hyperbeam.
+ *
+ * @param[in]  obs_metadata A MetafitsMetadata object containing the delays
+ *                          and amps.
+ * @param[out] delays       A pointer to an array of delay values, with layout
+ *                          \f$N_i \times N_d\f$
+ * @param[out] amps         A pointer to an array of amp values, with layout
+ *                          \f$N_i \times N_d\f$
+ *
  * Delays can be brought directly across from the MetafitsMetadata struct.
  * The "conversion" from delays to amps is straightforward: All amps are "1.0"
  * unless the delay is 32, in which case the amp should be "0.0".
  * (The value 32 is the number assigned to a faulty or broken dipole.)
  *
- * Both the delays array (input) and the amps array (output) should
- * have dimensions [ninputs][ndipoles]
- *
  * This function allocates memory for both delays and amps. This can be freed
  * by a call to free_delays_amps().
  */
+void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, uint32_t ***delays, double ***amps )
 {
     int ndipoles = obs_metadata->num_delays;
     int ninputs  = obs_metadata->num_rf_inputs;
@@ -192,9 +236,17 @@ void create_delays_amps_from_metafits( MetafitsMetadata *obs_metadata, uint32_t 
 }
 
 
-void free_delays_amps( MetafitsMetadata *obs_metadata, uint32_t **delays, double **amps )
-/* Frees the memory allocated in create_delays_amps_from_metafits().
+/**
+ * Frees the memory allocated in create_delays_amps_from_metafits().
+ *
+ * @param obs_metadata A MetafitsMetadata object
+ * @param delays       The array of delay values to be freed
+ * @param amps         The array of amp values to be freed
+ *
+ * Here, the MetafitsMetadata is used to find \f$N_i\f$ (one of the dimensions
+ * of `delays` and `amps`).
  */
+void free_delays_amps( MetafitsMetadata *obs_metadata, uint32_t **delays, double **amps )
 {
     int ninputs  = obs_metadata->num_rf_inputs;
     int input;
@@ -206,8 +258,13 @@ void free_delays_amps( MetafitsMetadata *obs_metadata, uint32_t **delays, double
 }
 
 
-int hash_dipole_config( double *amps )
-/* In order to avoid recalculating the FEE beam for repeated dipole
+/**
+ * Implements a hash lookup for dead/live dipole configurations.
+ *
+ * @param amps The array of amps whose configuration is to be hashed
+ * @return The hashed index for this configuration
+ *
+ * In order to avoid recalculating the FEE beam for repeated dipole
  * configurations, we have to keep track of which configurations have already
  * been calculated. We do this through a boolean array, and this function
  * converts dipole configurations into indices of this array. In other words,
@@ -216,15 +273,15 @@ int hash_dipole_config( double *amps )
  * Since dead dipoles are relatively rare, we only consider configurations
  * in which up to two dipoles are dead. Any more than that and the we can
  * recalculate the Jones matrix with minimal entropy. In this case, this
- * function returns MANY_DEAD_DIPOLES. The other remaining cases are:
+ * function returns `MANY_DEAD_DIPOLES`. The other remaining cases are:
  *
- *   0  dead dipoles = 1   configuration
- *   1  dead dipole  = 16  configurations
- *   2  dead dipoles = 120 configurations
- *   16 dead dipoles = 1   configuration
+ *  - 0  dead dipoles = 1   configuration
+ *  - 1  dead dipole  = 16  configurations
+ *  - 2  dead dipoles = 120 configurations
+ *  - 16 dead dipoles = 1   configuration
  *
  * for a grand total of 138 indices. They are ordered as follows:
- *
+ * ```
  *  idx  configuration (0=dead, 1=live)
  *   0   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
  *   1   [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
@@ -238,14 +295,16 @@ int hash_dipole_config( double *amps )
  *   ...
  *   31  [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
  *   32  [1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
- *   32  [1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+ *   33  [1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
  *   ...
- *   136 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0]
+ *   135 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0]
  *   136 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
  *   137 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ * ```
  *
- *   This function defines "dead" as amps=0.0, "live" otherwise.
+ *  This function defines "dead" as amps=0.0, "live" otherwise.
  */
+int hash_dipole_config( double *amps )
 {
     // The return value = the "hashed" array index
     int idx;
@@ -307,30 +366,31 @@ int hash_dipole_config( double *amps )
 }
 
 
+/**
+ * Calculates the parallactic angle correction matrix,
+ * \f${\bf P}_\text{pa}\f$.
+ *
+ * @param[out] Ppa The output rotation matrix
+ * @param[in]  lat The observing latitude (radians)
+ * @param[in]  az  The azimuth angle (radians)
+ * @param[in]  za  The zenith angle (radians)
+ *
+ * This function computes the parallactic angle correction matrix in the
+ * basis (see [Parallactic angle correction](@ref parallacticangle)):
+ * \f[
+ *     {\bf P}_\text{pa} =
+ *     \begin{bmatrix}
+ *         P_{\theta x} & P_{\theta y} \\
+           P_{\phi x}   & P_{\phi y}
+        \end{bmatrix}.
+ * \f]
+ */
 void parallactic_angle_correction(
     double *Ppa,  // output rotation matrix
     double lat,   // observing latitude (radians)
     double az,    // azimuth angle (radians)
     double za)    // zenith angle (radians)
 {
-    /* This parallactic angle correction is intended to be applied to the
-     * primary beam matrices delivered by the FEE beam code
-     * The FEE beam Jones matrix (according to Sokolowski et al. 2017) is
-     *   [q] = [ qθ  qφ ] [θ]
-     *   [p]   [ pθ  pφ ] [φ]
-     * However, we would like a matrix that goes from (y,x) to (q,p):
-     *   [q] = [ qy  qx ] [y]
-     *   [p]   [ py  px ] [x]
-     * This means we will have to multiply the FEE matrix on the right by
-     *   [q] = [ qθ  qφ ] [ θy θx ] [y]
-     *   [p]   [ pθ  pφ ] [ φy φx ] [x]
-     * The second matrix on the RHS above is the parallactic angle correction.
-     * For these specific coordinate systems,
-     *   [ θy θx ] = [ -sin(χ)  -cos(χ) ]  (see docs for sign conventions used here)
-     *   [ φy φx ]   [ -cos(χ)   sin(χ) ]
-     * Thus, the parallactic angle correction computed here is the transformation
-     * from (y,x) to (θ,φ)
-     */
 
     double el = PIBY2 - za;
 
@@ -347,6 +407,27 @@ void parallactic_angle_correction(
     Ppa[3] = -cchi;
 }
 
+/**
+ * Calculates the normalised primary beam response to a Stokes I, Q, U, or
+ * V sky.
+ *
+ * @param      beam A Hyperbeam object
+ * @param[in]  az The azimuth (radians)
+ * @param[in]  za The zenith angle (radians)
+ * @param[in]  freq_hz The frequency (Hz)
+ * @param[in]  delays The dipole delays that define a primary beam pointing
+ * @param[in]  amps The dipole amplitudes that define the live/dead
+ *             configuration
+ * @param[out] IQUV The beam response
+ * @param[out] J A pointer to the beam model Jones matrix
+ * @param      apply_pa_correction Whether to apply the parallactic angle
+ *             correction to `J`
+ *
+ * `IQUV` must point to already-allocated memory with size \f$N_s\f$.
+ *
+ * This function will allocate memory for `J`, which must be freed by the
+ * caller.
+ */
 void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction )
 {
     cuDoubleComplex JH[NCOMPLEXELEMENTS];

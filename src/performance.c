@@ -367,7 +367,7 @@ void logger_message( logger *log, const char *message )
 }
 
 /**
- * Print a stopwatch's statistics.
+ * Prints a stopwatch's statistics.
  *
  * @param log            A logger object containing the stopwatch to be
  *                       reported
@@ -397,7 +397,7 @@ void logger_stopwatch_report_stats( logger *log, const char *stopwatch_name )
 }
 
 /**
- * Print all stopwatches' statistics.
+ * Prints all stopwatches' statistics.
  *
  * @param log  the logger object whose stopwatches are to be reported
  *
