@@ -428,6 +428,19 @@ double parse_dec( char* dec_ddmmss )
 }
 
 
+/**
+ * Calculates the array factor.
+ *
+ * @param[in] obs_metadata  The observation metadata
+ * @param[in] freq_hz       The frequency in Hz
+ * @param[in] bg1           The look-direction
+ * @param[in] bg2           The direction in which to calculate the array
+ *                          factor
+ * @return The array factor
+ *
+ * This function computes the array factor as described in the appendix of
+ * [Meyers et al. (2017)](https://iopscience.iop.org/article/10.3847/1538-4357/aa8bba).
+ */
 double calc_array_factor(
         MetafitsMetadata *obs_metadata,
         uint32_t          freq_hz,
