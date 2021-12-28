@@ -36,59 +36,69 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 // define a macro for accessing gpuAssert
 #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
-/*******************************
- * FORWARD (ANALYSIS) FINE PFB *
- *******************************/
 
-/* The following kernels are part of an "offline" version of the "fine PFB"
-   algorithm that was implemented on the FPGAs of Phase 1 & 2 of the MWA. As
-   described in McSweeney et al. (2020), this algorithm is a version of the
-   "weighted overlap-add" algorithm (see their Eq. (3)):
-
-              K-1
-     X_k[m] = SUM b_m[n] e^(-2πjkn/K),
-              n=0
-
-   where
-
-              P-1
-     b_m[n] = SUM h[Kρ-n] x[n+mM-Kρ].
-              ρ=0
-
-   A full description of these symbols is given in the reference, but it
-   should be noted here that, for the kernels below,
-
-     - "x" represents the input data (INDATA),
-     - "X" represents the output data (OUTDATA),
-     - "h" represents the filter coefficients (FILTER_COEFFS),
-     - "P" represents the number of taps (NTAPS)
-     - "b" represents the weighted overlap-add array (WEIGHTED_OVERLAP_ARRAY)
-
-   The algorithm is broken up into three parts:
-     (1) the weighted overlap-add, which forms "b" from "x" and "h",
-     (2) the FFT, which is implemented using the cuFFT library, and
-     (3) the demotion and packaging of the result into the required
-         output format, which is described in the Appendix of McSweeney et al.
-         (2020).
-
-   Notes:
-
-    - INDATA is expected to have the same data layout as delivered by mwalib's
-      mwalib_voltage_context_read_second() function when applied to MWAX high
-      time resolution data, whose format description can be found at
-      https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System
-      The samples are organised according to the vMWAX_IDX macro.
-
-    - OUTDATA will have the same data layout as "recombined" legacy VCS data:
-      (4+4)-bit complex samples, with imaginary component occupying the first
-      4 bits, and samples organised according to the v_IDX macro.
-
-    - Each thread will operate on one RF input (i.e. antenna/pol combination)
-      and generate the spectrum for a single "fine-channelised" time step
-      (the "m" index). The "weighted overlap-add" array ("b") also resides in
-      device memory, in order that it can make use of cuFFT. This is a 
+/**
+ * \file pfb.cu
+ *
+ * [McSweeney2020]: https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/mwa-tiedarray-processing-iii-microsecond-time-resolution-via-a-polyphase-synthesis-filter/C76837FE84A1DCFAA696C9AC10C44F2D
+ * [MWAXHTR]: https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System
+ *
+ * # Forward (analysis) fine PFB
+ *
+ * The following kernels are part of an "offline" version of the "fine PFB"
+ * algorithm that was implemented on the FPGAs of Phase 1 & 2 of the MWA. As
+ * described in [McSweeney et al. (2020)][McSweeney2020], this algorithm is a
+ * version of the "weighted overlap-add" algorithm (see their Eq. (3)):
+ * \f[
+ *     X_k[m] \sum_n^{K-1} b_m[n] e^{-2\pi jkn/K},
+ * \f]
+ * where
+ * \f[
+ *     b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho].
+ * \f]
+ *
+ * A full description of these symbols is given in the reference, but it
+ * should be noted here that, for the kernels below,
+ *
+ *   - `x` represents the input data (`indata`),
+ *   - `X` represents the output data (`outdata`),
+ *   - `h` represents the filter coefficients (`filter_coeffs`),
+ *   - `P` represents the number of taps (`ntaps`),
+ *   - `b` represents the weighted overlap-add array (`weighted_overlap_array`)
+ *
+ * The algorithm is broken up into three parts, the third of which is
+ * optional:
+ *  1. the weighted overlap-add, which forms `b` from `x` and `h`,
+ *  2. the FFT, which is implemented using the cuFFT library, and
+ *  3. the demotion and packaging of the result into the
+ *     output format, which is described in the Appendix of
+ *     [McSweeney et al. (2020)][McSweeney2020]
+ *
+ * ## Notes:
+ *
+ *  - `indata` is expected to have the same data layout as delivered by mwalib's
+ *    mwalib_voltage_context_read_second() function when applied to MWAX high
+ *    time resolution data, whose format description can be found
+ *    [here][MWAXHTR]. The samples are organised according to the `vMWAX_IDX`
+ *    macro.
+ *  - `outdata` will have the same data layout as "recombined" legacy VCS data,
+ *    as per the `v_IDX` macro.
+ *  - Each thread will operate on one RF input (i.e. antenna/pol combination)
+ *    and generate the spectrum for a single "fine-channelised" time step
+ *    (the `m` index). The `weighted overlap-add` array (`b`) also resides in
+ *    device memory, in order that it can make use of cuFFT.
  */
 
+/**
+ * Performs the weighted overlap-add part of the PFB algorithm.
+ *
+ * @param[in] indata The input data, \f$x[n]\f$,
+ *                   with layout equivalent to the buffer populated by
+ * @param[in] filter_coeffs The PFB filter coefficients
+ * 
+ * The expected thread configuration is
+ * \f$ \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle \f$
+ */
 __global__ void vmWOLA_kernel( char2 *indata,
         int *filter_coeffs, void *weighted_overlap_array )
 {

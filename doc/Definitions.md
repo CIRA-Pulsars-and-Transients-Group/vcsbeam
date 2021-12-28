@@ -122,7 +122,7 @@ The complete list, in alphabetical order of subscripts, is
 | \f$N_f\f$ | Number of frequencies per coarse channel  | 128            |
 | \f$N_p\f$ | Number of polarisations                   | 2              |
 | \f$N_s\f$ | Number of Stokes parameters               | 4              |
-| \f$N_t\f$ | Number of timesteps/samples per second    | 1000           |
+| \f$N_t\f$ | Number of timesteps/samples per second    | 10000          |
 
 ## Comparison of notation in other documents
 
