@@ -57,14 +57,23 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
  *     b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho].
  * \f]
  *
- * A full description of these symbols is given in the reference, but it
- * should be noted here that, for the kernels below,
+ * A full description of these symbols is given in the reference, but here
+ * is a summary:
  *
- *   - `x` represents the input data (`indata`),
- *   - `X` represents the output data (`outdata`),
- *   - `h` represents the filter coefficients (`filter_coeffs`),
- *   - `P` represents the number of taps (`ntaps`),
- *   - `b` represents the weighted overlap-add array (`weighted_overlap_array`)
+ * | Symbol | Meaning | Variable |
+ * | :----: | :------ | :------- |
+ * | \f$x\f$ | The input data                  | `indata`                 |
+ * | \f$X\f$ | The output data                 | `outdata`                |
+ * | \f$h\f$ | The filter coefficients         | `filter_coeffs`          |
+ * | \f$P\f$ | The number of taps              | `ntaps`                  |
+ * | \f$b\f$ | The weighted overlap-add array  | `weighted_overlap_array` |
+ * | \f$\text{nspectra}\f$ | The number of output spectra |               |
+ * | \f$I\f$ | The number of RF inputs         |                          |
+ * | \f$K\f$ | The size of the output spectrum |                          |
+ * | \f$P\f$ | The number of taps              |                          |
+ *
+ * Note that this nomenclature differs from that used elsewhere in this
+ * documentation.
  *
  * The algorithm is broken up into three parts, the third of which is
  * optional:
@@ -94,9 +103,16 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
  *
  * @param[in] indata The input data, \f$x[n]\f$,
  *                   with layout equivalent to the buffer populated by
- * @param[in] filter_coeffs The PFB filter coefficients
+ *                   mwalib (see [the MWAX voltage format][MWAXHTR])
+ * @param[in] filter_coeffs The PFB filter coefficients, \f$h[n]\f$
  * @param[out] weighted_overlap_array The result of the weighted
- *             overlap-add operation.
+ *             overlap-add operation, \f$b[n]\f$
+ *
+ * The weighted overlap-add part of the PFB algorithm is the equation
+ * \f[
+ *     b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho].
+ * \f]
+ * See above for the meaning of the terms in this equation.
  * 
  * The expected thread configuration is
  * \f$ \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle \f$
@@ -163,6 +179,27 @@ __global__ void vmWOLA_kernel( char2 *indata,
 //if (m == 0 && i == 0) printf( "%u %d %d %d %d %d %d %d %d %d %d %d %d\n", n, p, K, P, h_idx, hval, xval.x, xval.y, X, Y, b_idx, b[b_idx].x, b[b_idx].y );
 }
 
+/**
+ * CUDA kernel for performing the rounding and demotion step of the forward
+ * PFB.
+ *
+ * @param[in,out] data The data to be rounded and demoted.
+ *
+ * The rounding and demotion performed here is designed to emulate that
+ * done in the FPGAs of the legacy (Phases 1 & 2) MWA system.
+ * Specifically, it does the following:
+ * \f[
+ *     \begin{cases}
+ *         \left\lfloor \frac{x}{2^{14}} + 0.5 \right\rfloor, & x > 0, \\
+ *         \left\lfloor \frac{x}{2^{14}}       \right\rfloor, & x \le 0.
+ *     \end{cases}
+ * \f]
+ The final numbers are represented as 32-bit floats.
+ *
+ * The expected thread configuration is
+ * \f$\langle\langle\langle (\text{nspectra} \times I), K
+ * \rangle\rangle\rangle\f$
+ */
 __global__ void fpga_rounding_and_demotion( void *data )
 {
     // Parse the block and thread idxs:
@@ -633,7 +670,7 @@ void vmWritePFBOutputToFile( vcsbeam_context *vm )
  * # Backwards (synthesis) fine PFB
  *
  * The backwards, inverse, or synthesis PFB is implemented in a single CUDA
- * kernelm so see ipfb_kernel() for more information.
+ * kernel, so see ipfb_kernel() for more information.
  */
 
 /**
