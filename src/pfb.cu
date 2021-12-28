@@ -95,9 +95,13 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
  * @param[in] indata The input data, \f$x[n]\f$,
  *                   with layout equivalent to the buffer populated by
  * @param[in] filter_coeffs The PFB filter coefficients
+ * @param[out] weighted_overlap_array The result of the weighted
+ *             overlap-add operation.
  * 
  * The expected thread configuration is
  * \f$ \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle \f$
+ *
+ * \todo Add data layout information to this docstring.
  */
 __global__ void vmWOLA_kernel( char2 *indata,
         int *filter_coeffs, void *weighted_overlap_array )
@@ -623,36 +627,54 @@ void vmWritePFBOutputToFile( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "write" );
 }
 
-/**********************************
- * BACKWARDS (SYNTHESIS) FINE PFB *
- **********************************/
+/**
+ * \file pfb.cu
+ *
+ * # Backwards (synthesis) fine PFB
+ *
+ * The backwards, inverse, or synthesis PFB is implemented in a single CUDA
+ * kernelm so see ipfb_kernel() for more information.
+ */
 
+/**
+ * CUDA kernel implementing the synthesis PFB.
+ *
+ * @param[in]  in_real ...
+ * @param[in]  in_imag ...
+ * @param[in]  ft_real ...
+ * @param[in]  ft_imag ...
+ * @param      ntaps ...
+ * @param      npol ...
+ * @param[out] out ...
+ *
+ * The backwards/inverse/synthesis filter is
+ * \f[
+ *     \hat{x}[n] = \frac{1}{K} \sum_m f[n - mM]
+ *                  \sum_k=0^{K-1} X_k[m]\,e^{2\pi jkn/K}
+ * \f]
+ *
+ * The sum over `m` is nominally over all integers, but in practice only
+ * involves a few terms because of the finiteness of the filter, `f`. To be
+ * precise, there are precisely `ntaps` non-zero values.
+ *
+ * \f$X_k[m]\f$ represents the complex-valued inputs, `in_real` and `in_imag`.
+ * Every possible value of \f$f[n]\,e^{2\pi jkn/K}\f$ is provided in `ft_real` and
+ * `ft_imag`.
+ *
+ * `K` is the number of channels, and because this is a critically sampled
+ * PFB, \f$M = K\f$. We will also use `P` to mean the number of taps in the synthesis
+ * filter, and \f$N = KP\f$ to mean the size of the filter.
+ *
+ * The polarisations are computed completely independently.
+ *
+ * And, of course, \f$\hat{x}n]\f$ is represented by the out array.
+ *
+ * \todo Finish writing this docstring
+ */
 __global__ void ipfb_kernel(
     float *in_real, float *in_imag,
     float *ft_real, float *ft_imag,
     int ntaps, int npol, float *out )
-/* This kernel computes the synthesis filter:
-
-              1              K-1
-   xhat[n] = --- SUM f[n-mM] SUM X_k[m] e^(2πjkn/K)
-              K   m          k=0
-
-   The sum over m is nominally over all integers, but in practice only
-   involves a few terms because of the finiteness of the filter, f. To be
-   precise, there are precisely ntaps non-zero values.
-
-   X_k[m] represents the complex-valued inputs, in_real and in_imag.
-   Every possible value of f[n]*e^(2πjkn/K) is provided in ft_real and
-   ft_imag.
-
-   K is the number of channels, and because this is a critically sampled
-   PFB, M = K. We will also use P to mean the number of taps in the synthesis
-   filter, and N = KP to mean the size of the filter.
-
-   The polarisations are computed completely independently.
-
-   And, of course, xhat[n] is represented by the out array.
- */
 {
     // First, set a generic variable for this thread
     int idx = blockDim.x*blockIdx.x + threadIdx.x;
