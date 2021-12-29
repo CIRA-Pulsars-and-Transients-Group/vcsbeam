@@ -208,14 +208,24 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     free( Dd );
 }
 
-void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname )
-/* Read in an RTS file and return the direction independent Jones matrix
+/**
+ * Reads in an RTS DIJones file.
+ *
+ * @param[out] Dd    The buffer to store the read-in matrices
+ * @param[out] A     The buffer to store the alignment matrix
+ * @param[out] amp   A (single-element) buffer to store the calibration
+ *                   amplitude
+ * @param[in]  nant  The number of antennas to read in
+ * @param      fname The name of the file to read
+ *
+ * Read in an RTS file and return the direction independent Jones matrix
  * for each antenna. This implements Eq. (29) in Ord et al. (2019).
  *
  * This function assumes that the RTS "DIJones" files are in a very specific
  * format. However, this code is maintained independently from the RTS,
  * so if the RTS changes, this code may break.
  */
+void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname )
 {
     // Open the file for reading
     FILE *fp = NULL;
