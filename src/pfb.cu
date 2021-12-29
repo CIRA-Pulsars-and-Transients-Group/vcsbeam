@@ -600,9 +600,20 @@ void vmDownloadForwardPFBChunk( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "download" );
 }
 
-void vmExecuteForwardPFB( vcsbeam_context *vm )
-/* The wrapper function that performs a forward PFB on the GPU
+/**
+ * The wrapper function that performs a forward PFB on the GPU.
+ *
+ * For each chunk of data, it calls, in order,
+ *   1. vmUploadForwardPFBChunk()
+ *   2. vmWOLAChunk()
+ *   3. vmFPGARoundingChunk()
+ *   4. vmFFTChunk()
+ *   5. vmPackChunk()
+ *
+ * If a buffer (`vm&rarr;fpfb&rarr;vcs_data`) has been prepared, then
+ * vmDownloadForwardPFBChunk() is called.
  */
+void vmExecuteForwardPFB( vcsbeam_context *vm )
 {
     // Shorthand variables
     forward_pfb *fpfb = vm->fpfb;
@@ -647,6 +658,12 @@ void vmExecuteForwardPFB( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "pfb" );
 }
 
+/**
+ * Writes the result of the forward PFB operation to file.
+ *
+ * This function writes the contents of `vm&rarr;fpfb&rarr;vcs_data` to a file
+ * whose name is returned by the function vmGetLegacyVoltFilename().
+ */
 void vmWritePFBOutputToFile( vcsbeam_context *vm )
 {
     logger_start_stopwatch( vm->log, "write", true );
@@ -687,7 +704,7 @@ void vmWritePFBOutputToFile( vcsbeam_context *vm )
  * The backwards/inverse/synthesis filter is
  * \f[
  *     \hat{x}[n] = \frac{1}{K} \sum_m f[n - mM]
- *                  \sum_k=0^{K-1} X_k[m]\,e^{2\pi jkn/K}
+ *                  \sum_{k=0}^{K-1} X_k[m]\,e^{2\pi jkn/K}
  * \f]
  *
  * The sum over `m` is nominally over all integers, but in practice only
@@ -695,18 +712,18 @@ void vmWritePFBOutputToFile( vcsbeam_context *vm )
  * precise, there are precisely `ntaps` non-zero values.
  *
  * \f$X_k[m]\f$ represents the complex-valued inputs, `in_real` and `in_imag`.
- * Every possible value of \f$f[n]\,e^{2\pi jkn/K}\f$ is provided in `ft_real` and
- * `ft_imag`.
+ * Every possible value of \f$f[n]\,e^{2\pi jkn/K}\f$ is provided in `ft_real`
+ * and `ft_imag`.
  *
  * `K` is the number of channels, and because this is a critically sampled
- * PFB, \f$M = K\f$. We will also use `P` to mean the number of taps in the synthesis
- * filter, and \f$N = KP\f$ to mean the size of the filter.
+ * PFB, \f$M = K\f$. We will also use `P` to mean the number of taps in the
+ * synthesis filter, and \f$N = KP\f$ to mean the size of the filter.
  *
  * The polarisations are computed completely independently.
  *
- * And, of course, \f$\hat{x}n]\f$ is represented by the out array.
+ * \f$\hat{x}[n]\f$ is represented by the `out` array.
  *
- * \todo Finish writing this docstring
+ * \todo Revamp this function to use cuComplex.
  */
 __global__ void ipfb_kernel(
     float *in_real, float *in_imag,
@@ -774,32 +791,36 @@ __global__ void ipfb_kernel(
     __syncthreads();
 }
 
-void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
-                        int npointing, int nsamples, int nchan, int npol,
-                        int sizeof_buffer,
-                        struct gpu_ipfb_arrays *g, float *data_buffer_vdif )
-/* "Invert the PFB" by applying a resynthesis filter, using GPU
- * acceleration.
+/**
+ * Invert the PFB by applying a resynthesis filter, using GPU acceleration.
  *
- * This function expects "detected_beam" to be structured as follows:
+ * This function expects `detected_beam` to be structured as follows:
  *
+ * ```
  *   detected_beam[2*nsamples][nchan][npol]
+ * ```
  *
  * Although detected_samples potentially contains 2 seconds' worth of data,
  * this function only inverts 1 second. The appropriate second is worked out
- * using file_no: if it is even, the first half of detected_beam is used,
+ * using `file_no`: if it is even, the first half of detected_beam is used,
  * if odd, the second half.
  *
- * The output of the inversion is packed back into data_buffer_vdif, a 1D
+ * The output of the inversion is packed back into `data_buffer_vdif`, a 1D
  * array whose ordering is as follows:
  *
+ * ```
  *   time, pol, complexity
+ * ```
  *
  * This ordering is suited for immediate output to the VDIF format.
  *
  * It is assumed that the inverse filter coefficients have already been loaded
  * to the GPU.
  */
+void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
+                        int npointing, int nsamples, int nchan, int npol,
+                        int sizeof_buffer,
+                        struct gpu_ipfb_arrays *g, float *data_buffer_vdif )
 {
     // Setup input values:
     // The starting sample index is "ntaps" places from the end of the second
@@ -860,24 +881,26 @@ void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
 }
 
 
+/**
+ * Load the inverse PFB filter coefficients to the GPU.
+ *
+ * This function loads the inverse filter coefficients and the twiddle factors
+ * into GPU memory. If they were loaded separately (as floats), then the
+ * multiplication of the filter coefficients and the twiddle factors will be
+ * less precise than if a single array containing every combination of floats
+ * and twiddle factors is calculated in doubles, and then demoted to floats.
+ * Hence, this pre-calculation is done in this function before cudaMemcpy is
+ * called.
+ *
+ * The result is 2x 1D arrays loaded onto the GPU (one for real, one for imag)
+ * where the ith element is equal to
+ * \f[
+ *     \text{result}[i] = f[n] \times exp{2\pi jk/K},
+ * \f]
+ * where \f$n = i \% N\f$, \f$k = i / N\f$, \f$N\f$ is the filter size
+ * (`fil_size`) and \f$K\f$ is the number of channels (`nchan`).
+ */
 void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
-/* This function loads the inverse filter coefficients and the twiddle factors
-   into GPU memory. If they were loaded separately (as floats), then the
-   multiplication of the filter coefficients and the twiddle factors will be
-   less precise than if a single array containing every combination of floats
-   and twiddle factors is calculated in doubles, and then demoted to floats.
-   Hence, this pre-calculation is done in this function before cudaMemcpy is
-   called.
-
-   The result is 2x 1D arrays loaded onto the GPU (one for real, one for imag)
-   where the ith element is equal to
-
-   result[i] = f[n] * exp(2πjk/K),
-   n = i % N  (N is the filter size, "fil_size")
-   k = i / N
-   and K is the number of channels (nchan).
-
-*/
 {
     int ch, f, i;
 
@@ -901,6 +924,11 @@ void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
 }
 
 
+/**
+ * Allocate GPU memory needed for performing the inverse PFB.
+ *
+ * Free with free_ipfb().
+ */
 void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
         int npol, int npointing )
 {
@@ -934,7 +962,9 @@ void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
 
 }
 
-
+/**
+ * Free the GPU memory allocated in malloc_ipfb().
+ */
 void free_ipfb( struct gpu_ipfb_arrays *g )
 {
     // Free memory on host and device
