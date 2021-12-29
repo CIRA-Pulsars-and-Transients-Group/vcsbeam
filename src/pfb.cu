@@ -239,6 +239,18 @@ __global__ void fpga_rounding_and_demotion( void *data )
     *fy = (float)Y;
 }
 
+/**
+ * Convert 32-bit integers to 32-bit floats.
+ *
+ * @param data The data to be converted
+ * @param scale A scaling factor to apply (set to 1 for no effect)
+ *
+ * Each thread handles a single integer, so the thread configuration can be
+ * chosen to suit the size of `data`.
+ *
+ * This function acts as an alternative to fpga_rounding_and_demotion(),
+ * in order to preserve the full precision of the PFB output.
+ */
 __global__ void int2float( void *data, double scale )
 {
     // Parse the block and thread idxs
@@ -253,24 +265,34 @@ __global__ void int2float( void *data, double scale )
     *pfloat = (float)(*pint) * scale;
 }
 
+/**
+ * CUDA kernel for packing the PFB'ed data into legacy recombined
+ * layout/format.
+ *
+ * @param[in] ffted The already-FFT'ed PFB data, ready for packing
+ * @param[out] outdata The output data buffer
+ * @param i_idx An array of indexes for the desired ordering of the RF inputs
+ *              (i.e. antenna/polarisation combinations)
+ * @param flags PFB configuration settings
+ *
+ * This is the final step in the forward fine PFB algorithm.
+ * At this point, the FFTED array contains the Fourier-transformed data that
+ * already represents the final channelisation. All that remains to be done is
+ * to pack it into the same layout (and optionally also the same format) as
+ * the VCS recombined data.
+ *
+ * The relevant values for `flags` are (see vmInitForwardPFB() for the full
+ * table):
+ *
+ * | Flag name | Description |
+ * | :-------- | :---------- |
+ * | `PFB_COMPLEX_INT4`    | Typecast the output into (4+4)-bit complex integers |
+ * | `PFB_COMPLEX_FLOAT64` | Typecast the output into (64+64)-bit complex floats |
+ *
+ * The expected thread configuration is
+ * \f$\langle\langle\langle(\text{nspectra},K),I\rangle\rangle\rangle\f$.
+ */
 __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdata, int *i_idx, pfb_flags flags )
-/* This is the final step in the forward fine PFB algorithm that emulates what
-   was implemented on the MWA FPGAs in Phase 1 & 2 (see above for details).
-   At this point, the FFTED array contains the Fourier-transformed data that
-   already represents the final channelisation. All that remains to be done is
-   to pack it into the same format as the VCS recombined data.
-
-   The available flags for PACKING_FLAGS are:
-       PFB_COMPLEX_INT4    = pack into 4+4-bit complex signed ints
-       PFB_COMPLEX_FLOAT64 = pack into 64+64-bit complex signed floats (= cuDoubleComplex)
-
-   Kernel signature:
-     <<<(nspectra,K),I>>>
-   where
-     nspectra is the number of (fine-channelised) time samples
-     K        is the number of channels
-     I        is the number of RF inputs
-*/
 {
     // Parse the kernel signature, using the same mathematical notation
     // described above
@@ -318,25 +340,39 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
     __syncthreads();
 }
 
-void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
-/* Create and initialise a forward_pfb struct.
- * A filter must already be loaded into VM->ANALYSIS_FILTER.
+/**
+ * Create and initialise a forward_pfb struct.
+ *
+ * @param M The "stride" of the PFB
+ * @param flags PFB configuration settings
+ *
+ * Setting \f$M = K\f$, where \f$K\f$ is the value of
+ * `vm&rarr;analysis_filter&rarr;nchans`, will make this a "critically
+ * sampled PFB"; setting \f$M > K\f$, an "oversampled PFB".
+ *
+ * A filter must already be loaded into `vm&rarr;analysis_filter`.
  * **WARNING! The filter will be forcibly typecast to int!!**
- * The GPU processing will be divided up into VM->CHUNKS_PER_SECOND,
+ *
+ * The GPU processing will be divided up into `vm&rarr;chunks_per_second`,
  * chunks per second, but if this number does not divide the number
  * of samples (10000) evenly, then it is incremented until it does.
  *
- * Inputs:
- *
- *   VM                - vcsbeam metadata, derived from mwalib
- *   M                 - the stride of the application of the filter
- *                       (this determines the time resolution of the
- *                       channelised data). Set M = K for critically
- *                       sampled PFB.
- *   FLAGS             - Various flags for whether to allocate memory
- *                       (see pfb_flags enum)
- *
+ * The available flags are given in the following table:
+ * | Flag name | Description |
+ * | :-------- | :---------- |
+ * | `PFB_MALLOC_HOST_INPUT`    | Allocate memory on CPU for the input        |
+ * | `PFB_MALLOC_HOST_OUTPUT`   | Allocate memory on CPU for the output       |
+ * | `PFB_MALLOC_DEVICE_INPUT`  | Allocate memory on GPU for the input        |
+ * | `PFB_MALLOC_DEVICE_OUTPUT` | Allocate memory on GPU for the output       |
+ * | `PFB_MALLOC_ALL`           | Synonym for <code>PFB_MALLOC_HOST_INPUT \| PFB_MALLOC_HOST_OUTPUT \| PFB_MALLOC_DEVICE_INPUT \| PFB_MALLOC_DEVICE_OUTPUT</code> |
+ * | `PFB_COMPLEX_INT4`         | Typecast the output into (4+4)-bit complex integers |
+ * | `PFB_COMPLEX_FLOAT64`      | Typecast the output into (64+64)-bit complex floats |
+ * | `PFB_IMAG_PART_FIRST`      | Place the imaginary part of the output in the first (i.e. most significant) position |
+ * | `PFB_EMULATE_FPGA`         | Perform the (asymmetric) rounding and demotion step in exactly the same way as the original (Phase 1 & 2) MWA FPGAs |
+ * | `PFB_SMART`                | Synonym for <code>PFB_MALLOC_HOST_INPUT \| PFB_MALLOC_DEVICE_INPUT \| PFB_MALLOC_DEVICE_OUTPUT \| PFB_EMULATE_FPGA \| PFB_COMPLEX_INT4</code> |
+ * | `PFB_FULL_PRECISION`       | Synonym for <code>PFB_MALLOC_HOST_INPUT \| PFB_MALLOC_DEVICE_INPUT \| PFB_MALLOC_DEVICE_OUTPUT \| PFB_COMPLEX_FLOAT64</code> |
  */
+void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
 {
     // Create the struct in memory
     vm->fpfb = (forward_pfb *)malloc( sizeof(forward_pfb) );
@@ -458,9 +494,14 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
     vm->nfine_chan       = fpfb->K;
 }
 
-void vmFreeForwardPFB( forward_pfb *fpfb )
-/* Free host and device memory allocated in init_forward_pfb
+/**
+ * Frees host and device memory allocated in vmInitForwardPFB().
+ *
+ * @param fpfb The `forward_pfb` object to be freed.
+ *
+ * After freeing the member variables of `fpfb`, the struct itself is freed.
  */
+void vmFreeForwardPFB( forward_pfb *fpfb )
 {
     cufftDestroy( fpfb->plan );
     gpuErrchk(cudaFreeHost( fpfb->filter_coeffs ));
@@ -474,6 +515,30 @@ void vmFreeForwardPFB( forward_pfb *fpfb )
     free( fpfb );
 }
 
+/**
+ * Copies a chunk of PFB data from CPU to GPU.
+ *
+ * A diagram of the memory layout of the copy operation:
+ * ```
+ *          <--hs->
+ * Host:   |-------|-------|-------| ... |-------| ...
+ * chunk:  0       1       2       3     c
+ *                                       ^ from
+ *
+ *          <--ds-->
+ * Device: |--------|
+ *         ^ to
+ * ```
+ * where
+ *  - **from** = `vm&rarr;v&rarr;buffer + c*hs`
+ *  - **to** = `vm&rarr;fpfb&rarr;d_htr_data`
+ *  - **ds** = `vm&rarr;fpfb&rarr;d_htr_size`
+ *  - **hs** = `vm&rarr;fpfb&rarr;htr_stride`
+ *  - **c** = `vm&rarr;chunk_to_load % vm&rarr;chunks_per_second`
+ *
+ * Note that **ds** is not necessarily equal to **hs**, and that **ds** bytes are
+ * copied.
+ */
 void vmUploadForwardPFBChunk( vcsbeam_context *vm )
 {
     logger_start_stopwatch( vm->log, "upload", false );
@@ -494,6 +559,12 @@ void vmUploadForwardPFBChunk( vcsbeam_context *vm )
         vm->v->locked = false;
 }
 
+/**
+ * Calls the vmWOLA_kernel() kernel for the forward PFB data.
+ *
+ * @todo Keep this as a "pure" forward_pfb function, and make a separate
+ *       "vm" function that's exposed.
+ */
 void vmWOLAChunk( vcsbeam_context *vm )
 {
     // Shorthand variable
@@ -514,6 +585,12 @@ void vmWOLAChunk( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "pfb-wola" );
 }
 
+/**
+ * Calls the fpga_rounding_and_demotion() kernel for the forward PFB data.
+ *
+ * @todo Keep this as a "pure" forward_pfb function, and make a separate
+ *       "vm" function that's exposed.
+ */
 void vmFPGARoundingChunk( vcsbeam_context *vm )
 {
     // Shorthand variable
@@ -542,6 +619,12 @@ void vmFPGARoundingChunk( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "pfb-round" );
 }
 
+/**
+ * Executes the (CUDA) FFT on the forward PFB data.
+ *
+ * @todo Keep this as a "pure" forward_pfb function, and make a separate
+ *       "vm" function that's exposed.
+ */
 void vmFFTChunk( vcsbeam_context *vm )
 {
     // Shorthand variable
@@ -564,6 +647,12 @@ void vmFFTChunk( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "pfb-fft" );
 }
 
+/**
+ * Calls the pack_into_recombined_format() kernel for the forward PFB data.
+ *
+ * @todo Keep this as a "pure" forward_pfb function, and make a separate
+ *       "vm" function that's exposed.
+ */
 void vmPackChunk( vcsbeam_context *vm )
 {
     // Shorthand variable
@@ -582,6 +671,30 @@ void vmPackChunk( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "pfb-pack" );
 }
 
+/**
+ * Copies a chunk of PFB data from GPU to CPU.
+ *
+ * A diagram of the memory layout of the copy operation:
+ * ```
+ *          <--ds-->
+ * Device: |--------|
+ *         ^ from
+ *
+ *          <--hs->
+ * Host:   |-------|-------|-------| ... |-------| ...
+ * chunk:  0       1       2       3     c
+ *                                       ^ to
+ * ```
+ * where
+ *  - **from** = `vm&rarr;fpfb&rarr;d_vcs_data`
+ *  - **to** = `vm&rarr;fpfb&rarr;vcs_data + c*hs`
+ *  - **ds** = `vm&rarr;fpfb&rarr;d_vcs_size`
+ *  - **hs** = `vm&rarr;fpfb&rarr;vcs_stride`
+ *  - **c** = `vm&rarr;chunk_to_load % vm&rarr;chunks_per_second`
+ *
+ * Note that **ds** is not necessarily equal to **hs**, and that **ds** bytes are
+ * copied.
+ */
 void vmDownloadForwardPFBChunk( vcsbeam_context *vm )
 {
     // Shorthand variable
