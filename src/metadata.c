@@ -408,34 +408,48 @@ void vmSetOutputChannelisation( vcsbeam_context *vm, bool out_fine, bool out_coa
     vm->do_forward_pfb = (vm->obs_metadata->mwa_version == VCSMWAXv2);
 }
 
+/**
+ * Allocates memory for the input voltages on the CPU.
+ *
+ * The memory is allocated as a `host_buffer` struct (see vmInitReadBuffer()
+ * for a full description).
+ * The amount of memory allocated depends on whether the observation is
+ * Legacy or MWAX.
+ *
+ * If the input is legacy, the read buffer can be just enough
+ * for one second's worth of data.
+ *
+ * However, for MWAX, the read buffer must be slightly bigger
+ * to accommodate the PFB's extra taps.
+ * (For now, this is fixed to one voltage block. Changing this
+ * will break the gpu kernels that do the fine PFB, for which
+ * the offset into the data is currently hard-coded.)
+ */
 void vmMallocVHost( vcsbeam_context *vm )
 {
-    // If the input is legacy, the read buffer can be just enough
-    // for one second's worth of data.
     if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
         vm->v = vmInitReadBuffer( vm->bytes_per_second, 0 );
-    // However, for MWAX, the read buffer must be slightly bigger
-    // to accommodate the PFB's extra taps.
-    // For now, this is FIXED to one voltage block. Changing this
-    // will break the gpu kernels that do the fine PFB, for which
-    // the offset into the data is currently hard-coded.
     else if (vm->obs_metadata->mwa_version == VCSMWAXv2)
         vm->v = vmInitReadBuffer( vm->bytes_per_second, vm->vcs_metadata->voltage_block_size_bytes );
 }
 
+/**
+ * Frees memory allocated for the input voltages on the CPU.
+ */
 void vmFreeVHost( vcsbeam_context *vm )
 {
     vmFreeReadBuffer( vm->v );
 }
 
 /**
- * vmMallocVDevice
- * ===============
+ * Allocates memory for the input voltages on the GPU.
  *
- * Allocates device memory for the input voltages for the beamformer.
- * If the observation is legacy, then allocates new memory.
- * If the observation is MWAX, then just point to the assumed
- * already existing memory allocated in VM->FPFB.
+ * If the observation is Legacy, then this function allocates new memory and
+ * sets `vm&rarr;d_v_size_bytes` to the address of the new mmemory block.
+ *
+ * If the observation is MWAX, then this function only copies the value of
+ * `vm&rarr;fpfb&rarr;d_vcs_data` to `vm&rarr;d_v_size_bytes`, (without
+ * checking whether it points to valid GPU memory).
  */
 void vmMallocVDevice( vcsbeam_context *vm )
 {
@@ -454,13 +468,12 @@ void vmMallocVDevice( vcsbeam_context *vm )
 }
 
 /**
- * vmFreeVDevice
- * =============
+ * Frees the GPU memory allocated with vmMallocVDevice().
  *
- * Frees the memory allocated with vmMallocVDevice.
- * If the observation is legacy, then free the memory.
- * If the observation is MWAX, then do nothing; the memory
- * should be freed via a call to vmFreeForwardPFB.
+ * If the observation is Legacy, then free the memory.
+ *
+ * If the observation is MWAX, then do nothing; the memory should be freed via
+ * a call to vmFreeForwardPFB().
  */
 void vmFreeVDevice( vcsbeam_context *vm )
 {
