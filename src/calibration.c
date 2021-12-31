@@ -264,19 +264,27 @@ void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, u
 }
 
 
-
+/**
+ * Reads an RTS Bandpass file.
+ *
+ * @param[out] Jm A buffer for the measured matrices, \f${\bf J}_m\f$
+ * @param[out] Jf A buffer for the fitted matrices, \f${\bf J}_f\f$
+ * @param cal_metadata The metadata struct for the calibration observation
+ * @param filename The name of the Bandpass file to be read
+ *
+ * This function populates the \f${\bf J}_m\f$ and \f${\bf J}_f\f$ arrays with
+ * values read in from the given Bandpass file. The Bandpass files contain
+ * only values for antennas and fine channels that have not been flagged.
+ * Nothing is done for those antennas/channels that have been flagged, so the
+ * onus is on the caller to initialise the \f${\bf J}_m\f$ and \f${\bf J}_f\f$
+ * arrays to values to their preferred values.
+ */
 void read_bandpass_file(
         cuDoubleComplex ***Jm, // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
         cuDoubleComplex ***Jf, // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
         MetafitsMetadata  *cal_metadata,
         char *filename         // Input:  name of bandpass file
         )
-/* This function populates the Jm and Jf arrays with values read in from the
- * given bandpass file. The bandpass files contain only values for antennas
- * and fine channels that have not been flagged. Nothing is done for those
- * antennas/channels that have been flagged, so the onus is on the caller to
- * initialise the Jm and Jf arrays to values to their preferred values.
- */
 {
 
     // Some shortcut variables
@@ -598,7 +606,8 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
     if (isfinite(QQscale))  J[3] = cuCdiv( J[3], QQ0norm );
 }
 
-/* Zeroes the off-diagonal terms of the given matrix.
+/**
+ * Zeroes the off-diagonal terms of the given matrix.
  *
  * @param[in,out] J A complex-valued 2x2 matrix, \f${\bf J}\f$
  *
@@ -901,7 +910,10 @@ bool tilename_is_flagged( char *tilename, calibration *cal )
 /**
  * Flags tiles by setting the corresponding calibration matrices to zero.
  *
- *
+ * If `vm&rarr;cal.flags_file` has been set, this function parses it (by
+ * calling vmParseFlaggedTilenamesFile()), and then sets all of the
+ * calibration solutions for the named tiles to zero.
+ * Afterwards, vmSetNumNotFlaggedRFInputs() is called.
  */
 void vmSetCustomTileFlags( vcsbeam_context *vm )
 {
@@ -966,6 +978,12 @@ void vmSetCustomTileFlags( vcsbeam_context *vm )
     vmSetNumNotFlaggedRFInputs( vm );
 }
 
+/**
+ * Sets the member variables of the given calibration struct to their default
+ * values.
+ *
+ * @param cal A pointer to the calibration struct to be initialised
+ */
 void init_calibration( calibration *cal )
 {
     cal->caldir            = NULL;
@@ -975,6 +993,13 @@ void init_calibration( calibration *cal )
     cal->flagged_tilenames = NULL;
 }
 
+/**
+ * Frees the memory associated with a calibration struct.
+ *
+ * @param cal The calibration struct to be freed
+ *
+ * This function frees memory associated with `cal`, but not `cal` itself.
+ */
 void free_calibration( calibration *cal )
 {
     if (cal->caldir != NULL)
