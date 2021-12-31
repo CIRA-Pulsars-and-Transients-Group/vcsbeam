@@ -403,61 +403,19 @@ void read_bandpass_file(
 
 
 /**
- * vmLoadOffringaSolution
- * ======================
+ * Reads in a calibration solution from an Offringa-style solution file.
  *
- * Offringa's own documentation for the format of these binary files (copied from an email
- * dated 4 May 2016 from franz.kirsten@curtin.edu.au to sammy.mcsweeney@gmail.com). This is
- * itself copied from Andre Offringa's original C++ code, in his Anoko repository, in
- * mwa-reduce/solutionfile.h:
+ * A full description of the Offringa file format can be found
+ * [here](@ref offringafileformat).
  *
- * The solution file is used for storing calibration Jones matrices.
- * The format is as follows:
-  *  Bytes |  Description
-  * -------+---------------
-  *  0- 7  |  string intro ; 8-byte null terminated string "MWAOCAL"
-  *  8-11  |  int fileType ; always 0, reserved for indicating something
-  *           other than complex Jones solutions
-  * 12-15  |  int structureType ; always 0, reserved for indicating
-  *           different ordering
-  * 16-19  |  int intervalCount ; Number of solution intervals in file
-  * 20-23  |  int antennaCount ; Number of antennas that were in the
-  *           measurement set (but were not necessary all solved for)
-  * 24-27  |  int channelCount ; Number of channels in the measurement set
-  * 28-31  |  int polarizationCount ; Number of polarizations solved for
-  *           -- always four.
-  * 32-39  |  double startTime ; Start time of solutions (AIPS time)
-  * 40-47  |  double endTime ; End time of solutions (AIPS time)
-  * -------+-------------------
-  * After the header follow 2 x nSolution doubles, with
-  *
-  * nSolutions = nIntervals * nAntennas * nChannels * nPols
-  *
-  * Ordered in the way as given, so:
-  * double 0 : real of interval 0, antenna 0, channel 0, pol 0
-  * double 1 : imaginary of interval 0, antenna 0, channel 0, pol 0
-  * double 2 : real of interval 0, antenna 0, channel 0, pol 1
-  * ...
-  * double 8 : real of interval 0, antenna 0, channel 1, pol 0
-  * double nChannel x 8 : real of interval 0, antenna 1, channel 0, pol 0
-  * etc.
-  *
-  * ints are here always 32 bits unsigned integers, doubles are IEEE
-  * double precision 64 bit floating points.
-  * If a solution is not available, either because its data no data were
-  * selected during calibration for this interval
-  * or because the calibration diverged, a "NaN" will be stored in the
-  * doubles belonging to that solution.
-  *
-  * ----------------------------------------------
-  *
-  * The input file is taken from VM->CAL.CALDIR.
-  *
-  * Only the coarse channel specified in VM->COARSE_CHAN_IDX will be read in.
-  *
-  * This function assumes that memory for the Jones matrices (D) has already
-  * been allocated.
-  */
+ * The input file is taken from `vm&rarr;cal.caldir`.
+ *
+ * Only the coarse channel specified in `vm&rarr;coarse_chan_idx` will be read
+ * in.
+ *
+ * This function assumes that memory for the Jones matrices (D) has already
+ * been allocated.
+ */
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
@@ -587,7 +545,39 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     fclose(fp);
 }
 
-
+/**
+ * Rotates the phases of the elements of a complex matrix with respect to a
+ * reference matrix.
+ *
+ * @param[in,out] J     The matrix whose phases are to be rotated, \f${\bf J}\f$
+ * @param[in]     Jref  The reference matrix, \f${\bf J}_\text{ref}\f$
+ *
+ * Each element in \f${\bf J}\f$ is divided by the corresponding element in
+ * \f${\bf J}_\text{ref}\f$, normalised to unit magnitude.
+ * That is, if
+ * \f[
+ * \begin{aligned}
+ *     {\bf J} &= \begin{bmatrix} J_0 & J_1 \\ J_2 & J_3 \end{bmatrix}, &
+ *     {\bf J}_\text{ref} &=
+ *         \begin{bmatrix}
+ *             J_{\text{ref},0} & J_{\text{ref},1} \\
+ *             J_{\text{ref},2} & J_{\text{ref},3}
+ *         \end{bmatrix},
+ * \end{aligned}
+ * \f]
+ * then this function computes
+ * \f[
+ * \begin{bmatrix}
+ *     J_0\frac{|J_{\text{ref},0}|}{J_{\text{ref},0}} &
+ *     J_1\frac{|J_{\text{ref},1}|}{J_{\text{ref},1}} \\
+ *     J_2\frac{|J_{\text{ref},2}|}{J_{\text{ref},2}} &
+ *     J_3\frac{|J_{\text{ref},3}|}{J_{\text{ref},3}}.
+ * \end{bmatrix}
+ * \f]
+ *
+ * This operation does not affect the magnitudes of the elements of
+ * \f${\bf J}\f$, but only their phases.
+ */
 void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
 {
     cuDoubleComplex PP0norm, PQ0norm, QP0norm, QQ0norm;
@@ -608,19 +598,32 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
     if (isfinite(QQscale))  J[3] = cuCdiv( J[3], QQ0norm );
 }
 
-void zero_PQ_and_QP( cuDoubleComplex *J )
-/* For J = [ QQ, QP ], set PQ and QP to 0 for all antennas
- *         [ PQ, PP ]
+/* Zeroes the off-diagonal terms of the given matrix.
+ *
+ * @param[in,out] J A complex-valued 2x2 matrix, \f${\bf J}\f$
+ *
+ * This function sets the off-diagonal terms to zero, thus:
+ * \f[
+ *     {\bf J} =
+ *     \begin{bmatrix} J_0 & J_1 \\ J_2 & J_3 \end{bmatrix}
+ *     \rightarrow
+ *     \begin{bmatrix} J_0 & 0 \\ 0 & J_3 \end{bmatrix}.
+ * \f]
  */
+void zero_PQ_and_QP( cuDoubleComplex *J )
 {
     J[1] = make_cuDoubleComplex( 0.0, 0.0 );
     J[2] = make_cuDoubleComplex( 0.0, 0.0 );
 }
 
-void parse_calibration_correction_file( uint32_t gpstime, calibration *cal )
-/* Retrieve the PQ phase correction from pq_phase_correction.txt for the given
- * gps time
+/**
+ * Parses the PQ phase correction for the given GPS time from the file
+ * `pq_phase_correction.txt`.
+ *
+ * @param gpstime The GPS second to search for
+ * @param cal     The calibration struct to store the read-in information
  */
+void parse_calibration_correction_file( uint32_t gpstime, calibration *cal )
 {
     char buffer[CAL_BUFSIZE];
     sprintf( buffer, "%s/pq_phase_correction.txt", RUNTIME_DIR );
@@ -692,14 +695,19 @@ void parse_calibration_correction_file( uint32_t gpstime, calibration *cal )
     }
 }
 
-void vmApplyCalibrationCorrections( vcsbeam_context *vm )
-/* Optionally apply certain corrections/adjustments to the calibration solutions
- * given in VM->D. The corrections to be applied are stored in the calibration struct VM->CAL.
- * Three corrections are applied here:
- *   (1) Subtract the phases from each antenna by a reference antenna
- *   (2) Remove the PQ and QP (i.e. off-diagonal) terms
- *   (3) Apply a phase slope to the QQ terms
+/**
+ * Applies various corrections/adjustments to the calibration solutions.
+ *
+ * This function applies to the calibration solutions given in `vm&rarr;D`.
+ * The corrections to be applied are taken from the calibration struct `vm&rarr;cal`.
+ *
+ * Three (optional) corrections are applied:
+ *   1. Subtract the phases from each antenna by a reference antenna
+ *      (see remove_reference_phase()).
+ *   2. Remove the PQ and QP (i.e. off-diagonal) terms (see zero_PQ_and_QP()).
+ *   3. Apply a phase slope to the QQ terms (implemented in this function).
  */
+void vmApplyCalibrationCorrections( vcsbeam_context *vm )
 {
     int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
 
@@ -830,6 +838,12 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
     }
 }
 
+/**
+ * Parse the flagged tile names in the given file.
+ *
+ * @param filename The name of the file to be parsed
+ * @param cal The calibration struct where to store the parsed information
+ */
 void vmParseFlaggedTilenamesFile( char *filename, calibration *cal )
 {
     // Open the file for reading
@@ -861,6 +875,15 @@ void vmParseFlaggedTilenamesFile( char *filename, calibration *cal )
     fclose( f );
 }
 
+/**
+ * Tests whether a tile with the given tilename has been flagged.
+ *
+ * @param tilename The tile name whose flagged status is sought
+ * @param cal The calibration struct containing the list of flagged tiles
+ *
+ * @return True if an only if the tile with the given tilename is flagged in
+ *         in `cal`
+ */
 bool tilename_is_flagged( char *tilename, calibration *cal )
 {
     int i;
@@ -875,6 +898,11 @@ bool tilename_is_flagged( char *tilename, calibration *cal )
     return false;
 }
 
+/**
+ * Flags tiles by setting the corresponding calibration matrices to zero.
+ *
+ *
+ */
 void vmSetCustomTileFlags( vcsbeam_context *vm )
 {
     // If no filename given, just count the number of active tiles and return

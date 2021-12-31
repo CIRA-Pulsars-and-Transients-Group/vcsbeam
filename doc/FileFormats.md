@@ -104,12 +104,9 @@ Mitch
 
 ### Offringa/Hyperdrive calibration file format {#offringafileformat}
 
+Offringa's own documentation for the format of these binary files (copied from an email dated 4 May 2016 from `franz.kirsten@curtin.edu.au` to `sammy.mcsweeney@gmail.com)`.
+This is itself copied from Andre Offringa's original C++ code, in his Anoko repository, in `mwa-reduce/solutionfile.h`:
 ```
-Offringa's own documentation for the format of these binary files (copied from an email
-dated 4 May 2016 from franz.kirsten@curtin.edu.au to sammy.mcsweeney@gmail.com). This is
-itself copied from Andre Offringa's original C++ code, in his Anoko repository, in
-mwa-reduce/solutionfile.h:
-
 The solution file is used for storing calibration Jones matrices.
 The format is as follows:
   Bytes |  Description
