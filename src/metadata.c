@@ -12,6 +12,15 @@
 
 #include "vcsbeam.h"
 
+/**
+ * Initialises a VCSBeam context struct.
+ *
+ * @param use_mpi Set up the struct for using MPI
+ * @return A pointer to a newly allocated `vcsbeam_context` struct
+ *
+ * Once the VCSBeam context is finished with, it should be freed with a call
+ * to destroy_vcsbeam_context().
+ */
 vcsbeam_context *vmInit( bool use_mpi )
 {
     // Allocate memory for the VCSBEAM_METADATA struct
@@ -135,6 +144,22 @@ vcsbeam_context *vmInit( bool use_mpi )
     return vm;
 }
 
+/**
+ * Binds a set of observation files to the VCSBeam context.
+ *
+ * @param first_coarse_chan_str A string representation of the lowest coarse
+ *        channel to be processed
+ * @param num_coarse_chans_to_process The number of coarse channels to be
+ *        processed
+ * @param coarse_chan_idx_offset The first coarse channel (relative to
+ *        `first_coarse_chan_str`) to be processed by this MPI process
+ * @param first_gps_second_str A string representation of the first GPS second
+ *        to be processed
+ * @param num_gps_seconds_to_process The number of GPS seconds to be processed
+ * @param gps_second_offset The first GPS second (relative to
+ *        `first_gps_second_str`) to be processed by this MPI process
+ * @param datadir The directory containing the observation data files
+ */
 void vmBindObsData(
         vcsbeam_context *vm,
         char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset,
@@ -202,7 +227,16 @@ void vmBindObsData(
     vmMallocVHost( vm );
 }
 
-
+/**
+ * Binds a calibration solution to the VCSBeam context.
+ *
+ * @param caldir The directory containing RTS solution files, OR the path of
+ *        an Offringa-style calibration solution file
+ * @param cal_type Either `CAL_RTS` or `CAL_OFFRINGA`
+ * @param use_bandpass Whether to include the Bandpass information (relevant
+ *        for RTS solutions only)
+ * @param flags_file A file containing names of (extra) tiles to be flagged
+ */
 void vmBindCalibrationData( vcsbeam_context *vm,
         char   *caldir,
         int     cal_type,
@@ -220,6 +254,13 @@ void vmBindCalibrationData( vcsbeam_context *vm,
     strcpy( vm->cal.flags_file, flags_file );
 }
 
+/**
+ * Reads in a calibration solution.
+ *
+ * Calls either vmLoadRTSSolution() or vmLoadOffringaSolution() depending
+ * on whether `vm&rarr;cal.cal_type` is set to `CAL_RTS` or `CAL_OFFRINGA`.
+ * Afterwards, vmSetCustomTileFlags() is called.
+ */
 void vmReadCalibration( vcsbeam_context *vm )
 {
     // Read in the calibration data from file
@@ -232,11 +273,17 @@ void vmReadCalibration( vcsbeam_context *vm )
     vmSetCustomTileFlags( vm );
 }
 
-Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
-/* Returns the index (to obs_metadata->antennas[]) for the antenna with the
- * specified name. If no antenna with that name exists, returns
- * NO_ANTENNA_FOUND (= -1)
+/**
+ * Finds an antenna in an observation with a given name.
+ *
+ * @param obs_metadata The observation metadata to be searched
+ * @param tile_name The name of the tile being sought
+ * @return A pointer to an mwalib Antenna struct with a matching tile name
+ *
+ * If no tile with the given name is found in the observation, `NULL` is
+ * returned.
  */
+Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
 {
     int i;
     for (i = 0; i < (int)(obs_metadata->num_ants); i++)
@@ -249,10 +296,15 @@ Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
     return NULL;
 }
 
-
-void destroy_vcsbeam_context( vcsbeam_context *vm )
-/* Frees the memory allocated in INIT_VCSBEAM_METADATA
+/**
+ * Frees the memory associated with the VCSBeam context.
+ *
+ * After freeing the memory associated with the VCSBeam context's member
+ * variables, this function frees the VCSBeam context itself.
+ *
+ * @todo Rename this function to a `vm...` name
  */
+void destroy_vcsbeam_context( vcsbeam_context *vm )
 {
     // Free manually created arrays
     free( vm->gps_seconds_to_process );
@@ -307,19 +359,38 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     free( vm );
 }
 
+/**
+ * Sets flags governing whether the PFB and inverse PFB routines are run
+ * depending on the input and output channelisations.
+ *
+ * @param out_fine Sets the flag for fine channelised output
+ * @param out_coarse Sets the flag for coarse_channelised output
+ *
+ * Whether the (forward) PFB or the inverse PFB needs to be run depends on the
+ * input channelisation (fine = Legacy, or coarse = MWAX), and what
+ * channelisations are desired in output (fine or coarse).
+ * The `vm&rarr;do_forward_pfb` and `vm&rarr;do_inverse_pfb` are set
+ * accordingly.
+ *
+ * The following table describes all possible scenarios:
+ * | Input mode | Output fine? | Output coarse? | Do forward PFB? | Do inverse PFB? |
+ * | :--------: | :----------: | :------------: | :-------------: | :-------------: |
+ * | Legacy     | no           | no             | no              | no              |
+ * | Legacy     | no           | yes            | no              | yes             |
+ * | Legacy     | yes          | no             | no              | no              |
+ * | Legacy     | yes          | yes            | no              | yes             |
+ * | MWAX       | no           | no             | no              | no              |
+ * | MWAX       | no           | yes            | yes             | yes             |
+ * | MWAX       | yes          | no             | yes             | no              |
+ * | MWAX       | yes          | yes            | yes             | yes             |
+ *
+ * Note that both forward and inverse PFBs are required for MWAX data even
+ * when fine-channelised output is not requested.
+ * This is because the beamforming operation requires sufficiently fine
+ * channels in order to avoid decoherence across the channels.
+ */
 void vmSetOutputChannelisation( vcsbeam_context *vm, bool out_fine, bool out_coarse )
 {
-    /*   # | input  | fine | coarse || forward pfb | inverse pfb
-     *  ---+--------+------+--------||-------------+-------------
-     *   1 | legacy | no   | no     || no          | no
-     *   2 | legacy | no   | yes    || no          | yes
-     *   3 | legacy | yes  | no     || no          | no
-     *   4 | legacy | yes  | yes    || no          | yes
-     *   5 | mwax   | no   | no     || no          | no
-     *   6 | mwax   | no   | yes    || yes         | yes
-     *   7 | mwax   | yes  | no     || yes         | no
-     *   8 | mwax   | yes  | yes    || yes         | yes
-     */
     vm->output_fine_channels   = out_fine;
     vm->output_coarse_channels = out_coarse;
 
