@@ -85,26 +85,37 @@ $(function() {
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:ae70052b290c7584548822ba40b9909d3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#ae70052b290c7584548822ba40b9909d3">calc_geometric_delays</a> (beam_geom *beam_geom_vals, uint32_t freq_hz, MetafitsMetadata *obs_metadata, cuDoubleComplex *phi)</td></tr>
+<tr class="memdesc:ae70052b290c7584548822ba40b9909d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the phase delays required for phasing up each antenna.  <a href="geometry_8c.html#ae70052b290c7584548822ba40b9909d3">More...</a><br /></td></tr>
 <tr class="separator:ae70052b290c7584548822ba40b9909d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a810de847675584bc9974936afa489292"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#a810de847675584bc9974936afa489292">vmCalcPhi</a> (vcsbeam_context *vm, beam_geom *beam_geom_vals)</td></tr>
+<tr class="memdesc:a810de847675584bc9974936afa489292"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the phase delays for all relevant frequencies and pointings.  <a href="geometry_8c.html#a810de847675584bc9974936afa489292">More...</a><br /></td></tr>
 <tr class="separator:a810de847675584bc9974936afa489292"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4f22458f9c2fe3434cf12558405ffcff"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#a4f22458f9c2fe3434cf12558405ffcff">vmCreateGeometricDelays</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a4f22458f9c2fe3434cf12558405ffcff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the delay phase arrays on both host and device.  <a href="geometry_8c.html#a4f22458f9c2fe3434cf12558405ffcff">More...</a><br /></td></tr>
 <tr class="separator:a4f22458f9c2fe3434cf12558405ffcff"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3f703cfe4e3fee512ce3731a3f618df7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#a3f703cfe4e3fee512ce3731a3f618df7">free_geometric_delays</a> (geometric_delays *gdelays)</td></tr>
+<tr class="memdesc:a3f703cfe4e3fee512ce3731a3f618df7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory for the delay phase arrays on both host and device.  <a href="geometry_8c.html#a3f703cfe4e3fee512ce3731a3f618df7">More...</a><br /></td></tr>
 <tr class="separator:a3f703cfe4e3fee512ce3731a3f618df7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a39f9cef5e83cd606efe7b197e420178c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#a39f9cef5e83cd606efe7b197e420178c">vmPushPhi</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a39f9cef5e83cd606efe7b197e420178c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies the delay phase arrays from CPU memory to GPU memory.  <a href="geometry_8c.html#a39f9cef5e83cd606efe7b197e420178c">More...</a><br /></td></tr>
 <tr class="separator:a39f9cef5e83cd606efe7b197e420178c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a02b83016499e45a0f970c349bc866dcc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#a02b83016499e45a0f970c349bc866dcc">calc_beam_geom</a> (double ras_hours, double decs_degs, double mjd, beam_geom *bg)</td></tr>
+<tr class="memdesc:a02b83016499e45a0f970c349bc866dcc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a <code>beam_geom</code> struct with pointing information derived from a given set of RAs, Decs, and MJDs.  <a href="geometry_8c.html#a02b83016499e45a0f970c349bc866dcc">More...</a><br /></td></tr>
 <tr class="separator:a02b83016499e45a0f970c349bc866dcc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaa2984696defc033c512894674aac97b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#aaa2984696defc033c512894674aac97b">dec2hms</a> (char *out, double in, int sflag)</td></tr>
+<tr class="memdesc:aaa2984696defc033c512894674aac97b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts a decimal RA to the format "HH:MM:SS.S".  <a href="geometry_8c.html#aaa2984696defc033c512894674aac97b">More...</a><br /></td></tr>
 <tr class="separator:aaa2984696defc033c512894674aac97b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa953d4605eeee44e39f62dbc4e3beca6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#aa953d4605eeee44e39f62dbc4e3beca6">mjd2lst</a> (double mjd, double *lst)</td></tr>
+<tr class="memdesc:aa953d4605eeee44e39f62dbc4e3beca6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert MJD to LST.  <a href="geometry_8c.html#aa953d4605eeee44e39f62dbc4e3beca6">More...</a><br /></td></tr>
 <tr class="separator:aa953d4605eeee44e39f62dbc4e3beca6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afe7d4548fa61ca4aaea6a98f5aa7be24"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#afe7d4548fa61ca4aaea6a98f5aa7be24">parse_ra</a> (char *ra_hhmmss)</td></tr>
+<tr class="memdesc:afe7d4548fa61ca4aaea6a98f5aa7be24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse an RA string.  <a href="geometry_8c.html#afe7d4548fa61ca4aaea6a98f5aa7be24">More...</a><br /></td></tr>
 <tr class="separator:afe7d4548fa61ca4aaea6a98f5aa7be24"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a69a8300a739499e65687da3e7adb3479"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#a69a8300a739499e65687da3e7adb3479">parse_dec</a> (char *dec_ddmmss)</td></tr>
+<tr class="memdesc:a69a8300a739499e65687da3e7adb3479"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse a Dec string.  <a href="geometry_8c.html#a69a8300a739499e65687da3e7adb3479">More...</a><br /></td></tr>
 <tr class="separator:a69a8300a739499e65687da3e7adb3479"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a67d9c26fe8074d9516927a499b68f0e9"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#a67d9c26fe8074d9516927a499b68f0e9">calc_array_factor</a> (MetafitsMetadata *obs_metadata, uint32_t freq_hz, beam_geom *bg1, beam_geom *bg2)</td></tr>
+<tr class="memdesc:a67d9c26fe8074d9516927a499b68f0e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the array factor.  <a href="geometry_8c.html#a67d9c26fe8074d9516927a499b68f0e9">More...</a><br /></td></tr>
 <tr class="separator:a67d9c26fe8074d9516927a499b68f0e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
@@ -146,6 +157,19 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calculates the array factor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">obs_metadata</td><td>The observation metadata </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">freq_hz</td><td>The frequency in Hz </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">bg1</td><td>The look-direction </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">bg2</td><td>The direction in which to calculate the array factor </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The array factor</dd></dl>
+<p>This function computes the array factor as described in the appendix of <a href="https://iopscience.iop.org/article/10.3847/1538-4357/aa8bba">Meyers et al. (2017)</a>. </p>
+
 </div>
 </div>
 <a id="a02b83016499e45a0f970c349bc866dcc"></a>
@@ -185,6 +209,42 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Populates a <code>beam_geom</code> struct with pointing information derived from a given set of RAs, Decs, and MJDs. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ras_hours</td><td>An array of RAs (in decimal hours) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">decs_degs</td><td>An array of Decs (in decimal degrees) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">mjd</td><td>The Modified Julian Date </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">bg</td><td>The struct containing various geometric quantities</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>The quantities which are calculated are </p><table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Quantity   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>bg-&gt;mean_ra</code>   </td><td class="markdownTableBodyNone">The mean RA of the pointing    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>bg-&gt;mean_dec</code>   </td><td class="markdownTableBodyNone">The mean Dec of the pointing    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>bg-&gt;az</code>   </td><td class="markdownTableBodyNone">The azimuth of the pointing    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>bg-&gt;el</code>   </td><td class="markdownTableBodyNone">The elevation of the pointing    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>bg-&gt;lmst</code>   </td><td class="markdownTableBodyNone">The local mean sidereal time    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>bg-&gt;fracmjd</code>   </td><td class="markdownTableBodyNone">The fractional part of the MJD    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>bg-&gt;intmjd</code>   </td><td class="markdownTableBodyNone">The integer part of the MJD    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>bg-&gt;unit_N</code>   </td><td class="markdownTableBodyNone">The normalised projection of the look-direction onto local North    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>bg-&gt;unit_E</code>   </td><td class="markdownTableBodyNone">The normalised projection of the look-direction onto local East    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>bg-&gt;unit_H</code>   </td><td class="markdownTableBodyNone">The normalised projection of the look-direction onto local "Up"   </td></tr>
+</table>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000018">Todo:</a></b></dt><dd>Put the table describing the beam_geom struct where it belongs: with the documentation for the beam_geom struct! </dd></dl>
 
 </div>
 </div>
@@ -226,6 +286,19 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calculates the phase delays required for phasing up each antenna. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">beam_geom_vals</td><td>Struct containing pointing information for the requested beams. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">freq_hz</td><td>The frequency in Hz </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">obs_metadata</td><td>The observation metadata </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">phi</td><td>The calculated phase delays</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This function calculates the phase delays for the given look-direction and frequency, for each antenna. This consists of both a "geometric delay" component, related to the different times a planar wavefront coming from a particular direction arrives at each antenna, and a "cable delay" component, related to the physical lengths of the cables connecting the antennas to the rest of the system.</p>
+<p>The equations implemented here are the first three equations in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E">Ord et al. (2019)</a>. </p>
+
 </div>
 </div>
 <a id="aaa2984696defc033c512894674aac97b"></a>
@@ -260,6 +333,18 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Converts a decimal RA to the format "HH:MM:SS.S". </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">out</td><td>A buffer for the output string </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">in</td><td>The decimal RA </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">sflag</td><td>Whether to include a leading '+'</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>The <code>out</code> buffer must already be allocated.</p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000019">Todo:</a></b></dt><dd>Figure out whether <a class="el" href="geometry_8c.html#aaa2984696defc033c512894674aac97b" title="Converts a decimal RA to the format &quot;HH:MM:SS.S&quot;.">dec2hms()</a> is <em>actually</em> just for RAs, or whether it is more general than that (and, if so, change the name to reflect this). </dd></dl>
+
 </div>
 </div>
 <a id="a3f703cfe4e3fee512ce3731a3f618df7"></a>
@@ -277,6 +362,9 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Frees memory for the delay phase arrays on both host and device. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000017">Todo:</a></b></dt><dd>Convert <a class="el" href="geometry_8c.html#a3f703cfe4e3fee512ce3731a3f618df7" title="Frees memory for the delay phase arrays on both host and device.">free_geometric_delays()</a> into a "vm" function. </dd></dl>
 
 </div>
 </div>
@@ -306,6 +394,16 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Convert MJD to LST. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">mjd</td><td>The Modified Julian Date </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">lst</td><td>The Local Sidereal Time</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000020">Todo:</a></b></dt><dd>Consider removing <a class="el" href="geometry_8c.html#aa953d4605eeee44e39f62dbc4e3beca6" title="Convert MJD to LST.">mjd2lst()</a>, since it consists only of a single call to a <code>pal</code> function. </dd></dl>
+
 </div>
 </div>
 <a id="a69a8300a739499e65687da3e7adb3479"></a>
@@ -324,6 +422,15 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Parse a Dec string. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">dec_ddmmss</td><td>A string representing a Dec in the DD:MM:SS.S format </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The Dec in decimal degrees. </dd></dl>
+
 </div>
 </div>
 <a id="afe7d4548fa61ca4aaea6a98f5aa7be24"></a>
@@ -341,6 +448,15 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Parse an RA string. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ra_hhmmss</td><td>A string representing an RA in the HH:MM:SS.S format </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The RA in decimal hours. </dd></dl>
 
 </div>
 </div>
@@ -370,6 +486,10 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calculates the phase delays for all relevant frequencies and pointings. </p>
+<p>Calls <a class="el" href="geometry_8c.html#ae70052b290c7584548822ba40b9909d3" title="Calculates the phase delays required for phasing up each antenna.">calc_geometric_delays()</a> for all frequencies in the relevant coarse channel, and for all requested pointings.</p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000016">Todo:</a></b></dt><dd>Incorporate the <code>beam_geom</code> struct into the <code>vm</code> struct. </dd></dl>
+
 </div>
 </div>
 <a id="a4f22458f9c2fe3434cf12558405ffcff"></a>
@@ -388,6 +508,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the delay phase arrays on both host and device. </p>
+<p>Free with <a class="el" href="geometry_8c.html#a3f703cfe4e3fee512ce3731a3f618df7" title="Frees memory for the delay phase arrays on both host and device.">free_geometric_delays()</a> </p>
+
 </div>
 </div>
 <a id="a39f9cef5e83cd606efe7b197e420178c"></a>
@@ -405,6 +528,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Copies the delay phase arrays from CPU memory to GPU memory. </p>
 
 </div>
 </div>

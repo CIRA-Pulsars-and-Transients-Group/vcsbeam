@@ -6,7 +6,7 @@ var searchData=
   ['vmapplycalibrationcorrections_125',['vmApplyCalibrationCorrections',['../calibration_8c.html#a1747181121fba13c88fdee4ce3de502d',1,'calibration.c']]],
   ['vmapplyj_5fkernel_126',['vmApplyJ_kernel',['../form__beam_8cu.html#a934af01c60bf52f6985f34b360c2fb78',1,'form_beam.cu']]],
   ['vmapplyjchunk_127',['vmApplyJChunk',['../form__beam_8cu.html#a215f77c938330e13916a9eedd6b675aa',1,'form_beam.cu']]],
-  ['vmbeamform_5fkernel_128',['vmBeamform_kernel',['../form__beam_8cu.html#a2f6655f86d0779d77f8482b586ffb4d4',1,'form_beam.cu']]],
+  ['vmbeamform_5fkernel_128',['vmBeamform_kernel',['../form__beam_8cu.html#a14c72ad11c18eba09eb2cf14f1933638',1,'form_beam.cu']]],
   ['vmbeamformchunk_129',['vmBeamformChunk',['../form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd',1,'form_beam.cu']]],
   ['vmbeamformsecond_130',['vmBeamformSecond',['../form__beam_8cu.html#a56e5357bff69a7f58f89578ef3130c41',1,'form_beam.cu']]],
   ['vmbindcalibrationdata_131',['vmBindCalibrationData',['../metadata_8c.html#a6d82fbfb82a80d86875463d9cc542486',1,'metadata.c']]],

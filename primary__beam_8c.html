@@ -89,33 +89,46 @@ Macros</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a39d7cb51f87c2ee201508a19bb9a8285"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285">vmCalcB</a> (vcsbeam_context *vm, beam_geom *beam_geom_vals)</td></tr>
+<tr class="memdesc:a39d7cb51f87c2ee201508a19bb9a8285"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the beam model Jones matrices for the given pointings.  <a href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285">More...</a><br /></td></tr>
 <tr class="separator:a39d7cb51f87c2ee201508a19bb9a8285"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b05c0aa7ccd995a5c7262829e5f84cf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a4b05c0aa7ccd995a5c7262829e5f84cf">vmCreatePrimaryBeam</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a4b05c0aa7ccd995a5c7262829e5f84cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the beam model Jones matrices.  <a href="primary__beam_8c.html#a4b05c0aa7ccd995a5c7262829e5f84cf">More...</a><br /></td></tr>
 <tr class="separator:a4b05c0aa7ccd995a5c7262829e5f84cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a66bac3aed1ef85141bf50bb9bca118f3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a66bac3aed1ef85141bf50bb9bca118f3">free_primary_beam</a> (primary_beam *pb)</td></tr>
+<tr class="memdesc:a66bac3aed1ef85141bf50bb9bca118f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees the memory allocated in <a class="el" href="primary__beam_8c.html#a4b05c0aa7ccd995a5c7262829e5f84cf" title="Allocates memory for the beam model Jones matrices.">vmCreatePrimaryBeam()</a>  <a href="primary__beam_8c.html#a66bac3aed1ef85141bf50bb9bca118f3">More...</a><br /></td></tr>
 <tr class="separator:a66bac3aed1ef85141bf50bb9bca118f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adfadd7431369faf082a54795fac0b5cd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#adfadd7431369faf082a54795fac0b5cd">create_delays_amps_from_metafits</a> (MetafitsMetadata *obs_metadata, uint32_t ***delays, double ***amps)</td></tr>
+<tr class="memdesc:adfadd7431369faf082a54795fac0b5cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs "delay" and "amp" arrays required by Hyperbeam.  <a href="primary__beam_8c.html#adfadd7431369faf082a54795fac0b5cd">More...</a><br /></td></tr>
 <tr class="separator:adfadd7431369faf082a54795fac0b5cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aca3a3b8084b6b8cb82e9385408c0a162"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#aca3a3b8084b6b8cb82e9385408c0a162">free_delays_amps</a> (MetafitsMetadata *obs_metadata, uint32_t **delays, double **amps)</td></tr>
+<tr class="memdesc:aca3a3b8084b6b8cb82e9385408c0a162"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees the memory allocated in <a class="el" href="primary__beam_8c.html#adfadd7431369faf082a54795fac0b5cd" title="Constructs &quot;delay&quot; and &quot;amp&quot; arrays required by Hyperbeam.">create_delays_amps_from_metafits()</a>.  <a href="primary__beam_8c.html#aca3a3b8084b6b8cb82e9385408c0a162">More...</a><br /></td></tr>
 <tr class="separator:aca3a3b8084b6b8cb82e9385408c0a162"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abed728c1e058dd6b81dd9771b431a2c1"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#abed728c1e058dd6b81dd9771b431a2c1">hash_dipole_config</a> (double *amps)</td></tr>
+<tr class="memdesc:abed728c1e058dd6b81dd9771b431a2c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implements a hash lookup for dead/live dipole configurations.  <a href="primary__beam_8c.html#abed728c1e058dd6b81dd9771b431a2c1">More...</a><br /></td></tr>
 <tr class="separator:abed728c1e058dd6b81dd9771b431a2c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afdec646d89aec813e571bb5a2b64612f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">parallactic_angle_correction</a> (double *Ppa, double lat, double az, double za)</td></tr>
+<tr class="memdesc:afdec646d89aec813e571bb5a2b64612f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the parallactic angle correction matrix, <img class="formulaInl" alt="${\bf P}_\text{pa}$" src="form_169.png" width="21" height="14"/>.  <a href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">More...</a><br /></td></tr>
 <tr class="separator:afdec646d89aec813e571bb5a2b64612f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a07d76803151480bdee46ceb53fd93d74"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a07d76803151480bdee46ceb53fd93d74">calc_normalised_beam_response</a> (FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction)</td></tr>
+<tr class="memdesc:a07d76803151480bdee46ceb53fd93d74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the normalised primary beam response to a Stokes I, Q, U, or V sky.  <a href="primary__beam_8c.html#a07d76803151480bdee46ceb53fd93d74">More...</a><br /></td></tr>
 <tr class="separator:a07d76803151480bdee46ceb53fd93d74"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
 <tr class="memitem:aa4ebd5848b98c1cf4465948643689007"><td class="memItemLeft" align="right" valign="top">const double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#aa4ebd5848b98c1cf4465948643689007">Isky</a> [] = { 0.5, 0. , 0. , 0. , 0. , 0. , 0.5, 0. }</td></tr>
+<tr class="memdesc:aa4ebd5848b98c1cf4465948643689007"><td class="mdescLeft">&#160;</td><td class="mdescRight">The coherency matrix for a pure Stokes I sky.  <a href="primary__beam_8c.html#aa4ebd5848b98c1cf4465948643689007">More...</a><br /></td></tr>
 <tr class="separator:aa4ebd5848b98c1cf4465948643689007"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae37edf3b0b6c65691da0f8815fc0ed8f"><td class="memItemLeft" align="right" valign="top">const double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#ae37edf3b0b6c65691da0f8815fc0ed8f">Qsky</a> [] = { 0.5, 0. , 0. , 0. , 0. , 0. , -0.5, 0. }</td></tr>
+<tr class="memdesc:ae37edf3b0b6c65691da0f8815fc0ed8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The coherency matrix for a pure Stokes Q sky.  <a href="primary__beam_8c.html#ae37edf3b0b6c65691da0f8815fc0ed8f">More...</a><br /></td></tr>
 <tr class="separator:ae37edf3b0b6c65691da0f8815fc0ed8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4dbbcdc2f67633b88b3af50d727dd10e"><td class="memItemLeft" align="right" valign="top">const double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a4dbbcdc2f67633b88b3af50d727dd10e">Usky</a> [] = { 0. , 0. , 0.5, 0. , 0.5, 0. , 0. , 0. }</td></tr>
+<tr class="memdesc:a4dbbcdc2f67633b88b3af50d727dd10e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The coherency matrix for a pure Stokes U sky.  <a href="primary__beam_8c.html#a4dbbcdc2f67633b88b3af50d727dd10e">More...</a><br /></td></tr>
 <tr class="separator:a4dbbcdc2f67633b88b3af50d727dd10e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad070a63d38129edfe4c274fa98463be8"><td class="memItemLeft" align="right" valign="top">const double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#ad070a63d38129edfe4c274fa98463be8">Vsky</a> [] = { 0. , 0. , 0. , -0.5, 0 , 0.5, 0. , 0. }</td></tr>
+<tr class="memdesc:ad070a63d38129edfe4c274fa98463be8"><td class="mdescLeft">&#160;</td><td class="mdescRight">The coherency matrix for a pure Stokes V sky.  <a href="primary__beam_8c.html#ad070a63d38129edfe4c274fa98463be8">More...</a><br /></td></tr>
 <tr class="separator:ad070a63d38129edfe4c274fa98463be8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7c6e931508e2907ad22c4188bd8c4ec3"><td class="memItemLeft" align="right" valign="top">const double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a7c6e931508e2907ad22c4188bd8c4ec3">sky</a> [] = { <a class="el" href="primary__beam_8c.html#aa4ebd5848b98c1cf4465948643689007">Isky</a>, <a class="el" href="primary__beam_8c.html#ae37edf3b0b6c65691da0f8815fc0ed8f">Qsky</a>, <a class="el" href="primary__beam_8c.html#a4dbbcdc2f67633b88b3af50d727dd10e">Usky</a>, <a class="el" href="primary__beam_8c.html#ad070a63d38129edfe4c274fa98463be8">Vsky</a> }</td></tr>
+<tr class="memdesc:a7c6e931508e2907ad22c4188bd8c4ec3"><td class="mdescLeft">&#160;</td><td class="mdescRight">The set of coherency matrices for pure Stokes I, Q, U, and V skies.  <a href="primary__beam_8c.html#a7c6e931508e2907ad22c4188bd8c4ec3">More...</a><br /></td></tr>
 <tr class="separator:a7c6e931508e2907ad22c4188bd8c4ec3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
@@ -202,6 +215,24 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calculates the normalised primary beam response to a Stokes I, Q, U, or V sky. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir"></td><td class="paramname">beam</td><td>A Hyperbeam object </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">az</td><td>The azimuth (radians) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">za</td><td>The zenith angle (radians) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">freq_hz</td><td>The frequency (Hz) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">delays</td><td>The dipole delays that define a primary beam pointing </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">amps</td><td>The dipole amplitudes that define the live/dead configuration </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">IQUV</td><td>The beam response </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">J</td><td>A pointer to the beam model Jones matrix </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">apply_pa_correction</td><td>Whether to apply the parallactic angle correction to <code>J</code></td></tr>
+  </table>
+  </dd>
+</dl>
+<p><code>IQUV</code> must point to already-allocated memory with size <img class="formulaInl" alt="$N_s$" src="form_37.png" width="15" height="13"/>.</p>
+<p>This function will allocate memory for <code>J</code>, which must be freed by the caller. </p>
+
 </div>
 </div>
 <a id="adfadd7431369faf082a54795fac0b5cd"></a>
@@ -235,6 +266,18 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Constructs "delay" and "amp" arrays required by Hyperbeam. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">obs_metadata</td><td>A MetafitsMetadata object containing the delays and amps. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">delays</td><td>A pointer to an array of delay values, with layout <img class="formulaInl" alt="$N_i \times N_d$" src="form_167.png" width="45" height="13"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">amps</td><td>A pointer to an array of amp values, with layout <img class="formulaInl" alt="$N_i \times N_d$" src="form_167.png" width="45" height="13"/></td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Delays can be brought directly across from the MetafitsMetadata struct. The "conversion" from delays to amps is straightforward: All amps are "1.0" unless the delay is 32, in which case the amp should be "0.0". (The value 32 is the number assigned to a faulty or broken dipole.)</p>
+<p>This function allocates memory for both delays and amps. This can be freed by a call to <a class="el" href="primary__beam_8c.html#aca3a3b8084b6b8cb82e9385408c0a162" title="Frees the memory allocated in create_delays_amps_from_metafits().">free_delays_amps()</a>. </p>
 
 </div>
 </div>
@@ -270,6 +313,17 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees the memory allocated in <a class="el" href="primary__beam_8c.html#adfadd7431369faf082a54795fac0b5cd" title="Constructs &quot;delay&quot; and &quot;amp&quot; arrays required by Hyperbeam.">create_delays_amps_from_metafits()</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">obs_metadata</td><td>A MetafitsMetadata object </td></tr>
+    <tr><td class="paramname">delays</td><td>The array of delay values to be freed </td></tr>
+    <tr><td class="paramname">amps</td><td>The array of amp values to be freed</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Here, the MetafitsMetadata is used to find <img class="formulaInl" alt="$N_i$" src="form_168.png" width="14" height="13"/> (one of the dimensions of <code>delays</code> and <code>amps</code>). </p>
+
 </div>
 </div>
 <a id="a66bac3aed1ef85141bf50bb9bca118f3"></a>
@@ -288,6 +342,9 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees the memory allocated in <a class="el" href="primary__beam_8c.html#a4b05c0aa7ccd995a5c7262829e5f84cf" title="Allocates memory for the beam model Jones matrices.">vmCreatePrimaryBeam()</a> </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000031">Todo:</a></b></dt><dd>Change name to vm... </dd></dl>
+
 </div>
 </div>
 <a id="abed728c1e058dd6b81dd9771b431a2c1"></a>
@@ -305,6 +362,42 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Implements a hash lookup for dead/live dipole configurations. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">amps</td><td>The array of amps whose configuration is to be hashed </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The hashed index for this configuration</dd></dl>
+<p>In order to avoid recalculating the FEE beam for repeated dipole configurations, we have to keep track of which configurations have already been calculated. We do this through a boolean array, and this function converts dipole configurations into indices of this array. In other words, this function <em>assigns meaning</em> to the array.</p>
+<p>Since dead dipoles are relatively rare, we only consider configurations in which up to two dipoles are dead. Any more than that and the we can recalculate the Jones matrix with minimal entropy. In this case, this function returns <code>MANY_DEAD_DIPOLES</code>. The other remaining cases are:</p>
+<ul>
+<li>0 dead dipoles = 1 configuration</li>
+<li>1 dead dipole = 16 configurations</li>
+<li>2 dead dipoles = 120 configurations</li>
+<li>16 dead dipoles = 1 configuration</li>
+</ul>
+<p>for a grand total of 138 indices. They are ordered as follows: </p><div class="fragment"><div class="line">idx  configuration (0=dead, 1=live)</div>
+<div class="line"> 0   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> 1   [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> 2   [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> 3   [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> ...</div>
+<div class="line"> 16  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]</div>
+<div class="line"> 17  [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> 18  [0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> 19  [0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> ...</div>
+<div class="line"> 31  [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]</div>
+<div class="line"> 32  [1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> 33  [1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</div>
+<div class="line"> ...</div>
+<div class="line"> 135 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0]</div>
+<div class="line"> 136 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]</div>
+<div class="line"> 137 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]</div>
+</div><!-- fragment --><p>This function defines "dead" as amps=0.0, "live" otherwise. </p>
 
 </div>
 </div>
@@ -346,6 +439,20 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calculates the parallactic angle correction matrix, <img class="formulaInl" alt="${\bf P}_\text{pa}$" src="form_169.png" width="21" height="14"/>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">Ppa</td><td>The output rotation matrix </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">lat</td><td>The observing latitude (radians) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">az</td><td>The azimuth angle (radians) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">za</td><td>The zenith angle (radians)</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This function computes the parallactic angle correction matrix in the basis (see <a class="el" href="definitions.html#parallacticangle">Parallactic angle correction</a>): </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ {\bf P}_\text{pa} = \begin{bmatrix} P_{\theta x} &amp; P_{\theta y} \\ P_{\phi x} &amp; P_{\phi y} \end{bmatrix}. \]" src="form_170.png" width="109" height="31"/>
+</p>
+ 
 </div>
 </div>
 <a id="a39d7cb51f87c2ee201508a19bb9a8285"></a>
@@ -374,6 +481,19 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calculates the beam model Jones matrices for the given pointings. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">beam_geom_vals</td><td>An array of beam_geom objects containing the pointing information</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This function uses Hyperbeam to calculate the beam model Jones matrices for each pointing in <code>beam_geom_vals</code>.</p>
+<p>Only those configurations of live (i.e. non-dead) dipoles which exist in the array are calculated, in order to save calculation time.</p>
+<p>The parallactic angle correction is applied, so that the final matrices, which are stored in <code>pb&rarr;B</code>, are in the basis </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ {\bf B} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix}. \]" src="form_165.png" width="99" height="31"/>
+</p>
+ 
 </div>
 </div>
 <a id="a4b05c0aa7ccd995a5c7262829e5f84cf"></a>
@@ -392,6 +512,9 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the beam model Jones matrices. </p>
+<p>The resulting array (<code>vm&rarr;B</code>) has dimensions <img class="formulaInl" alt="$N_b \times N_a \times N_p \times N_p$" src="form_166.png" width="108" height="14"/>. </p>
+
 </div>
 </div>
 <h2 class="groupheader">Variable Documentation</h2>
@@ -407,6 +530,8 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>The coherency matrix for a pure Stokes I sky. </p>
+
 </div>
 </div>
 <a id="ae37edf3b0b6c65691da0f8815fc0ed8f"></a>
@@ -420,6 +545,8 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>The coherency matrix for a pure Stokes Q sky. </p>
 
 </div>
 </div>
@@ -435,6 +562,8 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>The set of coherency matrices for pure Stokes I, Q, U, and V skies. </p>
+
 </div>
 </div>
 <a id="a4dbbcdc2f67633b88b3af50d727dd10e"></a>
@@ -449,6 +578,8 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>The coherency matrix for a pure Stokes U sky. </p>
+
 </div>
 </div>
 <a id="ad070a63d38129edfe4c274fa98463be8"></a>
@@ -462,6 +593,8 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>The coherency matrix for a pure Stokes V sky. </p>
 
 </div>
 </div>

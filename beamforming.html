@@ -68,43 +68,48 @@ $(function() {
 <div class="toc"><h3>Table of Contents</h3>
 <ul><li class="level1"><a href="#autotoc_md11">Generating and applying the calibration solutions</a></li>
 <li class="level1"><a href="#autotoc_md12">Phasing up</a></li>
-<li class="level1"><a href="#autotoc_md13">Summing the voltages</a></li>
+<li class="level1"><a href="#autotoc_md13">Averaging the voltages</a></li>
 <li class="level1"><a href="#autotoc_md14">Detection (forming Stokes parameters)</a></li>
 </ul>
 </div>
 <div class="textblock"><p><a class="anchor" id="md_Beamforming"></a></p>
 <p>Beamforming is expressed mathematically by the expression </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}, \]" src="form_51.png" width="128" height="28"/>
+<img class="formulaDsp" alt="\[ {\bf e}_f = \frac{1}{N_a} \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}, \]" src="form_66.png" width="149" height="33"/>
 </p>
 <p> where</p>
 <ul>
-<li><img class="formulaInl" alt="$a$" src="form_52.png" width="6" height="6"/> represents tiles (i.e. "antennas")</li>
-<li><img class="formulaInl" alt="$f$" src="form_53.png" width="8" height="13"/> represents frequency channels</li>
-<li><img class="formulaInl" alt="$\varphi$" src="form_54.png" width="8" height="9"/> is the delay phase,</li>
-<li><img class="formulaInl" alt="${\bf v}$" src="form_32.png" width="9" height="6"/> is the Jones vector describing the instrumental voltages</li>
-<li><img class="formulaInl" alt="${\bf J}$" src="form_25.png" width="8" height="10"/> is the Jones matrix describing the instrumental response to an incident electric field</li>
-<li><img class="formulaInl" alt="${\bf e}$" src="form_31.png" width="8" height="6"/> is the Jones vector describing the (recovered) incident electric field</li>
+<li><img class="formulaInl" alt="$a$" src="form_67.png" width="6" height="6"/> represents tiles (i.e. "antennas")</li>
+<li><img class="formulaInl" alt="$f$" src="form_68.png" width="8" height="13"/> represents frequency channels</li>
+<li><img class="formulaInl" alt="$\varphi$" src="form_69.png" width="8" height="9"/> is the delay phase,</li>
+<li><img class="formulaInl" alt="${\bf v}$" src="form_47.png" width="9" height="6"/> is the Jones vector describing the instrumental voltages</li>
+<li><img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/> is the Jones matrix describing the instrumental response to an incident electric field</li>
+<li><img class="formulaInl" alt="${\bf e}$" src="form_46.png" width="8" height="6"/> is the Jones vector describing the (recovered) incident electric field</li>
+<li><img class="formulaInl" alt="$N_a$" src="form_27.png" width="15" height="13"/> is the number of antennas</li>
 </ul>
+<p>(The time dependence of these quantities is not shown here.)</p>
 <p>Conceptually, we describe beamforming as consisting of the following distinct steps:</p>
 <ol type="1">
-<li>Generating and applying the calibration Jones matrices to the voltages measured at each tile, (i.e. multiplying <img class="formulaInl" alt="${\bf J}_{a,f}^{-1}$" src="form_55.png" width="23" height="19"/> to <img class="formulaInl" alt="${\bf v}_{a,f}$" src="form_56.png" width="23" height="10"/>),</li>
-<li>Shifting the signals from each tile in time to account for the signal delay from the look-direction to each tile, due to the geometric layout of the MWA tiles ("phasing up"), (i.e. multiplying <img class="formulaInl" alt="$e^{i\varphi_{a,f}})$" src="form_57.png" width="34" height="15"/>, and</li>
-<li>Summing over the tiles.</li>
+<li>Generating and applying the calibration Jones matrices to the voltages measured at each tile, (i.e. multiplying <img class="formulaInl" alt="${\bf J}_{a,f}^{-1}$" src="form_70.png" width="23" height="19"/> to <img class="formulaInl" alt="${\bf v}_{a,f}$" src="form_71.png" width="23" height="10"/>),</li>
+<li>Shifting the signals from each tile in time to account for the signal delay from the look-direction to each tile, due to the geometric layout of the MWA tiles ("phasing up"), (i.e. multiplying <img class="formulaInl" alt="$e^{i\varphi_{a,f}})$" src="form_72.png" width="34" height="15"/>, and</li>
+<li>Averaging over the tiles.</li>
 </ol>
 <p>For some operating modes, VCSBeam also performs <em>detection</em>, which means forming Stokes parameters, also described below.</p>
 <p>These steps are described more fully in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E">Ord et al., 2019</a>, but are discussed further in the following subsections.</p>
 <h1><a class="anchor" id="autotoc_md11"></a>
 Generating and applying the calibration solutions</h1>
-<p>The Jones matrix consists of a <em>direction independent</em> component, <img class="formulaInl" alt="${\bf D}_a$" src="form_58.png" width="18" height="13"/>, and a <em>direction dependent</em> component, <img class="formulaInl" alt="${\bf B}_{a,f}$" src="form_59.png" width="25" height="14"/>, such that </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf J}_{a,f} = {\bf D}_a {\bf B}_{a,f} \]" src="form_60.png" width="81" height="14"/>
+<p>The Jones matrix consists of a <em>direction independent</em> component, <img class="formulaInl" alt="${\bf D}_a$" src="form_73.png" width="18" height="13"/>, and a <em>direction dependent</em> component, <img class="formulaInl" alt="${\bf B}_{a,f}$" src="form_74.png" width="25" height="14"/>, such that </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ {\bf J}_{a,f} = {\bf D}_a {\bf B}_{a,f} \]" src="form_75.png" width="81" height="14"/>
 </p>
-<p> <img class="formulaInl" alt="${\bf D}_a$" src="form_58.png" width="18" height="13"/>, which only depends on the antenna, is the <em>instrumental calibration solution</em>. It is obtained using separate, dedicated calibration software, and VCSBeam currently supports solutions in two formats:</p>
+<p> <img class="formulaInl" alt="${\bf D}_a$" src="form_73.png" width="18" height="13"/>, which only depends on the antenna, is the <em>instrumental calibration solution</em>. It is obtained using separate, dedicated calibration software, and VCSBeam currently supports solutions in two formats:</p>
 <ol type="1">
 <li>The <a class="el" href="fileformats.html#rtsfileformat">RTS format</a>, and</li>
 <li>The <a class="el" href="fileformats.html#offringafileformat">Offringa file format</a>.</li>
 </ol>
-<p><img class="formulaInl" alt="${\bf B}_{a,f}$" src="form_59.png" width="25" height="14"/>, which formally depends on both antenna <em>and</em> frequency, is the <em>beam model</em>. If all antennas were identical, the beam model would only depend on frequency, and we could write simply <img class="formulaInl" alt="${\bf B}_f$" src="form_61.png" width="18" height="14"/>. In reality, antennas can differ because individual dipole elements can fail at different times. These failures, when detected, are recorded in an observation's metadata, and are used by VCSBeam to obtain beam models for every configuration of live/dead dipoles that are present in a given observation.</p>
+<p><img class="formulaInl" alt="${\bf B}_{a,f}$" src="form_74.png" width="25" height="14"/>, which formally depends on both antenna <em>and</em> frequency, is the <em>beam model</em>. If all antennas were identical, the beam model would only depend on frequency, and we could write simply <img class="formulaInl" alt="${\bf B}_f$" src="form_76.png" width="18" height="14"/>. In reality, antennas can differ because individual dipole elements can fail at different times. These failures, when detected, are recorded in an observation's metadata, and are used by VCSBeam to obtain beam models for every configuration of live/dead dipoles that are present in a given observation.</p>
 <p>The beam models themselves are calculated using <a href="https://github.com/MWATelescope/mwa_hyperdrive">Hyperbeam</a>, which implements the FEE beam model described in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#">Sokolowski et al. (2017)</a>.</p>
+<p>The product obtained by multiplying <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.png" width="21" height="11"/> to the voltage data is </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \tilde{\bf e}_{a,f} = {\bf J}^{-1}_{a,f} {\bf v}_{a,f}. \]" src="form_78.png" width="86" height="19"/>
+</p>
 <h1><a class="anchor" id="autotoc_md12"></a>
 Phasing up</h1>
 <p>Phasing up refers to the process of accounting for the fact that each antenna will "see" an astrophysical signal arriving at a different time due to</p>
@@ -112,20 +117,24 @@ Phasing up</h1>
 <li>Its location relative to the source, and</li>
 <li>The different lengths of the cables that connect the antennas to the rest of the system.</li>
 </ol>
-<p>Accounting for these time differences can be achieved either by a simple shift in the time domain, or, equivalently, the application of a phase ramp in the frequency domain, via the shift theorem. The latter is what's implemented in VCSBeam, as indicated by the <img class="formulaInl" alt="$e^{i\phi}$" src="form_62.png" width="15" height="11"/> term in the expression above.</p>
+<p>Accounting for these time differences can be achieved either by a simple shift in the time domain, or, equivalently, the application of a phase ramp in the frequency domain, via the shift theorem. The latter is what's implemented in VCSBeam, as indicated by the <img class="formulaInl" alt="$e^{i\varphi}$" src="form_79.png" width="15" height="11"/> term in the expression above. Thus, the result of phasing up is </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ {\bf e}_{a,f} = e^{i\varphi_f} \tilde{\bf e}_{a,f}. \]" src="form_80.png" width="85" height="16"/>
+</p>
 <h1><a class="anchor" id="autotoc_md13"></a>
-Summing the voltages</h1>
-<p>The final step is simply summing the voltages over all antennas. As long as the correct delays have been applied, summing the voltages will coherently combine any astrophysical signal arriving from the specified look-direction.</p>
+Averaging the voltages</h1>
+<p>The final step is simply summing the voltages over all antennas. As long as the correct delays have been applied, summing the voltages will coherently combine any astrophysical signal arriving from the specified look-direction. The result is </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ {\bf e}_f = \frac{1}{N_a}\sum_a \tilde{\bf e}_{a,f}. \]" src="form_81.png" width="96" height="33"/>
+</p>
 <h1><a class="anchor" id="autotoc_md14"></a>
 Detection (forming Stokes parameters)</h1>
 <p>VCSBeam converts the summed voltages into Stokes parameters if the PSRFITS output format is requested. This is achieved by forming the <em>coherency matrix</em>: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf e}{\bf e}^\dagger = \begin{bmatrix} e_x e_x^\ast &amp; e_x e_y^\ast \\ e_y e_x^\ast &amp; e_y e_y^\ast \end{bmatrix} = \frac12 \begin{bmatrix} I + Q &amp; U + Vi \\ U - Vi &amp; I - Q \end{bmatrix} \]" src="form_63.png" width="239" height="31"/>
+<img class="formulaDsp" alt="\[ {\bf e}{\bf e}^\dagger = \begin{bmatrix} e_x e_x^\ast &amp; e_x e_y^\ast \\ e_y e_x^\ast &amp; e_y e_y^\ast \end{bmatrix} = \frac12 \begin{bmatrix} I + Q &amp; U + Vi \\ U - Vi &amp; I - Q \end{bmatrix} \]" src="form_82.png" width="239" height="31"/>
 </p>
+<p> where the frequency dependence of all terms is implicit.</p>
 <p>However, as described in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E">Ord et al. (2019)</a>, VCSBeam also subtracts the autocorrelations, which for signals which are noise-dominated on a single-tile basis, improves the signal-to-noise ratio. Thus, the actual detection operation that is implemented in VCSBeam is </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \frac12 \begin{bmatrix} I + Q &amp; U + Vi \\ U - Vi &amp; I - Q \end{bmatrix} = {\bf e}{\bf e}^\dagger - \sum_a {\bf e}_a {\bf e}_a^\dagger, \]" src="form_64.png" width="213" height="34"/>
+<img class="formulaDsp" alt="\[ \frac12 \begin{bmatrix} I + Q &amp; U + Vi \\ U - Vi &amp; I - Q \end{bmatrix} = {\bf e}{\bf e}^\dagger - \sum_a {\bf e}_a {\bf e}_a^\dagger. \]" src="form_83.png" width="213" height="34"/>
 </p>
-<p> where <img class="formulaInl" alt="${\bf e}_a = e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}$" src="form_65.png" width="104" height="19"/> are the phased-up voltages before being summed. </p>
-</div></div><!-- contents -->
+ </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

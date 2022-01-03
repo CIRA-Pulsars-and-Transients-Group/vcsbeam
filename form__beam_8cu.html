@@ -94,38 +94,55 @@ Functions</h2></td></tr>
 <tr class="memdesc:aa400133bd01d7bfad48022e525106583"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for computing an incoherent beam.  <a href="form__beam_8cu.html#aa400133bd01d7bfad48022e525106583">More...</a><br /></td></tr>
 <tr class="separator:aa400133bd01d7bfad48022e525106583"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a934af01c60bf52f6985f34b360c2fb78"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a934af01c60bf52f6985f34b360c2fb78">vmApplyJ_kernel</a> (void *data, cuDoubleComplex *J, cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, uint32_t *polQ_idxs, uint32_t *polP_idxs, int npol, vcsbeam_datatype datatype)</td></tr>
+<tr class="memdesc:a934af01c60bf52f6985f34b360c2fb78"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for multiplying Jones matrices to Jones vectors.  <a href="form__beam_8cu.html#a934af01c60bf52f6985f34b360c2fb78">More...</a><br /></td></tr>
 <tr class="separator:a934af01c60bf52f6985f34b360c2fb78"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f6655f86d0779d77f8482b586ffb4d4"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a2f6655f86d0779d77f8482b586ffb4d4">vmBeamform_kernel</a> (cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, cuDoubleComplex *phi, double invw, int p, int soffset, int nchunk, cuDoubleComplex *e, float *C, int npol)</td></tr>
-<tr class="separator:a2f6655f86d0779d77f8482b586ffb4d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a80fc52aaf11c7aad6ccbcbe93d5430e5"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a80fc52aaf11c7aad6ccbcbe93d5430e5">renormalise_channels_kernel</a> (float *I, int nstep, float *offsets, float *scales, uint8_t *Iscaled)</td></tr>
-<tr class="separator:a80fc52aaf11c7aad6ccbcbe93d5430e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a14c72ad11c18eba09eb2cf14f1933638"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a14c72ad11c18eba09eb2cf14f1933638">vmBeamform_kernel</a> (cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, cuDoubleComplex *phi, double invw, int p, int soffset, int nchunk, cuDoubleComplex *e, float *S, int npol)</td></tr>
+<tr class="memdesc:a14c72ad11c18eba09eb2cf14f1933638"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for phasing up and summing the voltages over antenna.  <a href="form__beam_8cu.html#a14c72ad11c18eba09eb2cf14f1933638">More...</a><br /></td></tr>
+<tr class="separator:a14c72ad11c18eba09eb2cf14f1933638"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a418658321f739c188e3adee521b3c03b"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a418658321f739c188e3adee521b3c03b">renormalise_channels_kernel</a> (float *S, int nstep, float *offsets, float *scales, uint8_t *Sscaled)</td></tr>
+<tr class="memdesc:a418658321f739c188e3adee521b3c03b"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for normalising Stokes parameters.  <a href="form__beam_8cu.html#a418658321f739c188e3adee521b3c03b">More...</a><br /></td></tr>
+<tr class="separator:a418658321f739c188e3adee521b3c03b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aefd0c7b588cf2413c51863dcb4d25521"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#aefd0c7b588cf2413c51863dcb4d25521">cu_form_incoh_beam</a> (uint8_t *data, uint8_t *d_data, size_t data_size, float *d_incoh, unsigned int nsample, int nchan, int ninput, float *offsets, float *d_offsets, float *scales, float *d_scales, uint8_t *Iscaled, uint8_t *d_Iscaled, size_t Iscaled_size)</td></tr>
+<tr class="memdesc:aefd0c7b588cf2413c51863dcb4d25521"><td class="mdescLeft">&#160;</td><td class="mdescRight">Form an incoherent beam.  <a href="form__beam_8cu.html#aefd0c7b588cf2413c51863dcb4d25521">More...</a><br /></td></tr>
 <tr class="separator:aefd0c7b588cf2413c51863dcb4d25521"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a215f77c938330e13916a9eedd6b675aa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a215f77c938330e13916a9eedd6b675aa">vmApplyJChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a215f77c938330e13916a9eedd6b675aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes <img class="formulaInl" alt="${\bf J}^{-1} {\bf v}$" src="form_118.png" width="30" height="11"/>.  <a href="form__beam_8cu.html#a215f77c938330e13916a9eedd6b675aa">More...</a><br /></td></tr>
 <tr class="separator:a215f77c938330e13916a9eedd6b675aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0cf45d9edacf3bf40f3eabcfd58094cd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd">vmBeamformChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a0cf45d9edacf3bf40f3eabcfd58094cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs the phasing up, averaging over antennas, and detection operations on calibrated data.  <a href="form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd">More...</a><br /></td></tr>
 <tr class="separator:a0cf45d9edacf3bf40f3eabcfd58094cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a56e5357bff69a7f58f89578ef3130c41"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a56e5357bff69a7f58f89578ef3130c41">vmBeamformSecond</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a56e5357bff69a7f58f89578ef3130c41"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs all beamforming steps for 1 second's worth of data.  <a href="form__beam_8cu.html#a56e5357bff69a7f58f89578ef3130c41">More...</a><br /></td></tr>
 <tr class="separator:a56e5357bff69a7f58f89578ef3130c41"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abb4b6bf2611fd604b7fa43d6e588ca5d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#abb4b6bf2611fd604b7fa43d6e588ca5d">vmPullE</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:abb4b6bf2611fd604b7fa43d6e588ca5d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies the beamformed voltages from GPU memory to CPU memory.  <a href="form__beam_8cu.html#abb4b6bf2611fd604b7fa43d6e588ca5d">More...</a><br /></td></tr>
 <tr class="separator:abb4b6bf2611fd604b7fa43d6e588ca5d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a28a2fb5a5b33087e894b34e8fbe83a35"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a28a2fb5a5b33087e894b34e8fbe83a35">vmPullS</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a28a2fb5a5b33087e894b34e8fbe83a35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies the detected Stokes parameters from GPU memory to CPU memory.  <a href="form__beam_8cu.html#a28a2fb5a5b33087e894b34e8fbe83a35">More...</a><br /></td></tr>
 <tr class="separator:a28a2fb5a5b33087e894b34e8fbe83a35"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e2778cd4e010763af76bd3d820133f1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1">prepare_detected_beam</a> (cuDoubleComplex ****detected_beam, mpi_psrfits *mpfs, vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a4e2778cd4e010763af76bd3d820133f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies the beamformed voltages into a different array to prepare for inverting the PFB.  <a href="form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1">More...</a><br /></td></tr>
 <tr class="separator:a4e2778cd4e010763af76bd3d820133f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a35a259c82a7809d57d0c9d16dcf3be92"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a35a259c82a7809d57d0c9d16dcf3be92">vmSendSToFits</a> (vcsbeam_context *vm, mpi_psrfits *mpfs)</td></tr>
+<tr class="memdesc:a35a259c82a7809d57d0c9d16dcf3be92"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renormalises the detected Stokes parameters and copies them into PSRFITS structs, ready for frequency splicing.  <a href="form__beam_8cu.html#a35a259c82a7809d57d0c9d16dcf3be92">More...</a><br /></td></tr>
 <tr class="separator:a35a259c82a7809d57d0c9d16dcf3be92"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a195dcc4bde9607ce0eadf60f85be8bcf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a195dcc4bde9607ce0eadf60f85be8bcf">vmPushPolIdxLists</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a195dcc4bde9607ce0eadf60f85be8bcf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies the index arrays for antennas and polarisations from CPU memory to GPU memory.  <a href="form__beam_8cu.html#a195dcc4bde9607ce0eadf60f85be8bcf">More...</a><br /></td></tr>
 <tr class="separator:a195dcc4bde9607ce0eadf60f85be8bcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a433ddbce6c91b6c67daddb48bbcd5aea"><td class="memItemLeft" align="right" valign="top">float *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a433ddbce6c91b6c67daddb48bbcd5aea">create_pinned_data_buffer</a> (size_t size)</td></tr>
+<tr class="memdesc:a433ddbce6c91b6c67daddb48bbcd5aea"><td class="mdescLeft">&#160;</td><td class="mdescRight">(Deprecated) Allocate memory on the GPU.  <a href="form__beam_8cu.html#a433ddbce6c91b6c67daddb48bbcd5aea">More...</a><br /></td></tr>
 <tr class="separator:a433ddbce6c91b6c67daddb48bbcd5aea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad2e6ebf2fafcce02526b94cb8f01366f"><td class="memItemLeft" align="right" valign="top">cuDoubleComplex ****&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f">create_detected_beam</a> (int npointing, int nsamples, int nchan, int npol)</td></tr>
+<tr class="memdesc:ad2e6ebf2fafcce02526b94cb8f01366f"><td class="mdescLeft">&#160;</td><td class="mdescRight">(Deprecated) Allocate memory on the CPU.  <a href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f">More...</a><br /></td></tr>
 <tr class="separator:ad2e6ebf2fafcce02526b94cb8f01366f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae97c305b54fb67d57a8fd9c0af5be03a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#ae97c305b54fb67d57a8fd9c0af5be03a">destroy_detected_beam</a> (cuDoubleComplex ****array, int npointing, int nsamples, int nchan)</td></tr>
+<tr class="memdesc:ae97c305b54fb67d57a8fd9c0af5be03a"><td class="mdescLeft">&#160;</td><td class="mdescRight">(Deprecated) Frees memory on the CPU.  <a href="form__beam_8cu.html#ae97c305b54fb67d57a8fd9c0af5be03a">More...</a><br /></td></tr>
 <tr class="separator:ae97c305b54fb67d57a8fd9c0af5be03a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a42a8b688f3ed69468b056044bb26461e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e">allocate_input_output_arrays</a> (void **data, void **d_data, size_t size)</td></tr>
+<tr class="memdesc:a42a8b688f3ed69468b056044bb26461e"><td class="mdescLeft">&#160;</td><td class="mdescRight">(Deprecated) Allocates memory on the CPU and GPU simultaneously.  <a href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e">More...</a><br /></td></tr>
 <tr class="separator:a42a8b688f3ed69468b056044bb26461e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91c2e34710672b16c62eaf94e46b7ba0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a91c2e34710672b16c62eaf94e46b7ba0">free_input_output_arrays</a> (void *data, void *d_data)</td></tr>
+<tr class="memdesc:a91c2e34710672b16c62eaf94e46b7ba0"><td class="mdescLeft">&#160;</td><td class="mdescRight">(Deprecated) Frees memory on the CPU and GPU simultaneously.  <a href="form__beam_8cu.html#a91c2e34710672b16c62eaf94e46b7ba0">More...</a><br /></td></tr>
 <tr class="separator:a91c2e34710672b16c62eaf94e46b7ba0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
@@ -180,6 +197,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>(Deprecated) Allocates memory on the CPU and GPU simultaneously. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000014">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e" title="(Deprecated) Allocates memory on the CPU and GPU simultaneously.">allocate_input_output_arrays()</a>. </dd></dl>
+
 </div>
 </div>
 <a id="ad2e6ebf2fafcce02526b94cb8f01366f"></a>
@@ -220,6 +240,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>(Deprecated) Allocate memory on the CPU. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000012">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f" title="(Deprecated) Allocate memory on the CPU.">create_detected_beam()</a>. </dd></dl>
+
 </div>
 </div>
 <a id="a433ddbce6c91b6c67daddb48bbcd5aea"></a>
@@ -237,6 +260,9 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>(Deprecated) Allocate memory on the GPU. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000011">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a433ddbce6c91b6c67daddb48bbcd5aea" title="(Deprecated) Allocate memory on the GPU.">create_pinned_data_buffer()</a>. </dd></dl>
 
 </div>
 </div>
@@ -338,6 +364,10 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Form an incoherent beam. </p>
+<p>Forms an incoherent beam, detects it, and prepares it for writing to PSRFITS.</p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000008">Todo:</a></b></dt><dd>Either generalise the <a class="el" href="form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd" title="Performs the phasing up, averaging over antennas, and detection operations on calibrated data.">vmBeamformChunk()</a> so that it can also produce incoherent beams (and therefore do away with <a class="el" href="form__beam_8cu.html#aefd0c7b588cf2413c51863dcb4d25521" title="Form an incoherent beam.">cu_form_incoh_beam()</a>, or keep <a class="el" href="form__beam_8cu.html#aefd0c7b588cf2413c51863dcb4d25521" title="Form an incoherent beam.">cu_form_incoh_beam()</a> and convert it into a bona fide "vm" style fuction. </dd></dl>
+
 </div>
 </div>
 <a id="ae97c305b54fb67d57a8fd9c0af5be03a"></a>
@@ -378,6 +408,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>(Deprecated) Frees memory on the CPU. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000013">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#ae97c305b54fb67d57a8fd9c0af5be03a" title="(Deprecated) Frees memory on the CPU.">destroy_detected_beam()</a>. </dd></dl>
+
 </div>
 </div>
 <a id="a91c2e34710672b16c62eaf94e46b7ba0"></a>
@@ -405,6 +438,9 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>(Deprecated) Frees memory on the CPU and GPU simultaneously. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000015">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a91c2e34710672b16c62eaf94e46b7ba0" title="(Deprecated) Frees memory on the CPU and GPU simultaneously.">free_input_output_arrays()</a>. </dd></dl>
 
 </div>
 </div>
@@ -483,11 +519,21 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>CUDA kernel for computing an incoherent beam. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">data</td><td>The voltage data, <img class="formulaInl" alt="$v$" src="form_97.png" width="8" height="6"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_i$" src="form_98.png" width="75" height="14"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">incoh</td><td>The detected (Stokes I) powers, <img class="formulaInl" alt="$I$" src="form_99.png" width="8" height="10"/>, with layout <img class="formulaInl" alt="$N_t \times N_f$" src="form_100.png" width="45" height="14"/>.</td></tr>
+  </table>
+  </dd>
+</dl>
 <p>The incoherent beam is the expression </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ I = \sum_a {\bf v}_a^\dagger {\bf v}_a, \]" src="form_73.png" width="74" height="28"/>
+<img class="formulaDsp" alt="\[ I_{t,f} = \sum_i v_{t,f,i}^\dagger v_{t,f,i}. \]" src="form_101.png" width="109" height="28"/>
 </p>
-<p> where <img class="formulaInl" alt="${\bf v}$" src="form_32.png" width="9" height="6"/> are the instrumental voltages for antenna <img class="formulaInl" alt="$a$" src="form_52.png" width="6" height="6"/>. </p>
-
+<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle(N_f, N_t), N_i\rangle\rangle\rangle.$" src="form_102.png" width="98" height="14"/></p>
+<p>Note that if the voltages were arranged into Jones vectors, the above could also be expressed in the more familiar form </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ I_{t,f} = \sum_a {\bf v}_{t,f,a}^\dagger {\bf v}_{t,f,a}. \]" src="form_103.png" width="116" height="28"/>
+</p>
+ 
 </div>
 </div>
 <a id="a4e2778cd4e010763af76bd3d820133f1"></a>
@@ -522,10 +568,13 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Copies the beamformed voltages into a different array to prepare for inverting the PFB. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000010">Todo:</a></b></dt><dd>Remove <a class="el" href="form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1" title="Copies the beamformed voltages into a different array to prepare for inverting the PFB.">prepare_detected_beam()</a> and use a "host buffer" instead. </dd></dl>
+
 </div>
 </div>
-<a id="a80fc52aaf11c7aad6ccbcbe93d5430e5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a80fc52aaf11c7aad6ccbcbe93d5430e5">&#9670;&nbsp;</a></span>renormalise_channels_kernel()</h2>
+<a id="a418658321f739c188e3adee521b3c03b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a418658321f739c188e3adee521b3c03b">&#9670;&nbsp;</a></span>renormalise_channels_kernel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -534,7 +583,7 @@ Functions</h2></td></tr>
           <td class="memname">__global__ void renormalise_channels_kernel </td>
           <td>(</td>
           <td class="paramtype">float *&#160;</td>
-          <td class="paramname"><em>I</em>, </td>
+          <td class="paramname"><em>S</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -558,7 +607,7 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">uint8_t *&#160;</td>
-          <td class="paramname"><em>Iscaled</em>&#160;</td>
+          <td class="paramname"><em>Sscaled</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -567,6 +616,27 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>CUDA kernel for normalising Stokes parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">S[in]</td><td>The original Stokes parameters, with layout <img class="formulaInl" alt="$N_t \times N_s \times N_f$" src="form_111.png" width="76" height="14"/> </td></tr>
+    <tr><td class="paramname">nstep</td><td><img class="formulaInl" alt="$N_t$" src="form_25.png" width="14" height="13"/> </td></tr>
+    <tr><td class="paramname">offsets[out]</td><td>The amount of offset needed to recover the original values from the normalised ones </td></tr>
+    <tr><td class="paramname">scales[out]</td><td>The scaling needed to recover the original values from the normalised ones </td></tr>
+    <tr><td class="paramname">Sscaled[out]</td><td>The normalised Stokes parameters</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This kernel shifts and normalises the Stokes parameters so that they fit into 8-bits integers without clipping (e.g. for output into the PSRFITS format). Each frequency is normalised independently, with the scales and offsets needed to recover the original values for that channel being recorded as well.</p>
+<p>If <img class="formulaInl" alt="${\bf S}$" src="form_114.png" width="8" height="10"/> is the array of values to be normalised, then the normalisation is </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \hat{\bf S} = \frac{{\bf S} - \text{offset}}{\text{scale}}, \]" src="form_115.png" width="84" height="28"/>
+</p>
+<p> where </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\begin{align*} \text{scale} &amp;= \frac{S_\text{max} - S_\text{min}}{256} \\ \text{offset} &amp;= S_\text{min} + 0.5 \times \text{scale}. \end{align*}" src="form_116.png" width="145" height="44"/>
+</p>
+<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle N_b,(N_f, N_s)\rangle\rangle\rangle.$" src="form_117.png" width="99" height="14"/></p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000007">Todo:</a></b></dt><dd>Optimise the renormalisation kernel (e.g. by removing the for loop over timesteps. </dd></dl>
 
 </div>
 </div>
@@ -632,6 +702,25 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>CUDA kernel for multiplying Jones matrices to Jones vectors. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">data</td><td>The voltage data, <img class="formulaInl" alt="$v$" src="form_97.png" width="8" height="6"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_i$" src="form_98.png" width="75" height="14"/> </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">J</td><td>The Jones matrices, <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.png" width="21" height="11"/>, with layout <img class="formulaInl" alt="$N_a \times N_f \times N_p \times N_p$" src="form_104.png" width="109" height="14"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Jv_Q</td><td>The Q polarisation of the product <img class="formulaInl" alt="${\bf J}^{-1}{\bf v}$" src="form_105.png" width="30" height="11"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_a$" src="form_106.png" width="76" height="14"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Jv_P</td><td>The P polarisation of the product <img class="formulaInl" alt="${\bf J}^{-1}{\bf v}$" src="form_105.png" width="30" height="11"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_a$" src="form_106.png" width="76" height="14"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">polQ_idxs</td><td>And array of the indices <img class="formulaInl" alt="$i$" src="form_34.png" width="5" height="9"/> for the Q polarisations of the antennas </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">polP_idxs</td><td>And array of the indices <img class="formulaInl" alt="$i$" src="form_34.png" width="5" height="9"/> for the P polarisations of the antennas </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">npol</td><td><img class="formulaInl" alt="$N_p$" src="form_28.png" width="15" height="14"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">datatype</td><td>Either <code>VM_INT4</code> (if <code>data</code> contain 4+4-bit complex integers) or <code>VM_DBL</code> (if <code>data</code> contain complex doubles).</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Although this kernel is quite general, in the sense that it could be used to multiply any Jones matrices to any Jones vectors, it is used in particular for multiplying the Jones matrices <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.png" width="21" height="11"/> to the voltage data <img class="formulaInl" alt="${\bf v}$" src="form_47.png" width="9" height="6"/>: </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \tilde{\bf e}_{t,f,a} = {\bf J}^{-1}_{a,f}{\bf v}_{t,f,a}. \]" src="form_107.png" width="99" height="19"/>
+</p>
+<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.$" src="form_108.png" width="99" height="14"/> </p>
+
 </div>
 </div>
 <a id="a215f77c938330e13916a9eedd6b675aa"></a>
@@ -650,10 +739,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Computes <img class="formulaInl" alt="${\bf J}^{-1} {\bf v}$" src="form_118.png" width="30" height="11"/>. </p>
+
 </div>
 </div>
-<a id="a2f6655f86d0779d77f8482b586ffb4d4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2f6655f86d0779d77f8482b586ffb4d4">&#9670;&nbsp;</a></span>vmBeamform_kernel()</h2>
+<a id="a14c72ad11c18eba09eb2cf14f1933638"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a14c72ad11c18eba09eb2cf14f1933638">&#9670;&nbsp;</a></span>vmBeamform_kernel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -710,7 +801,7 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float *&#160;</td>
-          <td class="paramname"><em>C</em>, </td>
+          <td class="paramname"><em>S</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -725,6 +816,27 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>CUDA kernel for phasing up and summing the voltages over antenna. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jv_Q</td><td>The Q polarisation of the product <img class="formulaInl" alt="${\bf J}^{-1}{\bf v}$" src="form_105.png" width="30" height="11"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_a$" src="form_106.png" width="76" height="14"/> </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jv_P</td><td>The P polarisation of the product <img class="formulaInl" alt="${\bf J}^{-1}{\bf v}$" src="form_105.png" width="30" height="11"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_a$" src="form_106.png" width="76" height="14"/> </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">phi</td><td>The delay phase, <img class="formulaInl" alt="$\varphi$" src="form_69.png" width="8" height="9"/>, with layout <img class="formulaInl" alt="$N_a \times N_f$" src="form_109.png" width="46" height="14"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">invw</td><td>The reciprocal of the number of non-flagged antennas </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">p</td><td>The pointing index </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">soffset</td><td>An offset number of samples into <code>e</code> for where to put the the answer </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">e[out]</td><td>The recovered electric field, <img class="formulaInl" alt="${\bf e}$" src="form_46.png" width="8" height="6"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_p$" src="form_110.png" width="76" height="14"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">S[out]</td><td>The recovered Stokes parameters, with layout <img class="formulaInl" alt="$N_t \times N_s \times N_f$" src="form_111.png" width="76" height="14"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">npol</td><td><img class="formulaInl" alt="$N_p$" src="form_28.png" width="15" height="14"/></td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This kernel performs the phasing up and the summing over antennas part of the beamforming operation (see <a class="el" href="beamforming.html">Beamforming</a>): </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ {\bf e}_{t,f} = \frac{1}{N_a} \sum_a e^{i\varphi} \tilde{\bf e}_{t,f,a}. \]" src="form_112.png" width="125" height="33"/>
+</p>
+<p>It also computes the Stokes parameters, <img class="formulaInl" alt="$S = [I, Q, U, V]$" src="form_113.png" width="83" height="14"/> (with the autocorrelations removed).</p>
+<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.$" src="form_108.png" width="99" height="14"/> </p>
 
 </div>
 </div>
@@ -744,6 +856,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Performs the phasing up, averaging over antennas, and detection operations on calibrated data. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000009">Todo:</a></b></dt><dd>Split the beamforming operations into separate steps/kernels. </dd></dl>
+
 </div>
 </div>
 <a id="a56e5357bff69a7f58f89578ef3130c41"></a>
@@ -761,6 +876,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Performs all beamforming steps for 1 second's worth of data. </p>
 
 </div>
 </div>
@@ -780,6 +897,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Copies the beamformed voltages from GPU memory to CPU memory. </p>
+
 </div>
 </div>
 <a id="a28a2fb5a5b33087e894b34e8fbe83a35"></a>
@@ -798,6 +917,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Copies the detected Stokes parameters from GPU memory to CPU memory. </p>
+
 </div>
 </div>
 <a id="a195dcc4bde9607ce0eadf60f85be8bcf"></a>
@@ -815,6 +936,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Copies the index arrays for antennas and polarisations from CPU memory to GPU memory. </p>
 
 </div>
 </div>
@@ -843,6 +966,14 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Renormalises the detected Stokes parameters and copies them into PSRFITS structs, ready for frequency splicing. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">mpfs</td><td>The MPI PSRFITS struct that manages the splicing operation. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

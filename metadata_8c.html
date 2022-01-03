@@ -81,80 +81,118 @@ $(function() {
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a7a572becfecd297d68a8b296b29cd0f8"><td class="memItemLeft" align="right" valign="top">vcsbeam_context *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a7a572becfecd297d68a8b296b29cd0f8">vmInit</a> (bool use_mpi)</td></tr>
+<tr class="memdesc:a7a572becfecd297d68a8b296b29cd0f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a VCSBeam context struct.  <a href="metadata_8c.html#a7a572becfecd297d68a8b296b29cd0f8">More...</a><br /></td></tr>
 <tr class="separator:a7a572becfecd297d68a8b296b29cd0f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a091372039dcad27a96221fa22cd58d5e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a091372039dcad27a96221fa22cd58d5e">vmBindObsData</a> (vcsbeam_context *vm, char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset, char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset, char *datadir)</td></tr>
+<tr class="memdesc:a091372039dcad27a96221fa22cd58d5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a set of observation files to the VCSBeam context.  <a href="metadata_8c.html#a091372039dcad27a96221fa22cd58d5e">More...</a><br /></td></tr>
 <tr class="separator:a091372039dcad27a96221fa22cd58d5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6d82fbfb82a80d86875463d9cc542486"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a6d82fbfb82a80d86875463d9cc542486">vmBindCalibrationData</a> (vcsbeam_context *vm, char *caldir, int cal_type, bool use_bandpass, char *flags_file)</td></tr>
+<tr class="memdesc:a6d82fbfb82a80d86875463d9cc542486"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a calibration solution to the VCSBeam context.  <a href="metadata_8c.html#a6d82fbfb82a80d86875463d9cc542486">More...</a><br /></td></tr>
 <tr class="separator:a6d82fbfb82a80d86875463d9cc542486"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa1824ef3922bf4cd94ba1d17d9b6789f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#aa1824ef3922bf4cd94ba1d17d9b6789f">vmReadCalibration</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:aa1824ef3922bf4cd94ba1d17d9b6789f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads in a calibration solution.  <a href="metadata_8c.html#aa1824ef3922bf4cd94ba1d17d9b6789f">More...</a><br /></td></tr>
 <tr class="separator:aa1824ef3922bf4cd94ba1d17d9b6789f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6e0a6247393ba2c9f493315c21005fcd"><td class="memItemLeft" align="right" valign="top">Antenna *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a6e0a6247393ba2c9f493315c21005fcd">find_antenna_by_name</a> (MetafitsMetadata *obs_metadata, char *tile_name)</td></tr>
+<tr class="memdesc:a6e0a6247393ba2c9f493315c21005fcd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds an antenna in an observation with a given name.  <a href="metadata_8c.html#a6e0a6247393ba2c9f493315c21005fcd">More...</a><br /></td></tr>
 <tr class="separator:a6e0a6247393ba2c9f493315c21005fcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aac8b4c5ae6f35a9e2992867e6ba2cbfe"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#aac8b4c5ae6f35a9e2992867e6ba2cbfe">destroy_vcsbeam_context</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:aac8b4c5ae6f35a9e2992867e6ba2cbfe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees the memory associated with the VCSBeam context.  <a href="metadata_8c.html#aac8b4c5ae6f35a9e2992867e6ba2cbfe">More...</a><br /></td></tr>
 <tr class="separator:aac8b4c5ae6f35a9e2992867e6ba2cbfe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab000c14b3b5a0101dc26391aa8c38c3d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ab000c14b3b5a0101dc26391aa8c38c3d">vmSetOutputChannelisation</a> (vcsbeam_context *vm, bool out_fine, bool out_coarse)</td></tr>
+<tr class="memdesc:ab000c14b3b5a0101dc26391aa8c38c3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets flags governing whether the PFB and inverse PFB routines are run depending on the input and output channelisations.  <a href="metadata_8c.html#ab000c14b3b5a0101dc26391aa8c38c3d">More...</a><br /></td></tr>
 <tr class="separator:ab000c14b3b5a0101dc26391aa8c38c3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a724190b8e83033d8ab2b2e520e7b05b5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a724190b8e83033d8ab2b2e520e7b05b5">vmMallocVHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a724190b8e83033d8ab2b2e520e7b05b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the input voltages on the CPU.  <a href="metadata_8c.html#a724190b8e83033d8ab2b2e520e7b05b5">More...</a><br /></td></tr>
 <tr class="separator:a724190b8e83033d8ab2b2e520e7b05b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3afb5e0fe27c01f9b23a3eabb7b37092"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a3afb5e0fe27c01f9b23a3eabb7b37092">vmFreeVHost</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a3afb5e0fe27c01f9b23a3eabb7b37092"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9f21fd4f1390ced2d339afacdfe34fdd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a9f21fd4f1390ced2d339afacdfe34fdd">vmMallocVDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a9f21fd4f1390ced2d339afacdfe34fdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad1eed0fa043bb2638293788d612c9457"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ad1eed0fa043bb2638293788d612c9457">vmFreeVDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:ad1eed0fa043bb2638293788d612c9457"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8152b712ffd26aee6aede80c746231ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a8152b712ffd26aee6aede80c746231ac">vmMallocJVHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a8152b712ffd26aee6aede80c746231ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf J}{\bf v}$" src="form_140.png" width="16" height="10"/> on the CPU.  <a href="metadata_8c.html#a8152b712ffd26aee6aede80c746231ac">More...</a><br /></td></tr>
 <tr class="separator:a8152b712ffd26aee6aede80c746231ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad91c35892c7153ae8519bfc4daee2f8d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ad91c35892c7153ae8519bfc4daee2f8d">vmFreeJVHost</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:ad91c35892c7153ae8519bfc4daee2f8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a242cfb9b89103a9e46ac36e7cd2bf3cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a242cfb9b89103a9e46ac36e7cd2bf3cc">vmMallocJVDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a242cfb9b89103a9e46ac36e7cd2bf3cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a29729f4b68c699f747386bdf39846237"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a29729f4b68c699f747386bdf39846237">vmFreeJVDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a29729f4b68c699f747386bdf39846237"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aae5f9e8e858b0534cfc164d1eebde98f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#aae5f9e8e858b0534cfc164d1eebde98f">vmMallocEHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:aae5f9e8e858b0534cfc164d1eebde98f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf e}$" src="form_46.png" width="8" height="6"/> on the CPU.  <a href="metadata_8c.html#aae5f9e8e858b0534cfc164d1eebde98f">More...</a><br /></td></tr>
 <tr class="separator:aae5f9e8e858b0534cfc164d1eebde98f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f60270f9a62f1a8ad55d550f9a00474"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a7f60270f9a62f1a8ad55d550f9a00474">vmFreeEHost</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a7f60270f9a62f1a8ad55d550f9a00474"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5d01bd5ab04517acef1d876f3989a8cd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a5d01bd5ab04517acef1d876f3989a8cd">vmMallocEDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a5d01bd5ab04517acef1d876f3989a8cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a832fe96bf501b3617ffbd46576d6fd0c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a832fe96bf501b3617ffbd46576d6fd0c">vmFreeEDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a832fe96bf501b3617ffbd46576d6fd0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a31244370219af727e316abca277b4d98"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a31244370219af727e316abca277b4d98">vmMallocSHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a31244370219af727e316abca277b4d98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf S}$" src="form_114.png" width="8" height="10"/> on the CPU.  <a href="metadata_8c.html#a31244370219af727e316abca277b4d98">More...</a><br /></td></tr>
 <tr class="separator:a31244370219af727e316abca277b4d98"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a36f4b9a3f07109f98d2bc2bd2613e8fd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a36f4b9a3f07109f98d2bc2bd2613e8fd">vmFreeSHost</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a36f4b9a3f07109f98d2bc2bd2613e8fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a50396fdf6698e705b50d7406d542b8ff"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a50396fdf6698e705b50d7406d542b8ff">vmMallocSDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a50396fdf6698e705b50d7406d542b8ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9a9ba677ade4899d0040408fa210dddb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a9a9ba677ade4899d0040408fa210dddb">vmFreeSDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a9a9ba677ade4899d0040408fa210dddb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa524cc6f8c6bad8c8e2c76d2e4717de5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#aa524cc6f8c6bad8c8e2c76d2e4717de5">vmMallocJHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:aa524cc6f8c6bad8c8e2c76d2e4717de5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/> on the CPU.  <a href="metadata_8c.html#aa524cc6f8c6bad8c8e2c76d2e4717de5">More...</a><br /></td></tr>
 <tr class="separator:aa524cc6f8c6bad8c8e2c76d2e4717de5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5b8e5a587f033a1c98faf661d99f7685"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a5b8e5a587f033a1c98faf661d99f7685">vmFreeJHost</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a5b8e5a587f033a1c98faf661d99f7685"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a72bad3929557f04d2d1eb98fd554f303"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a72bad3929557f04d2d1eb98fd554f303">vmMallocJDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a72bad3929557f04d2d1eb98fd554f303"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5491e983adc3a6b38ec7c08e2ea51c01"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a5491e983adc3a6b38ec7c08e2ea51c01">vmFreeJDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a5491e983adc3a6b38ec7c08e2ea51c01"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a403313a0a88799c37b5424c922cc164c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a403313a0a88799c37b5424c922cc164c">vmMallocDHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a403313a0a88799c37b5424c922cc164c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/> on the CPU.  <a href="metadata_8c.html#a403313a0a88799c37b5424c922cc164c">More...</a><br /></td></tr>
 <tr class="separator:a403313a0a88799c37b5424c922cc164c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae991cd418cfdccd1956ee2f81f42634a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ae991cd418cfdccd1956ee2f81f42634a">vmFreeDHost</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:ae991cd418cfdccd1956ee2f81f42634a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d07ad1565f6716220a662fc7ad08273"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a0d07ad1565f6716220a662fc7ad08273">vmMallocDDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a0d07ad1565f6716220a662fc7ad08273"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4f4ff2689ea7a1cc6d1d106e2d0fcad4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a4f4ff2689ea7a1cc6d1d106e2d0fcad4">vmFreeDDevice</a> (vcsbeam_context *vm)</td></tr>
-<tr class="separator:a4f4ff2689ea7a1cc6d1d106e2d0fcad4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abdefe77192dfcbdfb6c1a986cdce5f5f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#abdefe77192dfcbdfb6c1a986cdce5f5f">vmMallocPQIdxsHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:abdefe77192dfcbdfb6c1a986cdce5f5f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the polarisation indexes on the CPU.  <a href="metadata_8c.html#abdefe77192dfcbdfb6c1a986cdce5f5f">More...</a><br /></td></tr>
 <tr class="separator:abdefe77192dfcbdfb6c1a986cdce5f5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3afb5e0fe27c01f9b23a3eabb7b37092"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a3afb5e0fe27c01f9b23a3eabb7b37092">vmFreeVHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a3afb5e0fe27c01f9b23a3eabb7b37092"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated for the input voltages on the CPU.  <a href="metadata_8c.html#a3afb5e0fe27c01f9b23a3eabb7b37092">More...</a><br /></td></tr>
+<tr class="separator:a3afb5e0fe27c01f9b23a3eabb7b37092"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad91c35892c7153ae8519bfc4daee2f8d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ad91c35892c7153ae8519bfc4daee2f8d">vmFreeJVHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:ad91c35892c7153ae8519bfc4daee2f8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a8152b712ffd26aee6aede80c746231ac" title="Allocates memory for the quantity  on the CPU.">vmMallocJVHost()</a>.  <a href="metadata_8c.html#ad91c35892c7153ae8519bfc4daee2f8d">More...</a><br /></td></tr>
+<tr class="separator:ad91c35892c7153ae8519bfc4daee2f8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7f60270f9a62f1a8ad55d550f9a00474"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a7f60270f9a62f1a8ad55d550f9a00474">vmFreeEHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a7f60270f9a62f1a8ad55d550f9a00474"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#aae5f9e8e858b0534cfc164d1eebde98f" title="Allocates memory for the quantity  on the CPU.">vmMallocEHost()</a>.  <a href="metadata_8c.html#a7f60270f9a62f1a8ad55d550f9a00474">More...</a><br /></td></tr>
+<tr class="separator:a7f60270f9a62f1a8ad55d550f9a00474"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a36f4b9a3f07109f98d2bc2bd2613e8fd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a36f4b9a3f07109f98d2bc2bd2613e8fd">vmFreeSHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a36f4b9a3f07109f98d2bc2bd2613e8fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a31244370219af727e316abca277b4d98" title="Allocates memory for the quantity  on the CPU.">vmMallocSHost()</a>.  <a href="metadata_8c.html#a36f4b9a3f07109f98d2bc2bd2613e8fd">More...</a><br /></td></tr>
+<tr class="separator:a36f4b9a3f07109f98d2bc2bd2613e8fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b8e5a587f033a1c98faf661d99f7685"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a5b8e5a587f033a1c98faf661d99f7685">vmFreeJHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a5b8e5a587f033a1c98faf661d99f7685"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#aa524cc6f8c6bad8c8e2c76d2e4717de5" title="Allocates memory for the quantity  on the CPU.">vmMallocJHost()</a>.  <a href="metadata_8c.html#a5b8e5a587f033a1c98faf661d99f7685">More...</a><br /></td></tr>
+<tr class="separator:a5b8e5a587f033a1c98faf661d99f7685"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae991cd418cfdccd1956ee2f81f42634a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ae991cd418cfdccd1956ee2f81f42634a">vmFreeDHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:ae991cd418cfdccd1956ee2f81f42634a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a403313a0a88799c37b5424c922cc164c" title="Allocates memory for the quantity  on the CPU.">vmMallocDHost()</a>.  <a href="metadata_8c.html#ae991cd418cfdccd1956ee2f81f42634a">More...</a><br /></td></tr>
+<tr class="separator:ae991cd418cfdccd1956ee2f81f42634a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a237de08cf463348bcb41139fd31c8271"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a237de08cf463348bcb41139fd31c8271">vmFreePQIdxsHost</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a237de08cf463348bcb41139fd31c8271"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#abdefe77192dfcbdfb6c1a986cdce5f5f" title="Allocates memory for the polarisation indexes on the CPU.">vmMallocPQIdxsHost()</a>.  <a href="metadata_8c.html#a237de08cf463348bcb41139fd31c8271">More...</a><br /></td></tr>
 <tr class="separator:a237de08cf463348bcb41139fd31c8271"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f21fd4f1390ced2d339afacdfe34fdd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a9f21fd4f1390ced2d339afacdfe34fdd">vmMallocVDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a9f21fd4f1390ced2d339afacdfe34fdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the input voltages on the GPU.  <a href="metadata_8c.html#a9f21fd4f1390ced2d339afacdfe34fdd">More...</a><br /></td></tr>
+<tr class="separator:a9f21fd4f1390ced2d339afacdfe34fdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a242cfb9b89103a9e46ac36e7cd2bf3cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a242cfb9b89103a9e46ac36e7cd2bf3cc">vmMallocJVDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a242cfb9b89103a9e46ac36e7cd2bf3cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantities <img class="formulaInl" alt="${\bf J}{\bf v}$" src="form_140.png" width="16" height="10"/> on the GPU.  <a href="metadata_8c.html#a242cfb9b89103a9e46ac36e7cd2bf3cc">More...</a><br /></td></tr>
+<tr class="separator:a242cfb9b89103a9e46ac36e7cd2bf3cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d01bd5ab04517acef1d876f3989a8cd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a5d01bd5ab04517acef1d876f3989a8cd">vmMallocEDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a5d01bd5ab04517acef1d876f3989a8cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf e}$" src="form_46.png" width="8" height="6"/> on the GPU.  <a href="metadata_8c.html#a5d01bd5ab04517acef1d876f3989a8cd">More...</a><br /></td></tr>
+<tr class="separator:a5d01bd5ab04517acef1d876f3989a8cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a50396fdf6698e705b50d7406d542b8ff"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a50396fdf6698e705b50d7406d542b8ff">vmMallocSDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a50396fdf6698e705b50d7406d542b8ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf S}$" src="form_114.png" width="8" height="10"/> on the GPU.  <a href="metadata_8c.html#a50396fdf6698e705b50d7406d542b8ff">More...</a><br /></td></tr>
+<tr class="separator:a50396fdf6698e705b50d7406d542b8ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a72bad3929557f04d2d1eb98fd554f303"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a72bad3929557f04d2d1eb98fd554f303">vmMallocJDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a72bad3929557f04d2d1eb98fd554f303"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/> on the GPU.  <a href="metadata_8c.html#a72bad3929557f04d2d1eb98fd554f303">More...</a><br /></td></tr>
+<tr class="separator:a72bad3929557f04d2d1eb98fd554f303"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d07ad1565f6716220a662fc7ad08273"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a0d07ad1565f6716220a662fc7ad08273">vmMallocDDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a0d07ad1565f6716220a662fc7ad08273"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the quantity <img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/> on the GPU.  <a href="metadata_8c.html#a0d07ad1565f6716220a662fc7ad08273">More...</a><br /></td></tr>
+<tr class="separator:a0d07ad1565f6716220a662fc7ad08273"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a69e06ca450bcb8b3e922093a4c0b34c0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a69e06ca450bcb8b3e922093a4c0b34c0">vmMallocPQIdxsDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a69e06ca450bcb8b3e922093a4c0b34c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the polarisation indexes on the GPU.  <a href="metadata_8c.html#a69e06ca450bcb8b3e922093a4c0b34c0">More...</a><br /></td></tr>
 <tr class="separator:a69e06ca450bcb8b3e922093a4c0b34c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad1eed0fa043bb2638293788d612c9457"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ad1eed0fa043bb2638293788d612c9457">vmFreeVDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:ad1eed0fa043bb2638293788d612c9457"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees the GPU memory allocated with <a class="el" href="metadata_8c.html#a9f21fd4f1390ced2d339afacdfe34fdd" title="Allocates memory for the input voltages on the GPU.">vmMallocVDevice()</a>.  <a href="metadata_8c.html#ad1eed0fa043bb2638293788d612c9457">More...</a><br /></td></tr>
+<tr class="separator:ad1eed0fa043bb2638293788d612c9457"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29729f4b68c699f747386bdf39846237"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a29729f4b68c699f747386bdf39846237">vmFreeJVDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a29729f4b68c699f747386bdf39846237"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a242cfb9b89103a9e46ac36e7cd2bf3cc" title="Allocates memory for the quantities  on the GPU.">vmMallocJVDevice()</a>.  <a href="metadata_8c.html#a29729f4b68c699f747386bdf39846237">More...</a><br /></td></tr>
+<tr class="separator:a29729f4b68c699f747386bdf39846237"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a832fe96bf501b3617ffbd46576d6fd0c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a832fe96bf501b3617ffbd46576d6fd0c">vmFreeEDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a832fe96bf501b3617ffbd46576d6fd0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a5d01bd5ab04517acef1d876f3989a8cd" title="Allocates memory for the quantity  on the GPU.">vmMallocEDevice()</a>.  <a href="metadata_8c.html#a832fe96bf501b3617ffbd46576d6fd0c">More...</a><br /></td></tr>
+<tr class="separator:a832fe96bf501b3617ffbd46576d6fd0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a9ba677ade4899d0040408fa210dddb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a9a9ba677ade4899d0040408fa210dddb">vmFreeSDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a9a9ba677ade4899d0040408fa210dddb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a50396fdf6698e705b50d7406d542b8ff" title="Allocates memory for the quantity  on the GPU.">vmMallocSDevice()</a>.  <a href="metadata_8c.html#a9a9ba677ade4899d0040408fa210dddb">More...</a><br /></td></tr>
+<tr class="separator:a9a9ba677ade4899d0040408fa210dddb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5491e983adc3a6b38ec7c08e2ea51c01"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a5491e983adc3a6b38ec7c08e2ea51c01">vmFreeJDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a5491e983adc3a6b38ec7c08e2ea51c01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a72bad3929557f04d2d1eb98fd554f303" title="Allocates memory for the quantity  on the GPU.">vmMallocJDevice()</a>.  <a href="metadata_8c.html#a5491e983adc3a6b38ec7c08e2ea51c01">More...</a><br /></td></tr>
+<tr class="separator:a5491e983adc3a6b38ec7c08e2ea51c01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f4ff2689ea7a1cc6d1d106e2d0fcad4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a4f4ff2689ea7a1cc6d1d106e2d0fcad4">vmFreeDDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a4f4ff2689ea7a1cc6d1d106e2d0fcad4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a0d07ad1565f6716220a662fc7ad08273" title="Allocates memory for the quantity  on the GPU.">vmMallocDDevice()</a>.  <a href="metadata_8c.html#a4f4ff2689ea7a1cc6d1d106e2d0fcad4">More...</a><br /></td></tr>
+<tr class="separator:a4f4ff2689ea7a1cc6d1d106e2d0fcad4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad283d5d365c73152b2a748e84a7dc6bc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ad283d5d365c73152b2a748e84a7dc6bc">vmFreePQIdxsDevice</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:ad283d5d365c73152b2a748e84a7dc6bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a69e06ca450bcb8b3e922093a4c0b34c0" title="Allocates memory for the polarisation indexes on the GPU.">vmMallocPQIdxsDevice()</a>.  <a href="metadata_8c.html#ad283d5d365c73152b2a748e84a7dc6bc">More...</a><br /></td></tr>
 <tr class="separator:ad283d5d365c73152b2a748e84a7dc6bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a64484b56ded28eedc6615f980d4039a2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a64484b56ded28eedc6615f980d4039a2">vmSetMaxGPUMem</a> (vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes)</td></tr>
+<tr class="memdesc:a64484b56ded28eedc6615f980d4039a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tries to cleverly figure out how many chunks are needed to fit everything on the GPU.  <a href="metadata_8c.html#a64484b56ded28eedc6615f980d4039a2">More...</a><br /></td></tr>
 <tr class="separator:a64484b56ded28eedc6615f980d4039a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6e140f229ab6d67dd32a403dd6f1521e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a6e140f229ab6d67dd32a403dd6f1521e">vmPushChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a6e140f229ab6d67dd32a403dd6f1521e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads a "chunk" of input data onto the GPU.  <a href="metadata_8c.html#a6e140f229ab6d67dd32a403dd6f1521e">More...</a><br /></td></tr>
 <tr class="separator:a6e140f229ab6d67dd32a403dd6f1521e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a46564605d923a726165f118fdb5d7998"><td class="memItemLeft" align="right" valign="top">vm_error&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a46564605d923a726165f118fdb5d7998">vmReadNextSecond</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a46564605d923a726165f118fdb5d7998"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads a second's worth of input data from the observation files.  <a href="metadata_8c.html#a46564605d923a726165f118fdb5d7998">More...</a><br /></td></tr>
 <tr class="separator:a46564605d923a726165f118fdb5d7998"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a61586e2cdb871f45ece427179a31c404"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a61586e2cdb871f45ece427179a31c404">vmPushJ</a> (vcsbeam_context *vm)</td></tr>
 <tr class="separator:a61586e2cdb871f45ece427179a31c404"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -220,6 +258,10 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees the memory associated with the VCSBeam context. </p>
+<p>After freeing the memory associated with the VCSBeam context's member variables, this function frees the VCSBeam context itself.</p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000023">Todo:</a></b></dt><dd>Rename this function to a <code>vm...</code> name </dd></dl>
+
 </div>
 </div>
 <a id="a6e0a6247393ba2c9f493315c21005fcd"></a>
@@ -247,6 +289,17 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Finds an antenna in an observation with a given name. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">obs_metadata</td><td>The observation metadata to be searched </td></tr>
+    <tr><td class="paramname">tile_name</td><td>The name of the tile being sought </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A pointer to an mwalib Antenna struct with a matching tile name</dd></dl>
+<p>If no tile with the given name is found in the observation, <code>NULL</code> is returned. </p>
 
 </div>
 </div>
@@ -452,6 +505,17 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Binds a calibration solution to the VCSBeam context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">caldir</td><td>The directory containing RTS solution files, OR the path of an Offringa-style calibration solution file </td></tr>
+    <tr><td class="paramname">cal_type</td><td>Either <code>CAL_RTS</code> or <code>CAL_OFFRINGA</code> </td></tr>
+    <tr><td class="paramname">use_bandpass</td><td>Whether to include the Bandpass information (relevant for RTS solutions only) </td></tr>
+    <tr><td class="paramname">flags_file</td><td>A file containing names of (extra) tiles to be flagged, or <code>NULL</code> </td></tr>
+  </table>
+  </dd>
+</dl>
+
 </div>
 </div>
 <a id="a091372039dcad27a96221fa22cd58d5e"></a>
@@ -515,6 +579,20 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Binds a set of observation files to the VCSBeam context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">first_coarse_chan_str</td><td>A string representation of the lowest coarse channel to be processed </td></tr>
+    <tr><td class="paramname">num_coarse_chans_to_process</td><td>The number of coarse channels to be processed </td></tr>
+    <tr><td class="paramname">coarse_chan_idx_offset</td><td>The first coarse channel (relative to <code>first_coarse_chan_str</code>) to be processed by this MPI process </td></tr>
+    <tr><td class="paramname">first_gps_second_str</td><td>A string representation of the first GPS second to be processed </td></tr>
+    <tr><td class="paramname">num_gps_seconds_to_process</td><td>The number of GPS seconds to be processed </td></tr>
+    <tr><td class="paramname">gps_second_offset</td><td>The first GPS second (relative to <code>first_gps_second_str</code>) to be processed by this MPI process </td></tr>
+    <tr><td class="paramname">datadir</td><td>The directory containing the observation data files </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -652,6 +730,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a0d07ad1565f6716220a662fc7ad08273" title="Allocates memory for the quantity  on the GPU.">vmMallocDDevice()</a>. </p>
+
 </div>
 </div>
 <a id="ae991cd418cfdccd1956ee2f81f42634a"></a>
@@ -669,6 +749,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a403313a0a88799c37b5424c922cc164c" title="Allocates memory for the quantity  on the CPU.">vmMallocDHost()</a>. </p>
 
 </div>
 </div>
@@ -688,6 +770,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a5d01bd5ab04517acef1d876f3989a8cd" title="Allocates memory for the quantity  on the GPU.">vmMallocEDevice()</a>. </p>
+
 </div>
 </div>
 <a id="a7f60270f9a62f1a8ad55d550f9a00474"></a>
@@ -705,6 +789,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#aae5f9e8e858b0534cfc164d1eebde98f" title="Allocates memory for the quantity  on the CPU.">vmMallocEHost()</a>. </p>
 
 </div>
 </div>
@@ -724,6 +810,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a72bad3929557f04d2d1eb98fd554f303" title="Allocates memory for the quantity  on the GPU.">vmMallocJDevice()</a>. </p>
+
 </div>
 </div>
 <a id="a5b8e5a587f033a1c98faf661d99f7685"></a>
@@ -741,6 +829,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#aa524cc6f8c6bad8c8e2c76d2e4717de5" title="Allocates memory for the quantity  on the CPU.">vmMallocJHost()</a>. </p>
 
 </div>
 </div>
@@ -760,6 +850,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a242cfb9b89103a9e46ac36e7cd2bf3cc" title="Allocates memory for the quantities  on the GPU.">vmMallocJVDevice()</a>. </p>
+
 </div>
 </div>
 <a id="ad91c35892c7153ae8519bfc4daee2f8d"></a>
@@ -777,6 +869,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a8152b712ffd26aee6aede80c746231ac" title="Allocates memory for the quantity  on the CPU.">vmMallocJVHost()</a>. </p>
 
 </div>
 </div>
@@ -796,6 +890,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a69e06ca450bcb8b3e922093a4c0b34c0" title="Allocates memory for the polarisation indexes on the GPU.">vmMallocPQIdxsDevice()</a>. </p>
+
 </div>
 </div>
 <a id="a237de08cf463348bcb41139fd31c8271"></a>
@@ -813,6 +909,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#abdefe77192dfcbdfb6c1a986cdce5f5f" title="Allocates memory for the polarisation indexes on the CPU.">vmMallocPQIdxsHost()</a>. </p>
 
 </div>
 </div>
@@ -832,6 +930,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a50396fdf6698e705b50d7406d542b8ff" title="Allocates memory for the quantity  on the GPU.">vmMallocSDevice()</a>. </p>
+
 </div>
 </div>
 <a id="a36f4b9a3f07109f98d2bc2bd2613e8fd"></a>
@@ -850,6 +950,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Frees memory allocated with <a class="el" href="metadata_8c.html#a31244370219af727e316abca277b4d98" title="Allocates memory for the quantity  on the CPU.">vmMallocSHost()</a>. </p>
+
 </div>
 </div>
 <a id="ad1eed0fa043bb2638293788d612c9457"></a>
@@ -867,9 +969,10 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md49"></a>
-vmFreeVDevice</h1>
-<p>Frees the memory allocated with vmMallocVDevice. If the observation is legacy, then free the memory. If the observation is MWAX, then do nothing; the memory should be freed via a call to vmFreeForwardPFB. </p>
+
+<p>Frees the GPU memory allocated with <a class="el" href="metadata_8c.html#a9f21fd4f1390ced2d339afacdfe34fdd" title="Allocates memory for the input voltages on the GPU.">vmMallocVDevice()</a>. </p>
+<p>If the observation is Legacy, then free the memory.</p>
+<p>If the observation is MWAX, then do nothing; the memory should be freed via a call to <a class="el" href="pfb_8cu.html#a54059e7d31bcf4eccc39609e72ad8189" title="Frees host and device memory allocated in vmInitForwardPFB().">vmFreeForwardPFB()</a>. </p>
 
 </div>
 </div>
@@ -888,6 +991,8 @@ vmFreeVDevice</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Frees memory allocated for the input voltages on the CPU. </p>
 
 </div>
 </div>
@@ -928,7 +1033,7 @@ vmFreeVDevice</h1>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md52"></a>
+<h1><a class="anchor" id="autotoc_md47"></a>
 vmGetLegacyVoltFilename</h1>
 <p>Same as vmGetVoltFilename, but return the filename as if the observation were really a legacy VCS observation. </p>
 
@@ -989,7 +1094,7 @@ vmGetLegacyVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md51"></a>
+<h1><a class="anchor" id="autotoc_md46"></a>
 vmGetVoltFilename</h1>
 <p>Returns the filename for the given channel index and GPS second, assuming the observation specified by VM-&gt;OBS_CONTEXT. Expects VM-&gt;SECONDS_PER_FILE to be set (via vmLoadObsMetafits). Result put into FILENAME (assumed already allocated). </p>
 
@@ -1010,6 +1115,16 @@ vmGetVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Initialises a VCSBeam context struct. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">use_mpi</td><td>Set up the struct for using MPI </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A pointer to a newly allocated <code>vcsbeam_context</code> struct</dd></dl>
+<p>Once the VCSBeam context is finished with, it should be freed with a call to <a class="el" href="metadata_8c.html#aac8b4c5ae6f35a9e2992867e6ba2cbfe" title="Frees the memory associated with the VCSBeam context.">destroy_vcsbeam_context()</a>. </p>
 
 </div>
 </div>
@@ -1085,6 +1200,9 @@ vmGetVoltFilename</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/> on the GPU. </p>
+<p>A pointer to the newly allocated memory is given in <code>vm&rarr;d_D</code>. </p>
+
 </div>
 </div>
 <a id="a403313a0a88799c37b5424c922cc164c"></a>
@@ -1102,6 +1220,9 @@ vmGetVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/> on the CPU. </p>
+<p>A pointer to the newly allocated memory is given in <code>vm&rarr;D</code>. </p>
 
 </div>
 </div>
@@ -1121,6 +1242,9 @@ vmGetVoltFilename</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf e}$" src="form_46.png" width="8" height="6"/> on the GPU. </p>
+<p>A pointer to the newly allocated memory is given in <code>vm&rarr;d_e</code>. </p>
+
 </div>
 </div>
 <a id="aae5f9e8e858b0534cfc164d1eebde98f"></a>
@@ -1138,6 +1262,9 @@ vmGetVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf e}$" src="form_46.png" width="8" height="6"/> on the CPU. </p>
+<p>A pointer to the newly allocated memory is given in <code>vm&rarr;e</code>. </p>
 
 </div>
 </div>
@@ -1157,6 +1284,9 @@ vmGetVoltFilename</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/> on the GPU. </p>
+<p>A pointer to the newly allocated memory is given in <code>vm&rarr;d_J</code>. </p>
+
 </div>
 </div>
 <a id="aa524cc6f8c6bad8c8e2c76d2e4717de5"></a>
@@ -1174,6 +1304,9 @@ vmGetVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/> on the CPU. </p>
+<p>A pointer to the newly allocated memory is given in <code>vm&rarr;J</code>. </p>
 
 </div>
 </div>
@@ -1193,6 +1326,10 @@ vmGetVoltFilename</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the quantities <img class="formulaInl" alt="${\bf J}{\bf v}$" src="form_140.png" width="16" height="10"/> on the GPU. </p>
+<p>Pointers to the newly allocated memory are given in <code>vm&rarr;d_Jv_P</code> and <code>vm&rarr;d_Jv_Q</code>.</p>
+<p>Only one "chunk" of memory is allocated (where each second of input data is divided up into one or more chunks, depending on the amount of memory available on the GPU). </p>
+
 </div>
 </div>
 <a id="a8152b712ffd26aee6aede80c746231ac"></a>
@@ -1210,6 +1347,9 @@ vmGetVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf J}{\bf v}$" src="form_140.png" width="16" height="10"/> on the CPU. </p>
+<p>Pointers to the newly allocated memory are given in <code>vm&rarr;Jv_P</code> and <code>vm&rarr;Jv_Q</code>. </p>
 
 </div>
 </div>
@@ -1229,6 +1369,9 @@ vmGetVoltFilename</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the polarisation indexes on the GPU. </p>
+<p>Pointers to the newly allocated memory are given in <code>vm&rarr;d_polP_idxs</code> and <code>vm&rarr;d_polQ_idxs</code>. </p>
+
 </div>
 </div>
 <a id="abdefe77192dfcbdfb6c1a986cdce5f5f"></a>
@@ -1246,6 +1389,9 @@ vmGetVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Allocates memory for the polarisation indexes on the CPU. </p>
+<p>Pointers to the newly allocated memory are given in <code>vm&rarr;polP_idxs</code> and <code>vm&rarr;polQ_idxs</code>. </p>
 
 </div>
 </div>
@@ -1265,6 +1411,9 @@ vmGetVoltFilename</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf S}$" src="form_114.png" width="8" height="10"/> on the GPU. </p>
+<p>A pointer to the newly allocated memory is given in <code>vm&rarr;d_S</code>. </p>
+
 </div>
 </div>
 <a id="a31244370219af727e316abca277b4d98"></a>
@@ -1283,6 +1432,9 @@ vmGetVoltFilename</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Allocates memory for the quantity <img class="formulaInl" alt="${\bf S}$" src="form_114.png" width="8" height="10"/> on the CPU. </p>
+<p>A pointer to the newly allocated memory is given in <code>vm&rarr;S</code>. </p>
+
 </div>
 </div>
 <a id="a9f21fd4f1390ced2d339afacdfe34fdd"></a>
@@ -1300,9 +1452,11 @@ vmGetVoltFilename</h1>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md48"></a>
-vmMallocVDevice</h1>
-<p>Allocates device memory for the input voltages for the beamformer. If the observation is legacy, then allocates new memory. If the observation is MWAX, then just point to the assumed already existing memory allocated in VM-&gt;FPFB. </p>
+
+<p>Allocates memory for the input voltages on the GPU. </p>
+<p>If the observation is Legacy, then this function allocates new memory and sets <code>vm&rarr;d_v_size_bytes</code> to the address of the new memory block.</p>
+<p>If the observation is MWAX, then this function only copies the value of <code>vm&rarr;fpfb&rarr;d_vcs_data</code> to <code>vm&rarr;d_v_size_bytes</code>, (without checking whether it points to valid GPU memory).</p>
+<p>Only one "chunk" of memory is allocated (where each second of input data is divided up into one or more chunks, depending on the amount of memory available on the GPU). </p>
 
 </div>
 </div>
@@ -1321,6 +1475,11 @@ vmMallocVDevice</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Allocates memory for the input voltages on the CPU. </p>
+<p>The memory is allocated as a <code>host_buffer</code> struct (see <a class="el" href="buffer_8c.html#ac3bea5a75804335dcce618820d5c28cf" title="Initialise a buffer for reading in voltage data.">vmInitReadBuffer()</a> for a full description). The amount of memory allocated depends on whether the observation is Legacy or MWAX.</p>
+<p>If the input is legacy, the read buffer can be just enough for one second's worth of data.</p>
+<p>However, for MWAX, the read buffer must be slightly bigger to accommodate the PFB's extra taps. (For now, this is fixed to one voltage block. Changing this will break the gpu kernels that do the fine PFB, for which the offset into the data is currently hard-coded.) </p>
 
 </div>
 </div>
@@ -1396,6 +1555,8 @@ vmMallocVDevice</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Loads a "chunk" of input data onto the GPU. </p>
+
 </div>
 </div>
 <a id="a61586e2cdb871f45ece427179a31c404"></a>
@@ -1432,6 +1593,9 @@ vmMallocVDevice</h1>
       </table>
 </div><div class="memdoc">
 
+<p>Reads in a calibration solution. </p>
+<p>Calls either <a class="el" href="calibration_8c.html#a456923a16ff4f680b225d49d7e5ebe63" title="Loads a Real Time System (RTS) calibration solution.">vmLoadRTSSolution()</a> or <a class="el" href="calibration_8c.html#a20eb84ad9699d8bc39c5f0001cf6b246" title="Reads in a calibration solution from an Offringa-style solution file.">vmLoadOffringaSolution()</a> depending on whether <code>vm&rarr;cal.cal_type</code> is set to <code>CAL_RTS</code> or <code>CAL_OFFRINGA</code>. Afterwards, <a class="el" href="calibration_8c.html#ad565f8bc38128d7645a55be24697ee6f" title="Flags tiles by setting the corresponding calibration matrices to zero.">vmSetCustomTileFlags()</a> is called. </p>
+
 </div>
 </div>
 <a id="a46564605d923a726165f118fdb5d7998"></a>
@@ -1449,6 +1613,8 @@ vmMallocVDevice</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Reads a second's worth of input data from the observation files. </p>
 
 </div>
 </div>
@@ -1495,10 +1661,9 @@ vmMallocVDevice</h1>
         </tr>
       </table>
 </div><div class="memdoc">
-<h1><a class="anchor" id="autotoc_md50"></a>
-vmSetMaxGPUMem</h1>
-<p>Tries to cleverly figure out how many chunks are needed to fit everything on the GPU.</p>
-<p>LOGIC IS CURRENTLY FAULTY AND INCOMPLETE. DO NOT USE </p>
+
+<p>Tries to cleverly figure out how many chunks are needed to fit everything on the GPU. </p>
+<p>LOGIC IS CURRENTLY FAULTY AND INCOMPLETE. DO NOT USE! </p>
 
 </div>
 </div>
@@ -1579,6 +1744,37 @@ vmSetMaxGPUMem</h1>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Sets flags governing whether the PFB and inverse PFB routines are run depending on the input and output channelisations. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">out_fine</td><td>Sets the flag for fine channelised output </td></tr>
+    <tr><td class="paramname">out_coarse</td><td>Sets the flag for coarse_channelised output</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Whether the (forward) PFB or the inverse PFB needs to be run depends on the input channelisation (fine = Legacy, or coarse = MWAX), and what channelisations are desired in output (fine or coarse). The <code>vm&rarr;do_forward_pfb</code> and <code>vm&rarr;do_inverse_pfb</code> are set accordingly.</p>
+<p>The following table describes all possible scenarios: </p><table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadCenter">Input mode   </th><th class="markdownTableHeadCenter">Output fine?   </th><th class="markdownTableHeadCenter">Output coarse?   </th><th class="markdownTableHeadCenter">Do forward PFB?   </th><th class="markdownTableHeadCenter">Do inverse PFB?    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter">Legacy   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">no    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter">Legacy   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">yes    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter">Legacy   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">no    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter">Legacy   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">yes    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter">MWAX   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">no    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter">MWAX   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">yes    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter">MWAX   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">no   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">no    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter">MWAX   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">yes   </td><td class="markdownTableBodyCenter">yes   </td></tr>
+</table>
+<p>Note that both forward and inverse PFBs are required for MWAX data even when fine-channelised output is not requested. This is because the beamforming operation requires sufficiently fine channels in order to avoid decoherence across the channels. </p>
 
 </div>
 </div>

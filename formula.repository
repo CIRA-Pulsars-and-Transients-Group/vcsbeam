@@ -23,78 +23,149 @@
 \_form#22=8x10:$\lambda$
 \_form#23=11x10:$H$
 \_form#24=170x13:$\lambda_\text{MWA} = -0.4660608448386394$
-\_form#25=8x10:${\bf J}$
-\_form#26=11x10:${\bf D}$
-\_form#27=11x10:${\bf B}$
-\_form#28=11x10:${\bf G}$
-\_form#29=10x9:${\bf E}$
-\_form#30=28x9:$2\times2$
-\_form#31=8x6:${\bf e}$
-\_form#32=9x6:${\bf v}$
-\_form#33=41x10:\[ {\bf v} = {\bf J}{\bf e}. \]
-\_form#34=134x31:\[ \begin{bmatrix} v_q \\ v_p \end{bmatrix} = \begin{bmatrix} J_{qx} & J_{qy} \\ J_{px} & J_{py} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]
-\_form#35=55x13:\[ {\bf e} = {\bf J}^{-1}{\bf v}. \]
-\_form#36=49x13:\[ {\bf J} = {\bf D}{\bf B}, \]
-\_form#37=14x13:${\bf J}_d$
-\_form#38=24x13:${\bf B}_\text{cal}$
-\_form#39=13x13:${\bf J}_b$
-\_form#40=368x31:\begin{align*} {\bf J}_d &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, & {\bf J}_b &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, & {\bf B}_\text{cal} &= \begin{bmatrix} B_{px} & B_{py} \\ B_{qx} & B_{qy} \end{bmatrix}. \end{align*}
-\_form#41=38x13:\[ {\bf J} = {\bf J}_d \]
-\_form#42=50x13:\[ {\bf J} = {\bf J}_d {\bf J}_b \]
-\_form#43=61x16:\[ {\bf D} = {\bf J}{\bf B}_\text{cal}^{-1}. \]
-\_form#44=101x31:\[ {\bf D} = \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}. \]
-\_form#45=101x31:\[ {\bf D} = \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}. \]
-\_form#46=111x31:\[ {\bf B}_\text{hb} = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}. \]
-\_form#47=28x14:$(x,y)$
-\_form#48=26x14:$(q,p)$
-\_form#49=23x13:${\bf B}_\text{hb}$
-\_form#50=304x31:\[ {\bf B} = {\bf B}_\text{hb}{\bf P}_\text{pa} = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix} = \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix} \]
-\_form#51=128x28:\[ {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}, \]
-\_form#52=6x6:$a$
-\_form#53=8x13:$f$
-\_form#54=8x9:$\varphi$
-\_form#55=23x19:${\bf J}_{a,f}^{-1}$
-\_form#56=23x10:${\bf v}_{a,f}$
-\_form#57=34x15:$e^{i\varphi_{a,f}})$
-\_form#58=18x13:${\bf D}_a$
-\_form#59=25x14:${\bf B}_{a,f}$
-\_form#60=81x14:\[ {\bf J}_{a,f} = {\bf D}_a {\bf B}_{a,f} \]
-\_form#61=18x14:${\bf B}_f$
-\_form#62=15x11:$e^{i\phi}$
-\_form#63=239x31:\[ {\bf e}{\bf e}^\dagger = \begin{bmatrix} e_x e_x^\ast & e_x e_y^\ast \\ e_y e_x^\ast & e_y e_y^\ast \end{bmatrix} = \frac12 \begin{bmatrix} I + Q & U + Vi \\ U - Vi & I - Q \end{bmatrix} \]
-\_form#64=213x34:\[ \frac12 \begin{bmatrix} I + Q & U + Vi \\ U - Vi & I - Q \end{bmatrix} = {\bf e}{\bf e}^\dagger - \sum_a {\bf e}_a {\bf e}_a^\dagger, \]
-\_form#65=104x19:${\bf e}_a = e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}$
-\_form#66=10x10:$D$
-\_form#67=34x14:$(Q,P)$
-\_form#68=71x31:\[\begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}.\]
-\_form#69=33x14:$(P,Q)$
-\_form#70=150x31:\[ \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix} \rightarrow \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix} \]
-\_form#71=6x6:$z$
-\_form#72=38x11:$z^N = 1$
-\_form#73=74x28:\[ I = \sum_a {\bf v}_a^\dagger {\bf v}_a, \]
-\_form#74=81x16:${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$
-\_form#75=21x11:${\bf J}^{-1}$
-\_form#76=134x51:\[ \begin{aligned} {\bf e} &= {\bf J}^{-1} {\bf v}, \\ \begin{bmatrix} e_x \\ e_y \end{bmatrix} &= \begin{bmatrix} J_{xq} & J_{xp} \\ J_{yq} & J_{yp} \end{bmatrix} \begin{bmatrix} v_q \\ v_p \end{bmatrix}. \end{aligned} \]
-\_form#77=88x16:\[{\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1},\]
-\_form#78=119x14:$(N_a \times N_f \times N_p \times N_p)$
-\_form#79=15x13:$N_a$
-\_form#80=15x14:$N_f$
-\_form#81=15x14:$N_p$
-\_form#82=15x11:$e^{i\varphi}$
-\_form#83=23x13:${\bf M}_\text{in}$
-\_form#84=69x13:${\bf M}_\text{out} = {\bf M}_\text{in}$
-\_form#85=9x26:$\dfrac{1}{z}$
-\_form#86=16x6:$-z$
-\_form#87=73x16:${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$
-\_form#88=19x13:${\bf M}_1$
-\_form#89=20x13:${\bf M}_2$
-\_form#90=99x13:${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$
-\_form#91=15x10:${\bf M}$
-\_form#92=65x13:${\bf M}_\text{out} = {\bf M}^\ast$
-\_form#93=75x14:${\bf M}_\text{out} = |{\bf M}_\text{in}|$
-\_form#94=29x13:${\bf M}_\text{out}$
-\_form#95=91x31:\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 3 & 2 \\ 1 & 0 \end{bmatrix}\]
-\_form#96=91x31:\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 2 & 3 \\ 0 & 1 \end{bmatrix}\]
-\_form#97=91x31:\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 1 & 0 \\ 3 & 2 \end{bmatrix}\]
-\_form#98=48x11:${\bf H} = {\bf M}^\dagger$
-\_form#99=59x11:${\bf C} = {\bf M}{\bf M}^\dagger$
+\_form#25=14x13:$N_t$
+\_form#26=15x14:$N_f$
+\_form#27=15x13:$N_a$
+\_form#28=15x14:$N_p$
+\_form#29=11x10:${\bf D}$
+\_form#30=114x14:\[ N_a \times N_f \times N_p \times N_p, \]
+\_form#31=49x14:$D_{a,f,p_1,p_2}$
+\_form#32=54x31:\[ {\bf e} = \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]
+\_form#33=93x31:\[ {\bf J} = \begin{bmatrix} J_{xx} & J_{xy} \\ J_{yx} & J_{yy} \end{bmatrix}. \]
+\_form#34=5x9:$i$
+\_form#35=78x14:$N_i = N_a \times N_p$
+\_form#36=64x14:$\{I, Q, U, V\}$
+\_form#37=15x13:$N_s$
+\_form#38=45x13:$N_d = 16$
+\_form#39=15x13:$N_b$
+\_form#40=15x13:$N_d$
+\_form#41=8x10:${\bf J}$
+\_form#42=11x10:${\bf B}$
+\_form#43=11x10:${\bf G}$
+\_form#44=10x9:${\bf E}$
+\_form#45=28x9:$2\times2$
+\_form#46=8x6:${\bf e}$
+\_form#47=9x6:${\bf v}$
+\_form#48=41x10:\[ {\bf v} = {\bf J}{\bf e}. \]
+\_form#49=134x31:\[ \begin{bmatrix} v_q \\ v_p \end{bmatrix} = \begin{bmatrix} J_{qx} & J_{qy} \\ J_{px} & J_{py} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]
+\_form#50=55x13:\[ {\bf e} = {\bf J}^{-1}{\bf v}. \]
+\_form#51=49x13:\[ {\bf J} = {\bf D}{\bf B}, \]
+\_form#52=14x13:${\bf J}_d$
+\_form#53=24x13:${\bf B}_\text{cal}$
+\_form#54=13x13:${\bf J}_b$
+\_form#55=368x31:\begin{align*} {\bf J}_d &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, & {\bf J}_b &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, & {\bf B}_\text{cal} &= \begin{bmatrix} B_{px} & B_{py} \\ B_{qx} & B_{qy} \end{bmatrix}. \end{align*}
+\_form#56=38x13:\[ {\bf J} = {\bf J}_d \]
+\_form#57=50x13:\[ {\bf J} = {\bf J}_d {\bf J}_b \]
+\_form#58=61x16:\[ {\bf D} = {\bf J}{\bf B}_\text{cal}^{-1}. \]
+\_form#59=101x31:\[ {\bf D} = \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}. \]
+\_form#60=101x31:\[ {\bf D} = \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}. \]
+\_form#61=111x31:\[ {\bf B}_\text{hb} = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}. \]
+\_form#62=28x14:$(x,y)$
+\_form#63=26x14:$(q,p)$
+\_form#64=23x13:${\bf B}_\text{hb}$
+\_form#65=304x31:\[ {\bf B} = {\bf B}_\text{hb}{\bf P}_\text{pa} = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix} = \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix} \]
+\_form#66=149x33:\[ {\bf e}_f = \frac{1}{N_a} \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}, \]
+\_form#67=6x6:$a$
+\_form#68=8x13:$f$
+\_form#69=8x9:$\varphi$
+\_form#70=23x19:${\bf J}_{a,f}^{-1}$
+\_form#71=23x10:${\bf v}_{a,f}$
+\_form#72=34x15:$e^{i\varphi_{a,f}})$
+\_form#73=18x13:${\bf D}_a$
+\_form#74=25x14:${\bf B}_{a,f}$
+\_form#75=81x14:\[ {\bf J}_{a,f} = {\bf D}_a {\bf B}_{a,f} \]
+\_form#76=18x14:${\bf B}_f$
+\_form#77=21x11:${\bf J}^{-1}$
+\_form#78=86x19:\[ \tilde{\bf e}_{a,f} = {\bf J}^{-1}_{a,f} {\bf v}_{a,f}. \]
+\_form#79=15x11:$e^{i\varphi}$
+\_form#80=85x16:\[ {\bf e}_{a,f} = e^{i\varphi_f} \tilde{\bf e}_{a,f}. \]
+\_form#81=96x33:\[ {\bf e}_f = \frac{1}{N_a}\sum_a \tilde{\bf e}_{a,f}. \]
+\_form#82=239x31:\[ {\bf e}{\bf e}^\dagger = \begin{bmatrix} e_x e_x^\ast & e_x e_y^\ast \\ e_y e_x^\ast & e_y e_y^\ast \end{bmatrix} = \frac12 \begin{bmatrix} I + Q & U + Vi \\ U - Vi & I - Q \end{bmatrix} \]
+\_form#83=213x34:\[ \frac12 \begin{bmatrix} I + Q & U + Vi \\ U - Vi & I - Q \end{bmatrix} = {\bf e}{\bf e}^\dagger - \sum_a {\bf e}_a {\bf e}_a^\dagger. \]
+\_form#84=10x10:$D$
+\_form#85=34x14:$(Q,P)$
+\_form#86=71x31:\[\begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}.\]
+\_form#87=33x14:$(P,Q)$
+\_form#88=150x31:\[ \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix} \rightarrow \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix} \]
+\_form#89=18x13:${\bf J}_m$
+\_form#90=14x14:${\bf J}_f$
+\_form#91=21x13:${\bf J}_\text{ref}$
+\_form#92=214x31:\[ \begin{aligned} {\bf J} &= \begin{bmatrix} J_0 & J_1 \\ J_2 & J_3 \end{bmatrix}, & {\bf J}_\text{ref} &= \begin{bmatrix} J_{\text{ref},0} & J_{\text{ref},1} \\ J_{\text{ref},2} & J_{\text{ref},3} \end{bmatrix}, \end{aligned} \]
+\_form#93=114x41:\[ \begin{bmatrix} J_0\frac{|J_{\text{ref},0}|}{J_{\text{ref},0}} & J_1\frac{|J_{\text{ref},1}|}{J_{\text{ref},1}} \\ J_2\frac{|J_{\text{ref},2}|}{J_{\text{ref},2}} & J_3\frac{|J_{\text{ref},3}|}{J_{\text{ref},3}}. \end{bmatrix} \]
+\_form#94=150x31:\[ {\bf J} = \begin{bmatrix} J_0 & J_1 \\ J_2 & J_3 \end{bmatrix} \rightarrow \begin{bmatrix} J_0 & 0 \\ 0 & J_3 \end{bmatrix}. \]
+\_form#95=6x6:$z$
+\_form#96=38x11:$z^N = 1$
+\_form#97=8x6:$v$
+\_form#98=75x14:$N_t \times N_f \times N_i$
+\_form#99=8x10:$I$
+\_form#100=45x14:$N_t \times N_f$
+\_form#101=109x28:\[ I_{t,f} = \sum_i v_{t,f,i}^\dagger v_{t,f,i}. \]
+\_form#102=98x14:$\langle\langle\langle(N_f, N_t), N_i\rangle\rangle\rangle.$
+\_form#103=116x28:\[ I_{t,f} = \sum_a {\bf v}_{t,f,a}^\dagger {\bf v}_{t,f,a}. \]
+\_form#104=109x14:$N_a \times N_f \times N_p \times N_p$
+\_form#105=30x11:${\bf J}^{-1}{\bf v}$
+\_form#106=76x14:$N_t \times N_f \times N_a$
+\_form#107=99x19:\[ \tilde{\bf e}_{t,f,a} = {\bf J}^{-1}_{a,f}{\bf v}_{t,f,a}. \]
+\_form#108=99x14:$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.$
+\_form#109=46x14:$N_a \times N_f$
+\_form#110=76x14:$N_t \times N_f \times N_p$
+\_form#111=76x14:$N_t \times N_s \times N_f$
+\_form#112=125x33:\[ {\bf e}_{t,f} = \frac{1}{N_a} \sum_a e^{i\varphi} \tilde{\bf e}_{t,f,a}. \]
+\_form#113=83x14:$S = [I, Q, U, V]$
+\_form#114=8x10:${\bf S}$
+\_form#115=84x28:\[ \hat{\bf S} = \frac{{\bf S} - \text{offset}}{\text{scale}}, \]
+\_form#116=145x44:\begin{align*} \text{scale} &= \frac{S_\text{max} - S_\text{min}}{256} \\ \text{offset} &= S_\text{min} + 0.5 \times \text{scale}. \end{align*}
+\_form#117=99x14:$\langle\langle\langle N_b,(N_f, N_s)\rangle\rangle\rangle.$
+\_form#118=30x11:${\bf J}^{-1} {\bf v}$
+\_form#119=81x16:${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$
+\_form#120=134x51:\[ \begin{aligned} {\bf e} &= {\bf J}^{-1} {\bf v}, \\ \begin{bmatrix} e_x \\ e_y \end{bmatrix} &= \begin{bmatrix} J_{xq} & J_{xp} \\ J_{yq} & J_{yp} \end{bmatrix} \begin{bmatrix} v_q \\ v_p \end{bmatrix}. \end{aligned} \]
+\_form#121=88x16:\[{\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1},\]
+\_form#122=119x14:$(N_a \times N_f \times N_p \times N_p)$
+\_form#123=23x13:${\bf M}_\text{in}$
+\_form#124=69x13:${\bf M}_\text{out} = {\bf M}_\text{in}$
+\_form#125=9x26:$\dfrac{1}{z}$
+\_form#126=16x6:$-z$
+\_form#127=73x16:${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$
+\_form#128=19x13:${\bf M}_1$
+\_form#129=20x13:${\bf M}_2$
+\_form#130=99x13:${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$
+\_form#131=15x10:${\bf M}$
+\_form#132=65x13:${\bf M}_\text{out} = {\bf M}^\ast$
+\_form#133=75x14:${\bf M}_\text{out} = |{\bf M}_\text{in}|$
+\_form#134=29x13:${\bf M}_\text{out}$
+\_form#135=91x31:\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 3 & 2 \\ 1 & 0 \end{bmatrix}\]
+\_form#136=91x31:\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 2 & 3 \\ 0 & 1 \end{bmatrix}\]
+\_form#137=91x31:\[\begin{bmatrix} 0 & 1 \\ 2 & 3\end{bmatrix} \rightarrow \begin{bmatrix} 1 & 0 \\ 3 & 2 \end{bmatrix}\]
+\_form#138=48x11:${\bf H} = {\bf M}^\dagger$
+\_form#139=59x11:${\bf C} = {\bf M}{\bf M}^\dagger$
+\_form#140=16x10:${\bf J}{\bf v}$
+\_form#141=149x38:\[ X_k[m] \sum_n^{K-1} b_m[n] e^{-2\pi jkn/K}, \]
+\_form#142=221x39:\[ b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho]. \]
+\_form#143=13x10:$X$
+\_form#144=8x10:$h$
+\_form#145=5x10:$b$
+\_form#146=48x11:$\text{nspectra}$
+\_form#147=11x10:$K$
+\_form#148=21x14:$x[n]$
+\_form#149=20x14:$h[n]$
+\_form#150=19x14:$b[n]$
+\_form#151=128x14:$ \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle $
+\_form#152=120x39:\[ \begin{cases} \left\lfloor \frac{x}{2^{14}} + 0.5 \right\rfloor, & x > 0, \\ \left\lfloor \frac{x}{2^{14}} \right\rfloor, & x \le 0. \end{cases} \]
+\_form#153=123x14:$\langle\langle\langle (\text{nspectra} \times I), K \rangle\rangle\rangle$
+\_form#154=113x14:$\langle\langle\langle(\text{nspectra},K),I\rangle\rangle\rangle$
+\_form#155=41x10:$M = K$
+\_form#156=246x39:\[ \hat{x}[n] = \frac{1}{K} \sum_m f[n - mM] \sum_{k=0}^{K-1} X_k[m]\,e^{2\pi jkn/K} \]
+\_form#157=34x14:$X_k[m]$
+\_form#158=71x16:$f[n]\,e^{2\pi jkn/K}$
+\_form#159=49x10:$N = KP$
+\_form#160=21x14:$\hat{x}[n]$
+\_form#161=163x14:\[ \text{result}[i] = f[n] \times exp{2\pi jk/K}, \]
+\_form#162=51x11:$n = i \% N$
+\_form#163=45x14:$k = i / N$
+\_form#164=11x10:$N$
+\_form#165=99x31:\[ {\bf B} = \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix}. \]
+\_form#166=108x14:$N_b \times N_a \times N_p \times N_p$
+\_form#167=45x13:$N_i \times N_d$
+\_form#168=14x13:$N_i$
+\_form#169=21x14:${\bf P}_\text{pa}$
+\_form#170=109x31:\[ {\bf P}_\text{pa} = \begin{bmatrix} P_{\theta x} & P_{\theta y} \\ P_{\phi x} & P_{\phi y} \end{bmatrix}. \]

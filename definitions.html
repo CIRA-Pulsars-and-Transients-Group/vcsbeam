@@ -74,6 +74,7 @@ $(function() {
 <li class="level1"><a href="#autotoc_md7">Coordinate transformations</a><ul><li class="level2"><a href="#parallacticangle">Parallactic angle correction</a></li>
 </ul>
 </li>
+<li class="level1"><a href="#datadimensions">Data dimensions</a></li>
 <li class="level1"><a href="#autotoc_md8">Comparison of notation in other documents</a><ul><li class="level2"><a href="#autotoc_md9">Coordinate systems</a></li>
 <li class="level2"><a href="#autotoc_md10">Jones matrices</a></li>
 </ul>
@@ -121,6 +122,39 @@ Parallactic angle correction</h2>
 <img class="formulaDsp" alt="\[ \tan \chi = \frac{\cos \lambda \sin H}{\sin\lambda \cos x - \cos \lambda \sin x \cos H}, \]" src="form_21.png" width="204" height="28"/>
 </p>
 <p> where <img class="formulaInl" alt="$\lambda$" src="form_22.png" width="8" height="10"/> is the latitude of the observer, <img class="formulaInl" alt="$H$" src="form_23.png" width="11" height="10"/> is the hour angle of the source, and <img class="formulaInl" alt="$x$" src="form_4.png" width="8" height="6"/> is the declination. The latitude of the MWA is <img class="formulaInl" alt="$\lambda_\text{MWA} = -0.4660608448386394$" src="form_24.png" width="170" height="13"/> rad, defined in the <a href="https://github.com/MWATelescope/mwalib">mwalib</a> library.</p>
+<h1><a class="anchor" id="datadimensions"></a>
+Data dimensions</h1>
+<p>All data are functions of time (<em>t</em>), frequency (<em>f</em>), antenna (<em>a</em>), and/or polarisation (<em>p</em>). Accordingly, the size of data arrays are expressed in terms of <img class="formulaInl" alt="$N_t$" src="form_25.png" width="14" height="13"/>, <img class="formulaInl" alt="$N_f$" src="form_26.png" width="15" height="14"/>, <img class="formulaInl" alt="$N_a$" src="form_27.png" width="15" height="13"/>, and <img class="formulaInl" alt="$N_p$" src="form_28.png" width="15" height="14"/>. The order of the dimensions indicates the layout of the data arrays in memory, with the first dimension being the slowest changing dimension, and so on until the last dimension, which is the fastest changing. For example, the instrumental calibration matrices ( <img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/>) have dimensions </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ N_a \times N_f \times N_p \times N_p, \]" src="form_30.png" width="114" height="14"/>
+</p>
+<p> and a single element is specified with the index notation, <img class="formulaInl" alt="$D_{a,f,p_1,p_2}$" src="form_31.png" width="49" height="14"/>. <em>Jones vectors</em>, indicated with a lower case Latin letter in <b>bold</b>, include a polarisation dimension implicitly, e.g. </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ {\bf e} = \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]" src="form_32.png" width="54" height="31"/>
+</p>
+<p> where <img class="formulaInl" alt="$x$" src="form_4.png" width="8" height="6"/> and <img class="formulaInl" alt="$y$" src="form_5.png" width="8" height="9"/> are examples of a specific polarisation basis. Similary, <em>Jones matrices</em>, represented with <b>bold</b> uppercase Latin letters, have two implied polarisation dimensions, e.g. </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ {\bf J} = \begin{bmatrix} J_{xx} &amp; J_{xy} \\ J_{yx} &amp; J_{yy} \end{bmatrix}. \]" src="form_33.png" width="93" height="31"/>
+</p>
+<p>The exception to the above system is the data layout of the legacy recombined format, in which the combinations of antennas and polarisations are ordered in a "mixed" way, so that it cannot be said that either antennas or polarisations change faster than the other. For this case, we describe a particular antenna-polarisation combination as an "input", and denote it with the subscript <img class="formulaInl" alt="$i$" src="form_34.png" width="5" height="9"/>, with <img class="formulaInl" alt="$N_i = N_a \times N_p$" src="form_35.png" width="78" height="14"/> (without the implied hierarchical ordering).</p>
+<p>Full Stokes parameters are the set <img class="formulaInl" alt="$\{I, Q, U, V\}$" src="form_36.png" width="64" height="14"/>. Accordingly, an array containing these "post-detection" products may include the dimension <img class="formulaInl" alt="$N_s$" src="form_37.png" width="15" height="13"/>, which always equals exactly 4.</p>
+<p>Each MWA tile contains <img class="formulaInl" alt="$N_d = 16$" src="form_38.png" width="45" height="13"/> dipoles.</p>
+<p>Multiple pointings can also be processed simultaneously, and some output arrays therefore include dimension <img class="formulaInl" alt="$N_b$" src="form_39.png" width="15" height="13"/>.</p>
+<p>The complete list, in alphabetical order of subscripts, is </p><table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadCenter">Symbol   </th><th class="markdownTableHeadLeft">Description   </th><th class="markdownTableHeadCenter">Typical values    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$N_a$" src="form_27.png" width="15" height="13"/>   </td><td class="markdownTableBodyLeft">Number of tiles/antennas   </td><td class="markdownTableBodyCenter">128    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$N_b$" src="form_39.png" width="15" height="13"/>   </td><td class="markdownTableBodyLeft">Number of beams/pointings   </td><td class="markdownTableBodyCenter">1    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$N_d$" src="form_40.png" width="15" height="13"/>   </td><td class="markdownTableBodyLeft">Number of dipoles per tile   </td><td class="markdownTableBodyCenter">16    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$N_f$" src="form_26.png" width="15" height="14"/>   </td><td class="markdownTableBodyLeft">Number of frequencies per coarse channel   </td><td class="markdownTableBodyCenter">128    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$N_p$" src="form_28.png" width="15" height="14"/>   </td><td class="markdownTableBodyLeft">Number of polarisations   </td><td class="markdownTableBodyCenter">2    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$N_s$" src="form_37.png" width="15" height="13"/>   </td><td class="markdownTableBodyLeft">Number of Stokes parameters   </td><td class="markdownTableBodyCenter">4    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$N_t$" src="form_25.png" width="14" height="13"/>   </td><td class="markdownTableBodyLeft">Number of timesteps/samples per second   </td><td class="markdownTableBodyCenter">10000   </td></tr>
+</table>
 <h1><a class="anchor" id="autotoc_md8"></a>
 Comparison of notation in other documents</h1>
 <h2><a class="anchor" id="autotoc_md9"></a>
@@ -139,11 +173,11 @@ Jones matrices</h2>
 <tr class="markdownTableHead">
 <th class="markdownTableHeadLeft">Document   </th><th class="markdownTableHeadCenter"></th><th class="markdownTableHeadCenter"></th><th class="markdownTableHeadCenter"></th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><em>This document</em>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf J}$" src="form_25.png" width="8" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf D}$" src="form_26.png" width="11" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf B}$" src="form_27.png" width="11" height="10"/>    </td></tr>
+<td class="markdownTableBodyLeft"><em>This document</em>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf B}$" src="form_42.png" width="11" height="10"/>    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyLeft"><a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476">Sokolowski et al., (2017)</a>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf J}$" src="form_25.png" width="8" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf G}$" src="form_28.png" width="11" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf E}$" src="form_29.png" width="10" height="9"/>    </td></tr>
+<td class="markdownTableBodyLeft"><a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476">Sokolowski et al., (2017)</a>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf G}$" src="form_43.png" width="11" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf E}$" src="form_44.png" width="10" height="9"/>    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyLeft"><a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E">Ord et al., (2019)</a>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf J}$" src="form_25.png" width="8" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf D}$" src="form_26.png" width="11" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf B}$" src="form_27.png" width="11" height="10"/>   </td></tr>
+<td class="markdownTableBodyLeft"><a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E">Ord et al., (2019)</a>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/>   </td><td class="markdownTableBodyCenter"><img class="formulaInl" alt="${\bf B}$" src="form_42.png" width="11" height="10"/>   </td></tr>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->

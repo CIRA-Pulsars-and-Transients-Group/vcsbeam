@@ -93,45 +93,112 @@ Functions</h2></td></tr>
 <tr class="memitem:ab3e90881a2476fd461eb2bcfcaa7cf63"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#ab3e90881a2476fd461eb2bcfcaa7cf63">gpuAssert</a> (cudaError_t code, const char *file, int line, bool abort=true)</td></tr>
 <tr class="separator:ab3e90881a2476fd461eb2bcfcaa7cf63"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7374f0e61cc4b19318b0aca79c8f40df"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a7374f0e61cc4b19318b0aca79c8f40df">vmWOLA_kernel</a> (char2 *indata, int *filter_coeffs, void *weighted_overlap_array)</td></tr>
+<tr class="memdesc:a7374f0e61cc4b19318b0aca79c8f40df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs the weighted overlap-add part of the PFB algorithm.  <a href="pfb_8cu.html#a7374f0e61cc4b19318b0aca79c8f40df">More...</a><br /></td></tr>
 <tr class="separator:a7374f0e61cc4b19318b0aca79c8f40df"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa5d1c9b40a2932b8d4f48f76877207aa"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#aa5d1c9b40a2932b8d4f48f76877207aa">fpga_rounding_and_demotion</a> (void *data)</td></tr>
+<tr class="memdesc:aa5d1c9b40a2932b8d4f48f76877207aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for performing the rounding and demotion step of the forward PFB.  <a href="pfb_8cu.html#aa5d1c9b40a2932b8d4f48f76877207aa">More...</a><br /></td></tr>
 <tr class="separator:aa5d1c9b40a2932b8d4f48f76877207aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd399e8c525feba6355ab52ba02a9f1f"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#afd399e8c525feba6355ab52ba02a9f1f">int2float</a> (void *data, double scale)</td></tr>
+<tr class="memdesc:afd399e8c525feba6355ab52ba02a9f1f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert 32-bit integers to 32-bit floats.  <a href="pfb_8cu.html#afd399e8c525feba6355ab52ba02a9f1f">More...</a><br /></td></tr>
 <tr class="separator:afd399e8c525feba6355ab52ba02a9f1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae589c23753dd32af43d9293e4d53aa9a"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#ae589c23753dd32af43d9293e4d53aa9a">pack_into_recombined_format</a> (cuFloatComplex *ffted, void *outdata, int *i_idx, pfb_flags flags)</td></tr>
+<tr class="memdesc:ae589c23753dd32af43d9293e4d53aa9a"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for packing the PFB'ed data into legacy recombined layout/format.  <a href="pfb_8cu.html#ae589c23753dd32af43d9293e4d53aa9a">More...</a><br /></td></tr>
 <tr class="separator:ae589c23753dd32af43d9293e4d53aa9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9c933bc8f363e9480d75f32c6720fe56"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a9c933bc8f363e9480d75f32c6720fe56">vmInitForwardPFB</a> (vcsbeam_context *vm, int M, pfb_flags flags)</td></tr>
+<tr class="memdesc:a9c933bc8f363e9480d75f32c6720fe56"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create and initialise a forward_pfb struct.  <a href="pfb_8cu.html#a9c933bc8f363e9480d75f32c6720fe56">More...</a><br /></td></tr>
 <tr class="separator:a9c933bc8f363e9480d75f32c6720fe56"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a54059e7d31bcf4eccc39609e72ad8189"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a54059e7d31bcf4eccc39609e72ad8189">vmFreeForwardPFB</a> (forward_pfb *fpfb)</td></tr>
+<tr class="memdesc:a54059e7d31bcf4eccc39609e72ad8189"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees host and device memory allocated in <a class="el" href="pfb_8cu.html#a9c933bc8f363e9480d75f32c6720fe56" title="Create and initialise a forward_pfb struct.">vmInitForwardPFB()</a>.  <a href="pfb_8cu.html#a54059e7d31bcf4eccc39609e72ad8189">More...</a><br /></td></tr>
 <tr class="separator:a54059e7d31bcf4eccc39609e72ad8189"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd8ef7871feb4b480442a73482cb4903"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#afd8ef7871feb4b480442a73482cb4903">vmUploadForwardPFBChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:afd8ef7871feb4b480442a73482cb4903"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies a chunk of PFB data from CPU to GPU.  <a href="pfb_8cu.html#afd8ef7871feb4b480442a73482cb4903">More...</a><br /></td></tr>
 <tr class="separator:afd8ef7871feb4b480442a73482cb4903"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a353ec3d21419ab0192de2ea4771a77b3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a353ec3d21419ab0192de2ea4771a77b3">vmWOLAChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a353ec3d21419ab0192de2ea4771a77b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calls the <a class="el" href="pfb_8cu.html#a7374f0e61cc4b19318b0aca79c8f40df" title="Performs the weighted overlap-add part of the PFB algorithm.">vmWOLA_kernel()</a> kernel for the forward PFB data.  <a href="pfb_8cu.html#a353ec3d21419ab0192de2ea4771a77b3">More...</a><br /></td></tr>
 <tr class="separator:a353ec3d21419ab0192de2ea4771a77b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a51d546028e05c56e5bd4e53570054366"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a51d546028e05c56e5bd4e53570054366">vmFPGARoundingChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a51d546028e05c56e5bd4e53570054366"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calls the <a class="el" href="pfb_8cu.html#aa5d1c9b40a2932b8d4f48f76877207aa" title="CUDA kernel for performing the rounding and demotion step of the forward PFB.">fpga_rounding_and_demotion()</a> kernel for the forward PFB data.  <a href="pfb_8cu.html#a51d546028e05c56e5bd4e53570054366">More...</a><br /></td></tr>
 <tr class="separator:a51d546028e05c56e5bd4e53570054366"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a25d6f48661b1ee20194a9cdbb1370244"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a25d6f48661b1ee20194a9cdbb1370244">vmFFTChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a25d6f48661b1ee20194a9cdbb1370244"><td class="mdescLeft">&#160;</td><td class="mdescRight">Executes the (CUDA) FFT on the forward PFB data.  <a href="pfb_8cu.html#a25d6f48661b1ee20194a9cdbb1370244">More...</a><br /></td></tr>
 <tr class="separator:a25d6f48661b1ee20194a9cdbb1370244"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa6ff9eb0026fbdcf87817dbeb746fad6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#aa6ff9eb0026fbdcf87817dbeb746fad6">vmPackChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:aa6ff9eb0026fbdcf87817dbeb746fad6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calls the <a class="el" href="pfb_8cu.html#ae589c23753dd32af43d9293e4d53aa9a" title="CUDA kernel for packing the PFB&#39;ed data into legacy recombined layout/format.">pack_into_recombined_format()</a> kernel for the forward PFB data.  <a href="pfb_8cu.html#aa6ff9eb0026fbdcf87817dbeb746fad6">More...</a><br /></td></tr>
 <tr class="separator:aa6ff9eb0026fbdcf87817dbeb746fad6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:add07f7e3012c84b6d596b76d6ab1af82"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#add07f7e3012c84b6d596b76d6ab1af82">vmDownloadForwardPFBChunk</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:add07f7e3012c84b6d596b76d6ab1af82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies a chunk of PFB data from GPU to CPU.  <a href="pfb_8cu.html#add07f7e3012c84b6d596b76d6ab1af82">More...</a><br /></td></tr>
 <tr class="separator:add07f7e3012c84b6d596b76d6ab1af82"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a718c0996f48d674e941efd897aa9ae8f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a718c0996f48d674e941efd897aa9ae8f">vmExecuteForwardPFB</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a718c0996f48d674e941efd897aa9ae8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The wrapper function that performs a forward PFB on the GPU.  <a href="pfb_8cu.html#a718c0996f48d674e941efd897aa9ae8f">More...</a><br /></td></tr>
 <tr class="separator:a718c0996f48d674e941efd897aa9ae8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a831bf4d5d1a25ca5d2deeb0def57cd2a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a831bf4d5d1a25ca5d2deeb0def57cd2a">vmWritePFBOutputToFile</a> (vcsbeam_context *vm)</td></tr>
+<tr class="memdesc:a831bf4d5d1a25ca5d2deeb0def57cd2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the result of the forward PFB operation to file.  <a href="pfb_8cu.html#a831bf4d5d1a25ca5d2deeb0def57cd2a">More...</a><br /></td></tr>
 <tr class="separator:a831bf4d5d1a25ca5d2deeb0def57cd2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#aa6eb2332a6371d8a576e6422d7bc9d79">ipfb_kernel</a> (float *in_real, float *in_imag, float *ft_real, float *ft_imag, int ntaps, int npol, float *out)</td></tr>
+<tr class="memdesc:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel implementing the synthesis PFB.  <a href="pfb_8cu.html#aa6eb2332a6371d8a576e6422d7bc9d79">More...</a><br /></td></tr>
 <tr class="separator:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa7a1d89887301752b3023ccc4cf36a9f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#aa7a1d89887301752b3023ccc4cf36a9f">cu_invert_pfb</a> (cuDoubleComplex ****detected_beam, int file_no, int npointing, int nsamples, int nchan, int npol, int sizeof_buffer, struct gpu_ipfb_arrays *g, float *data_buffer_vdif)</td></tr>
+<tr class="memdesc:aa7a1d89887301752b3023ccc4cf36a9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Invert the PFB by applying a resynthesis filter, using GPU acceleration.  <a href="pfb_8cu.html#aa7a1d89887301752b3023ccc4cf36a9f">More...</a><br /></td></tr>
 <tr class="separator:aa7a1d89887301752b3023ccc4cf36a9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45995dfe13bebd70b6d7806078fa6211"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a45995dfe13bebd70b6d7806078fa6211">cu_load_ipfb_filter</a> (pfb_filter *filter, struct gpu_ipfb_arrays *g)</td></tr>
+<tr class="memdesc:a45995dfe13bebd70b6d7806078fa6211"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the inverse PFB filter coefficients to the GPU.  <a href="pfb_8cu.html#a45995dfe13bebd70b6d7806078fa6211">More...</a><br /></td></tr>
 <tr class="separator:a45995dfe13bebd70b6d7806078fa6211"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6744a624a2063f1bce0e23ebf2880c24"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a6744a624a2063f1bce0e23ebf2880c24">malloc_ipfb</a> (struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples, int npol, int npointing)</td></tr>
+<tr class="memdesc:a6744a624a2063f1bce0e23ebf2880c24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate GPU memory needed for performing the inverse PFB.  <a href="pfb_8cu.html#a6744a624a2063f1bce0e23ebf2880c24">More...</a><br /></td></tr>
 <tr class="separator:a6744a624a2063f1bce0e23ebf2880c24"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac08e04314a805c456827f9b39c930180"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#ac08e04314a805c456827f9b39c930180">free_ipfb</a> (struct gpu_ipfb_arrays *g)</td></tr>
+<tr class="memdesc:ac08e04314a805c456827f9b39c930180"><td class="mdescLeft">&#160;</td><td class="mdescRight">Free the GPU memory allocated in <a class="el" href="pfb_8cu.html#a6744a624a2063f1bce0e23ebf2880c24" title="Allocate GPU memory needed for performing the inverse PFB.">malloc_ipfb()</a>.  <a href="pfb_8cu.html#ac08e04314a805c456827f9b39c930180">More...</a><br /></td></tr>
 <tr class="separator:ac08e04314a805c456827f9b39c930180"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Macro Definition Documentation</h2>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><h1><a class="anchor" id="autotoc_md48"></a>
+Forward (analysis) fine PFB</h1>
+<p>The following kernels are part of an "offline" version of the "fine PFB" algorithm that was implemented on the FPGAs of Phase 1 &amp; 2 of the MWA. As described in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/mwa-tiedarray-processing-iii-microsecond-time-resolution-via-a-polyphase-synthesis-filter/C76837FE84A1DCFAA696C9AC10C44F2D">McSweeney et al. (2020)</a>, this algorithm is a version of the "weighted overlap-add" algorithm (see their Eq. (3)): </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ X_k[m] \sum_n^{K-1} b_m[n] e^{-2\pi jkn/K}, \]" src="form_141.png" width="149" height="38"/>
+</p>
+<p> where </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho]. \]" src="form_142.png" width="221" height="39"/>
+</p>
+<p>A full description of these symbols is given in the reference, but here is a summary:</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadCenter">Symbol   </th><th class="markdownTableHeadLeft">Meaning   </th><th class="markdownTableHeadLeft">Variable    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$x$" src="form_4.png" width="8" height="6"/>   </td><td class="markdownTableBodyLeft">The input data   </td><td class="markdownTableBodyLeft"><code>indata</code>    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$X$" src="form_143.png" width="13" height="10"/>   </td><td class="markdownTableBodyLeft">The output data   </td><td class="markdownTableBodyLeft"><code>outdata</code>    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$h$" src="form_144.png" width="8" height="10"/>   </td><td class="markdownTableBodyLeft">The filter coefficients   </td><td class="markdownTableBodyLeft"><code>filter_coeffs</code>    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$P$" src="form_6.png" width="10" height="10"/>   </td><td class="markdownTableBodyLeft">The number of taps   </td><td class="markdownTableBodyLeft"><code>ntaps</code>    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$b$" src="form_145.png" width="5" height="10"/>   </td><td class="markdownTableBodyLeft">The weighted overlap-add array   </td><td class="markdownTableBodyLeft"><code>weighted_overlap_array</code>    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$\text{nspectra}$" src="form_146.png" width="48" height="11"/>   </td><td class="markdownTableBodyLeft">The number of output spectra   </td><td class="markdownTableBodyLeft"></td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$I$" src="form_99.png" width="8" height="10"/>   </td><td class="markdownTableBodyLeft">The number of RF inputs   </td><td class="markdownTableBodyLeft"></td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$K$" src="form_147.png" width="11" height="10"/>   </td><td class="markdownTableBodyLeft">The size of the output spectrum   </td><td class="markdownTableBodyLeft"></td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$P$" src="form_6.png" width="10" height="10"/>   </td><td class="markdownTableBodyLeft">The number of taps   </td><td class="markdownTableBodyLeft"></td></tr>
+</table>
+<p>Note that this nomenclature differs from that used elsewhere in this documentation.</p>
+<p>The algorithm is broken up into three parts, the third of which is optional:</p><ol type="1">
+<li>the weighted overlap-add, which forms <code>b</code> from <code>x</code> and <code>h</code>,</li>
+<li>the FFT, which is implemented using the cuFFT library, and</li>
+<li>the demotion and packaging of the result into the output format, which is described in the Appendix of <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/mwa-tiedarray-processing-iii-microsecond-time-resolution-via-a-polyphase-synthesis-filter/C76837FE84A1DCFAA696C9AC10C44F2D">McSweeney et al. (2020)</a></li>
+</ol>
+<h2><a class="anchor" id="autotoc_md49"></a>
+Notes:</h2>
+<ul>
+<li><code>indata</code> is expected to have the same data layout as delivered by mwalib's mwalib_voltage_context_read_second() function when applied to MWAX high time resolution data, whose format description can be found <a href="https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System">here</a>. The samples are organised according to the <code>vMWAX_IDX</code> macro.</li>
+<li><code>outdata</code> will have the same data layout as "recombined" legacy VCS data, as per the <code>v_IDX</code> macro.</li>
+<li>Each thread will operate on one RF input (i.e. antenna/pol combination) and generate the spectrum for a single "fine-channelised" time step (the <code>m</code> index). The <code>weighted overlap-add</code> array (<code>b</code>) also resides in device memory, in order that it can make use of cuFFT.</li>
+</ul>
+<h1><a class="anchor" id="autotoc_md50"></a>
+Backwards (synthesis) fine PFB</h1>
+<p>The backwards, inverse, or synthesis PFB is implemented in a single CUDA kernel, so see <a class="el" href="pfb_8cu.html#aa6eb2332a6371d8a576e6422d7bc9d79" title="CUDA kernel implementing the synthesis PFB.">ipfb_kernel()</a> for more information. </p>
+</div><h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="a3f6ea8e9ef58125936d50d7e1181aa7a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3f6ea8e9ef58125936d50d7e1181aa7a">&#9670;&nbsp;</a></span>gpuErrchk</h2>
 
@@ -219,6 +286,15 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Invert the PFB by applying a resynthesis filter, using GPU acceleration. </p>
+<p>This function expects <code>detected_beam</code> to be structured as follows:</p>
+<div class="fragment"><div class="line">detected_beam[2*nsamples][nchan][npol]</div>
+</div><!-- fragment --><p>Although detected_samples potentially contains 2 seconds' worth of data, this function only inverts 1 second. The appropriate second is worked out using <code>file_no</code>: if it is even, the first half of detected_beam is used, if odd, the second half.</p>
+<p>The output of the inversion is packed back into <code>data_buffer_vdif</code>, a 1D array whose ordering is as follows:</p>
+<div class="fragment"><div class="line">time, pol, complexity</div>
+</div><!-- fragment --><p>This ordering is suited for immediate output to the VDIF format.</p>
+<p>It is assumed that the inverse filter coefficients have already been loaded to the GPU. </p>
+
 </div>
 </div>
 <a id="a45995dfe13bebd70b6d7806078fa6211"></a>
@@ -247,6 +323,13 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Load the inverse PFB filter coefficients to the GPU. </p>
+<p>This function loads the inverse filter coefficients and the twiddle factors into GPU memory. If they were loaded separately (as floats), then the multiplication of the filter coefficients and the twiddle factors will be less precise than if a single array containing every combination of floats and twiddle factors is calculated in doubles, and then demoted to floats. Hence, this pre-calculation is done in this function before cudaMemcpy is called.</p>
+<p>The result is 2x 1D arrays loaded onto the GPU (one for real, one for imag) where the ith element is equal to </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \text{result}[i] = f[n] \times exp{2\pi jk/K}, \]" src="form_161.png" width="163" height="14"/>
+</p>
+<p> where <img class="formulaInl" alt="$n = i \% N$" src="form_162.png" width="51" height="11"/>, <img class="formulaInl" alt="$k = i / N$" src="form_163.png" width="45" height="14"/>, <img class="formulaInl" alt="$N$" src="form_164.png" width="11" height="10"/> is the filter size (<code>fil_size</code>) and <img class="formulaInl" alt="$K$" src="form_147.png" width="11" height="10"/> is the number of channels (<code>nchan</code>). </p>
+
 </div>
 </div>
 <a id="aa5d1c9b40a2932b8d4f48f76877207aa"></a>
@@ -265,6 +348,19 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>CUDA kernel for performing the rounding and demotion step of the forward PFB. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">data</td><td>The data to be rounded and demoted.</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>The rounding and demotion performed here is designed to emulate that done in the FPGAs of the legacy (Phases 1 &amp; 2) MWA system. Specifically, it does the following: </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \begin{cases} \left\lfloor \frac{x}{2^{14}} + 0.5 \right\rfloor, &amp; x &gt; 0, \\ \left\lfloor \frac{x}{2^{14}} \right\rfloor, &amp; x \le 0. \end{cases} \]" src="form_152.png" width="120" height="39"/>
+</p>
+<p> The final numbers are represented as 32-bit floats.</p>
+<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle (\text{nspectra} \times I), K \rangle\rangle\rangle$" src="form_153.png" width="123" height="14"/> </p>
+
 </div>
 </div>
 <a id="ac08e04314a805c456827f9b39c930180"></a>
@@ -282,6 +378,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Free the GPU memory allocated in <a class="el" href="pfb_8cu.html#a6744a624a2063f1bce0e23ebf2880c24" title="Allocate GPU memory needed for performing the inverse PFB.">malloc_ipfb()</a>. </p>
 
 </div>
 </div>
@@ -359,6 +457,17 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Convert 32-bit integers to 32-bit floats. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>The data to be converted </td></tr>
+    <tr><td class="paramname">scale</td><td>A scaling factor to apply (set to 1 for no effect)</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Each thread handles a single integer, so the thread configuration can be chosen to suit the size of <code>data</code>.</p>
+<p>This function acts as an alternative to <a class="el" href="pfb_8cu.html#aa5d1c9b40a2932b8d4f48f76877207aa" title="CUDA kernel for performing the rounding and demotion step of the forward PFB.">fpga_rounding_and_demotion()</a>, in order to preserve the full precision of the PFB output. </p>
+
 </div>
 </div>
 <a id="aa6eb2332a6371d8a576e6422d7bc9d79"></a>
@@ -417,6 +526,29 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>CUDA kernel implementing the synthesis PFB. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">in_real</td><td>... </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">in_imag</td><td>... </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ft_real</td><td>... </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ft_imag</td><td>... </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">ntaps</td><td>... </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">npol</td><td>... </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">out</td><td>...</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>The backwards/inverse/synthesis filter is </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \hat{x}[n] = \frac{1}{K} \sum_m f[n - mM] \sum_{k=0}^{K-1} X_k[m]\,e^{2\pi jkn/K} \]" src="form_156.png" width="246" height="39"/>
+</p>
+<p>The sum over <code>m</code> is nominally over all integers, but in practice only involves a few terms because of the finiteness of the filter, <code>f</code>. To be precise, there are precisely <code>ntaps</code> non-zero values.</p>
+<p><img class="formulaInl" alt="$X_k[m]$" src="form_157.png" width="34" height="14"/> represents the complex-valued inputs, <code>in_real</code> and <code>in_imag</code>. Every possible value of <img class="formulaInl" alt="$f[n]\,e^{2\pi jkn/K}$" src="form_158.png" width="71" height="16"/> is provided in <code>ft_real</code> and <code>ft_imag</code>.</p>
+<p><code>K</code> is the number of channels, and because this is a critically sampled PFB, <img class="formulaInl" alt="$M = K$" src="form_155.png" width="41" height="10"/>. We will also use <code>P</code> to mean the number of taps in the synthesis filter, and <img class="formulaInl" alt="$N = KP$" src="form_159.png" width="49" height="10"/> to mean the size of the filter.</p>
+<p>The polarisations are computed completely independently.</p>
+<p><img class="formulaInl" alt="$\hat{x}[n]$" src="form_160.png" width="21" height="14"/> is represented by the <code>out</code> array.</p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000030">Todo:</a></b></dt><dd>Revamp this function to use cuComplex. </dd></dl>
+
 </div>
 </div>
 <a id="a6744a624a2063f1bce0e23ebf2880c24"></a>
@@ -463,6 +595,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Allocate GPU memory needed for performing the inverse PFB. </p>
+<p>Free with <a class="el" href="pfb_8cu.html#ac08e04314a805c456827f9b39c930180" title="Free the GPU memory allocated in malloc_ipfb().">free_ipfb()</a>. </p>
+
 </div>
 </div>
 <a id="ae589c23753dd32af43d9293e4d53aa9a"></a>
@@ -503,6 +638,28 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>CUDA kernel for packing the PFB'ed data into legacy recombined layout/format. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ffted</td><td>The already-FFT'ed PFB data, ready for packing </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">outdata</td><td>The output data buffer </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">i_idx</td><td>An array of indexes for the desired ordering of the RF inputs (i.e. antenna/polarisation combinations) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">flags</td><td>PFB configuration settings</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This is the final step in the forward fine PFB algorithm. At this point, the FFTED array contains the Fourier-transformed data that already represents the final channelisation. All that remains to be done is to pack it into the same layout (and optionally also the same format) as the VCS recombined data.</p>
+<p>The relevant values for <code>flags</code> are (see <a class="el" href="pfb_8cu.html#a9c933bc8f363e9480d75f32c6720fe56" title="Create and initialise a forward_pfb struct.">vmInitForwardPFB()</a> for the full table):</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadLeft">Flag name   </th><th class="markdownTableHeadLeft">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyLeft"><code>PFB_COMPLEX_INT4</code>   </td><td class="markdownTableBodyLeft">Typecast the output into (4+4)-bit complex integers    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyLeft"><code>PFB_COMPLEX_FLOAT64</code>   </td><td class="markdownTableBodyLeft">Typecast the output into (64+64)-bit complex floats   </td></tr>
+</table>
+<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle(\text{nspectra},K),I\rangle\rangle\rangle$" src="form_154.png" width="113" height="14"/>. </p>
+
 </div>
 </div>
 <a id="add07f7e3012c84b6d596b76d6ab1af82"></a>
@@ -520,6 +677,24 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Copies a chunk of PFB data from GPU to CPU. </p>
+<p>A diagram of the memory layout of the copy operation: </p><div class="fragment"><div class="line">         &lt;--ds--&gt;</div>
+<div class="line">Device: |--------|</div>
+<div class="line">        ^ from</div>
+<div class="line"> </div>
+<div class="line">         &lt;--hs-&gt;</div>
+<div class="line">Host:   |-------|-------|-------| ... |-------| ...</div>
+<div class="line">chunk:  0       1       2       3     c</div>
+<div class="line">                                      ^ to</div>
+</div><!-- fragment --><p> where</p><ul>
+<li><b>from</b> = <code>vm&rarr;fpfb&rarr;d_vcs_data</code></li>
+<li><b>to</b> = <code>vm&rarr;fpfb&rarr;vcs_data + c*hs</code></li>
+<li><b>ds</b> = <code>vm&rarr;fpfb&rarr;d_vcs_size</code></li>
+<li><b>hs</b> = <code>vm&rarr;fpfb&rarr;vcs_stride</code></li>
+<li><b>c</b> = <code>vm&rarr;chunk_to_load % vm&rarr;chunks_per_second</code></li>
+</ul>
+<p>Note that <b>ds</b> is not necessarily equal to <b>hs</b>, and that <b>ds</b> bytes are copied. </p>
 
 </div>
 </div>
@@ -539,6 +714,16 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>The wrapper function that performs a forward PFB on the GPU. </p>
+<p>For each chunk of data, it calls, in order,</p><ol type="1">
+<li><a class="el" href="pfb_8cu.html#afd8ef7871feb4b480442a73482cb4903" title="Copies a chunk of PFB data from CPU to GPU.">vmUploadForwardPFBChunk()</a></li>
+<li><a class="el" href="pfb_8cu.html#a353ec3d21419ab0192de2ea4771a77b3" title="Calls the vmWOLA_kernel() kernel for the forward PFB data.">vmWOLAChunk()</a></li>
+<li><a class="el" href="pfb_8cu.html#a51d546028e05c56e5bd4e53570054366" title="Calls the fpga_rounding_and_demotion() kernel for the forward PFB data.">vmFPGARoundingChunk()</a></li>
+<li><a class="el" href="pfb_8cu.html#a25d6f48661b1ee20194a9cdbb1370244" title="Executes the (CUDA) FFT on the forward PFB data.">vmFFTChunk()</a></li>
+<li><a class="el" href="pfb_8cu.html#aa6ff9eb0026fbdcf87817dbeb746fad6" title="Calls the pack_into_recombined_format() kernel for the forward PFB data.">vmPackChunk()</a></li>
+</ol>
+<p>If a buffer (<code>vm&rarr;fpfb&rarr;vcs_data</code>) has been prepared, then <a class="el" href="pfb_8cu.html#add07f7e3012c84b6d596b76d6ab1af82" title="Copies a chunk of PFB data from GPU to CPU.">vmDownloadForwardPFBChunk()</a> is called. </p>
+
 </div>
 </div>
 <a id="a25d6f48661b1ee20194a9cdbb1370244"></a>
@@ -556,6 +741,9 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Executes the (CUDA) FFT on the forward PFB data. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000028">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
 
 </div>
 </div>
@@ -575,6 +763,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calls the <a class="el" href="pfb_8cu.html#aa5d1c9b40a2932b8d4f48f76877207aa" title="CUDA kernel for performing the rounding and demotion step of the forward PFB.">fpga_rounding_and_demotion()</a> kernel for the forward PFB data. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000027">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
+
 </div>
 </div>
 <a id="a54059e7d31bcf4eccc39609e72ad8189"></a>
@@ -592,6 +783,15 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Frees host and device memory allocated in <a class="el" href="pfb_8cu.html#a9c933bc8f363e9480d75f32c6720fe56" title="Create and initialise a forward_pfb struct.">vmInitForwardPFB()</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fpfb</td><td>The <code>forward_pfb</code> object to be freed.</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>After freeing the member variables of <code>fpfb</code>, the struct itself is freed. </p>
 
 </div>
 </div>
@@ -627,6 +827,45 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Create and initialise a forward_pfb struct. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">M</td><td>The "stride" of the PFB </td></tr>
+    <tr><td class="paramname">flags</td><td>PFB configuration settings</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Setting <img class="formulaInl" alt="$M = K$" src="form_155.png" width="41" height="10"/>, where <img class="formulaInl" alt="$K$" src="form_147.png" width="11" height="10"/> is the value of <code>vm&rarr;analysis_filter&rarr;nchans</code>, will make this a "critically
+sampled PFB"; setting \f$M &gt; K\f$, an "oversampled PFB".</p>
+<p>A filter must already be loaded into <code>vm&rarr;analysis_filter</code>. <b>WARNING! The filter will be forcibly typecast to int!!</b></p>
+<p>The GPU processing will be divided up into <code>vm&rarr;chunks_per_second</code>, chunks per second, but if this number does not divide the number of samples (10000) evenly, then it is incremented until it does.</p>
+<p>The available flags are given in the following table: </p><table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadLeft">Flag name   </th><th class="markdownTableHeadLeft">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyLeft"><code>PFB_MALLOC_HOST_INPUT</code>   </td><td class="markdownTableBodyLeft">Allocate memory on CPU for the input    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyLeft"><code>PFB_MALLOC_HOST_OUTPUT</code>   </td><td class="markdownTableBodyLeft">Allocate memory on CPU for the output    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyLeft"><code>PFB_MALLOC_DEVICE_INPUT</code>   </td><td class="markdownTableBodyLeft">Allocate memory on GPU for the input    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyLeft"><code>PFB_MALLOC_DEVICE_OUTPUT</code>   </td><td class="markdownTableBodyLeft">Allocate memory on GPU for the output    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyLeft"><code>PFB_MALLOC_ALL</code>   </td><td class="markdownTableBodyLeft">Synonym for <code>PFB_MALLOC_HOST_INPUT | PFB_MALLOC_HOST_OUTPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT</code>    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyLeft"><code>PFB_COMPLEX_INT4</code>   </td><td class="markdownTableBodyLeft">Typecast the output into (4+4)-bit complex integers    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyLeft"><code>PFB_COMPLEX_FLOAT64</code>   </td><td class="markdownTableBodyLeft">Typecast the output into (64+64)-bit complex floats    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyLeft"><code>PFB_IMAG_PART_FIRST</code>   </td><td class="markdownTableBodyLeft">Place the imaginary part of the output in the first (i.e. most significant) position    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyLeft"><code>PFB_EMULATE_FPGA</code>   </td><td class="markdownTableBodyLeft">Perform the (asymmetric) rounding and demotion step in exactly the same way as the original (Phase 1 &amp; 2) MWA FPGAs    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyLeft"><code>PFB_SMART</code>   </td><td class="markdownTableBodyLeft">Synonym for <code>PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT | PFB_EMULATE_FPGA | PFB_COMPLEX_INT4</code>    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyLeft"><code>PFB_FULL_PRECISION</code>   </td><td class="markdownTableBodyLeft">Synonym for <code>PFB_MALLOC_HOST_INPUT | PFB_MALLOC_DEVICE_INPUT | PFB_MALLOC_DEVICE_OUTPUT | PFB_COMPLEX_FLOAT64</code>   </td></tr>
+</table>
+
 </div>
 </div>
 <a id="aa6ff9eb0026fbdcf87817dbeb746fad6"></a>
@@ -645,6 +884,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calls the <a class="el" href="pfb_8cu.html#ae589c23753dd32af43d9293e4d53aa9a" title="CUDA kernel for packing the PFB&#39;ed data into legacy recombined layout/format.">pack_into_recombined_format()</a> kernel for the forward PFB data. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000029">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
+
 </div>
 </div>
 <a id="afd8ef7871feb4b480442a73482cb4903"></a>
@@ -662,6 +904,24 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Copies a chunk of PFB data from CPU to GPU. </p>
+<p>A diagram of the memory layout of the copy operation: </p><div class="fragment"><div class="line">         &lt;--hs-&gt;</div>
+<div class="line">Host:   |-------|-------|-------| ... |-------| ...</div>
+<div class="line">chunk:  0       1       2       3     c</div>
+<div class="line">                                      ^ from</div>
+<div class="line"> </div>
+<div class="line">         &lt;--ds--&gt;</div>
+<div class="line">Device: |--------|</div>
+<div class="line">        ^ to</div>
+</div><!-- fragment --><p> where</p><ul>
+<li><b>from</b> = <code>vm&rarr;v&rarr;buffer + c*hs</code></li>
+<li><b>to</b> = <code>vm&rarr;fpfb&rarr;d_htr_data</code></li>
+<li><b>ds</b> = <code>vm&rarr;fpfb&rarr;d_htr_size</code></li>
+<li><b>hs</b> = <code>vm&rarr;fpfb&rarr;htr_stride</code></li>
+<li><b>c</b> = <code>vm&rarr;chunk_to_load % vm&rarr;chunks_per_second</code></li>
+</ul>
+<p>Note that <b>ds</b> is not necessarily equal to <b>hs</b>, and that <b>ds</b> bytes are copied. </p>
 
 </div>
 </div>
@@ -697,6 +957,22 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Performs the weighted overlap-add part of the PFB algorithm. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">indata</td><td>The input data, <img class="formulaInl" alt="$x[n]$" src="form_148.png" width="21" height="14"/>, with layout equivalent to the buffer populated by mwalib (see [the MWAX voltage format][MWAXHTR]) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">filter_coeffs</td><td>The PFB filter coefficients, <img class="formulaInl" alt="$h[n]$" src="form_149.png" width="20" height="14"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">weighted_overlap_array</td><td>The result of the weighted overlap-add operation, <img class="formulaInl" alt="$b[n]$" src="form_150.png" width="19" height="14"/></td></tr>
+  </table>
+  </dd>
+</dl>
+<p>The weighted overlap-add part of the PFB algorithm is the equation </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho]. \]" src="form_142.png" width="221" height="39"/>
+</p>
+<p> See above for the meaning of the terms in this equation.</p>
+<p>The expected thread configuration is <img class="formulaInl" alt="$ \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle $" src="form_151.png" width="128" height="14"/></p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000025">Todo:</a></b></dt><dd>Add data layout information to this docstring. </dd></dl>
+
 </div>
 </div>
 <a id="a353ec3d21419ab0192de2ea4771a77b3"></a>
@@ -715,6 +991,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Calls the <a class="el" href="pfb_8cu.html#a7374f0e61cc4b19318b0aca79c8f40df" title="Performs the weighted overlap-add part of the PFB algorithm.">vmWOLA_kernel()</a> kernel for the forward PFB data. </p>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000026">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
+
 </div>
 </div>
 <a id="a831bf4d5d1a25ca5d2deeb0def57cd2a"></a>
@@ -732,6 +1011,9 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Writes the result of the forward PFB operation to file. </p>
+<p>This function writes the contents of <code>vm&rarr;fpfb&rarr;vcs_data</code> to a file whose name is returned by the function <a class="el" href="metadata_8c.html#a229dbe21a869afa361c5adb778b6b580">vmGetLegacyVoltFilename()</a>. </p>
 
 </div>
 </div>

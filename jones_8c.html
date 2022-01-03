@@ -87,13 +87,13 @@ Functions</h2></td></tr>
 <tr class="memdesc:a4151f4d79f5ab390a652f7b3ac4de0ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates arrays of indexes for antennas and polarisation according to the ordering used in legacy VCS observations.  <a href="jones_8c.html#a4151f4d79f5ab390a652f7b3ac4de0ce">More...</a><br /></td></tr>
 <tr class="separator:a4151f4d79f5ab390a652f7b3ac4de0ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af5913e5eb13932219386f0905b5ccb00"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00">vmCalcJ</a> (vcsbeam_context *vm)</td></tr>
-<tr class="memdesc:af5913e5eb13932219386f0905b5ccb00"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the (inverse) Jones matrix <img class="formulaInl" alt="${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$" src="form_74.png" width="81" height="16"/>.  <a href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00">More...</a><br /></td></tr>
+<tr class="memdesc:af5913e5eb13932219386f0905b5ccb00"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the (inverse) Jones matrix <img class="formulaInl" alt="${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$" src="form_119.png" width="81" height="16"/>.  <a href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00">More...</a><br /></td></tr>
 <tr class="separator:af5913e5eb13932219386f0905b5ccb00"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac6480e78a0fa01cbce1bd9c48aadf539"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ac6480e78a0fa01cbce1bd9c48aadf539">vmCalcJonesAndDelays</a> (vcsbeam_context *vm, double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals)</td></tr>
-<tr class="memdesc:ac6480e78a0fa01cbce1bd9c48aadf539"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wrapper function for <a class="el" href="geometry_8c.html#a810de847675584bc9974936afa489292">vmCalcPhi()</a>, <a class="el" href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285">vmCalcB()</a>, and <a class="el" href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00" title="Computes the (inverse) Jones matrix .">vmCalcJ()</a>.  <a href="jones_8c.html#ac6480e78a0fa01cbce1bd9c48aadf539">More...</a><br /></td></tr>
+<tr class="memdesc:ac6480e78a0fa01cbce1bd9c48aadf539"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wrapper function for <a class="el" href="geometry_8c.html#a810de847675584bc9974936afa489292" title="Calculates the phase delays for all relevant frequencies and pointings.">vmCalcPhi()</a>, <a class="el" href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285" title="Calculates the beam model Jones matrices for the given pointings.">vmCalcB()</a>, and <a class="el" href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00" title="Computes the (inverse) Jones matrix .">vmCalcJ()</a>.  <a href="jones_8c.html#ac6480e78a0fa01cbce1bd9c48aadf539">More...</a><br /></td></tr>
 <tr class="separator:ac6480e78a0fa01cbce1bd9c48aadf539"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e8dd951e2bd3f3945eac9bcee98d24e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a0e8dd951e2bd3f3945eac9bcee98d24e">cp2x2</a> (cuDoubleComplex *Min, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a0e8dd951e2bd3f3945eac9bcee98d24e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#a0e8dd951e2bd3f3945eac9bcee98d24e">More...</a><br /></td></tr>
+<tr class="memdesc:a0e8dd951e2bd3f3945eac9bcee98d24e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#a0e8dd951e2bd3f3945eac9bcee98d24e">More...</a><br /></td></tr>
 <tr class="separator:a0e8dd951e2bd3f3945eac9bcee98d24e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a78cc7addc19f3da512eaaa8e785a2e0f"><td class="memItemLeft" align="right" valign="top">cuDoubleComplex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a78cc7addc19f3da512eaaa8e785a2e0f">reciprocal_complex</a> (cuDoubleComplex z)</td></tr>
 <tr class="memdesc:a78cc7addc19f3da512eaaa8e785a2e0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the reciprocal of a complex number.  <a href="jones_8c.html#a78cc7addc19f3da512eaaa8e785a2e0f">More...</a><br /></td></tr>
@@ -102,49 +102,49 @@ Functions</h2></td></tr>
 <tr class="memdesc:a5631baeefb8d9c2c8a167e254ccfed31"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the negative of a complex number.  <a href="jones_8c.html#a5631baeefb8d9c2c8a167e254ccfed31">More...</a><br /></td></tr>
 <tr class="separator:a5631baeefb8d9c2c8a167e254ccfed31"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af550b1e1d2b8e6d644a5f66696985c14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14">inv2x2</a> (cuDoubleComplex *Min, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:af550b1e1d2b8e6d644a5f66696985c14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14">More...</a><br /></td></tr>
+<tr class="memdesc:af550b1e1d2b8e6d644a5f66696985c14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14">More...</a><br /></td></tr>
 <tr class="separator:af550b1e1d2b8e6d644a5f66696985c14"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad17116a2d6b08d8db75d3b6aee9440be"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ad17116a2d6b08d8db75d3b6aee9440be">inv2x2d</a> (double *Min, double *Mout)</td></tr>
-<tr class="memdesc:ad17116a2d6b08d8db75d3b6aee9440be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> real-valued matrix.  <a href="jones_8c.html#ad17116a2d6b08d8db75d3b6aee9440be">More...</a><br /></td></tr>
+<tr class="memdesc:ad17116a2d6b08d8db75d3b6aee9440be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> real-valued matrix.  <a href="jones_8c.html#ad17116a2d6b08d8db75d3b6aee9440be">More...</a><br /></td></tr>
 <tr class="separator:ad17116a2d6b08d8db75d3b6aee9440be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac0a655af3a288ee5ecabb91f095e93d6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ac0a655af3a288ee5ecabb91f095e93d6">inv2x2S</a> (cuDoubleComplex *Min, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:ac0a655af3a288ee5ecabb91f095e93d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#ac0a655af3a288ee5ecabb91f095e93d6">More...</a><br /></td></tr>
+<tr class="memdesc:ac0a655af3a288ee5ecabb91f095e93d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#ac0a655af3a288ee5ecabb91f095e93d6">More...</a><br /></td></tr>
 <tr class="separator:ac0a655af3a288ee5ecabb91f095e93d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a13b739a3ffba31d732a4eb8d6980610b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a13b739a3ffba31d732a4eb8d6980610b">mult2x2d</a> (cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a13b739a3ffba31d732a4eb8d6980610b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of two <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrices.  <a href="jones_8c.html#a13b739a3ffba31d732a4eb8d6980610b">More...</a><br /></td></tr>
+<tr class="memdesc:a13b739a3ffba31d732a4eb8d6980610b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of two <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrices.  <a href="jones_8c.html#a13b739a3ffba31d732a4eb8d6980610b">More...</a><br /></td></tr>
 <tr class="separator:a13b739a3ffba31d732a4eb8d6980610b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2651b73c74702a29086fbe0ce75b0e33"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a2651b73c74702a29086fbe0ce75b0e33">mult2x2d_RxC</a> (double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a2651b73c74702a29086fbe0ce75b0e33"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> real-valued matrix (on the left) with a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix (on the right).  <a href="jones_8c.html#a2651b73c74702a29086fbe0ce75b0e33">More...</a><br /></td></tr>
+<tr class="memdesc:a2651b73c74702a29086fbe0ce75b0e33"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> real-valued matrix (on the left) with a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix (on the right).  <a href="jones_8c.html#a2651b73c74702a29086fbe0ce75b0e33">More...</a><br /></td></tr>
 <tr class="separator:a2651b73c74702a29086fbe0ce75b0e33"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae22d56f5e4cb6895ee63e3702a1fc3ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ae22d56f5e4cb6895ee63e3702a1fc3ac">mult2x2d_CxR</a> (cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:ae22d56f5e4cb6895ee63e3702a1fc3ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix (on the left) with a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> real-valued matrix (on the right).  <a href="jones_8c.html#ae22d56f5e4cb6895ee63e3702a1fc3ac">More...</a><br /></td></tr>
+<tr class="memdesc:ae22d56f5e4cb6895ee63e3702a1fc3ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix (on the left) with a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> real-valued matrix (on the right).  <a href="jones_8c.html#ae22d56f5e4cb6895ee63e3702a1fc3ac">More...</a><br /></td></tr>
 <tr class="separator:ae22d56f5e4cb6895ee63e3702a1fc3ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab6eb3c5a28939b5dd8513339c0f51217"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ab6eb3c5a28939b5dd8513339c0f51217">conj2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:ab6eb3c5a28939b5dd8513339c0f51217"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the conjugate of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#ab6eb3c5a28939b5dd8513339c0f51217">More...</a><br /></td></tr>
+<tr class="memdesc:ab6eb3c5a28939b5dd8513339c0f51217"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the conjugate of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#ab6eb3c5a28939b5dd8513339c0f51217">More...</a><br /></td></tr>
 <tr class="separator:ab6eb3c5a28939b5dd8513339c0f51217"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae83944ac74b5cb9d0c66f541940eed4e"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ae83944ac74b5cb9d0c66f541940eed4e">norm2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:ae83944ac74b5cb9d0c66f541940eed4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Normalises a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> matrix via the Frobenius norm.  <a href="jones_8c.html#ae83944ac74b5cb9d0c66f541940eed4e">More...</a><br /></td></tr>
+<tr class="memdesc:ae83944ac74b5cb9d0c66f541940eed4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Normalises a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> matrix via the Frobenius norm.  <a href="jones_8c.html#ae83944ac74b5cb9d0c66f541940eed4e">More...</a><br /></td></tr>
 <tr class="separator:ae83944ac74b5cb9d0c66f541940eed4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa855d47e66488b80a386d8b46b88fd76"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#aa855d47e66488b80a386d8b46b88fd76">reverse2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:aa855d47e66488b80a386d8b46b88fd76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reverses the elements of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> matrix.  <a href="jones_8c.html#aa855d47e66488b80a386d8b46b88fd76">More...</a><br /></td></tr>
+<tr class="memdesc:aa855d47e66488b80a386d8b46b88fd76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reverses the elements of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> matrix.  <a href="jones_8c.html#aa855d47e66488b80a386d8b46b88fd76">More...</a><br /></td></tr>
 <tr class="separator:aa855d47e66488b80a386d8b46b88fd76"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a719879385bcb10110a734b65cba146c1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a719879385bcb10110a734b65cba146c1">swaprows2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a719879385bcb10110a734b65cba146c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps the rows of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> matrix.  <a href="jones_8c.html#a719879385bcb10110a734b65cba146c1">More...</a><br /></td></tr>
+<tr class="memdesc:a719879385bcb10110a734b65cba146c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps the rows of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> matrix.  <a href="jones_8c.html#a719879385bcb10110a734b65cba146c1">More...</a><br /></td></tr>
 <tr class="separator:a719879385bcb10110a734b65cba146c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6e4caad10da318cf70cad484c4993d8f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a6e4caad10da318cf70cad484c4993d8f">swapcols2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a6e4caad10da318cf70cad484c4993d8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps the columns of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> matrix.  <a href="jones_8c.html#a6e4caad10da318cf70cad484c4993d8f">More...</a><br /></td></tr>
+<tr class="memdesc:a6e4caad10da318cf70cad484c4993d8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps the columns of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> matrix.  <a href="jones_8c.html#a6e4caad10da318cf70cad484c4993d8f">More...</a><br /></td></tr>
 <tr class="separator:a6e4caad10da318cf70cad484c4993d8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6b0d682c8dd588f8c91e20de549cb2a3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a6b0d682c8dd588f8c91e20de549cb2a3">is2x2zero</a> (cuDoubleComplex *M)</td></tr>
-<tr class="memdesc:a6b0d682c8dd588f8c91e20de549cb2a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if and only if all elements of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix are identically zero.  <a href="jones_8c.html#a6b0d682c8dd588f8c91e20de549cb2a3">More...</a><br /></td></tr>
+<tr class="memdesc:a6b0d682c8dd588f8c91e20de549cb2a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if and only if all elements of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix are identically zero.  <a href="jones_8c.html#a6b0d682c8dd588f8c91e20de549cb2a3">More...</a><br /></td></tr>
 <tr class="separator:a6b0d682c8dd588f8c91e20de549cb2a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af2d2c07ed8d82064c00fdf85ff48eadf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#af2d2c07ed8d82064c00fdf85ff48eadf">calc_hermitian</a> (cuDoubleComplex *M, cuDoubleComplex *H)</td></tr>
 <tr class="memdesc:af2d2c07ed8d82064c00fdf85ff48eadf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the Hermitian (i.e.  <a href="jones_8c.html#af2d2c07ed8d82064c00fdf85ff48eadf">More...</a><br /></td></tr>
 <tr class="separator:af2d2c07ed8d82064c00fdf85ff48eadf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6c6ec805c1f3139a266be79b44e56d24"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a6c6ec805c1f3139a266be79b44e56d24">calc_coherency_matrix</a> (cuDoubleComplex *M, cuDoubleComplex *C)</td></tr>
-<tr class="memdesc:a6c6ec805c1f3139a266be79b44e56d24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the coherency matrix of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#a6c6ec805c1f3139a266be79b44e56d24">More...</a><br /></td></tr>
+<tr class="memdesc:a6c6ec805c1f3139a266be79b44e56d24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the coherency matrix of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#a6c6ec805c1f3139a266be79b44e56d24">More...</a><br /></td></tr>
 <tr class="separator:a6c6ec805c1f3139a266be79b44e56d24"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a52bf647ef5e9e55631b085474c441d29"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a52bf647ef5e9e55631b085474c441d29">fprintf_complex_matrix</a> (FILE *fout, cuDoubleComplex *M)</td></tr>
-<tr class="memdesc:a52bf647ef5e9e55631b085474c441d29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prints a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#a52bf647ef5e9e55631b085474c441d29">More...</a><br /></td></tr>
+<tr class="memdesc:a52bf647ef5e9e55631b085474c441d29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prints a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix.  <a href="jones_8c.html#a52bf647ef5e9e55631b085474c441d29">More...</a><br /></td></tr>
 <tr class="separator:a52bf647ef5e9e55631b085474c441d29"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
@@ -174,11 +174,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes the coherency matrix of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix. </p>
+<p>Computes the coherency matrix of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_91.png" width="15" height="10"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">C</td><td>The output matrix, <img class="formulaInl" alt="${\bf C} = {\bf M}{\bf M}^\dagger$" src="form_99.png" width="59" height="11"/>.</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_131.png" width="15" height="10"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">C</td><td>The output matrix, <img class="formulaInl" alt="${\bf C} = {\bf M}{\bf M}^\dagger$" src="form_139.png" width="59" height="11"/>.</td></tr>
   </table>
   </dd>
 </dl>
@@ -213,11 +213,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Computes the Hermitian (i.e. </p>
-<p>conjugate transpose) of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix.</p>
+<p>conjugate transpose) of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_91.png" width="15" height="10"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">H</td><td>The output matrix, <img class="formulaInl" alt="${\bf H} = {\bf M}^\dagger$" src="form_98.png" width="48" height="11"/>.</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_131.png" width="15" height="10"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">H</td><td>The output matrix, <img class="formulaInl" alt="${\bf H} = {\bf M}^\dagger$" src="form_138.png" width="48" height="11"/>.</td></tr>
   </table>
   </dd>
 </dl>
@@ -251,11 +251,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes the conjugate of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix. </p>
+<p>Computes the conjugate of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_91.png" width="15" height="10"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}^\ast$" src="form_92.png" width="65" height="13"/>.</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_131.png" width="15" height="10"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}^\ast$" src="form_132.png" width="65" height="13"/>.</td></tr>
   </table>
   </dd>
 </dl>
@@ -289,11 +289,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Copies a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix. </p>
+<p>Copies a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">Min</td><td>The source matrix, <img class="formulaInl" alt="${\bf M}_\text{in}$" src="form_83.png" width="23" height="13"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The destination matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_\text{in}$" src="form_84.png" width="69" height="13"/>. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">Min</td><td>The source matrix, <img class="formulaInl" alt="${\bf M}_\text{in}$" src="form_123.png" width="23" height="13"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The destination matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_\text{in}$" src="form_124.png" width="69" height="13"/>. </td></tr>
   </table>
   </dd>
 </dl>
@@ -326,7 +326,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Prints a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix. </p>
+<p>Prints a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">fout</td><td>The file stream to output to </td></tr>
@@ -366,11 +366,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix. </p>
+<p>Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">Min</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}_\text{in}$" src="form_83.png" width="23" height="13"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$" src="form_87.png" width="73" height="16"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">Min</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}_\text{in}$" src="form_123.png" width="23" height="13"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$" src="form_127.png" width="73" height="16"/> </td></tr>
   </table>
   </dd>
 </dl>
@@ -403,11 +403,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> real-valued matrix. </p>
+<p>Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> real-valued matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">Min</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}_\text{in}$" src="form_83.png" width="23" height="13"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$" src="form_87.png" width="73" height="16"/>. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">Min</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}_\text{in}$" src="form_123.png" width="23" height="13"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$" src="form_127.png" width="73" height="16"/>. </td></tr>
   </table>
   </dd>
 </dl>
@@ -440,16 +440,16 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix. </p>
+<p>Computes the inverse of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">Min</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}_\text{in}$" src="form_83.png" width="23" height="13"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$" src="form_87.png" width="73" height="16"/></td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">Min</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}_\text{in}$" src="form_123.png" width="23" height="13"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}$" src="form_127.png" width="73" height="16"/></td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a></dd></dl>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000008">Todo:</a></b></dt><dd>Does this do the same thing as <a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a>? Check the code, and delete if not needed. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000022">Todo:</a></b></dt><dd>Does this do the same thing as <a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a>? Check the code, and delete if not needed. </dd></dl>
 
 </div>
 </div>
@@ -469,10 +469,10 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Returns true if and only if all elements of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix are identically zero. </p>
+<p>Returns true if and only if all elements of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix are identically zero. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">M</td><td>The matrix to be tested, <img class="formulaInl" alt="${\bf M}$" src="form_91.png" width="15" height="10"/>. </td></tr>
+    <tr><td class="paramname">M</td><td>The matrix to be tested, <img class="formulaInl" alt="${\bf M}$" src="form_131.png" width="15" height="10"/>. </td></tr>
   </table>
   </dd>
 </dl>
@@ -511,12 +511,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Performs a matrix multiplication of two <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrices. </p>
+<p>Performs a matrix multiplication of two <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrices. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M1</td><td>The first input matrix, <img class="formulaInl" alt="${\bf M}_1$" src="form_88.png" width="19" height="13"/> </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">M2</td><td>The second input matrix, <img class="formulaInl" alt="${\bf M}_2$" src="form_89.png" width="20" height="13"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$" src="form_90.png" width="99" height="13"/>. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M1</td><td>The first input matrix, <img class="formulaInl" alt="${\bf M}_1$" src="form_128.png" width="19" height="13"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M2</td><td>The second input matrix, <img class="formulaInl" alt="${\bf M}_2$" src="form_129.png" width="20" height="13"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$" src="form_130.png" width="99" height="13"/>. </td></tr>
   </table>
   </dd>
 </dl>
@@ -555,12 +555,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Performs a matrix multiplication of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix (on the left) with a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> real-valued matrix (on the right). </p>
+<p>Performs a matrix multiplication of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix (on the left) with a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> real-valued matrix (on the right). </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M1</td><td>The first input matrix (complex-valued), <img class="formulaInl" alt="${\bf M}_1$" src="form_88.png" width="19" height="13"/> </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">M2</td><td>The second input matrix (real-valued), <img class="formulaInl" alt="${\bf M}_2$" src="form_89.png" width="20" height="13"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix (complex-valued), <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$" src="form_90.png" width="99" height="13"/>. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M1</td><td>The first input matrix (complex-valued), <img class="formulaInl" alt="${\bf M}_1$" src="form_128.png" width="19" height="13"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M2</td><td>The second input matrix (real-valued), <img class="formulaInl" alt="${\bf M}_2$" src="form_129.png" width="20" height="13"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix (complex-valued), <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$" src="form_130.png" width="99" height="13"/>. </td></tr>
   </table>
   </dd>
 </dl>
@@ -599,12 +599,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Performs a matrix multiplication of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> real-valued matrix (on the left) with a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> complex-valued matrix (on the right). </p>
+<p>Performs a matrix multiplication of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> real-valued matrix (on the left) with a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> complex-valued matrix (on the right). </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M1</td><td>The first input matrix (real-valued), <img class="formulaInl" alt="${\bf M}_1$" src="form_88.png" width="19" height="13"/> </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">M2</td><td>The second input matrix (complex-valued), <img class="formulaInl" alt="${\bf M}_2$" src="form_89.png" width="20" height="13"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix (complex-valued), <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$" src="form_90.png" width="99" height="13"/>. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M1</td><td>The first input matrix (real-valued), <img class="formulaInl" alt="${\bf M}_1$" src="form_128.png" width="19" height="13"/> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M2</td><td>The second input matrix (complex-valued), <img class="formulaInl" alt="${\bf M}_2$" src="form_129.png" width="20" height="13"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix (complex-valued), <img class="formulaInl" alt="${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2$" src="form_130.png" width="99" height="13"/>. </td></tr>
   </table>
   </dd>
 </dl>
@@ -634,7 +634,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd><img class="formulaInl" alt="$-z$" src="form_86.png" width="16" height="6"/> </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><img class="formulaInl" alt="$-z$" src="form_126.png" width="16" height="6"/> </dd></dl>
 
 </div>
 </div>
@@ -664,11 +664,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Normalises a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> matrix via the Frobenius norm. </p>
+<p>Normalises a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> matrix via the Frobenius norm. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_91.png" width="15" height="10"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = |{\bf M}_\text{in}|$" src="form_93.png" width="75" height="14"/>.</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_131.png" width="15" height="10"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out} = |{\bf M}_\text{in}|$" src="form_133.png" width="75" height="14"/>.</td></tr>
   </table>
   </dd>
 </dl>
@@ -699,7 +699,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd><img class="formulaInl" alt="$\dfrac{1}{z}$" src="form_85.png" width="9" height="26"/> </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><img class="formulaInl" alt="$\dfrac{1}{z}$" src="form_125.png" width="9" height="26"/> </dd></dl>
 
 </div>
 </div>
@@ -729,16 +729,16 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Reverses the elements of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> matrix. </p>
+<p>Reverses the elements of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_91.png" width="15" height="10"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out}$" src="form_94.png" width="29" height="13"/>.</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_131.png" width="15" height="10"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out}$" src="form_134.png" width="29" height="13"/>.</td></tr>
   </table>
   </dd>
 </dl>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[\begin{bmatrix} 0 &amp; 1 \\ 2 &amp; 3\end{bmatrix} \rightarrow \begin{bmatrix} 3 &amp; 2 \\ 1 &amp; 0 \end{bmatrix}\]" src="form_95.png" width="91" height="31"/>
+<img class="formulaDsp" alt="\[\begin{bmatrix} 0 &amp; 1 \\ 2 &amp; 3\end{bmatrix} \rightarrow \begin{bmatrix} 3 &amp; 2 \\ 1 &amp; 0 \end{bmatrix}\]" src="form_135.png" width="91" height="31"/>
 </p>
 <p>It is safe for <code>M</code> and <code>Mout</code> to point to the same matrix. </p>
 
@@ -770,16 +770,16 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Swaps the columns of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> matrix. </p>
+<p>Swaps the columns of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_91.png" width="15" height="10"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out}$" src="form_94.png" width="29" height="13"/>.</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_131.png" width="15" height="10"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out}$" src="form_134.png" width="29" height="13"/>.</td></tr>
   </table>
   </dd>
 </dl>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[\begin{bmatrix} 0 &amp; 1 \\ 2 &amp; 3\end{bmatrix} \rightarrow \begin{bmatrix} 1 &amp; 0 \\ 3 &amp; 2 \end{bmatrix}\]" src="form_97.png" width="91" height="31"/>
+<img class="formulaDsp" alt="\[\begin{bmatrix} 0 &amp; 1 \\ 2 &amp; 3\end{bmatrix} \rightarrow \begin{bmatrix} 1 &amp; 0 \\ 3 &amp; 2 \end{bmatrix}\]" src="form_137.png" width="91" height="31"/>
 </p>
 <p>It is safe for <code>M</code> and <code>Mout</code> to point to the same matrix. </p>
 
@@ -811,16 +811,16 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Swaps the rows of a <img class="formulaInl" alt="$2\times2$" src="form_30.png" width="28" height="9"/> matrix. </p>
+<p>Swaps the rows of a <img class="formulaInl" alt="$2\times2$" src="form_45.png" width="28" height="9"/> matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_91.png" width="15" height="10"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out}$" src="form_94.png" width="29" height="13"/>.</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">M</td><td>The input matrix, <img class="formulaInl" alt="${\bf M}$" src="form_131.png" width="15" height="10"/>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Mout</td><td>The output matrix, <img class="formulaInl" alt="${\bf M}_\text{out}$" src="form_134.png" width="29" height="13"/>.</td></tr>
   </table>
   </dd>
 </dl>
 <p class="formulaDsp">
-<img class="formulaDsp" alt="\[\begin{bmatrix} 0 &amp; 1 \\ 2 &amp; 3\end{bmatrix} \rightarrow \begin{bmatrix} 2 &amp; 3 \\ 0 &amp; 1 \end{bmatrix}\]" src="form_96.png" width="91" height="31"/>
+<img class="formulaDsp" alt="\[\begin{bmatrix} 0 &amp; 1 \\ 2 &amp; 3\end{bmatrix} \rightarrow \begin{bmatrix} 2 &amp; 3 \\ 0 &amp; 1 \end{bmatrix}\]" src="form_136.png" width="91" height="31"/>
 </p>
 <p>It is safe for <code>M</code> and <code>Mout</code> to point to the same matrix. </p>
 
@@ -842,21 +842,21 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes the (inverse) Jones matrix <img class="formulaInl" alt="${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$" src="form_74.png" width="81" height="16"/>. </p>
-<p><img class="formulaInl" alt="${\bf J}^{-1}$" src="form_75.png" width="21" height="11"/> is the Jones matrix that converts from instrumental voltages to sky voltages, according to </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \begin{aligned} {\bf e} &amp;= {\bf J}^{-1} {\bf v}, \\ \begin{bmatrix} e_x \\ e_y \end{bmatrix} &amp;= \begin{bmatrix} J_{xq} &amp; J_{xp} \\ J_{yq} &amp; J_{yp} \end{bmatrix} \begin{bmatrix} v_q \\ v_p \end{bmatrix}. \end{aligned} \]" src="form_76.png" width="134" height="51"/>
+<p>Computes the (inverse) Jones matrix <img class="formulaInl" alt="${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$" src="form_119.png" width="81" height="16"/>. </p>
+<p><img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.png" width="21" height="11"/> is the Jones matrix that converts from instrumental voltages to sky voltages, according to </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \begin{aligned} {\bf e} &amp;= {\bf J}^{-1} {\bf v}, \\ \begin{bmatrix} e_x \\ e_y \end{bmatrix} &amp;= \begin{bmatrix} J_{xq} &amp; J_{xp} \\ J_{yq} &amp; J_{yp} \end{bmatrix} \begin{bmatrix} v_q \\ v_p \end{bmatrix}. \end{aligned} \]" src="form_120.png" width="134" height="51"/>
 </p>
 <p> It is computed by multiplying the instrumental calibration Jones matrix with the beam model matrix, and taking the inverse </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[{\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1},\]" src="form_77.png" width="88" height="16"/>
+<img class="formulaDsp" alt="\[{\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1},\]" src="form_121.png" width="88" height="16"/>
 </p>
-<p> where <img class="formulaInl" alt="${\bf D}$" src="form_26.png" width="11" height="10"/> is taken from <code>vm&rarr;D</code>, and <img class="formulaInl" alt="${\bf B}$" src="form_27.png" width="11" height="10"/> from <code>vm&rarr;pb.B</code>. The result is stored in <code>vm&rarr;J</code>.</p>
-<p><img class="formulaInl" alt="${\bf J}^{-1}$" src="form_75.png" width="21" height="11"/> has dimensions <img class="formulaInl" alt="$(N_a \times N_f \times N_p \times N_p)$" src="form_78.png" width="119" height="14"/>, where</p><ul>
-<li><img class="formulaInl" alt="$N_a$" src="form_79.png" width="15" height="13"/> is the number of antennas (<code>vm&rarr;obs_metadata&rarr;num_ants</code>)</li>
-<li><img class="formulaInl" alt="$N_f$" src="form_80.png" width="15" height="14"/> is the number of frequencies (<code>vm&rarr;vm&rarr;nfine_chan</code>)</li>
-<li><img class="formulaInl" alt="$N_p$" src="form_81.png" width="15" height="14"/> is the number of polarisation (<code>vm&rarr;obs_metadata&rarr;num_ant_pols</code>)</li>
+<p> where <img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/> is taken from <code>vm&rarr;D</code>, and <img class="formulaInl" alt="${\bf B}$" src="form_42.png" width="11" height="10"/> from <code>vm&rarr;pb.B</code>. The result is stored in <code>vm&rarr;J</code>.</p>
+<p><img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.png" width="21" height="11"/> has dimensions <img class="formulaInl" alt="$(N_a \times N_f \times N_p \times N_p)$" src="form_122.png" width="119" height="14"/>, where</p><ul>
+<li><img class="formulaInl" alt="$N_a$" src="form_27.png" width="15" height="13"/> is the number of antennas (<code>vm&rarr;obs_metadata&rarr;num_ants</code>)</li>
+<li><img class="formulaInl" alt="$N_f$" src="form_26.png" width="15" height="14"/> is the number of frequencies (<code>vm&rarr;vm&rarr;nfine_chan</code>)</li>
+<li><img class="formulaInl" alt="$N_p$" src="form_28.png" width="15" height="14"/> is the number of polarisation (<code>vm&rarr;obs_metadata&rarr;num_ant_pols</code>)</li>
 </ul>
 <p>The antenna ordering is given by the "Antenna" keyword in the observation's metafits file. The frequencies are ordered from lowest to highest.</p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000007">Todo:</a></b></dt><dd><a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/issues/9">Issue #9</a> </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000021">Todo:</a></b></dt><dd><a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/issues/9">Issue #9</a> </dd></dl>
 
 </div>
 </div>
@@ -898,7 +898,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Wrapper function for <a class="el" href="geometry_8c.html#a810de847675584bc9974936afa489292">vmCalcPhi()</a>, <a class="el" href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285">vmCalcB()</a>, and <a class="el" href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00" title="Computes the (inverse) Jones matrix .">vmCalcJ()</a>. </p>
+<p>Wrapper function for <a class="el" href="geometry_8c.html#a810de847675584bc9974936afa489292" title="Calculates the phase delays for all relevant frequencies and pointings.">vmCalcPhi()</a>, <a class="el" href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285" title="Calculates the beam model Jones matrices for the given pointings.">vmCalcB()</a>, and <a class="el" href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00" title="Computes the (inverse) Jones matrix .">vmCalcJ()</a>. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">ras_hours</td><td>An array of right ascensions, in decimal hours, one for each pointing. </td></tr>
@@ -907,7 +907,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<p>For each pointing, the quantities <img class="formulaInl" alt="$e^{i\varphi}$" src="form_82.png" width="15" height="11"/>, <img class="formulaInl" alt="${\bf B}$" src="form_27.png" width="11" height="10"/>, and <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_75.png" width="21" height="11"/> are calculated. ( <img class="formulaInl" alt="${\bf D}$" src="form_26.png" width="11" height="10"/> is not recalculated, but is used in the calculation of <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_75.png" width="21" height="11"/>). </p>
+<p>For each pointing, the quantities <img class="formulaInl" alt="$e^{i\varphi}$" src="form_79.png" width="15" height="11"/>, <img class="formulaInl" alt="${\bf B}$" src="form_42.png" width="11" height="10"/>, and <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.png" width="21" height="11"/> are calculated. ( <img class="formulaInl" alt="${\bf D}$" src="form_29.png" width="11" height="10"/> is not recalculated, but is used in the calculation of <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.png" width="21" height="11"/>). </p>
 
 </div>
 </div>
