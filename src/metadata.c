@@ -235,7 +235,8 @@ void vmBindObsData(
  * @param cal_type Either `CAL_RTS` or `CAL_OFFRINGA`
  * @param use_bandpass Whether to include the Bandpass information (relevant
  *        for RTS solutions only)
- * @param flags_file A file containing names of (extra) tiles to be flagged
+ * @param flags_file A file containing names of (extra) tiles to be flagged,
+ *        or `NULL`
  */
 void vmBindCalibrationData( vcsbeam_context *vm,
         char   *caldir,
@@ -250,8 +251,13 @@ void vmBindCalibrationData( vcsbeam_context *vm,
     vm->cal.caldir       = (char *)malloc( strlen( caldir ) + 1 );
     strcpy( vm->cal.caldir, caldir );
 
-    vm->cal.flags_file   = (char *)malloc( strlen( flags_file ) + 1 );
-    strcpy( vm->cal.flags_file, flags_file );
+    if (flags_file != NULL)
+    {
+        vm->cal.flags_file   = (char *)malloc( strlen( flags_file ) + 1 );
+        strcpy( vm->cal.flags_file, flags_file );
+    }
+    else
+        vm->cal.flags_file = NULL;
 }
 
 /**
