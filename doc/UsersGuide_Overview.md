@@ -2,7 +2,7 @@
 
 [TOC]
 
-(This page is copied from [](https://wiki.mwatelescope.org/display/MP/Processing+high+time+resolution+data+with+VCSBeam).)
+(This page is copied from https://wiki.mwatelescope.org/display/MP/Processing+high+time+resolution+data+with+VCSBeam.)
 @todo Update the beamforming pipeline overview with updated information
 
 The beamforming pipeline described [here](https://wiki.mwatelescope.org/display/MP/Documentation) is applicable to fine-channelised (10 kHz) MWA data that was produced up to September 2021 (hereafter called **legacy** data), when the legacy Voltage Capture System was decommissioned.
