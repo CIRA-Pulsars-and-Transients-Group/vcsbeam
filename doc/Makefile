@@ -1,2 +1,3 @@
 doxygen:
-	doxygen && make -C latex
+	doxygen
+	#doxygen && make -C latex

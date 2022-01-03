@@ -14,6 +14,8 @@ Apart from the obvious requirement to be able to process the new data format, a 
 \image html pipeline_overview.png width=800
 \image latex pipeline_overview.png width=\textwidth
 
+\dotfile overview.dot
+
 ## Individual processing steps
   1. Download (not part of VCSBeam): This step is currently identical to the downloading step described on the legacy page. For legacy data, the existing pipeline performs the "recombine step" automatically, so that the data which are made available to the user are the "Recombined voltages", or ".dat" files. As of this writing (25 Sep 2021), it is not yet clear whether the current downloading instructions will correctly download MWAX data (i.e. after September 2021), or whether that functionality still needs to be implemented. However, it is intended that the data that will be downloaded are the "Coarse channel voltages", or ".sub" files.
   2. Offline PFB: This step mimics the FPGA-based polyphase filter bank that was implemented in the legacy system, but which is not supplied by the MWAX system. It is currently (as of September 2021), the only way to process MWAX data, although there are many outstanding issues with this that are described below.

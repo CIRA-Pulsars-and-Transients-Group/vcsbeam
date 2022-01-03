@@ -1,0 +1,7 @@
+digraph overview {
+    node [shape=record];
+    mwa [ label="MWA" ]
+    date [ label="Before Sep 2021?", shape=diamond ]
+    beamform [ label="Beamform" ]
+    mwa -> date -> beamform
+}
