@@ -878,7 +878,6 @@ INPUT                  = Mainpage.md \
                          FileFormats.md \
                          UsersGuide_Overview.md \
                          UsersGuide_Beamforming.md \
-                         UsersGuide_Calibration.md \
                          UsersGuide_Examples.md \
                          Applications_FinePFBOffline.md \
                          Applications_MakeMWAIncohBeam.md \
@@ -886,6 +885,7 @@ INPUT                  = Mainpage.md \
                          Applications_MWAPlotCalibration.md \
                          Applications_MWATiedArrayBeamPSF.md \
                          Applications_MWATrackPrimaryBeamResponse.md \
+                         Applications_OfflineCorrelator.md \
                          ../src
 
 # This tag can be used to specify the character encoding of the source files

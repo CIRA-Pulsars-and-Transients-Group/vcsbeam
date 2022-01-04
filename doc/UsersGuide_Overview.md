@@ -16,12 +16,12 @@ Processing an observation in this way is described on [this page](@ref usersguid
 VCSBeam can not only beamform, but also process VCS data in other ways.
 These include:
 
- - Forming tied-array beams
- - Forming incoherent beams
- - Applying a polyphase filterbank (PFB) for fine channelisation
- - Visualising calibration solutions
- - Visualising the tied-array beam pattern
- - Modelling the tied-array beam response towards a particular target
+ - [Forming tied-array beams](@ref applicationsmakemwatiedarraybeam)
+ - [Forming incoherent beams](@ref applicationsmakemwaincohbeam)
+ - [Applying a polyphase filterbank (PFB) for fine channelisation](@ref applicationsfinepfboffline)
+ - [Visualising calibration solutions](@ref applicationsmwaplotcalibration)
+ - [Visualising the tied-array beam pattern](@ref applicationsmwatiedarraybeampsf)
+ - [Modelling the tied-array beam response towards a particular target](@ref applicationsmwatrackprimarybeamresponse)
 
 Each of the above items corresponds to an "application" that comes shipped with VCSBeam, and clicking the links will take you to each application's documentation.
 However, these processing tasks are not the only scientifically useful ways that VCS data can be processed, and the broader goal of VCSBeam is to provide a flexible framework that can be used to implement other novel algorithms and processing techniques.

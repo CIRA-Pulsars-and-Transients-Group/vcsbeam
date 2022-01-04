@@ -1,11 +1,12 @@
 digraph overview {
-    node [ shape=record, style="filled" ];
-    splines = curved;
+    node [ shape=cylinder, style="filled" ];
+    //splines = curved;
 
-    targetobs [ label="Target\nObs", shape=circle ];
-    calobs [ label="Calibration\nObs", shape=circle ];
-    calvcs [ label="Is data VCS or\ncalibrated visibilities?", shape=diamond, fillcolor=yellow ];
+    targetobs [ label="Target\nObs", shape=circle, fixedsize=true, width=1.2 ];
+    calobs [ label="Calibration\nObs", shape=circle, fixedsize=true, width=1.2 ];
+    calvcs [ label="Is data VCS or\ncorrelated visibilities?", shape=diamond, fillcolor=yellow, fixedsize=true, width=2.5, height=1.2 ];
     date [ label="Before\nSep 2021?", shape=diamond, fillcolor=yellow ];
+    date2 [ label="Before\nSep 2021?", shape=diamond, fillcolor=yellow ];
     raw [ label="Fine channel\nvoltages (.raw)", fillcolor=green ];
     sub [ label="Coarse channel\nvoltages (.sub)", fillcolor=green ];
     dat [ label="Recombined\nvoltages (.dat)", fillcolor=green ];
@@ -14,17 +15,17 @@ digraph overview {
     psrfits [ label="PSRFITS\nFull Stokes", fillcolor=green ];
     vdif [ label="VDIF\nVoltages", fillcolor=green ];
     calsol [ label="Calibration solution\n(.bin or RTS)", fillcolor=green ];
-    recombine [ label="recombine", shape=invhouse ];
-    tiedarray [ label="make_mwa_tied_array_beam", shape=invhouse ];
-    rts [ label="RTS/Hyperdrive", shape=invhouse ];
-
+    recombine [ label="recombine", shape=record, href="https://github.com/ICRAR/mwa-voltage.git", fontcolor=blue ];
+    tiedarray [ label="make_mwa_tied_array_beam", shape=record, href="@ref applicationsmakemwatiedarraybeam", fontcolor=blue ];
+    rts [ label="RTS/Hyperdrive", shape=record, href="@ref usersguidecalibration", fontcolor=blue ];
     targetobs -> date;
     date -> raw [ xlabel="Yes (Legacy)" ];
     date -> sub [ label="No (MWAX)" ];
-    sub:se -> tiedarray:ne;
+    sub -> tiedarray;
 
-    offlinepfb [ label="fine_pfb_offline", shape=invhouse ];
-    offlinecorr [ label="Offline Correlator*", shape=invhouse ];
+    offlinepfb [ label="fine_pfb_offline", shape=record, href="@ref applicationsfinepfboffline", fontcolor=blue ];
+    offlinecorrlegacy [ label="offline_correlator", shape=record, href="@ref applicationsofflinecorrelator", fontcolor=blue ];
+    offlinecorrmwax [ label="MWAX Offline Correlator", shape=record, href="https://wiki.mwatelescope.org/display/MP/MWAX+Offline+Correlator", fontcolor=blue ];
 
     raw -> recombine -> dat;
     sub -> offlinepfb -> dat;
@@ -33,10 +34,12 @@ digraph overview {
     outputchannelisation -> vdif [ label="1.28 MHz" ];
     calsol -> tiedarray;
     calobs -> calvcs;
-    calvcs -> offlinecorr [ label="Yes" ];
-    offlinecorr -> vis;
-    calvcs -> rts [ label="No" ];
-    rts -> calsol;
+    calvcs -> date2 [ label="VCS" ];
+    date2 -> offlinecorrlegacy [ xlabel="Yes" ];
+    date2 -> offlinecorrmwax [ xlabel="No" ];
+    offlinecorrlegacy -> vis;
+    offlinecorrmwax -> vis;
+    calvcs -> rts [ label="Correlated visibilities" ];
     vis -> rts -> calsol;
 
     {rank = same; targetobs; calobs; }
