@@ -14,7 +14,8 @@ The following diagram gives an overview of the beamforming pipeline:
 \dotfile beamforming.dot
 
 Green nodes represent data files that are stored on disk, until deleted by the user.
-Down arrows represent applications, and those in blue are provided by VCSBeam.
+Grey boxes represent applications, some of which are provided by VCSBeam, and some of which are external applications.
+The links in the diagram take to you each application's documentation.
 
 ## Downloading the data
 
@@ -49,4 +50,27 @@ Apart from [the MWA Telescope Wiki][Hyperdrive] (same link as given in the table
 
 ## Beamforming
 
+### Set up
 Once the data for the target observation have been downloaded, and a calibration solution obtained, the data may be beamformed.
+This is achieved by using the application `make_mwa_tied_array_beam`.
+
+`make_mwa_tied_array_beam` is highly configurable, and the full set of options can be seen by running
+```
+make_mwa_tied_array_beam -h
+```
+A minimal call requires
+ 1. The metafits file for the target observation,
+ 2. The metafits file for the calibration observation,
+ 3. The path to the calibration solution,
+ 4. A "pointings" file containing a list of RA/Decs.
+
+The metafits files can be obtained via an [MWA Web Service](https://wiki.mwatelescope.org/display/MP/Web+Services), e.g.
+```
+wget -O <obsid>_metafits.fits http://ws.mwatelescope.org/metadata/fits?obs_id=<obsid>
+```
+where `<obsid>` is a placeholder for the MWA Observation ID.
+For beamforming purposes, the metafits files can be given any arbitrary names.
+
+The path to the calibration solution will be either the calibration file solution itself if it is an [Offringa-style format binary file](@ref offringafileformat), or the directory containing the calibration solution files if it is an [RTS solution](@ref rtsfileformat).
+
+The "pointings" file ...
