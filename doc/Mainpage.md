@@ -15,7 +15,7 @@ The source code for this software can be found [here](https://github.com/CIRA-Pu
  - User's Guide
    + [Overview](@ref usersguideoverview)
    + [Calibration](@ref usersguidecalibration)
-   + Beamforming
+   + [Beamforming](@ref usersguidebeamforming)
    + [Examples](@ref usersguideexamples)
  - Appendices
    + [File formats](@ref fileformats) - RTS, Offringa
