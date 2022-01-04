@@ -1,0 +1,32 @@
+digraph overview {
+    node [ shape=record, style="filled" ];
+    splines = curved;
+
+    targetobs [ label="Target\nObs", shape=circle ];
+    date [ label="Before\nSep 2021?", shape=diamond, fillcolor=yellow ];
+    raw [ label="Fine channel\nvoltages (.raw)", fillcolor=green ];
+    sub [ label="Coarse channel\nvoltages (.sub)", fillcolor=green ];
+    dat [ label="Recombined\nvoltages (.dat)", fillcolor=green ];
+    //legacyvis [ label="Correlated\nvisibilities (.fits)" ];
+    outputchannelisation [ label="Output\nchannelisation?", shape=diamond, fillcolor=yellow ];
+    psrfits [ label="PSRFITS\nFull Stokes" ];
+    vdif [ label="VDIF\nVoltages" ];
+    cal [ label="Calibration\nsolution (.bin)", fillcolor=green ]
+    caldata [ label="Calibrated\ndata" ]
+
+    targetobs -> date;
+    date -> raw [ xlabel="Yes (Legacy)" ];
+    date -> sub [ label="No (MWAX)" ];
+    raw -> dat [ xlabel="recombine" ];
+    sub -> dat [ xlabel="offline_pfb" ];
+    dat -> caldata [ label="make_mwa_tied_array_beam" ];
+    sub -> caldata //[ label="make_mwa_tied_array_beam" ];
+    caldata -> outputchannelisation;
+    outputchannelisation -> psrfits [ xlabel="10 kHz" ];
+    outputchannelisation -> vdif [ label="1.28 MHz" ];
+    cal -> caldata;
+    //dat -> legacyvis [ label="offline_correlator" ];
+
+    {rank = same; raw; sub;}
+    {rank = same; cal; caldata; }
+}

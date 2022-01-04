@@ -11,12 +11,14 @@ The software repository for VCSBeam is located at [this GitHub page](https://git
 
 The primary goal of VCSBeam is to combine the signals measured at each of the MWA's antenna elements ("tiles") in order to maximise the sensitivity of the entire array towards a desired look-direction.
 (The beam pattern of the combined array is called a "tied-array beam", and the processing of forming it, "beamforming".)
-VCSBeam provides the executable `make_mwa_tied_array_beam` to perform this beamforming operation.
+Processing an observation in this way is described on [this page](@ref usersguidebeamforming).
 
-VCSBeam includes a variety of tools to process HTR data in many ways, including (but not limited to):
+VCSBeam can not only beamform, but also process VCS data in other ways.
+These include:
+
  - Forming tied-array beams
  - Forming incoherent beams
- - Applying a polyphase filterbank (PFB)
+ - Applying a polyphase filterbank (PFB) for fine channelisation
  - Visualising calibration solutions
  - Visualising the tied-array beam pattern
  - Modelling the tied-array beam response towards a particular target
