@@ -49,4 +49,4 @@ Apart from [the MWA Telescope Wiki][Hyperdrive] (same link as given in the table
 
 ## Beamforming
 
-The main 
+Once the data for the target observation have been downloaded, and a calibration solution obtained, the data may be beamformed.
