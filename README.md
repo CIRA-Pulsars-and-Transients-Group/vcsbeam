@@ -8,7 +8,7 @@ It consists of
 
 ## Installation
 
-See [the Installation Guide](https://cira-pulsars-and-transients-group.github.io/vcsbeam/installation.html).
+See [the Installation Guide](https://cira-pulsars-and-transients-group.github.io/vcsbeam/installationguide.html)
 
 ## Alternatives
 
