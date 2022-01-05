@@ -31,7 +31,7 @@ jobs:
         # Working directory
         working-directory: "./doc" # default is .
         # Enable LaTeX for formulas
-        enable-latex: true
+        enable-latex: false
     
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
