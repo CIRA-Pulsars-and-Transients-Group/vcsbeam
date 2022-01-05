@@ -12,6 +12,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    extensions: ["tex2jax.js"],
+    jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -73,52 +80,52 @@ $(function() {
 </div>
 <div class="textblock"><p><a class="anchor" id="md_Calibration"></a></p>
 <p>Calibration is the process by which the temporal variations in the instrumental and/or ionospheric response to an incoming signal are characterised, in order to account for them when processing observational data. A <em>calibration solution</em> is a mathematical operation that can be applied either to measured visibilities or raw voltages to correct for these variations, and recover the visibilities (or raw voltages) that would have been measured under ideal conditions.</p>
-<p>For the MWA, calibration solutions are modelled as a tile-dependent, linear transformation of two orthogonal polarisations. Thus, the full calibration solution for each tile is represented by a <img class="formulaInl" alt="$2\times2$" src="form_45.svg"/> Jones matrix, <img class="formulaInl" alt="${\bf J}$" src="form_41.svg"/>, which is multiplied to the incident electric field, <img class="formulaInl" alt="${\bf e}$" src="form_46.svg"/>, to predict the measured voltages, <img class="formulaInl" alt="${\bf v}$" src="form_47.svg"/>. </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf v} = {\bf J}{\bf e}. \]" src="form_48.svg"/>
+<p>For the MWA, calibration solutions are modelled as a tile-dependent, linear transformation of two orthogonal polarisations. Thus, the full calibration solution for each tile is represented by a \(2\times2\) Jones matrix, \({\bf J}\), which is multiplied to the incident electric field, \({\bf e}\), to predict the measured voltages, \({\bf v}\). </p><p class="formulaDsp">
+\[ {\bf v} = {\bf J}{\bf e}. \]
 </p>
-<p> The form of <img class="formulaInl" alt="${\bf J}$" src="form_41.svg"/> depends on the coordinate bases used for <img class="formulaInl" alt="${\bf v}$" src="form_47.svg"/> and <img class="formulaInl" alt="${\bf e}$" src="form_46.svg"/>. For example, </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \begin{bmatrix} v_q \\ v_p \end{bmatrix} = \begin{bmatrix} J_{qx} &amp; J_{qy} \\ J_{px} &amp; J_{py} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]" src="form_49.svg"/>
+<p> The form of \({\bf J}\) depends on the coordinate bases used for \({\bf v}\) and \({\bf e}\). For example, </p><p class="formulaDsp">
+\[ \begin{bmatrix} v_q \\ v_p \end{bmatrix} = \begin{bmatrix} J_{qx} &amp; J_{qy} \\ J_{px} &amp; J_{py} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]
 </p>
 <p> In practise, of course, the inverse operations are used to reconstruct the electric field from the measured voltages: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf e} = {\bf J}^{-1}{\bf v}. \]" src="form_50.svg"/>
+\[ {\bf e} = {\bf J}^{-1}{\bf v}. \]
 </p>
-<p>Following <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#">Sokolowski et al., 2017</a>, <img class="formulaInl" alt="${\bf J}$" src="form_41.svg"/> is calculated as the matrix product of two different matrices, </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf J} = {\bf D}{\bf B}, \]" src="form_51.svg"/>
+<p>Following <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#">Sokolowski et al., 2017</a>, \({\bf J}\) is calculated as the matrix product of two different matrices, </p><p class="formulaDsp">
+\[ {\bf J} = {\bf D}{\bf B}, \]
 </p>
 <p> where</p><ul>
-<li><img class="formulaInl" alt="${\bf D}$" src="form_29.svg"/> represents the (direction independent) instrumental gains, and</li>
-<li><img class="formulaInl" alt="${\bf B}$" src="form_42.svg"/> represents the (direction dependent) tile beam response. <img class="formulaInl" alt="${\bf D}$" src="form_29.svg"/> is obtained either from the Real Time System, or Hyperdrive. <img class="formulaInl" alt="${\bf B}$" src="form_42.svg"/> is obtained from Hyperbeam.</li>
+<li>\({\bf D}\) represents the (direction independent) instrumental gains, and</li>
+<li>\({\bf B}\) represents the (direction dependent) tile beam response. \({\bf D}\) is obtained either from the Real Time System, or Hyperdrive. \({\bf B}\) is obtained from Hyperbeam.</li>
 </ul>
 <h1><a class="anchor" id="rts"></a>
 Real Time System (RTS)</h1>
-<p>The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation. The solutions are given in two sets of files, called "DI_JonesMatrices_nodeCCC.dat" (hereafter, DIJones) and `&lsquo;BandpassCalibration_nodeCCC.dat&rsquo;' (hereafter, Bandpass), where CCC represents a coarse channel index. The DIJones files contain both the Jones matrices for each tile for the given coarse channel, <img class="formulaInl" alt="${\bf J}_d$" src="form_52.svg"/>, as well as the beam response matrix that was used by the RTS during calibration, <img class="formulaInl" alt="${\bf B}_\text{cal}$" src="form_53.svg"/>. To get the calibration solutions for the fine channels, one must multiply <img class="formulaInl" alt="${\bf J}_d$" src="form_52.svg"/> on the right by the matrices in the Bandpass files, <img class="formulaInl" alt="${\bf J}_b$" src="form_54.svg"/>.</p>
+<p>The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation. The solutions are given in two sets of files, called "DI_JonesMatrices_nodeCCC.dat" (hereafter, DIJones) and `&lsquo;BandpassCalibration_nodeCCC.dat&rsquo;' (hereafter, Bandpass), where CCC represents a coarse channel index. The DIJones files contain both the Jones matrices for each tile for the given coarse channel, \({\bf J}_d\), as well as the beam response matrix that was used by the RTS during calibration, \({\bf B}_\text{cal}\). To get the calibration solutions for the fine channels, one must multiply \({\bf J}_d\) on the right by the matrices in the Bandpass files, \({\bf J}_b\).</p>
 <p>The bases of these matrices are as follows: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\begin{align*} {\bf J}_d &amp;= \begin{bmatrix} J_{px} &amp; J_{py} \\ J_{qx} &amp; J_{qy} \end{bmatrix}, &amp; {\bf J}_b &amp;= \begin{bmatrix} J_{px} &amp; J_{py} \\ J_{qx} &amp; J_{qy} \end{bmatrix}, &amp; {\bf B}_\text{cal} &amp;= \begin{bmatrix} B_{px} &amp; B_{py} \\ B_{qx} &amp; B_{qy} \end{bmatrix}. \end{align*}" src="form_55.svg"/>
+\begin{align*} {\bf J}_d &amp;= \begin{bmatrix} J_{px} &amp; J_{py} \\ J_{qx} &amp; J_{qy} \end{bmatrix}, &amp; {\bf J}_b &amp;= \begin{bmatrix} J_{px} &amp; J_{py} \\ J_{qx} &amp; J_{qy} \end{bmatrix}, &amp; {\bf B}_\text{cal} &amp;= \begin{bmatrix} B_{px} &amp; B_{py} \\ B_{qx} &amp; B_{qy} \end{bmatrix}. \end{align*}
 </p>
 <p> If you want to apply these calibration solutions to the same observation, then you can set </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf J} = {\bf J}_d \]" src="form_56.svg"/>
+\[ {\bf J} = {\bf J}_d \]
 </p>
 <p> for coarse channel approximations, or, for the fine channel solutions, </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf J} = {\bf J}_d {\bf J}_b \]" src="form_57.svg"/>
+\[ {\bf J} = {\bf J}_d {\bf J}_b \]
 </p>
 <p> If the calibration solution is to be applied to a different observation (in a different part of the sky), or even to a separate different direction in the same observation, then the instrumental gains must be reconstructed by factoring out the beam response: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf D} = {\bf J}{\bf B}_\text{cal}^{-1}. \]" src="form_58.svg"/>
+\[ {\bf D} = {\bf J}{\bf B}_\text{cal}^{-1}. \]
 </p>
 <p> The resulting instrumental gains matrix is in the basis </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf D} = \begin{bmatrix} D_{pp} &amp; D_{pq} \\ D_{qp} &amp; D_{qq} \end{bmatrix}. \]" src="form_59.svg"/>
+\[ {\bf D} = \begin{bmatrix} D_{pp} &amp; D_{pq} \\ D_{qp} &amp; D_{qq} \end{bmatrix}. \]
 </p>
 <h1><a class="anchor" id="hyperdrive"></a>
 Hyperdrive</h1>
 <p>Hyperdrive outputs the instrumental gains matrices (per tile per fine channel) in the "Offringa" format, described in <a href="#offringa">Offringa format</a>. The matrices are in the basis: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf D} = \begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix}. \]" src="form_60.svg"/>
+\[ {\bf D} = \begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix}. \]
 </p>
 <h1><a class="anchor" id="hyperbeam"></a>
 Hyperbeam</h1>
-<p>The primary beam is obtained using <a href="https://github.com/MWATelescope/mwa_hyperbeam">Hyperbeam</a>, which is based on the FEE beam model described in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#">Sokolowski et al., 2017</a>. This gives the <img class="formulaInl" alt="${\bf B}$" src="form_42.svg"/> matrix in the basis </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf B}_\text{hb} = \begin{bmatrix} B_{q\theta} &amp; B_{q\phi} \\ B_{p\theta} &amp; B_{p\phi} \end{bmatrix}. \]" src="form_61.svg"/>
+<p>The primary beam is obtained using <a href="https://github.com/MWATelescope/mwa_hyperbeam">Hyperbeam</a>, which is based on the FEE beam model described in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#">Sokolowski et al., 2017</a>. This gives the \({\bf B}\) matrix in the basis </p><p class="formulaDsp">
+\[ {\bf B}_\text{hb} = \begin{bmatrix} B_{q\theta} &amp; B_{q\phi} \\ B_{p\theta} &amp; B_{p\phi} \end{bmatrix}. \]
 </p>
-<p> To obtain the beam matrix that converts from the <img class="formulaInl" alt="$(x,y)$" src="form_62.svg"/> basis to the <img class="formulaInl" alt="$(q,p)$" src="form_63.svg"/> basis, one must multiply <img class="formulaInl" alt="${\bf B}_\text{hb}$" src="form_64.svg"/> on the right by the parallactic angle correction matrix: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf B} = {\bf B}_\text{hb}{\bf P}_\text{pa} = \begin{bmatrix} B_{q\theta} &amp; B_{q\phi} \\ B_{p\theta} &amp; B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} &amp; B_{\theta y} \\ B_{\phi x} &amp; B_{\phi y} \end{bmatrix} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix} \]" src="form_65.svg"/>
+<p> To obtain the beam matrix that converts from the \((x,y)\) basis to the \((q,p)\) basis, one must multiply \({\bf B}_\text{hb}\) on the right by the parallactic angle correction matrix: </p><p class="formulaDsp">
+\[ {\bf B} = {\bf B}_\text{hb}{\bf P}_\text{pa} = \begin{bmatrix} B_{q\theta} &amp; B_{q\phi} \\ B_{p\theta} &amp; B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} &amp; B_{\theta y} \\ B_{\phi x} &amp; B_{\phi y} \end{bmatrix} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix} \]
 </p>
  </div></div><!-- contents -->
 </div><!-- PageDoc -->

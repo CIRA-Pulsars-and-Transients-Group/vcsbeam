@@ -12,6 +12,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    extensions: ["tex2jax.js"],
+    jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -112,7 +119,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:aefd0c7b588cf2413c51863dcb4d25521"><td class="mdescLeft">&#160;</td><td class="mdescRight">Form an incoherent beam.  <a href="form__beam_8cu.html#aefd0c7b588cf2413c51863dcb4d25521">More...</a><br /></td></tr>
 <tr class="separator:aefd0c7b588cf2413c51863dcb4d25521"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a215f77c938330e13916a9eedd6b675aa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a215f77c938330e13916a9eedd6b675aa">vmApplyJChunk</a> (vcsbeam_context *vm)</td></tr>
-<tr class="memdesc:a215f77c938330e13916a9eedd6b675aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes <img class="formulaInl" alt="${\bf J}^{-1} {\bf v}$" src="form_121.svg"/>.  <a href="form__beam_8cu.html#a215f77c938330e13916a9eedd6b675aa">More...</a><br /></td></tr>
+<tr class="memdesc:a215f77c938330e13916a9eedd6b675aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes \({\bf J}^{-1} {\bf v}\).  <a href="form__beam_8cu.html#a215f77c938330e13916a9eedd6b675aa">More...</a><br /></td></tr>
 <tr class="separator:a215f77c938330e13916a9eedd6b675aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0cf45d9edacf3bf40f3eabcfd58094cd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd">vmBeamformChunk</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:a0cf45d9edacf3bf40f3eabcfd58094cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs the phasing up, averaging over antennas, and detection operations on calibrated data.  <a href="form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd">More...</a><br /></td></tr>
@@ -527,17 +534,17 @@ Functions</h2></td></tr>
 <p>CUDA kernel for computing an incoherent beam. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">data</td><td>The voltage data, <img class="formulaInl" alt="$v$" src="form_100.svg"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_i$" src="form_101.svg"/>. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">incoh</td><td>The detected (Stokes I) powers, <img class="formulaInl" alt="$I$" src="form_102.svg"/>, with layout <img class="formulaInl" alt="$N_t \times N_f$" src="form_103.svg"/>.</td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">data</td><td>The voltage data, \(v\), with layout \(N_t \times N_f \times N_i\). </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">incoh</td><td>The detected (Stokes I) powers, \(I\), with layout \(N_t \times N_f\).</td></tr>
   </table>
   </dd>
 </dl>
 <p>The incoherent beam is the expression </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ I_{t,f} = \sum_i v_{t,f,i}^\dagger v_{t,f,i}. \]" src="form_104.svg"/>
+\[ I_{t,f} = \sum_i v_{t,f,i}^\dagger v_{t,f,i}. \]
 </p>
-<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle(N_f, N_t), N_i\rangle\rangle\rangle.$" src="form_105.svg"/></p>
+<p>The expected thread configuration is \(\langle\langle\langle(N_f, N_t), N_i\rangle\rangle\rangle.\)</p>
 <p>Note that if the voltages were arranged into Jones vectors, the above could also be expressed in the more familiar form </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ I_{t,f} = \sum_a {\bf v}_{t,f,a}^\dagger {\bf v}_{t,f,a}. \]" src="form_106.svg"/>
+\[ I_{t,f} = \sum_a {\bf v}_{t,f,a}^\dagger {\bf v}_{t,f,a}. \]
 </p>
  
 </div>
@@ -626,8 +633,8 @@ Functions</h2></td></tr>
 <p>CUDA kernel for normalising Stokes parameters. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">S</td><td>The original Stokes parameters, with layout <img class="formulaInl" alt="$N_t \times N_s \times N_f$" src="form_114.svg"/> </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">nstep</td><td><img class="formulaInl" alt="$N_t$" src="form_25.svg"/> </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">S</td><td>The original Stokes parameters, with layout \(N_t \times N_s \times N_f\) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">nstep</td><td>\(N_t\) </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">offsets</td><td>The amount of offset needed to recover the original values from the normalised ones </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">scales</td><td>The scaling needed to recover the original values from the normalised ones </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">Sscaled</td><td>The normalised Stokes parameters</td></tr>
@@ -635,13 +642,13 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <p>This kernel shifts and normalises the Stokes parameters so that they fit into 8-bits integers without clipping (e.g. for output into the PSRFITS format). Each frequency is normalised independently, with the scales and offsets needed to recover the original values for that channel being recorded as well.</p>
-<p>If <img class="formulaInl" alt="${\bf S}$" src="form_117.svg"/> is the array of values to be normalised, then the normalisation is </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \hat{\bf S} = \frac{{\bf S} - \text{offset}}{\text{scale}}, \]" src="form_118.svg"/>
+<p>If \({\bf S}\) is the array of values to be normalised, then the normalisation is </p><p class="formulaDsp">
+\[ \hat{\bf S} = \frac{{\bf S} - \text{offset}}{\text{scale}}, \]
 </p>
 <p> where </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\begin{align*} \text{scale} &amp;= \frac{S_\text{max} - S_\text{min}}{256} \\ \text{offset} &amp;= S_\text{min} + 0.5 \times \text{scale}. \end{align*}" src="form_119.svg"/>
+\begin{align*} \text{scale} &amp;= \frac{S_\text{max} - S_\text{min}}{256} \\ \text{offset} &amp;= S_\text{min} + 0.5 \times \text{scale}. \end{align*}
 </p>
-<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle N_b,(N_f, N_s)\rangle\rangle\rangle.$" src="form_120.svg"/></p>
+<p>The expected thread configuration is \(\langle\langle\langle N_b,(N_f, N_s)\rangle\rangle\rangle.\)</p>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000009">Todo:</a></b></dt><dd>Optimise the renormalisation kernel (e.g. by removing the for loop over timesteps. </dd></dl>
 
 </div>
@@ -711,21 +718,21 @@ Functions</h2></td></tr>
 <p>CUDA kernel for multiplying Jones matrices to Jones vectors. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">data</td><td>The voltage data, <img class="formulaInl" alt="$v$" src="form_100.svg"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_i$" src="form_101.svg"/> </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">J</td><td>The Jones matrices, <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.svg"/>, with layout <img class="formulaInl" alt="$N_a \times N_f \times N_p \times N_p$" src="form_107.svg"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Jv_Q</td><td>The Q polarisation of the product <img class="formulaInl" alt="${\bf J}^{-1}{\bf v}$" src="form_108.svg"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_a$" src="form_109.svg"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Jv_P</td><td>The P polarisation of the product <img class="formulaInl" alt="${\bf J}^{-1}{\bf v}$" src="form_108.svg"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_a$" src="form_109.svg"/> </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">polQ_idxs</td><td>And array of the indices <img class="formulaInl" alt="$i$" src="form_34.svg"/> for the Q polarisations of the antennas </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">polP_idxs</td><td>And array of the indices <img class="formulaInl" alt="$i$" src="form_34.svg"/> for the P polarisations of the antennas </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">npol</td><td><img class="formulaInl" alt="$N_p$" src="form_28.svg"/> </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">data</td><td>The voltage data, \(v\), with layout \(N_t \times N_f \times N_i\) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">J</td><td>The Jones matrices, \({\bf J}^{-1}\), with layout \(N_a \times N_f \times N_p \times N_p\) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Jv_Q</td><td>The Q polarisation of the product \({\bf J}^{-1}{\bf v}\), with layout \(N_t \times N_f \times N_a\) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Jv_P</td><td>The P polarisation of the product \({\bf J}^{-1}{\bf v}\), with layout \(N_t \times N_f \times N_a\) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">polQ_idxs</td><td>And array of the indices \(i\) for the Q polarisations of the antennas </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">polP_idxs</td><td>And array of the indices \(i\) for the P polarisations of the antennas </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">npol</td><td>\(N_p\) </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">datatype</td><td>Either <code>VM_INT4</code> (if <code>data</code> contain 4+4-bit complex integers) or <code>VM_DBL</code> (if <code>data</code> contain complex doubles).</td></tr>
   </table>
   </dd>
 </dl>
-<p>Although this kernel is quite general, in the sense that it could be used to multiply any Jones matrices to any Jones vectors, it is used in particular for multiplying the Jones matrices <img class="formulaInl" alt="${\bf J}^{-1}$" src="form_77.svg"/> to the voltage data <img class="formulaInl" alt="${\bf v}$" src="form_47.svg"/>: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \tilde{\bf e}_{t,f,a} = {\bf J}^{-1}_{a,f}{\bf v}_{t,f,a}. \]" src="form_110.svg"/>
+<p>Although this kernel is quite general, in the sense that it could be used to multiply any Jones matrices to any Jones vectors, it is used in particular for multiplying the Jones matrices \({\bf J}^{-1}\) to the voltage data \({\bf v}\): </p><p class="formulaDsp">
+\[ \tilde{\bf e}_{t,f,a} = {\bf J}^{-1}_{a,f}{\bf v}_{t,f,a}. \]
 </p>
-<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.$" src="form_111.svg"/> </p>
+<p>The expected thread configuration is \(\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\) </p>
 
 </div>
 </div>
@@ -745,7 +752,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes <img class="formulaInl" alt="${\bf J}^{-1} {\bf v}$" src="form_121.svg"/>. </p>
+<p>Computes \({\bf J}^{-1} {\bf v}\). </p>
 
 </div>
 </div>
@@ -826,24 +833,24 @@ Functions</h2></td></tr>
 <p>CUDA kernel for phasing up and summing the voltages over antenna. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Jv_Q</td><td>The Q polarisation of the product <img class="formulaInl" alt="${\bf J}^{-1}{\bf v}$" src="form_108.svg"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_a$" src="form_109.svg"/> </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">Jv_P</td><td>The P polarisation of the product <img class="formulaInl" alt="${\bf J}^{-1}{\bf v}$" src="form_108.svg"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_a$" src="form_109.svg"/> </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">phi</td><td>The delay phase, <img class="formulaInl" alt="$\varphi$" src="form_69.svg"/>, with layout <img class="formulaInl" alt="$N_a \times N_f$" src="form_112.svg"/> </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jv_Q</td><td>The Q polarisation of the product \({\bf J}^{-1}{\bf v}\), with layout \(N_t \times N_f \times N_a\) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jv_P</td><td>The P polarisation of the product \({\bf J}^{-1}{\bf v}\), with layout \(N_t \times N_f \times N_a\) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">phi</td><td>The delay phase, \(\varphi\), with layout \(N_a \times N_f\) </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">invw</td><td>The reciprocal of the number of non-flagged antennas </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">p</td><td>The pointing index </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">soffset</td><td>An offset number of samples into <code>e</code> for where to put the the answer </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">nchunk</td><td>The number of chunks (divisions of a second's worth of data) </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">e</td><td>The recovered electric field, <img class="formulaInl" alt="${\bf e}$" src="form_46.svg"/>, with layout <img class="formulaInl" alt="$N_t \times N_f \times N_p$" src="form_113.svg"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">S</td><td>The recovered Stokes parameters, with layout <img class="formulaInl" alt="$N_t \times N_s \times N_f$" src="form_114.svg"/> </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">npol</td><td><img class="formulaInl" alt="$N_p$" src="form_28.svg"/></td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">e</td><td>The recovered electric field, \({\bf e}\), with layout \(N_t \times N_f \times N_p\) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">S</td><td>The recovered Stokes parameters, with layout \(N_t \times N_s \times N_f\) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">npol</td><td>\(N_p\)</td></tr>
   </table>
   </dd>
 </dl>
 <p>This kernel performs the phasing up and the summing over antennas part of the beamforming operation (see <a class="el" href="beamforming.html">Beamforming</a>): </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf e}_{t,f} = \frac{1}{N_a} \sum_a e^{i\varphi} \tilde{\bf e}_{t,f,a}. \]" src="form_115.svg"/>
+\[ {\bf e}_{t,f} = \frac{1}{N_a} \sum_a e^{i\varphi} \tilde{\bf e}_{t,f,a}. \]
 </p>
-<p>It also computes the Stokes parameters, <img class="formulaInl" alt="$S = [I, Q, U, V]$" src="form_116.svg"/> (with the autocorrelations removed).</p>
-<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.$" src="form_111.svg"/> </p>
+<p>It also computes the Stokes parameters, \(S = [I, Q, U, V]\) (with the autocorrelations removed).</p>
+<p>The expected thread configuration is \(\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\) </p>
 
 </div>
 </div>

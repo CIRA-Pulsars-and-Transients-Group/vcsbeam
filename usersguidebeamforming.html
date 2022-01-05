@@ -12,6 +12,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    extensions: ["tex2jax.js"],
+    jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -234,7 +241,7 @@ Keeping the cross terms?</h3>
 <p>The <code>-X</code> option can be used to retain the cross terms.</p>
 <h3><a class="anchor" id="autotoc_md41"></a>
 Dividing a reference antenna</h3>
-<p>The calibration solution is a Jones matrix whose absolute phase carries no physical signifance. Said another way, calibration solutions are unique only up to a complex unit scalar factor, so that if <img class="formulaInl" alt="$\{{\bf J}_1, {\bf J}_2, \dots, {\bf J}_{N_a}\}$" src="form_84.svg"/> is a set of calibration solutions for antennas <img class="formulaInl" alt="$1, 2, \dots, N_a$" src="form_85.svg"/>, then <img class="formulaInl" alt="$\{e^{i\theta}{\bf J}_1, e^{i\theta}{\bf J}_2, \dots, e^{i\theta}{\bf J}_{N_a}\}$" src="form_86.svg"/> is an equivalent set of solutions, for any arbitrary <img class="formulaInl" alt="$\theta$" src="form_2.svg"/>. Thus, the solutions produced by the RTS and/or Hyperdrive may "look" worse than they really are because the solutions for different frequency channels may have different arbitrary phases. Thus, in order to compare the solutions across frequency, it is useful to divide the elements of all Jones matrix by a unit complex number which has the same phase as an arbitrarily chosen reference antenna. This will make the reference antenna itself have a calibration solution consisting only of real-valued elements, but the phases of the other antennas can now be more easily evaluated for "goodness".</p>
+<p>The calibration solution is a Jones matrix whose absolute phase carries no physical signifance. Said another way, calibration solutions are unique only up to a complex unit scalar factor, so that if \(\{{\bf J}_1, {\bf J}_2, \dots, {\bf J}_{N_a}\}\) is a set of calibration solutions for antennas \(1, 2, \dots, N_a\), then \(\{e^{i\theta}{\bf J}_1, e^{i\theta}{\bf J}_2, \dots, e^{i\theta}{\bf J}_{N_a}\}\) is an equivalent set of solutions, for any arbitrary \(\theta\). Thus, the solutions produced by the RTS and/or Hyperdrive may "look" worse than they really are because the solutions for different frequency channels may have different arbitrary phases. Thus, in order to compare the solutions across frequency, it is useful to divide the elements of all Jones matrix by a unit complex number which has the same phase as an arbitrarily chosen reference antenna. This will make the reference antenna itself have a calibration solution consisting only of real-valued elements, but the phases of the other antennas can now be more easily evaluated for "goodness".</p>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000004">Todo:</a></b></dt><dd>Finish the calibration section (and probably move it all to the Calibration workflow page).</dd></dl>
 <hr  />
 <h2><a class="anchor" id="autotoc_md42"></a>

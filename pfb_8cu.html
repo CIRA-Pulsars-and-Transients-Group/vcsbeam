@@ -12,6 +12,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    extensions: ["tex2jax.js"],
+    jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -160,33 +167,33 @@ Functions</h2></td></tr>
 <div class="textblock"><h1><a class="anchor" id="autotoc_md74"></a>
 Forward (analysis) fine PFB</h1>
 <p>The following kernels are part of an "offline" version of the "fine PFB" algorithm that was implemented on the FPGAs of Phase 1 &amp; 2 of the MWA. As described in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/mwa-tiedarray-processing-iii-microsecond-time-resolution-via-a-polyphase-synthesis-filter/C76837FE84A1DCFAA696C9AC10C44F2D">McSweeney et al. (2020)</a>, this algorithm is a version of the "weighted overlap-add" algorithm (see their Eq. (3)): </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ X_k[m] \sum_n^{K-1} b_m[n] e^{-2\pi jkn/K}, \]" src="form_144.svg"/>
+\[ X_k[m] \sum_n^{K-1} b_m[n] e^{-2\pi jkn/K}, \]
 </p>
 <p> where </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho]. \]" src="form_145.svg"/>
+\[ b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho]. \]
 </p>
 <p>A full description of these symbols is given in the reference, but here is a summary:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadCenter">Symbol   </th><th class="markdownTableHeadLeft">Meaning   </th><th class="markdownTableHeadLeft">Variable    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$x$" src="form_4.svg"/>   </td><td class="markdownTableBodyLeft">The input data   </td><td class="markdownTableBodyLeft"><code>indata</code>    </td></tr>
+<td class="markdownTableBodyCenter">\(x\)   </td><td class="markdownTableBodyLeft">The input data   </td><td class="markdownTableBodyLeft"><code>indata</code>    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$X$" src="form_146.svg"/>   </td><td class="markdownTableBodyLeft">The output data   </td><td class="markdownTableBodyLeft"><code>outdata</code>    </td></tr>
+<td class="markdownTableBodyCenter">\(X\)   </td><td class="markdownTableBodyLeft">The output data   </td><td class="markdownTableBodyLeft"><code>outdata</code>    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$h$" src="form_147.svg"/>   </td><td class="markdownTableBodyLeft">The filter coefficients   </td><td class="markdownTableBodyLeft"><code>filter_coeffs</code>    </td></tr>
+<td class="markdownTableBodyCenter">\(h\)   </td><td class="markdownTableBodyLeft">The filter coefficients   </td><td class="markdownTableBodyLeft"><code>filter_coeffs</code>    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$P$" src="form_6.svg"/>   </td><td class="markdownTableBodyLeft">The number of taps   </td><td class="markdownTableBodyLeft"><code>ntaps</code>    </td></tr>
+<td class="markdownTableBodyCenter">\(P\)   </td><td class="markdownTableBodyLeft">The number of taps   </td><td class="markdownTableBodyLeft"><code>ntaps</code>    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$b$" src="form_148.svg"/>   </td><td class="markdownTableBodyLeft">The weighted overlap-add array   </td><td class="markdownTableBodyLeft"><code>weighted_overlap_array</code>    </td></tr>
+<td class="markdownTableBodyCenter">\(b\)   </td><td class="markdownTableBodyLeft">The weighted overlap-add array   </td><td class="markdownTableBodyLeft"><code>weighted_overlap_array</code>    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$\text{nspectra}$" src="form_149.svg"/>   </td><td class="markdownTableBodyLeft">The number of output spectra   </td><td class="markdownTableBodyLeft"></td></tr>
+<td class="markdownTableBodyCenter">\(\text{nspectra}\)   </td><td class="markdownTableBodyLeft">The number of output spectra   </td><td class="markdownTableBodyLeft"></td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$I$" src="form_102.svg"/>   </td><td class="markdownTableBodyLeft">The number of RF inputs   </td><td class="markdownTableBodyLeft"></td></tr>
+<td class="markdownTableBodyCenter">\(I\)   </td><td class="markdownTableBodyLeft">The number of RF inputs   </td><td class="markdownTableBodyLeft"></td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$K$" src="form_150.svg"/>   </td><td class="markdownTableBodyLeft">The size of the output spectrum   </td><td class="markdownTableBodyLeft"></td></tr>
+<td class="markdownTableBodyCenter">\(K\)   </td><td class="markdownTableBodyLeft">The size of the output spectrum   </td><td class="markdownTableBodyLeft"></td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyCenter"><img class="formulaInl" alt="$P$" src="form_6.svg"/>   </td><td class="markdownTableBodyLeft">The number of taps   </td><td class="markdownTableBodyLeft"></td></tr>
+<td class="markdownTableBodyCenter">\(P\)   </td><td class="markdownTableBodyLeft">The number of taps   </td><td class="markdownTableBodyLeft"></td></tr>
 </table>
 <p>Note that this nomenclature differs from that used elsewhere in this documentation.</p>
 <p>The algorithm is broken up into three parts, the third of which is optional:</p><ol type="1">
@@ -332,9 +339,9 @@ Backwards (synthesis) fine PFB</h1>
 <p>Load the inverse PFB filter coefficients to the GPU. </p>
 <p>This function loads the inverse filter coefficients and the twiddle factors into GPU memory. If they were loaded separately (as floats), then the multiplication of the filter coefficients and the twiddle factors will be less precise than if a single array containing every combination of floats and twiddle factors is calculated in doubles, and then demoted to floats. Hence, this pre-calculation is done in this function before cudaMemcpy is called.</p>
 <p>The result is 2x 1D arrays loaded onto the GPU (one for real, one for imag) where the ith element is equal to </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \text{result}[i] = f[n] \times exp{2\pi jk/K}, \]" src="form_165.svg"/>
+\[ \text{result}[i] = f[n] \times exp{2\pi jk/K}, \]
 </p>
-<p> where <img class="formulaInl" alt="$n = i \% N$" src="form_166.svg"/>, <img class="formulaInl" alt="$k = i / N$" src="form_167.svg"/>, <img class="formulaInl" alt="$N$" src="form_168.svg"/> is the filter size (<code>fil_size</code>) and <img class="formulaInl" alt="$K$" src="form_150.svg"/> is the number of channels (<code>nchan</code>). </p>
+<p> where \(n = i \% N\), \(k = i / N\), \(N\) is the filter size (<code>fil_size</code>) and \(K\) is the number of channels (<code>nchan</code>). </p>
 
 </div>
 </div>
@@ -362,10 +369,10 @@ Backwards (synthesis) fine PFB</h1>
   </dd>
 </dl>
 <p>The rounding and demotion performed here is designed to emulate that done in the FPGAs of the legacy (Phases 1 &amp; 2) MWA system. Specifically, it does the following: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \begin{cases} \left\lfloor \frac{x}{2^{14}} + 0.5 \right\rfloor, &amp; x &gt; 0, \\ \left\lfloor \frac{x}{2^{14}} \right\rfloor, &amp; x \le 0. \end{cases} \]" src="form_155.svg"/>
+\[ \begin{cases} \left\lfloor \frac{x}{2^{14}} + 0.5 \right\rfloor, &amp; x &gt; 0, \\ \left\lfloor \frac{x}{2^{14}} \right\rfloor, &amp; x \le 0. \end{cases} \]
 </p>
 <p> The final numbers are represented as 32-bit floats.</p>
-<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle (\text{nspectra} \times I), K \rangle\rangle\rangle$" src="form_156.svg"/> </p>
+<p>The expected thread configuration is \(\langle\langle\langle (\text{nspectra} \times I), K \rangle\rangle\rangle\) </p>
 
 </div>
 </div>
@@ -546,13 +553,13 @@ Backwards (synthesis) fine PFB</h1>
   </dd>
 </dl>
 <p>The backwards/inverse/synthesis filter is </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \hat{x}[n] = \frac{1}{K} \sum_m f[n - mM] \sum_{k=0}^{K-1} X_k[m]\,e^{2\pi jkn/K} \]" src="form_160.svg"/>
+\[ \hat{x}[n] = \frac{1}{K} \sum_m f[n - mM] \sum_{k=0}^{K-1} X_k[m]\,e^{2\pi jkn/K} \]
 </p>
 <p>The sum over <code>m</code> is nominally over all integers, but in practice only involves a few terms because of the finiteness of the filter, <code>f</code>. To be precise, there are precisely <code>ntaps</code> non-zero values.</p>
-<p><img class="formulaInl" alt="$X_k[m]$" src="form_161.svg"/> represents the complex-valued inputs, <code>in_real</code> and <code>in_imag</code>. Every possible value of <img class="formulaInl" alt="$f[n]\,e^{2\pi jkn/K}$" src="form_162.svg"/> is provided in <code>ft_real</code> and <code>ft_imag</code>.</p>
-<p><code>K</code> is the number of channels, and because this is a critically sampled PFB, <img class="formulaInl" alt="$M = K$" src="form_158.svg"/>. We will also use <code>P</code> to mean the number of taps in the synthesis filter, and <img class="formulaInl" alt="$N = KP$" src="form_163.svg"/> to mean the size of the filter.</p>
+<p>\(X_k[m]\) represents the complex-valued inputs, <code>in_real</code> and <code>in_imag</code>. Every possible value of \(f[n]\,e^{2\pi jkn/K}\) is provided in <code>ft_real</code> and <code>ft_imag</code>.</p>
+<p><code>K</code> is the number of channels, and because this is a critically sampled PFB, \(M = K\). We will also use <code>P</code> to mean the number of taps in the synthesis filter, and \(N = KP\) to mean the size of the filter.</p>
 <p>The polarisations are computed completely independently.</p>
-<p><img class="formulaInl" alt="$\hat{x}[n]$" src="form_164.svg"/> is represented by the <code>out</code> array.</p>
+<p>\(\hat{x}[n]\) is represented by the <code>out</code> array.</p>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000033">Todo:</a></b></dt><dd>Revamp this function to use cuComplex. </dd></dl>
 
 </div>
@@ -664,7 +671,7 @@ Backwards (synthesis) fine PFB</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyLeft"><code>PFB_COMPLEX_FLOAT64</code>   </td><td class="markdownTableBodyLeft">Typecast the output into (64+64)-bit complex floats   </td></tr>
 </table>
-<p>The expected thread configuration is <img class="formulaInl" alt="$\langle\langle\langle(\text{nspectra},K),I\rangle\rangle\rangle$" src="form_157.svg"/>. </p>
+<p>The expected thread configuration is \(\langle\langle\langle(\text{nspectra},K),I\rangle\rangle\rangle\). </p>
 
 </div>
 </div>
@@ -842,7 +849,7 @@ Backwards (synthesis) fine PFB</h1>
   </table>
   </dd>
 </dl>
-<p>Setting <img class="formulaInl" alt="$M = K$" src="form_158.svg"/>, where <img class="formulaInl" alt="$K$" src="form_150.svg"/> is the value of <code>vm&rarr;analysis_filter&rarr;nchans</code>, will make this a "critically sampled PFB"; setting <img class="formulaInl" alt="$M &gt; K$" src="form_159.svg"/>, an "oversampled PFB".</p>
+<p>Setting \(M = K\), where \(K\) is the value of <code>vm&rarr;analysis_filter&rarr;nchans</code>, will make this a "critically sampled PFB"; setting \(M &gt; K\), an "oversampled PFB".</p>
 <p>A filter must already be loaded into <code>vm&rarr;analysis_filter</code>. <b>WARNING! The filter will be forcibly typecast to int!!</b></p>
 <p>The GPU processing will be divided up into <code>vm&rarr;chunks_per_second</code>, chunks per second, but if this number does not divide the number of samples (10000) evenly, then it is incremented until it does.</p>
 <p>The available flags are given in the following table: </p><table class="markdownTable">
@@ -966,17 +973,17 @@ Backwards (synthesis) fine PFB</h1>
 <p>Performs the weighted overlap-add part of the PFB algorithm. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">indata</td><td>The input data, <img class="formulaInl" alt="$x[n]$" src="form_151.svg"/>, with layout equivalent to the buffer populated by mwalib (see [the MWAX voltage format][MWAXHTR]) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">filter_coeffs</td><td>The PFB filter coefficients, <img class="formulaInl" alt="$h[n]$" src="form_152.svg"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">weighted_overlap_array</td><td>The result of the weighted overlap-add operation, <img class="formulaInl" alt="$b[n]$" src="form_153.svg"/></td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">indata</td><td>The input data, \(x[n]\), with layout equivalent to the buffer populated by mwalib (see [the MWAX voltage format][MWAXHTR]) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">filter_coeffs</td><td>The PFB filter coefficients, \(h[n]\) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">weighted_overlap_array</td><td>The result of the weighted overlap-add operation, \(b[n]\)</td></tr>
   </table>
   </dd>
 </dl>
 <p>The weighted overlap-add part of the PFB algorithm is the equation </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho]. \]" src="form_145.svg"/>
+\[ b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho]. \]
 </p>
 <p> See above for the meaning of the terms in this equation.</p>
-<p>The expected thread configuration is <img class="formulaInl" alt="$ \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle $" src="form_154.svg"/></p>
+<p>The expected thread configuration is \( \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle \)</p>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000028">Todo:</a></b></dt><dd>Add data layout information to this docstring. </dd></dl>
 
 </div>

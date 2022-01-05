@@ -12,6 +12,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    extensions: ["tex2jax.js"],
+    jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -113,7 +120,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:abed728c1e058dd6b81dd9771b431a2c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implements a hash lookup for dead/live dipole configurations.  <a href="primary__beam_8c.html#abed728c1e058dd6b81dd9771b431a2c1">More...</a><br /></td></tr>
 <tr class="separator:abed728c1e058dd6b81dd9771b431a2c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afdec646d89aec813e571bb5a2b64612f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">parallactic_angle_correction</a> (double *Ppa, double lat, double az, double za)</td></tr>
-<tr class="memdesc:afdec646d89aec813e571bb5a2b64612f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the parallactic angle correction matrix, <img class="formulaInl" alt="${\bf P}_\text{pa}$" src="form_173.svg"/>.  <a href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">More...</a><br /></td></tr>
+<tr class="memdesc:afdec646d89aec813e571bb5a2b64612f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the parallactic angle correction matrix, \({\bf P}_\text{pa}\).  <a href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">More...</a><br /></td></tr>
 <tr class="separator:afdec646d89aec813e571bb5a2b64612f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a07d76803151480bdee46ceb53fd93d74"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a07d76803151480bdee46ceb53fd93d74">calc_normalised_beam_response</a> (FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction)</td></tr>
 <tr class="memdesc:a07d76803151480bdee46ceb53fd93d74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the normalised primary beam response to a Stokes I, Q, U, or V sky.  <a href="primary__beam_8c.html#a07d76803151480bdee46ceb53fd93d74">More...</a><br /></td></tr>
@@ -236,7 +243,7 @@ Variables</h2></td></tr>
   </table>
   </dd>
 </dl>
-<p><code>IQUV</code> must point to already-allocated memory with size <img class="formulaInl" alt="$N_s$" src="form_37.svg"/>.</p>
+<p><code>IQUV</code> must point to already-allocated memory with size \(N_s\).</p>
 <p>This function will allocate memory for <code>J</code>, which must be freed by the caller. </p>
 
 </div>
@@ -277,8 +284,8 @@ Variables</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">obs_metadata</td><td>A MetafitsMetadata object containing the delays and amps. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">delays</td><td>A pointer to an array of delay values, with layout <img class="formulaInl" alt="$N_i \times N_d$" src="form_171.svg"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">amps</td><td>A pointer to an array of amp values, with layout <img class="formulaInl" alt="$N_i \times N_d$" src="form_171.svg"/></td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">delays</td><td>A pointer to an array of delay values, with layout \(N_i \times N_d\) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">amps</td><td>A pointer to an array of amp values, with layout \(N_i \times N_d\)</td></tr>
   </table>
   </dd>
 </dl>
@@ -328,7 +335,7 @@ Variables</h2></td></tr>
   </table>
   </dd>
 </dl>
-<p>Here, the MetafitsMetadata is used to find <img class="formulaInl" alt="$N_i$" src="form_172.svg"/> (one of the dimensions of <code>delays</code> and <code>amps</code>). </p>
+<p>Here, the MetafitsMetadata is used to find \(N_i\) (one of the dimensions of <code>delays</code> and <code>amps</code>). </p>
 
 </div>
 </div>
@@ -445,7 +452,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Calculates the parallactic angle correction matrix, <img class="formulaInl" alt="${\bf P}_\text{pa}$" src="form_173.svg"/>. </p>
+<p>Calculates the parallactic angle correction matrix, \({\bf P}_\text{pa}\). </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[out]</td><td class="paramname">Ppa</td><td>The output rotation matrix </td></tr>
@@ -456,7 +463,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 <p>This function computes the parallactic angle correction matrix in the basis (see <a class="el" href="definitions.html#parallacticangle">Parallactic angle correction</a>): </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf P}_\text{pa} = \begin{bmatrix} P_{\theta x} &amp; P_{\theta y} \\ P_{\phi x} &amp; P_{\phi y} \end{bmatrix}. \]" src="form_174.svg"/>
+\[ {\bf P}_\text{pa} = \begin{bmatrix} P_{\theta x} &amp; P_{\theta y} \\ P_{\phi x} &amp; P_{\phi y} \end{bmatrix}. \]
 </p>
  
 </div>
@@ -498,7 +505,7 @@ Variables</h2></td></tr>
 <p>This function uses Hyperbeam to calculate the beam model Jones matrices for each pointing in <code>beam_geom_vals</code>.</p>
 <p>Only those configurations of live (i.e. non-dead) dipoles which exist in the array are calculated, in order to save calculation time.</p>
 <p>The parallactic angle correction is applied, so that the final matrices, which are stored in <code>pb&rarr;B</code>, are in the basis </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf B} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix}. \]" src="form_169.svg"/>
+\[ {\bf B} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix}. \]
 </p>
  
 </div>
@@ -520,7 +527,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Allocates memory for the beam model Jones matrices. </p>
-<p>The resulting array (<code>vm&rarr;B</code>) has dimensions <img class="formulaInl" alt="$N_b \times N_a \times N_p \times N_p$" src="form_170.svg"/>. </p>
+<p>The resulting array (<code>vm&rarr;B</code>) has dimensions \(N_b \times N_a \times N_p \times N_p\). </p>
 
 </div>
 </div>
