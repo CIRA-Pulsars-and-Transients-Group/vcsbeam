@@ -147,6 +147,7 @@ vcsbeam_context *vmInit( bool use_mpi )
 /**
  * Binds a set of observation files to the VCSBeam context.
  *
+ * @param vm The VCSBeam context struct
  * @param first_coarse_chan_str A string representation of the lowest coarse
  *        channel to be processed
  * @param num_coarse_chans_to_process The number of coarse channels to be
@@ -230,6 +231,7 @@ void vmBindObsData(
 /**
  * Binds a calibration solution to the VCSBeam context.
  *
+ * @param vm The VCSBeam context struct
  * @param caldir The directory containing RTS solution files, OR the path of
  *        an Offringa-style calibration solution file
  * @param cal_type Either `CAL_RTS` or `CAL_OFFRINGA`
@@ -262,6 +264,8 @@ void vmBindCalibrationData( vcsbeam_context *vm,
 
 /**
  * Reads in a calibration solution.
+ *
+ * @param vm The VCSBeam context struct
  *
  * Calls either vmLoadRTSSolution() or vmLoadOffringaSolution() depending
  * on whether `vm&rarr;cal.cal_type` is set to `CAL_RTS` or `CAL_OFFRINGA`.
@@ -304,6 +308,8 @@ Antenna *find_antenna_by_name( MetafitsMetadata *obs_metadata, char *tile_name )
 
 /**
  * Frees the memory associated with the VCSBeam context.
+ *
+ * @param vm The VCSBeam context struct
  *
  * After freeing the memory associated with the VCSBeam context's member
  * variables, this function frees the VCSBeam context itself.
@@ -369,6 +375,7 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
  * Sets flags governing whether the PFB and inverse PFB routines are run
  * depending on the input and output channelisations.
  *
+ * @param vm The VCSBeam context struct
  * @param out_fine Sets the flag for fine channelised output
  * @param out_coarse Sets the flag for coarse_channelised output
  *
@@ -417,6 +424,8 @@ void vmSetOutputChannelisation( vcsbeam_context *vm, bool out_fine, bool out_coa
 /**
  * Allocates memory for the input voltages on the CPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * The memory is allocated as a `host_buffer` struct (see vmInitReadBuffer()
  * for a full description).
  * The amount of memory allocated depends on whether the observation is
@@ -442,6 +451,8 @@ void vmMallocVHost( vcsbeam_context *vm )
 /**
  * Allocates memory for the quantity \f${\bf J}{\bf v}\f$ on the CPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * Pointers to the newly allocated memory are given in
  * `vm&rarr;Jv_P` and `vm&rarr;Jv_Q`.
  */
@@ -462,6 +473,8 @@ void vmMallocJVHost( vcsbeam_context *vm )
 /**
  * Allocates memory for the quantity \f${\bf e}\f$ on the CPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * A pointer to the newly allocated memory is given in `vm&rarr;e`.
  */
 void vmMallocEHost( vcsbeam_context *vm )
@@ -481,6 +494,8 @@ void vmMallocEHost( vcsbeam_context *vm )
 /**
  * Allocates memory for the quantity \f${\bf S}\f$ on the CPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * A pointer to the newly allocated memory is given in `vm&rarr;S`.
  */
 void vmMallocSHost( vcsbeam_context *vm )
@@ -494,6 +509,8 @@ void vmMallocSHost( vcsbeam_context *vm )
 
 /**
  * Allocates memory for the quantity \f${\bf J}\f$ on the CPU.
+ *
+ * @param vm The VCSBeam context struct
  *
  * A pointer to the newly allocated memory is given in `vm&rarr;J`.
  */
@@ -513,6 +530,8 @@ void vmMallocJHost( vcsbeam_context *vm )
 /**
  * Allocates memory for the quantity \f${\bf D}\f$ on the CPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * A pointer to the newly allocated memory is given in `vm&rarr;D`.
  */
 void vmMallocDHost( vcsbeam_context *vm )
@@ -531,6 +550,8 @@ void vmMallocDHost( vcsbeam_context *vm )
 /**
  * Allocates memory for the polarisation indexes on the CPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * Pointers to the newly allocated memory are given in
  * `vm&rarr;polP_idxs` and `vm&rarr;polQ_idxs`.
  */
@@ -547,6 +568,8 @@ void vmMallocPQIdxsHost( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated for the input voltages on the CPU.
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeVHost( vcsbeam_context *vm )
 {
@@ -555,6 +578,8 @@ void vmFreeVHost( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocJVHost().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeJVHost( vcsbeam_context *vm )
 {
@@ -566,6 +591,8 @@ void vmFreeJVHost( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocEHost().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeEHost( vcsbeam_context *vm )
 {
@@ -575,6 +602,8 @@ void vmFreeEHost( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocSHost().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeSHost( vcsbeam_context *vm )
 {
@@ -584,6 +613,8 @@ void vmFreeSHost( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocJHost().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeJHost( vcsbeam_context *vm )
 {
@@ -593,6 +624,8 @@ void vmFreeJHost( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocDHost().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeDHost( vcsbeam_context *vm )
 {
@@ -602,6 +635,8 @@ void vmFreeDHost( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocPQIdxsHost().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreePQIdxsHost( vcsbeam_context *vm )
 {
@@ -613,6 +648,8 @@ void vmFreePQIdxsHost( vcsbeam_context *vm )
 
 /**
  * Allocates memory for the input voltages on the GPU.
+ *
+ * @param vm The VCSBeam context struct
  *
  * If the observation is Legacy, then this function allocates new memory and
  * sets `vm&rarr;d_v_size_bytes` to the address of the new memory block.
@@ -644,6 +681,8 @@ void vmMallocVDevice( vcsbeam_context *vm )
 /**
  * Allocates memory for the quantities \f${\bf J}{\bf v}\f$ on the GPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * Pointers to the newly allocated memory are given in
  * `vm&rarr;d_Jv_P` and `vm&rarr;d_Jv_Q`.
  *
@@ -669,6 +708,8 @@ void vmMallocJVDevice( vcsbeam_context *vm )
 /**
  * Allocates memory for the quantity \f${\bf e}\f$ on the GPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * A pointer to the newly allocated memory is given in `vm&rarr;d_e`.
  */
 void vmMallocEDevice( vcsbeam_context *vm )
@@ -688,6 +729,8 @@ void vmMallocEDevice( vcsbeam_context *vm )
 /**
  * Allocates memory for the quantity \f${\bf S}\f$ on the GPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * A pointer to the newly allocated memory is given in `vm&rarr;d_S`.
  */
 void vmMallocSDevice( vcsbeam_context *vm )
@@ -701,6 +744,8 @@ void vmMallocSDevice( vcsbeam_context *vm )
 
 /**
  * Allocates memory for the quantity \f${\bf J}\f$ on the GPU.
+ *
+ * @param vm The VCSBeam context struct
  *
  * A pointer to the newly allocated memory is given in `vm&rarr;d_J`.
  */
@@ -720,6 +765,8 @@ void vmMallocJDevice( vcsbeam_context *vm )
 /**
  * Allocates memory for the quantity \f${\bf D}\f$ on the GPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * A pointer to the newly allocated memory is given in `vm&rarr;d_D`.
  */
 void vmMallocDDevice( vcsbeam_context *vm )
@@ -738,6 +785,8 @@ void vmMallocDDevice( vcsbeam_context *vm )
 /**
  * Allocates memory for the polarisation indexes on the GPU.
  *
+ * @param vm The VCSBeam context struct
+ *
  * Pointers to the newly allocated memory are given in
  * `vm&rarr;d_polP_idxs` and `vm&rarr;d_polQ_idxs`.
  */
@@ -755,6 +804,8 @@ void vmMallocPQIdxsDevice( vcsbeam_context *vm )
 /**
  * Frees the GPU memory allocated with vmMallocVDevice().
  *
+ * @param vm The VCSBeam context struct
+ *
  * If the observation is Legacy, then free the memory.
  *
  * If the observation is MWAX, then do nothing; the memory should be freed via
@@ -771,6 +822,8 @@ void vmFreeVDevice( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocJVDevice().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeJVDevice( vcsbeam_context *vm )
 {
@@ -782,6 +835,8 @@ void vmFreeJVDevice( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocEDevice().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeEDevice( vcsbeam_context *vm )
 {
@@ -791,6 +846,8 @@ void vmFreeEDevice( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocSDevice().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeSDevice( vcsbeam_context *vm )
 {
@@ -800,6 +857,8 @@ void vmFreeSDevice( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocJDevice().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeJDevice( vcsbeam_context *vm )
 {
@@ -810,6 +869,8 @@ void vmFreeJDevice( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocDDevice().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreeDDevice( vcsbeam_context *vm )
 {
@@ -820,6 +881,8 @@ void vmFreeDDevice( vcsbeam_context *vm )
 
 /**
  * Frees memory allocated with vmMallocPQIdxsDevice().
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmFreePQIdxsDevice( vcsbeam_context *vm )
 {
@@ -832,6 +895,9 @@ void vmFreePQIdxsDevice( vcsbeam_context *vm )
 /**
  * Tries to cleverly figure out how many chunks are needed to
  * fit everything on the GPU.
+ *
+ * @param vm The VCSBeam context struct
+ * @param max_gpu_mem_bytes The maximum amount of GPU memory (in bytes) to use
  *
  * LOGIC IS CURRENTLY FAULTY AND INCOMPLETE. DO NOT USE!
  */
@@ -870,6 +936,8 @@ void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
 
 /**
  * Loads a "chunk" of input data onto the GPU
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmPushChunk( vcsbeam_context *vm )
 {
@@ -886,6 +954,8 @@ void vmPushChunk( vcsbeam_context *vm )
 
 /**
  * Reads a second's worth of input data from the observation files.
+ *
+ * @param vm The VCSBeam context struct
  */
 vm_error vmReadNextSecond( vcsbeam_context *vm )
 {
