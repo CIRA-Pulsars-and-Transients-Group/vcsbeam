@@ -343,12 +343,13 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
 /**
  * Create and initialise a forward_pfb struct.
  *
+ * @param vm The VCSBeam context struct
  * @param M The "stride" of the PFB
  * @param flags PFB configuration settings
  *
  * Setting \f$M = K\f$, where \f$K\f$ is the value of
- * `vm&rarr;analysis_filter&rarr;nchans`, will make this a "critically
- * sampled PFB"; setting \f$M > K\f$, an "oversampled PFB".
+ * `vm&rarr;analysis_filter&rarr;nchans`, will make this a
+ * "critically sampled PFB"; setting \f$M > K\f$, an "oversampled PFB".
  *
  * A filter must already be loaded into `vm&rarr;analysis_filter`.
  * **WARNING! The filter will be forcibly typecast to int!!**

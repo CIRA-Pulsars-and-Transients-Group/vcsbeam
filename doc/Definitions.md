@@ -22,7 +22,7 @@ The \f$P\f$ polarisation refers to the physical set of dipoles parallel to the N
 ### Local sky coordinates
 
 This is a spherical coordinate system defined with respect to a local observer.
-\f$\theta\f$ is the *zenith angle*, i.e. a \textit{colatitude}, with zenith itself therefore defined as \f$\theta = 0\f$ and the horizon as \f$\theta = \pi/2\f$.
+\f$\theta\f$ is the *zenith angle*, i.e. a *colatitude*, with zenith itself therefore defined as \f$\theta = 0\f$ and the horizon as \f$\theta = \pi/2\f$.
 \f$\phi\f$ is the *azimuth*, and we define \f$\phi = 0\f$ in the North direction, with positive azimuth moving clockwise as viewed from above (i.e. N&rarr;E&rarr;S&rarr;W&rarr;N).
 Moreover, the *elevation* is denoted by the symbol \f$\tilde{\theta}\f$, and is related to the zenith angle by
 \f[

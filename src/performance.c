@@ -34,7 +34,7 @@ double now()
  * Finds the stopwatch with the given name.
  *
  * @param log The logger object to be searched
- * @param[in] The string to be searched
+ * @param[in] stopwatch_name The string to be searched
  * @return The index into `log&rarr;stopwatches` where the stopwatch name
  *         matches `stopwatch_name`
  */

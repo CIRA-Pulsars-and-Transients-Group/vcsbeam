@@ -40,6 +40,7 @@ const double *sky[] = { Isky, Qsky, Usky, Vsky };
 /**
  * Calculates the beam model Jones matrices for the given pointings.
  *
+ * @param vm The VCSBeam context struct
  * @param beam_geom_vals An array of beam_geom objects containing the pointing
  *                       information
  *

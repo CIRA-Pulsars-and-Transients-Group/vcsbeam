@@ -1017,6 +1017,8 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
 
 /**
  * Loads the Jones matrices onto the GPU.
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmPushJ( vcsbeam_context *vm )
 {
@@ -1026,6 +1028,8 @@ void vmPushJ( vcsbeam_context *vm )
 
 /**
  * Sets up CUDA streams for multi-pixel beamforming.
+ *
+ * @param vm The VCSBeam context struct
  *
  * \see vmDestroyCudaStreams()
  */
@@ -1044,6 +1048,8 @@ void vmCreateCudaStreams( vcsbeam_context *vm )
 /**
  * Destroys the CUDA streams that were set up for multi-pixel beamforming.
  *
+ * @param vm The VCSBeam context struct
+ *
  * \see vmCreateCudaStreams()
  */
 void vmDestroyCudaStreams( vcsbeam_context *vm )
@@ -1061,6 +1067,9 @@ void vmDestroyCudaStreams( vcsbeam_context *vm )
 /**
  * Allocates both CPU and GPU memory for the scales, offsets, and data for
  * PSRFITS output.
+ *
+ * @param vm The VCSBeam context struct
+ * @param mpfs A pointer to a MPI PSRFITS struct
  *
  * \see vmDestroyStatistics()
  */
@@ -1091,6 +1100,8 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
  * Frees both the CPU and GPU memory for the scales, offsets, and data for
  * PSRFITS output.
  *
+ * @param vm The VCSBeam context struct
+ *
  * \see vmCreateStatistics()
  */
 void vmDestroyStatistics( vcsbeam_context *vm )
@@ -1113,6 +1124,9 @@ void vmDestroyStatistics( vcsbeam_context *vm )
 /**
  * Sets the number of pointings.
  *
+ * @param vm The VCSBeam context struct
+ * @param[in] npointings The number of pointings
+ *
  * @todo Investigate whether this function is really needed
  */
 void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
@@ -1127,6 +1141,8 @@ void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
 
 /**
  * Creates a list of file names for the input data.
+ *
+ * @param vm The VCSBeam context struct
  *
  * This function creates an array of file names that are passed to mwalib to
  * manage the reading in of the data.
@@ -1198,6 +1214,7 @@ void vmCreateFilenames( vcsbeam_context *vm )
 /**
  * Gets the input file name for the given channel index and GPS second.
  *
+ * @param vm The VCSBeam context struct
  * @param[in] coarse_chan_idx The index of a coarse channel
  * @param[in] gps_second A GPS second
  * @param[out] filename A buffer for the filename
@@ -1236,6 +1253,7 @@ void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint6
  * Gets the file name for the given channel index and GPS, as if the
  * observation were a Legacy VCS observation.
  *
+ * @param vm The VCSBeam context struct
  * @param[in] coarse_chan_idx The index of a coarse channel
  * @param[in] gps_second A GPS second
  * @param[out] filename A buffer for the filename
@@ -1269,6 +1287,8 @@ void vmGetLegacyVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx,
 /**
  * Destroys the list of input file names.
  *
+ * @param vm The VCSBeam context struct
+ *
  * \see vmCreateFilenames()
  */
 void vmDestroyFilenames( vcsbeam_context *vm )
@@ -1287,6 +1307,7 @@ void vmDestroyFilenames( vcsbeam_context *vm )
 /**
  * Loads an observation's metadata from its metafits file.
  *
+ * @param vm The VCSBeam context struct
  * @param filename The name of the metafits file to be loaded.
  *
  * This function loads the metadata into `vm&rarr;obs_context` and
@@ -1327,6 +1348,7 @@ void vmLoadObsMetafits( vcsbeam_context *vm, char *filename )
 /**
  * Loads a calibration observation's metadata from its metafits file.
  *
+ * @param vm The VCSBeam context struct
  * @param filename The name of the metafits file to be loaded.
  *
  * This function loads the metadata into `vm&rarr;cal_context` and
@@ -1353,6 +1375,8 @@ void vmLoadCalMetafits( vcsbeam_context *vm, char *filename )
 
 /**
  * Creates the voltage metadata structs using mwalib's API.
+ *
+ * @param vm The VCSBeam context struct
  *
  * This function should only be called after vmLoadObsMetafits().
  */
@@ -1538,6 +1562,8 @@ uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_
 /**
  * Counts the number of tiles that are not flagged.
  *
+ * @param vm The VCSBeam context struct
+ *
  * The result is stored in `vm&rarr;num_not_flagged`.
  */
 void vmSetNumNotFlaggedRFInputs( vcsbeam_context *vm )
@@ -1582,6 +1608,18 @@ Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput )
 }
 
 
+/**
+ * Finds a matching Antenna in the given metadata.
+ *
+ * @param metadata The metadata to be searched
+ * @param rfinput The RF input being sought
+ * @return A pointer to the matching struct in `metadata`
+ *
+ * This function goes through the antennas in `metadata`, searching for one
+ * that matches `rfinput`.
+ * A "match" is an RF input that has the same `tile_id`.
+ * If no match is found, `NULL` is returned.
+ */
 Antenna *find_matching_antenna( MetafitsMetadata *metadata, Rfinput *rfinput )
 {
     // Find the input in METADATA that has the matching tile_id and polarisation
@@ -1621,6 +1659,7 @@ void get_mwalib_version( char *version_str )
 /**
  * Parses RA/Dec pointings from a file.
  *
+ * @param vm The VCSBeam context struct
  * @param filename The name of the file to be parsed.
  *
  * The file must contain whitespace-separated RAs and Decs in the format
@@ -1685,6 +1724,8 @@ void vmParsePointingFile( vcsbeam_context *vm, const char *filename )
 
 /**
  * Reports all performance statistics.
+ *
+ * @param vm The VCSBeam context struct
  */
 void vmReportPerformanceStats( vcsbeam_context *vm )
 {
@@ -1694,6 +1735,7 @@ void vmReportPerformanceStats( vcsbeam_context *vm )
 /**
  * Prints a title to the specified log output stream.
  *
+ * @param vm The VCSBeam context struct
  * @param title The text to be printed
  *
  * The text is printed in the format
