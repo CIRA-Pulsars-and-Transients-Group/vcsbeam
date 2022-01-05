@@ -1,5 +1,7 @@
 # VCSBeam
 
+![VCSBeam logo](doc/images/logo_tiny.png)
+
 VCSBeam is designed to process high time resolution (HTR) data recorded by the Voltage Capture System (VCS) subsystem of the Murchison Widefield Array (MWA) telescope.
 It consists of
 
