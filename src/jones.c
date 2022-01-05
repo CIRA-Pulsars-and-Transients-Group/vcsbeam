@@ -20,10 +20,7 @@
  * Creates arrays of indexes for antennas and polarisation according to the
  * ordering used in legacy VCS observations.
  *
- * @param[out] Pidxs An index array for the \f$P\f$ polarisation (`vm&rarr;polP_idxs`),
- *         which corresponds to the metafits label 'Y'.
- * @param[out] Qidxs An index array for the \f$Q\f$ polarisation (`vm&rarr;polQ_idxs`),
- *         which corresponds to the metafits label 'X'.
+ * @param vm The VCSBeam context struct
  *
  * The index arrays are needed for pairing the antenna metadata with the
  * voltage samples, which historically were ordered in a different way.
@@ -34,7 +31,8 @@
  * metafits "Antenna" number, and the value stored in that array position
  * being the "VCSOrder".
  *
- * The metafits information is drawn from `vm&rarr;obs_metadata`.
+ * The metafits information is drawn from `vm&rarr;obs_metadata`, and the
+ * indexes are saved in `vm&rarr;polP_idxs` and `vm&rarr;polQ_idxs`.
  *
  * No memory is allocated by this function. It is assumed that all arrays
  * have been previously allocated, and are sufficiently large.
@@ -159,6 +157,7 @@ if (ch == 50 && ant == 0)
 /**
  * Wrapper function for vmCalcPhi(), vmCalcB(), and vmCalcJ().
  *
+ * @param vm The VCSBeam context struct
  * @param ras_hours An array of right ascensions, in decimal hours, one for each pointing.
  * @param decs_degs An array of declinations, in decimal degrees, one for each pointing.
  * @param beam_geom_vals An array of beam geometries, one for each pointing.

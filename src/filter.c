@@ -51,8 +51,9 @@ cuDoubleComplex *roots_of_unity( int N )
 /**
  * Load a set of filter coefficients
  *
+ * @param vm The VCSBeam context struct
  * @param filtername String specifying a filter. There should be a corresponding
- *                file in the RUNTIME_DIR called <filtername>.dat.
+ *                file in the RUNTIME_DIR called `<filtername>.dat`.
  * @param type    Either ANALYSIS_FILTER or SYNTHESIS_FILTER
  * @param nchans  The number of channels that this filter will be applied to.
  *                For both ANALYSIS and SYNTHESIS filters, this should be
@@ -152,6 +153,7 @@ void vmLoadFilter( vcsbeam_context *vm, char *filtername, filter_type type, int 
 /**
  * Scale the filter coefficients by constant factor.
  *
+ * @param vm The VCSBeam context struct
  * @param type         Either ANALYSIS_FILTER or SYNTHESIS_FILTER
  * @param scale_factor The scaling factor
  */

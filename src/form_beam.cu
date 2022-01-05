@@ -198,9 +198,10 @@ __global__ void vmApplyJ_kernel( void            *data,
  * @param p        The pointing index
  * @param soffset  An offset number of samples into `e` for where to put the
  *                 the answer
- * @param e[out]   The recovered electric field, \f${\bf e}\f$,
+ * @param nchunk   The number of chunks (divisions of a second's worth of data)
+ * @param[out] e   The recovered electric field, \f${\bf e}\f$,
  *                 with layout \f$N_t \times N_f \times N_p\f$
- * @param S[out]   The recovered Stokes parameters,
+ * @param[out] S   The recovered Stokes parameters,
  *                 with layout \f$N_t \times N_s \times N_f\f$
  * @param npol     \f$N_p\f$
  *
@@ -331,14 +332,14 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 /**
  * CUDA kernel for normalising Stokes parameters
  *
- * @param S[in]        The original Stokes parameters,
+ * @param[in]  S       The original Stokes parameters,
  *                     with layout \f$N_t \times N_s \times N_f\f$
- * @param nstep        \f$N_t\f$
- * @param offsets[out] The amount of offset needed to recover the original
+ * @param      nstep   \f$N_t\f$
+ * @param[out] offsets The amount of offset needed to recover the original
  *                     values from the normalised ones
- * @param scales[out]  The scaling needed to recover the original values
+ * @param[out] scales  The scaling needed to recover the original values
  *                     from the normalised ones
- * @param Sscaled[out] The normalised Stokes parameters
+ * @param[out] Sscaled The normalised Stokes parameters
  *
  * This kernel shifts and normalises the Stokes parameters so that they fit
  * into 8-bits integers without clipping (e.g. for output into the PSRFITS
@@ -625,6 +626,7 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
  * Renormalises the detected Stokes parameters and copies them into PSRFITS
  * structs, ready for frequency splicing.
  *
+ * @param vm The VCSBeam context struct
  * @param mpfs The MPI PSRFITS struct that manages the splicing operation.
  */
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )

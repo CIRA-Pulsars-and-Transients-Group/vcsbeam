@@ -21,11 +21,11 @@
 /**
  * Converts floats to 8-bit integers.
  *
- * @param f The (source) buffer of floats
- * @param n The number of floats in `f`
- * @param min The smallest allowed float
- * @param max The largest allowed float
- * @retval i The (destination) buffer of 8-bit integers
+ * @param[in]  f   The (source) buffer of floats
+ * @param      n   The number of floats in `f`
+ * @param      min The smallest allowed float
+ * @param      max The largest allowed float
+ * @param[out] i   The (destination) buffer of 8-bit integers
  */
 void float2int8_trunc(float *f, int n, float min, float max, int8_t *i)
 {
@@ -128,6 +128,7 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
 /**
  * Populates a VDIF header with data derived from the observation.
  *
+ * @param vm The VCSBeam context struct
  * @param beam_geom_vals A `beam_geom` struct containing pointing information
  */
 void vmPopulateVDIFHeader(

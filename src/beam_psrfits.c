@@ -21,6 +21,7 @@
 /**
  * Populates a PSRFITS struct with data derived from the observation.
  *
+ * @param vm The VCSBeam context struct
  * @param pf The PSRFITS struct to be populated
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file
@@ -238,6 +239,7 @@ void populate_spliced_psrfits_header(
 /**
  * Populates a PSRFITS struct with data derived from the observation.
  *
+ * @param vm The VCSBeam context struct
  * @param pf The PSRFITS struct to be populated
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file
@@ -452,6 +454,7 @@ void free_psrfits( struct psrfits *pf )
 /**
  * Initialises a struct for managing multiple PSRFITS files via MPI processes.
  *
+ * @param vm The VCSBeam context struct
  * @param mpf A pointer to the new struct to be initialised
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file

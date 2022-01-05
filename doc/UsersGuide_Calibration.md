@@ -1,19 +1,24 @@
-# User's Guide -- Calibration {#usersguidecalibration}
+# User's Guide -- Preparing a calibration solution {#usersguidecalibration}
 
 [TOC]
 
-Which calibration software to use (RTS vs Hyperdrive) depends on whether the data is Legacy or MWAX, and whether you are doing in-beam calibration or using a dedicated calibration observation.
+## RTS vs Hyperdrive
+
+Which calibration software to use (RTS vs Hyperdrive) depends on whether the data is Legacy or MWAX, and whether it is VCS or already-correlated data (e.g. a dedicated calibration observation).
 The following table summarises the possibilities:
 
-|        | In-beam (voltages) | Dedicated calibration (calibrated voltages) |
-| ------ | ------------------ | ------------------------------------------- |
-| Legacy | RTS                | RTS, Hyperdrive                             |
-| MWAX   | Hyperdrive         | Hyperdrive                                  |
+[RTS]: https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-CalibratingwiththeRealTimeSystem(RTS)
+[Hyperdrive]: https://wiki.mwatelescope.org/pages/viewpage.action?pageId=52068764
 
-## The Real Time System (RTS)
+|        | VCS                      | Correlated visibilities              |
+| ------ | ------------------------ | ------------------------------------ |
+| Legacy | [RTS][RTS]               | [RTS][RTS], [Hyperdrive][Hyperdrive] |
+| MWAX   | [Hyperdrive][Hyperdrive] | [Hyperdrive][Hyperdrive]             |
 
-Documentation for using the RTS can be found with [the VCSTools documentation](https://wiki.mwatelescope.org/display/MP/Documentation).
+The links in the table will take you to the corresponding documentation.
+Apart from [the MWA Telescope Wiki][Hyperdrive] (same link as given in the table), Hyperdrive also has some documentation on [its Github main page](https://github.com/MWATelescope/mwa_hyperdrive), and [its Github Wiki page](https://github.com/MWATelescope/mwa_hyperdrive/wiki).
 
-## Hyperdrive
+The [RTS][RTS] link describes a workflow for preparing a calibration solution using the RTS.
+This page describes the equivalent workflow for Hyperdrive solutions.
+However, it should be noted that the visualisation tools used for Hyperdrive can also be used for RTS solutions, which are not documented there.
 
-Documentation for Hyperdrive can be found on [this MWA Telescope Wiki page](https://wiki.mwatelescope.org/pages/viewpage.action?pageId=52068764), [its Github main page](https://github.com/MWATelescope/mwa_hyperdrive), and [its Github Wiki page](https://github.com/MWATelescope/mwa_hyperdrive/wiki).
