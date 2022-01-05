@@ -1015,13 +1015,20 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
     return VM_SUCCESS;
 }
 
+/**
+ * Loads the Jones matrices onto the GPU.
+ */
 void vmPushJ( vcsbeam_context *vm )
 {
     cudaMemcpy( vm->d_J, vm->J, vm->J_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyJ: cudaMemcpy failed" );
 }
 
-
+/**
+ * Sets up CUDA streams for multi-pixel beamforming.
+ *
+ * \see vmDestroyCudaStreams()
+ */
 void vmCreateCudaStreams( vcsbeam_context *vm )
 {
     vm->streams = (cudaStream_t *)malloc( vm->npointing * sizeof(cudaStream_t) );
@@ -1034,6 +1041,11 @@ void vmCreateCudaStreams( vcsbeam_context *vm )
     }
 }
 
+/**
+ * Destroys the CUDA streams that were set up for multi-pixel beamforming.
+ *
+ * \see vmCreateCudaStreams()
+ */
 void vmDestroyCudaStreams( vcsbeam_context *vm )
 {
     unsigned int p;
@@ -1046,6 +1058,12 @@ void vmDestroyCudaStreams( vcsbeam_context *vm )
     free( vm->streams );
 }
 
+/**
+ * Allocates both CPU and GPU memory for the scales, offsets, and data for
+ * PSRFITS output.
+ *
+ * \see vmDestroyStatistics()
+ */
 void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
 {
     uintptr_t nchan  = vm->nfine_chan;
@@ -1069,6 +1087,12 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
     cudaCheckErrors( "vmCreateStatistics: cudaMallocHost(Cscaled) failed" );
 }
 
+/**
+ * Frees both the CPU and GPU memory for the scales, offsets, and data for
+ * PSRFITS output.
+ *
+ * \see vmCreateStatistics()
+ */
 void vmDestroyStatistics( vcsbeam_context *vm )
 {
     cudaFreeHost( vm->offsets );
@@ -1086,6 +1110,11 @@ void vmDestroyStatistics( vcsbeam_context *vm )
     cudaCheckErrors( "vmDestroyStatistics: cudaFree(Cscaled) failed" );
 }
 
+/**
+ * Sets the number of pointings.
+ *
+ * @todo Investigate whether this function is really needed
+ */
 void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
 {
     uintptr_t npol      = vm->obs_metadata->num_ant_pols; // = 2
@@ -1096,6 +1125,14 @@ void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
     vm->d_e_size_bytes  = vm->e_size_bytes;
 }
 
+/**
+ * Creates a list of file names for the input data.
+ *
+ * This function creates an array of file names that are passed to mwalib to
+ * manage the reading in of the data.
+ *
+ * \see vmDestroyFilenames()
+ */
 void vmCreateFilenames( vcsbeam_context *vm )
 /* Create an array of filenames; free with vmDestroyFilenames()
  */
@@ -1159,13 +1196,22 @@ void vmCreateFilenames( vcsbeam_context *vm )
 }
 
 /**
- * vmGetVoltFilename
- * =================
+ * Gets the input file name for the given channel index and GPS second.
  *
- * Returns the filename for the given channel index and GPS second,
- * assuming the observation specified by VM->OBS_CONTEXT.
- * Expects VM->SECONDS_PER_FILE to be set (via vmLoadObsMetafits).
- * Result put into FILENAME (assumed already allocated).
+ * @param[in] coarse_chan_idx The index of a coarse channel
+ * @param[in] gps_second A GPS second
+ * @param[out] filename A buffer for the filename
+ *
+ * This function returns the filename for the observation referred to in
+ * `vm&rarr;obs_context`.
+ *
+ * The variable `vm&rarr;seconds_per_file` must be set to the relevant value
+ * depending on whether the observation is Legacy (1) or MWAX (8), which is
+ * done via vmLoadObsMetafits().
+ *
+ * `filename` must point to already-allocated memory.
+ *
+ * \see vmGetLegacyVoltFilename()
  */
 void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint64_t gps_second, char *filename )
 {
@@ -1187,11 +1233,19 @@ void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint6
 }
 
 /**
- * vmGetLegacyVoltFilename
- * =======================
+ * Gets the file name for the given channel index and GPS, as if the
+ * observation were a Legacy VCS observation.
  *
- * Same as vmGetVoltFilename, but return the filename as if the observation
- * were really a legacy VCS observation.
+ * @param[in] coarse_chan_idx The index of a coarse channel
+ * @param[in] gps_second A GPS second
+ * @param[out] filename A buffer for the filename
+ *
+ * This function returns the filename for the observation referred to in
+ * `vm&rarr;obs_context_legacy`.
+ *
+ * `filename` must point to already-allocated memory.
+ *
+ * \see vmGetVoltFilename()
  */
 void vmGetLegacyVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint64_t gps_second, char *filename )
 {
@@ -1212,6 +1266,11 @@ void vmGetLegacyVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx,
     }
 }
 
+/**
+ * Destroys the list of input file names.
+ *
+ * \see vmCreateFilenames()
+ */
 void vmDestroyFilenames( vcsbeam_context *vm )
 {
     if (vm->filenames != NULL)
@@ -1225,7 +1284,18 @@ void vmDestroyFilenames( vcsbeam_context *vm )
     vm->nfiles = 0;
 }
 
-
+/**
+ * Loads an observation's metadata from its metafits file.
+ *
+ * @param filename The name of the metafits file to be loaded.
+ *
+ * This function loads the metadata into `vm&rarr;obs_context` and
+ * `vm&rarr;obs_metadata`, using mwalib's API.
+ * It also loads a "Legacy" version of the context into
+ * `vm&rarr;obs_context_legacy`.
+ * The observation to be loaded should be the "target" observation, i.e. the
+ * observation whose VCS data is to be processed.
+ */
 void vmLoadObsMetafits( vcsbeam_context *vm, char *filename )
 {
     // Create OBS_CONTEXT
@@ -1254,16 +1324,26 @@ void vmLoadObsMetafits( vcsbeam_context *vm, char *filename )
                         // ^-- Raise an issue with mwalib (I shouldn't have to do this)
 }
 
+/**
+ * Loads a calibration observation's metadata from its metafits file.
+ *
+ * @param filename The name of the metafits file to be loaded.
+ *
+ * This function loads the metadata into `vm&rarr;cal_context` and
+ * `vm&rarr;cal_metadata`, using mwalib's API.
+ * The observation to be loaded should be the calibration observation, i.e.
+ * the observation for which a calibration solution has been obtained.
+ */
 void vmLoadCalMetafits( vcsbeam_context *vm, char *filename )
 {
-    // Create OBS_CONTEXT
+    // Create CAL_CONTEXT
     if (mwalib_metafits_context_new2( filename, &vm->cal_context, vm->error_message, ERROR_MESSAGE_LEN) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create metafits context: %s\n", vm->error_message );
         exit(EXIT_FAILURE);
     }
 
-    // Create OBS_METADATA
+    // Create CAL_METADATA
     if (mwalib_metafits_metadata_get( vm->cal_context, NULL, NULL, &vm->cal_metadata, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", vm->error_message );
@@ -1271,9 +1351,12 @@ void vmLoadCalMetafits( vcsbeam_context *vm, char *filename )
     }
 }
 
-void vmGetVoltageMetadata( vcsbeam_context *vm )
-/* Create the voltage metadata structs using mwalib's API.
+/**
+ * Creates the voltage metadata structs using mwalib's API.
+ *
+ * This function should only be called after vmLoadObsMetafits().
  */
+void vmGetVoltageMetadata( vcsbeam_context *vm )
 {
     // Shorthand variables
     unsigned long int begin_gps       = vm->gps_seconds_to_process[0];
@@ -1332,11 +1415,28 @@ void vmGetVoltageMetadata( vcsbeam_context *vm )
 }
 
 
-long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int relative_begin )
-/* Get the gps second for an observation from a relative value, RELATIVE_BEGIN
- * If RELATIVE_BEGIN >= 0, then return the gps second relative to the "good time"
- * If RELATIVE_BEGIN < 0, then return the gps second relative to the end of the observation
+/**
+ * Gets the GPS second for an observation from a relative offset value.
+ *
+ * @param obs_metadata The observation's metadata
+ * @param relative_begin An offset number of seconds
+ * @return An absolute GPS second
+ *
+ * If `relative_begin` >= 0, then return the GPS second relative to the "good
+ * time" (i.e. from the beginning of the observation).
+ * If `relative_begin` < 0, then return the GPS second relative to the end of
+ * the observation.
+ *
+ * | `relative_begin` | GPS second        |
+ * | :--------------: | :---------------- |
+ * | 0                | 1st "good" second |
+ * | 1                | 2nd "good" second |
+ * | 2                | 3rd "good" second |
+ * | ...              | ...               |
+ * | -2               | 2nd last second   |
+ * | -1               | Last second       |
  */
+long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int relative_begin )
 {
     if (relative_begin >= 0)
         return obs_metadata->good_time_gps_ms/1000 + relative_begin;
@@ -1345,12 +1445,23 @@ long unsigned int get_relative_gps( MetafitsMetadata *obs_metadata, long int rel
     return obs_metadata->metafits_timesteps[obs_metadata->num_metafits_timesteps + relative_begin].gps_time_ms/1000;
 }
 
-long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str )
-/* Another way to get the beginning gps second
- * If the first character of BEGIN_STR is '+' or '-', then return a relative gps second
- * according to get_relative_gps().
- * Otherwise, parse it as a gps second in its own right.
+/**
+ * Gets the GPS second from a string representation of either a relative or
+ * absolute value.
+ *
+ * @param obs_metadata The observation's metadata
+ * @param begin_str A string representation of either a relative or absolute
+ *        GPS second
+ * @return An absolute GPS second
+ *
+ * If the first character of `begin_str` is '`+`' or '`-`', then return a
+ * relative GPS second according to get_relative_gps().
+ * Otherwise, parse it as a GPS second in its own right.
+ *
+ * \see parse_coarse_chan_string()
+ * \see get_relative_gps()
  */
+long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begin_str )
 {
     // If the first character is '+' or '-', treat it as a relative time
     if (begin_str[0] == '+' || begin_str[0] == '-')
@@ -1369,11 +1480,24 @@ long unsigned int parse_begin_string( MetafitsMetadata *obs_metadata, char *begi
 }
 
 
-uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_coarse_chan_str )
-/* Another way to get the coarse channel index (0 to N-1)
- * If the first character of BEGIN_STR is '+' or '-', then return a relative channel idx
- * Otherwise, parse it as a receiver channel number.
+/**
+ * Gets the coarse channel index from a string representation of either a relative or
+ * absolute value.
+ *
+ * @param obs_metadata The observation's metadata
+ * @param begin_coarse_chan_str A string representation of either a relative
+ *        or absolute coarse channel index
+ * @return An absolute coarse channel index
+ *
+ * If the first character of `begin_coarse_chan_str` is '`+`' or '`-`', then
+ * return the coarse channel index relative to the lowest or highest coarse
+ * channel, respectively (with "-1" representing the highest channel, "-2" the
+ * second highest, etc.).
+ * Otherwise, parse it as a coarse channel index in its own right.
+ *
+ * \see parse_begin_string()
  */
+uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_coarse_chan_str )
 {
     if (begin_coarse_chan_str == NULL)
     {
@@ -1411,7 +1535,11 @@ uintptr_t parse_coarse_chan_string( MetafitsMetadata *obs_metadata, char *begin_
     return 0;
 }
 
-
+/**
+ * Counts the number of tiles that are not flagged.
+ *
+ * The result is stored in `vm&rarr;num_not_flagged`.
+ */
 void vmSetNumNotFlaggedRFInputs( vcsbeam_context *vm )
 {
     vm->num_not_flagged = 0;
@@ -1421,6 +1549,18 @@ void vmSetNumNotFlaggedRFInputs( vcsbeam_context *vm )
             vm->num_not_flagged++;
 }
 
+/**
+ * Finds a matching RF input in the given metadata.
+ *
+ * @param metadata The metadata to be searched
+ * @param rfinput The RF input being sought
+ * @return A pointer to the matching struct in `metadata`
+ *
+ * This function goes through the RF inputs in `metadata`, searching for one
+ * that matches `rfinput`.
+ * A "match" is an RF input that has the same `tile_id` and `pol`.
+ * If no match is found, `NULL` is returned.
+ */
 Rfinput *find_matching_rf_input( MetafitsMetadata *metadata, Rfinput *rfinput )
 {
     // Find the input in METADATA that has the matching tile_id and polarisation
@@ -1460,9 +1600,15 @@ Antenna *find_matching_antenna( MetafitsMetadata *metadata, Rfinput *rfinput )
     return NULL;
 }
 
-void get_mwalib_version( char *version_str )
-/* Assumes that version_str is already allocated, and is big enough
+/**
+ * Gets the mwalib version.
+ *
+ * @param[out] version_str A buffer to hold the version string
+ *
+ * This function assumes that `version_str` is already allocated, and is big
+ * enough
  */
+void get_mwalib_version( char *version_str )
 {
     sprintf( version_str, "%u.%u.%u",
             mwalib_get_version_major(),
@@ -1472,11 +1618,18 @@ void get_mwalib_version( char *version_str )
 }
 
 
-void vmParsePointingFile( vcsbeam_context *vm, const char *filename )
-/* Parse the given file in FILENAME and create arrays of RAs and DECs.
- * This function allocates memory for ras_hours and decs_degs arrays.
- * Will be destroyed when vcsbeam context is destroyed.
+/**
+ * Parses RA/Dec pointings from a file.
+ *
+ * @param filename The name of the file to be parsed.
+ *
+ * The file must contain whitespace-separated RAs and Decs in the format
+ * `HH:MM:SS.S DD:MM:SS.S`.
+ *
+ * This function allocates memory for ras_hours and decs_degs arrays, which
+ * will be destroyed during destroy_vcsbeam_context().
  */
+void vmParsePointingFile( vcsbeam_context *vm, const char *filename )
 {
     // Print a log message
     sprintf( vm->log_message, "Reading pointings file %s", filename );
@@ -1530,11 +1683,26 @@ void vmParsePointingFile( vcsbeam_context *vm, const char *filename )
     vmCreateCudaStreams( vm );
 }
 
+/**
+ * Reports all performance statistics.
+ */
 void vmReportPerformanceStats( vcsbeam_context *vm )
 {
     logger_report_all_stats( vm->log );
 }
 
+/**
+ * Prints a title to the specified log output stream.
+ *
+ * @param title The text to be printed
+ *
+ * The text is printed in the format
+ * ```
+ * ------- VCSBeam (VERSION): TITLE -------
+ * ```
+ * with `VERSION` and `TITLE` being replaced with the VCSBeam version string
+ * and the specified title respectively.
+ */
 void vmPrintTitle( vcsbeam_context *vm, const char *title )
 {
     sprintf( vm->log_message, "------- VCSBeam (%s): %s -------",
