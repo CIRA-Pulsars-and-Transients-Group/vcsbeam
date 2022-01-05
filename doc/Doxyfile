@@ -876,6 +876,7 @@ INPUT                  = Mainpage.md \
                          Calibration.md \
                          Beamforming.md \
                          FileFormats.md \
+                         Installation.md \
                          UsersGuide_Overview.md \
                          UsersGuide_Beamforming.md \
                          UsersGuide_Calibration.md \

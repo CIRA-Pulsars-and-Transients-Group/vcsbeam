@@ -111,7 +111,7 @@ The advantage to using PSRFITS is that PSRFITS is a supported format of [PRESTO]
 The SMART survey uses PRESTO as part of its search pipeline.
 
 VCSBeam can output either PSRFITS or VDIF formats, or both, by including the `-p` (PSRFITS) and `-v` (VDIF) options.
-If neither `-p` nor `-v` is explicitly given, the default behaviour is to output only PSRFITS.
+If neither `-p` nor `-v` is explicitly given, the default behaviour is to output the same channelisation as the input (i.e. MWAX&rarr;VDIF, Legacy&rarr;PSRFITS).
 
 By default, PSRFITS files are written out with 200 seconds per file.
 This behaviour can be altered with the `-t` option.
@@ -229,6 +229,8 @@ However, this is unlikely to affect the wall time significantly (although this r
 
 The calibration solutions provided by the RTS or Hyperdrive can be further manipulated in several ways before they are applied to the input voltages.
 Many of these manipulates are still experimental, and mostly affect the fidelity of the polarisation response, whose verification is still a work in progress.
+
+
 
 #### Flagging extra tiles
 

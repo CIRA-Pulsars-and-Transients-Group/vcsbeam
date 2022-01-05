@@ -384,8 +384,8 @@ void usage()
             "\t-A, --analysis_filter=FILTER  Apply the named filter during fine channelisation (for MWAX only).\n"
             "\t                           [default: FINEPFB]\n"
             "\t-s, --smart                Use legacy settings for fine channelisation [default: off]\n"
-            "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
-            "\t                           filter can be MIRROR or LSQ12.\n"
+            "\t-S, --synth_filter=FILTER  Apply the named filter during high-time resolution synthesis.\n"
+            "\t                           FILTER can be MIRROR or LSQ12.\n"
             "\t                           [default: LSQ12]\n"
           );
 
@@ -415,7 +415,7 @@ void usage()
     printf( "\nCALIBRATION OPTIONS\n\n"
             "\t-B, --bandpass             Use the Bandpass (fine channel) as well as the DIJones (coarse channel) solutions\n"
             "\t                           (only relevant for RTS) [default: off]\n"
-            "\t-F  --flagged-tiles=FILE   FILE is a text file including the TileNames of extra tiles to be flagged.\n"
+            "\t-F, --flagged-tiles=FILE   FILE is a text file including the TileNames of extra tiles to be flagged.\n"
             "\t                           By default, tiles flagged in both the calibration and the observation metafits file\n"
             "\t                           are flagged in the beamformer. The utility 'rts_flag_ant_to_tilenames.py' can be used\n"
             "\t                           to convert the antenna numbers listed in the RTS 'flagged_tiles.txt' file into human-\n"
