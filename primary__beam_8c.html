@@ -80,6 +80,12 @@ $(function() {
 <code>#include &lt;mwalib.h&gt;</code><br />
 <code>#include &lt;mwa_hyperbeam.h&gt;</code><br />
 <code>#include &quot;vcsbeam.h&quot;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Include dependency graph for primary_beam.c:</div>
+<div class="dyncontent">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="primary__beam_8c__incl.svg" width="100%" height="384"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+</div>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
@@ -107,7 +113,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:abed728c1e058dd6b81dd9771b431a2c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implements a hash lookup for dead/live dipole configurations.  <a href="primary__beam_8c.html#abed728c1e058dd6b81dd9771b431a2c1">More...</a><br /></td></tr>
 <tr class="separator:abed728c1e058dd6b81dd9771b431a2c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afdec646d89aec813e571bb5a2b64612f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">parallactic_angle_correction</a> (double *Ppa, double lat, double az, double za)</td></tr>
-<tr class="memdesc:afdec646d89aec813e571bb5a2b64612f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the parallactic angle correction matrix, <img class="formulaInl" alt="${\bf P}_\text{pa}$" src="form_169.png" width="21" height="14"/>.  <a href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">More...</a><br /></td></tr>
+<tr class="memdesc:afdec646d89aec813e571bb5a2b64612f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the parallactic angle correction matrix, <img class="formulaInl" alt="${\bf P}_\text{pa}$" src="form_169.svg"/>.  <a href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">More...</a><br /></td></tr>
 <tr class="separator:afdec646d89aec813e571bb5a2b64612f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a07d76803151480bdee46ceb53fd93d74"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a07d76803151480bdee46ceb53fd93d74">calc_normalised_beam_response</a> (FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction)</td></tr>
 <tr class="memdesc:a07d76803151480bdee46ceb53fd93d74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the normalised primary beam response to a Stokes I, Q, U, or V sky.  <a href="primary__beam_8c.html#a07d76803151480bdee46ceb53fd93d74">More...</a><br /></td></tr>
@@ -230,7 +236,7 @@ Variables</h2></td></tr>
   </table>
   </dd>
 </dl>
-<p><code>IQUV</code> must point to already-allocated memory with size <img class="formulaInl" alt="$N_s$" src="form_37.png" width="15" height="13"/>.</p>
+<p><code>IQUV</code> must point to already-allocated memory with size <img class="formulaInl" alt="$N_s$" src="form_37.svg"/>.</p>
 <p>This function will allocate memory for <code>J</code>, which must be freed by the caller. </p>
 
 </div>
@@ -271,8 +277,8 @@ Variables</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">obs_metadata</td><td>A MetafitsMetadata object containing the delays and amps. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">delays</td><td>A pointer to an array of delay values, with layout <img class="formulaInl" alt="$N_i \times N_d$" src="form_167.png" width="45" height="13"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">amps</td><td>A pointer to an array of amp values, with layout <img class="formulaInl" alt="$N_i \times N_d$" src="form_167.png" width="45" height="13"/></td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">delays</td><td>A pointer to an array of delay values, with layout <img class="formulaInl" alt="$N_i \times N_d$" src="form_167.svg"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">amps</td><td>A pointer to an array of amp values, with layout <img class="formulaInl" alt="$N_i \times N_d$" src="form_167.svg"/></td></tr>
   </table>
   </dd>
 </dl>
@@ -322,7 +328,7 @@ Variables</h2></td></tr>
   </table>
   </dd>
 </dl>
-<p>Here, the MetafitsMetadata is used to find <img class="formulaInl" alt="$N_i$" src="form_168.png" width="14" height="13"/> (one of the dimensions of <code>delays</code> and <code>amps</code>). </p>
+<p>Here, the MetafitsMetadata is used to find <img class="formulaInl" alt="$N_i$" src="form_168.svg"/> (one of the dimensions of <code>delays</code> and <code>amps</code>). </p>
 
 </div>
 </div>
@@ -343,7 +349,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Frees the memory allocated in <a class="el" href="primary__beam_8c.html#a4b05c0aa7ccd995a5c7262829e5f84cf" title="Allocates memory for the beam model Jones matrices.">vmCreatePrimaryBeam()</a> </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000031">Todo:</a></b></dt><dd>Change name to vm... </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000032">Todo:</a></b></dt><dd>Change name to vm... </dd></dl>
 
 </div>
 </div>
@@ -439,7 +445,7 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Calculates the parallactic angle correction matrix, <img class="formulaInl" alt="${\bf P}_\text{pa}$" src="form_169.png" width="21" height="14"/>. </p>
+<p>Calculates the parallactic angle correction matrix, <img class="formulaInl" alt="${\bf P}_\text{pa}$" src="form_169.svg"/>. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[out]</td><td class="paramname">Ppa</td><td>The output rotation matrix </td></tr>
@@ -450,7 +456,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 <p>This function computes the parallactic angle correction matrix in the basis (see <a class="el" href="definitions.html#parallacticangle">Parallactic angle correction</a>): </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf P}_\text{pa} = \begin{bmatrix} P_{\theta x} &amp; P_{\theta y} \\ P_{\phi x} &amp; P_{\phi y} \end{bmatrix}. \]" src="form_170.png" width="109" height="31"/>
+<img class="formulaDsp" alt="\[ {\bf P}_\text{pa} = \begin{bmatrix} P_{\theta x} &amp; P_{\theta y} \\ P_{\phi x} &amp; P_{\phi y} \end{bmatrix}. \]" src="form_170.svg"/>
 </p>
  
 </div>
@@ -491,7 +497,7 @@ Variables</h2></td></tr>
 <p>This function uses Hyperbeam to calculate the beam model Jones matrices for each pointing in <code>beam_geom_vals</code>.</p>
 <p>Only those configurations of live (i.e. non-dead) dipoles which exist in the array are calculated, in order to save calculation time.</p>
 <p>The parallactic angle correction is applied, so that the final matrices, which are stored in <code>pb&rarr;B</code>, are in the basis </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf B} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix}. \]" src="form_165.png" width="99" height="31"/>
+<img class="formulaDsp" alt="\[ {\bf B} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix}. \]" src="form_165.svg"/>
 </p>
  
 </div>
@@ -513,7 +519,7 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Allocates memory for the beam model Jones matrices. </p>
-<p>The resulting array (<code>vm&rarr;B</code>) has dimensions <img class="formulaInl" alt="$N_b \times N_a \times N_p \times N_p$" src="form_166.png" width="108" height="14"/>. </p>
+<p>The resulting array (<code>vm&rarr;B</code>) has dimensions <img class="formulaInl" alt="$N_b \times N_a \times N_p \times N_p$" src="form_166.svg"/>. </p>
 
 </div>
 </div>

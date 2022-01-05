@@ -78,6 +78,12 @@ $(function() {
 <code>#include &lt;mwalib.h&gt;</code><br />
 <code>#include &lt;cuComplex.h&gt;</code><br />
 <code>#include &quot;vcsbeam.h&quot;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Include dependency graph for calibration.c:</div>
+<div class="dyncontent">
+<div class="center"><iframe scrolling="no" frameborder="0" src="calibration_8c__incl.svg" width="660" height="112"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
+</div>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
@@ -253,14 +259,14 @@ Functions</h2></td></tr>
 <p>Reads an RTS Bandpass file. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[out]</td><td class="paramname">Jm</td><td>A buffer for the measured matrices, <img class="formulaInl" alt="${\bf J}_m$" src="form_89.png" width="18" height="13"/> </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Jf</td><td>A buffer for the fitted matrices, <img class="formulaInl" alt="${\bf J}_f$" src="form_90.png" width="14" height="14"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Jm</td><td>A buffer for the measured matrices, <img class="formulaInl" alt="${\bf J}_m$" src="form_89.svg"/> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">Jf</td><td>A buffer for the fitted matrices, <img class="formulaInl" alt="${\bf J}_f$" src="form_90.svg"/> </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">cal_metadata</td><td>The metadata struct for the calibration observation </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">filename</td><td>The name of the Bandpass file to be read</td></tr>
   </table>
   </dd>
 </dl>
-<p>This function populates the <img class="formulaInl" alt="${\bf J}_m$" src="form_89.png" width="18" height="13"/> and <img class="formulaInl" alt="${\bf J}_f$" src="form_90.png" width="14" height="14"/> arrays with values read in from the given Bandpass file. The Bandpass files contain only values for antennas and fine channels that have not been flagged. Nothing is done for those antennas/channels that have been flagged, so the onus is on the caller to initialise the <img class="formulaInl" alt="${\bf J}_m$" src="form_89.png" width="18" height="13"/> and <img class="formulaInl" alt="${\bf J}_f$" src="form_90.png" width="14" height="14"/> arrays to values to their preferred values. </p>
+<p>This function populates the <img class="formulaInl" alt="${\bf J}_m$" src="form_89.svg"/> and <img class="formulaInl" alt="${\bf J}_f$" src="form_90.svg"/> arrays with values read in from the given Bandpass file. The Bandpass files contain only values for antennas and fine channels that have not been flagged. Nothing is done for those antennas/channels that have been flagged, so the onus is on the caller to initialise the <img class="formulaInl" alt="${\bf J}_m$" src="form_89.svg"/> and <img class="formulaInl" alt="${\bf J}_f$" src="form_90.svg"/> arrays to values to their preferred values. </p>
 
 </div>
 </div>
@@ -353,18 +359,18 @@ Functions</h2></td></tr>
 <p>Rotates the phases of the elements of a complex matrix with respect to a reference matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in,out]</td><td class="paramname">J</td><td>The matrix whose phases are to be rotated, <img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/> </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">Jref</td><td>The reference matrix, <img class="formulaInl" alt="${\bf J}_\text{ref}$" src="form_91.png" width="21" height="13"/></td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">J</td><td>The matrix whose phases are to be rotated, <img class="formulaInl" alt="${\bf J}$" src="form_41.svg"/> </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jref</td><td>The reference matrix, <img class="formulaInl" alt="${\bf J}_\text{ref}$" src="form_91.svg"/></td></tr>
   </table>
   </dd>
 </dl>
-<p>Each element in <img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/> is divided by the corresponding element in <img class="formulaInl" alt="${\bf J}_\text{ref}$" src="form_91.png" width="21" height="13"/>, normalised to unit magnitude. That is, if </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \begin{aligned} {\bf J} &amp;= \begin{bmatrix} J_0 &amp; J_1 \\ J_2 &amp; J_3 \end{bmatrix}, &amp; {\bf J}_\text{ref} &amp;= \begin{bmatrix} J_{\text{ref},0} &amp; J_{\text{ref},1} \\ J_{\text{ref},2} &amp; J_{\text{ref},3} \end{bmatrix}, \end{aligned} \]" src="form_92.png" width="214" height="31"/>
+<p>Each element in <img class="formulaInl" alt="${\bf J}$" src="form_41.svg"/> is divided by the corresponding element in <img class="formulaInl" alt="${\bf J}_\text{ref}$" src="form_91.svg"/>, normalised to unit magnitude. That is, if </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \begin{aligned} {\bf J} &amp;= \begin{bmatrix} J_0 &amp; J_1 \\ J_2 &amp; J_3 \end{bmatrix}, &amp; {\bf J}_\text{ref} &amp;= \begin{bmatrix} J_{\text{ref},0} &amp; J_{\text{ref},1} \\ J_{\text{ref},2} &amp; J_{\text{ref},3} \end{bmatrix}, \end{aligned} \]" src="form_92.svg"/>
 </p>
 <p> then this function computes </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \begin{bmatrix} J_0\frac{|J_{\text{ref},0}|}{J_{\text{ref},0}} &amp; J_1\frac{|J_{\text{ref},1}|}{J_{\text{ref},1}} \\ J_2\frac{|J_{\text{ref},2}|}{J_{\text{ref},2}} &amp; J_3\frac{|J_{\text{ref},3}|}{J_{\text{ref},3}}. \end{bmatrix} \]" src="form_93.png" width="114" height="41"/>
+<img class="formulaDsp" alt="\[ \begin{bmatrix} J_0\frac{|J_{\text{ref},0}|}{J_{\text{ref},0}} &amp; J_1\frac{|J_{\text{ref},1}|}{J_{\text{ref},1}} \\ J_2\frac{|J_{\text{ref},2}|}{J_{\text{ref},2}} &amp; J_3\frac{|J_{\text{ref},3}|}{J_{\text{ref},3}}. \end{bmatrix} \]" src="form_93.svg"/>
 </p>
-<p>This operation does not affect the magnitudes of the elements of <img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/>, but only their phases. </p>
+<p>This operation does not affect the magnitudes of the elements of <img class="formulaInl" alt="${\bf J}$" src="form_41.svg"/>, but only their phases. </p>
 
 </div>
 </div>
@@ -475,13 +481,13 @@ Functions</h2></td></tr>
 <p>Loads a Real Time System (RTS) calibration solution. </p>
 <dl class="section return"><dt>Returns</dt><dd>An array of Jones matrices (<code>vm&rarr;D</code>)</dd></dl>
 <p>Reads in the RTS solution from the DI_Jones and Bandpass files in the <code>vm&rarr;cal.caldir</code> directory. It only reads the solution for the coarse channel specified in <code>vm&rarr;coarse_chan_idxs_to_process[0]</code>. Flagged channels and flagged antennas are set to zero.</p>
-<p>The Jones matrices, <img class="formulaInl" alt="$D$" src="form_84.png" width="10" height="10"/>, are output in the <img class="formulaInl" alt="$(Q,P)$" src="form_85.png" width="34" height="14"/> basis: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[\begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix}.\]" src="form_86.png" width="71" height="31"/>
+<p>The Jones matrices, <img class="formulaInl" alt="$D$" src="form_84.svg"/>, are output in the <img class="formulaInl" alt="$(Q,P)$" src="form_85.svg"/> basis: </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[\begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix}.\]" src="form_86.svg"/>
 </p>
 <p>The RTS bandpass solutions ("Bandpass...") are included if <code>vm&rarr;cal.use_bandpass</code> is set, otherwise only the coarse channel solutions ("DI_Jones...") are used.</p>
 <p>This function assumes that a buffer for <code>vm&rarr;D</code> has already been allocated.</p>
-<p>The RTS matrices are actually given in the <img class="formulaInl" alt="$(P,Q)$" src="form_87.png" width="33" height="14"/>, and this function reorders the matrices to be in the <img class="formulaInl" alt="$(Q,P)$" src="form_85.png" width="34" height="14"/> basis, required by VCSBeam: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ \begin{bmatrix} D_{pp} &amp; D_{pq} \\ D_{qp} &amp; D_{qq} \end{bmatrix} \rightarrow \begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix} \]" src="form_88.png" width="150" height="31"/>
+<p>The RTS matrices are actually given in the <img class="formulaInl" alt="$(P,Q)$" src="form_87.svg"/>, and this function reorders the matrices to be in the <img class="formulaInl" alt="$(Q,P)$" src="form_85.svg"/> basis, required by VCSBeam: </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ \begin{bmatrix} D_{pp} &amp; D_{pq} \\ D_{qp} &amp; D_{qq} \end{bmatrix} \rightarrow \begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix} \]" src="form_88.svg"/>
 </p>
 <p> This reording is a "reversal" of the matrix elements (i.e. if one reads the elements from left to right, top to bottom).</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="calibration.html#rts">RTS</a> </dd>
@@ -567,12 +573,12 @@ Functions</h2></td></tr>
 <p>Zeroes the off-diagonal terms of the given matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in,out]</td><td class="paramname">J</td><td>A complex-valued 2x2 matrix, <img class="formulaInl" alt="${\bf J}$" src="form_41.png" width="8" height="10"/></td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">J</td><td>A complex-valued 2x2 matrix, <img class="formulaInl" alt="${\bf J}$" src="form_41.svg"/></td></tr>
   </table>
   </dd>
 </dl>
 <p>This function sets the off-diagonal terms to zero, thus: </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ {\bf J} = \begin{bmatrix} J_0 &amp; J_1 \\ J_2 &amp; J_3 \end{bmatrix} \rightarrow \begin{bmatrix} J_0 &amp; 0 \\ 0 &amp; J_3 \end{bmatrix}. \]" src="form_94.png" width="150" height="31"/>
+<img class="formulaDsp" alt="\[ {\bf J} = \begin{bmatrix} J_0 &amp; J_1 \\ J_2 &amp; J_3 \end{bmatrix} \rightarrow \begin{bmatrix} J_0 &amp; 0 \\ 0 &amp; J_3 \end{bmatrix}. \]" src="form_94.svg"/>
 </p>
  
 </div>

@@ -66,86 +66,26 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#autotoc_md20">Processing Pipeline Overview</a></li>
-<li class="level1"><a href="#autotoc_md21">Individual processing steps</a><ul><li class="level2"><a href="#autotoc_md22">Download</a></li>
-<li class="level2"><a href="#autotoc_md23">Offline PFB</a></li>
-<li class="level2"><a href="#autotoc_md24">Offline Correlator</a></li>
-<li class="level2"><a href="#autotoc_md25">Beamformer</a><ul><li class="level3"><a href="#autotoc_md26">Incoherent beam</a><ul><li class="level4"><a href="#autotoc_md27">Example of use on Garrawarla</a></li>
-</ul>
-</li>
-<li class="level3"><a href="#autotoc_md28">Tied-array beam</a><ul><li class="level4"><a href="#autotoc_md29">Example of use on Garrawarla</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
+<ul><li class="level1"><a href="#autotoc_md22">VCSBeam Overview</a></li>
 </ul>
 </div>
 <div class="textblock"><p><a class="anchor" id="md_UsersGuide_Overview"></a></p>
-<p>(This page is copied from [](<a href="https://wiki.mwatelescope.org/display/MP/Processing+high+time+resolution+data+with+VCSBeam">https://wiki.mwatelescope.org/display/MP/Processing+high+time+resolution+data+with+VCSBeam</a>).) </p><dl class="todo"><dt><b><a class="el" href="todo.html#_todo000002">Todo:</a></b></dt><dd>Update the beamforming pipeline overview with updated information</dd></dl>
-<p>The beamforming pipeline described <a href="https://wiki.mwatelescope.org/display/MP/Documentation">here</a> is applicable to fine-channelised (10 kHz) MWA data that was produced up to September 2021 (hereafter called <b>legacy</b> data), when the legacy Voltage Capture System was decommissioned. The upgraded system, MWAX (documented elsewhere on this wiki), produces coarse-channelised (1.28 MHz) high-time resolution (HTR) data (hereafter called MWAX data; see the format description <a href="https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System">here</a>). Apart from the obvious requirement to be able to process the new data format, a number of other factors have motivated the development of VCSBeam, which operates sufficiently differently from the legacy beamformer that it has now branched off into its own repository, housed at <a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam">this GitHub page</a>.</p>
-<h1><a class="anchor" id="autotoc_md20"></a>
-Processing Pipeline Overview</h1>
-<div class="image">
-<img src="pipeline_overview.png" alt="" width="800"/>
-</div>
- <h1><a class="anchor" id="autotoc_md21"></a>
-Individual processing steps</h1>
-<ol type="1">
-<li>Download (not part of VCSBeam): This step is currently identical to the downloading step described on the legacy page. For legacy data, the existing pipeline performs the "recombine step" automatically, so that the data which are made available to the user are the "Recombined voltages", or ".dat" files. As of this writing (25 Sep 2021), it is not yet clear whether the current downloading instructions will correctly download MWAX data (i.e. after September 2021), or whether that functionality still needs to be implemented. However, it is intended that the data that will be downloaded are the "Coarse channel voltages", or ".sub" files.</li>
-<li>Offline PFB: This step mimics the FPGA-based polyphase filter bank that was implemented in the legacy system, but which is not supplied by the MWAX system. It is currently (as of September 2021), the only way to process MWAX data, although there are many outstanding issues with this that are described below.</li>
-<li>Offline correlator: Used for producing correlated visibilities in the form of GPUBox files, e.g., for in-beam calibration, or making fast images.</li>
-<li>Beamformer: This produces the maximum sensitivity towards a desired look-direction. It incorporates the multi-pixel functionality described in Swainston et al. (in prep). The outputs of the beamformer are either full Stokes PSRFITS files at 100 us resolution, or dual polarisation (XY) VDIF files at 0.78 us resolution.</li>
-</ol>
-<h2><a class="anchor" id="autotoc_md22"></a>
-Download</h2>
-<p>Refer to the legacy page for instructions.</p>
-<h2><a class="anchor" id="autotoc_md23"></a>
-Offline PFB</h2>
-<p>Documentation for the Offline PFB is found here.</p>
-<h2><a class="anchor" id="autotoc_md24"></a>
-Offline Correlator</h2>
-<p>Documentation for the Offline Correlator is found here.</p>
-<h2><a class="anchor" id="autotoc_md25"></a>
-Beamformer</h2>
-<p>VCSBeam provides two binaries for beamforming:</p>
-<ol type="1">
-<li><code>make_mwa_incoh_beam</code></li>
-<li><code>make_mwa_tied_array_beam</code></li>
-</ol>
-<h3><a class="anchor" id="autotoc_md26"></a>
-Incoherent beam</h3>
-<h4><a class="anchor" id="autotoc_md27"></a>
-Example of use on Garrawarla</h4>
-<h3><a class="anchor" id="autotoc_md28"></a>
-Tied-array beam</h3>
-<h4><a class="anchor" id="autotoc_md29"></a>
-Example of use on Garrawarla</h4>
-<div class="fragment"><div class="line">#!/bin/bash -l</div>
-<div class="line"> </div>
-<div class="line">#SBATCH --nodes=1</div>
-<div class="line">#SBATCH --mem=370gb</div>
-<div class="line">#SBATCH --partition=gpuq</div>
-<div class="line">#SBATCH --gres=gpu:1</div>
-<div class="line">#SBATCH --time=01:00:00</div>
-<div class="line">#SBATCH --account=mwavcs</div>
-<div class="line">#SBATCH --export=NONE</div>
-<div class="line"> </div>
-<div class="line">module use /pawsey/mwa/software/python3/modulefiles</div>
-<div class="line">module load vcsbeam</div>
-<div class="line"> </div>
-<div class="line">srun -N 24 -n 24 make_mwa_tied_array_beam \</div>
-<div class="line">        -m PATH/TO/1240826896_metafits_ppds.fits \</div>
-<div class="line">        -b 1240826897 \</div>
-<div class="line">        -T 295 \</div>
-<div class="line">        -f 133 \</div>
-<div class="line">        -d PATH/TO/VCS/DATA \</div>
-<div class="line">        -P pointings.txt \</div>
-<div class="line">        -c PATH/TO/CAL/1240827912.metafits \</div>
-<div class="line">        -C PATH/TO/RTS/SOLUTION \</div>
-<div class="line">        -p</div>
-</div><!-- fragment --> </div></div><!-- contents -->
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000002">Todo:</a></b></dt><dd>Add link to program names once those pages are written.</dd></dl>
+<h1><a class="anchor" id="autotoc_md22"></a>
+VCSBeam Overview</h1>
+<p>VCSBeam is a software library and a suite of applications designed to process high time resolution (HTR) data recorded by the Voltage Capture System (VCS) subsystem of the Murchison Widefield Array (MWA) telescope. The software repository for VCSBeam is located at <a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam">this GitHub page</a>.</p>
+<p>The primary goal of VCSBeam is to combine the signals measured at each of the MWA's antenna elements ("tiles") in order to maximise the sensitivity of the entire array towards a desired look-direction. (The beam pattern of the combined array is called a "tied-array beam", and the processing of forming it, "beamforming".) Processing an observation in this way is described on <a class="el" href="usersguidebeamforming.html">this page</a>.</p>
+<p>VCSBeam can not only beamform, but also process VCS data in other ways. These include:</p>
+<ul>
+<li><a class="el" href="applicationsmakemwatiedarraybeam.html">Forming tied-array beams</a></li>
+<li><a class="el" href="applicationsmakemwaincohbeam.html">Forming incoherent beams</a></li>
+<li><a class="el" href="applicationsfinepfboffline.html">Applying a polyphase filterbank (PFB) for fine channelisation</a></li>
+<li><a class="el" href="applicationsmwaplotcalibration.html">Visualising calibration solutions</a></li>
+<li><a class="el" href="applicationsmwatiedarraybeampsf.html">Visualising the tied-array beam pattern</a></li>
+<li><a class="el" href="applicationsmwatrackprimarybeamresponse.html">Modelling the tied-array beam response towards a particular target</a></li>
+</ul>
+<p>Each of the above items corresponds to an "application" that comes shipped with VCSBeam, and clicking the links will take you to each application's documentation. However, these processing tasks are not the only scientifically useful ways that VCS data can be processed, and the broader goal of VCSBeam is to provide a flexible framework that can be used to implement other novel algorithms and processing techniques. As such, VCSBeam provides a C library which can be used to create custom processing applications. This library is still a work-in-progress, and documentation for its use will be added in the future. </p>
+</div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

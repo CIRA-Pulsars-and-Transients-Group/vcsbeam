@@ -60,7 +60,7 @@ $(a,b)$
 $(c,d)$
 \pagebreak
 
-\[ {\bf P}_{(c,d)\leftarrow(a,b)} \equiv \begin{bmatrix} \frac{\partial c}{\partial a} & \frac{\partial c}{\partial b} \\[5 pt] \frac{\partial d}{\partial a} & \frac{\partial d}{\partial b} \end{bmatrix} \]
+\[ {\bf P}_{(a,b)\rightarrow(c,d)} \equiv \begin{bmatrix} P_{ca} & P_{cb} \\ P_{da} & P_{db} \end{bmatrix} \equiv \begin{bmatrix} \frac{\partial c}{\partial a} & \frac{\partial c}{\partial b} \\[5 pt] \frac{\partial d}{\partial a} & \frac{\partial d}{\partial b} \end{bmatrix} \]
 \pagebreak
 
 $\chi$
@@ -72,7 +72,7 @@ $(x,y)\rightarrow(\theta,\phi)$
 $\pi - \chi$
 \pagebreak
 
-\[ {\bf P}_\text{pa} = \begin{bmatrix} \cos\left(\pi - \chi\right) & -\sin\left(\pi - \chi\right) \\ \sin\left(\pi - \chi\right) & \cos\left(\pi - \chi\right) \end{bmatrix} = \begin{bmatrix} -\cos\chi & -\sin\chi \\ \sin\chi & -\cos\chi \end{bmatrix}. \]
+\[ {\bf P}_\text{pa} = \begin{bmatrix} P_{\theta x} & P_{\theta y} \\ P_{\phi x} & P_{\phi y} \end{bmatrix} = \begin{bmatrix} \cos\left(\pi - \chi\right) & -\sin\left(\pi - \chi\right) \\ \sin\left(\pi - \chi\right) & \cos\left(\pi - \chi\right) \end{bmatrix} = \begin{bmatrix} -\cos\chi & -\sin\chi \\ \sin\chi & -\cos\chi \end{bmatrix}. \]
 \pagebreak
 
 \[ \tan \chi = \frac{\cos \lambda \sin H}{\sin\lambda \cos x - \cos \lambda \sin x \cos H}, \]
@@ -87,10 +87,55 @@ $H$
 $\lambda_\text{MWA} = -0.4660608448386394$
 \pagebreak
 
-${\bf J}$
+$N_t$
+\pagebreak
+
+$N_f$
+\pagebreak
+
+$N_a$
+\pagebreak
+
+$N_p$
 \pagebreak
 
 ${\bf D}$
+\pagebreak
+
+\[ N_a \times N_f \times N_p \times N_p, \]
+\pagebreak
+
+$D_{a,f,p_1,p_2}$
+\pagebreak
+
+\[ {\bf e} = \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]
+\pagebreak
+
+\[ {\bf J} = \begin{bmatrix} J_{xx} & J_{xy} \\ J_{yx} & J_{yy} \end{bmatrix}. \]
+\pagebreak
+
+$i$
+\pagebreak
+
+$N_i = N_a \times N_p$
+\pagebreak
+
+$\{I, Q, U, V\}$
+\pagebreak
+
+$N_s$
+\pagebreak
+
+$N_d = 16$
+\pagebreak
+
+$N_b$
+\pagebreak
+
+$N_d$
+\pagebreak
+
+${\bf J}$
 \pagebreak
 
 ${\bf B}$
@@ -118,6 +163,9 @@ ${\bf v}$
 \pagebreak
 
 \[ {\bf e} = {\bf J}^{-1}{\bf v}. \]
+\pagebreak
+
+\[ {\bf J} = {\bf D}{\bf B}, \]
 \pagebreak
 
 ${\bf J}_d$
@@ -162,19 +210,7 @@ ${\bf B}_\text{hb}$
 \[ {\bf B} = {\bf B}_\text{hb}{\bf P}_\text{pa} = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix} = \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix} \]
 \pagebreak
 
-\[ \begin{aligned} {\bf v} &= {\bf J}{\bf e} \\ {\bf v} &= {\bf D} {\bf B}_\text{hb} {\bf P}_\text{pa} {\bf e} \\ \begin{bmatrix} v_q \\ v_p \end{bmatrix} &= \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix} \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix} \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix} \end{aligned} \]
-\pagebreak
-
-\[ \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}. \]
-\pagebreak
-
-\[ \begin{aligned} \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix} &\rightarrow \begin{bmatrix} 4 & 3 \\ 2 & 1 \end{bmatrix} \\ \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix} &\rightarrow \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix} \end{aligned} \]
-\pagebreak
-
-${\bf B}_\text{hp}$
-\pagebreak
-
-$(\theta,\phi)\rightarrow(q,p)$
+\[ {\bf e}_f = \frac{1}{N_a} \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}, \]
 \pagebreak
 
 $a$
@@ -183,10 +219,49 @@ $a$
 $f$
 \pagebreak
 
-\[ {\bf e}_f = \sum_a e^{i\varphi_{a,f}} {\bf J}_{a,f}^{-1} {\bf v}_{a,f}, \]
+$\varphi$
 \pagebreak
 
-$\varphi_f$
+${\bf J}_{a,f}^{-1}$
+\pagebreak
+
+${\bf v}_{a,f}$
+\pagebreak
+
+$e^{i\varphi_{a,f}})$
+\pagebreak
+
+${\bf D}_a$
+\pagebreak
+
+${\bf B}_{a,f}$
+\pagebreak
+
+\[ {\bf J}_{a,f} = {\bf D}_a {\bf B}_{a,f} \]
+\pagebreak
+
+${\bf B}_f$
+\pagebreak
+
+${\bf J}^{-1}$
+\pagebreak
+
+\[ \tilde{\bf e}_{a,f} = {\bf J}^{-1}_{a,f} {\bf v}_{a,f}. \]
+\pagebreak
+
+$e^{i\varphi}$
+\pagebreak
+
+\[ {\bf e}_{a,f} = e^{i\varphi_f} \tilde{\bf e}_{a,f}. \]
+\pagebreak
+
+\[ {\bf e}_f = \frac{1}{N_a}\sum_a \tilde{\bf e}_{a,f}. \]
+\pagebreak
+
+\[ {\bf e}{\bf e}^\dagger = \begin{bmatrix} e_x e_x^\ast & e_x e_y^\ast \\ e_y e_x^\ast & e_y e_y^\ast \end{bmatrix} = \frac12 \begin{bmatrix} I + Q & U + Vi \\ U - Vi & I - Q \end{bmatrix} \]
+\pagebreak
+
+\[ \frac12 \begin{bmatrix} I + Q & U + Vi \\ U - Vi & I - Q \end{bmatrix} = {\bf e}{\bf e}^\dagger - \sum_a {\bf e}_a {\bf e}_a^\dagger. \]
 \pagebreak
 
 $D$
@@ -195,7 +270,31 @@ $D$
 $(Q,P)$
 \pagebreak
 
-\[\begin{bmatrix} QQ & QP \\ PQ & QQ \end{bmatrix}.\]
+\[\begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}.\]
+\pagebreak
+
+$(P,Q)$
+\pagebreak
+
+\[ \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix} \rightarrow \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix} \]
+\pagebreak
+
+${\bf J}_m$
+\pagebreak
+
+${\bf J}_f$
+\pagebreak
+
+${\bf J}_\text{ref}$
+\pagebreak
+
+\[ \begin{aligned} {\bf J} &= \begin{bmatrix} J_0 & J_1 \\ J_2 & J_3 \end{bmatrix}, & {\bf J}_\text{ref} &= \begin{bmatrix} J_{\text{ref},0} & J_{\text{ref},1} \\ J_{\text{ref},2} & J_{\text{ref},3} \end{bmatrix}, \end{aligned} \]
+\pagebreak
+
+\[ \begin{bmatrix} J_0\frac{|J_{\text{ref},0}|}{J_{\text{ref},0}} & J_1\frac{|J_{\text{ref},1}|}{J_{\text{ref},1}} \\ J_2\frac{|J_{\text{ref},2}|}{J_{\text{ref},2}} & J_3\frac{|J_{\text{ref},3}|}{J_{\text{ref},3}}. \end{bmatrix} \]
+\pagebreak
+
+\[ {\bf J} = \begin{bmatrix} J_0 & J_1 \\ J_2 & J_3 \end{bmatrix} \rightarrow \begin{bmatrix} J_0 & 0 \\ 0 & J_3 \end{bmatrix}. \]
 \pagebreak
 
 $z$
@@ -204,10 +303,73 @@ $z$
 $z^N = 1$
 \pagebreak
 
-${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$
+$v$
 \pagebreak
 
-${\bf J}^{-1}$
+$N_t \times N_f \times N_i$
+\pagebreak
+
+$I$
+\pagebreak
+
+$N_t \times N_f$
+\pagebreak
+
+\[ I_{t,f} = \sum_i v_{t,f,i}^\dagger v_{t,f,i}. \]
+\pagebreak
+
+$\langle\langle\langle(N_f, N_t), N_i\rangle\rangle\rangle.$
+\pagebreak
+
+\[ I_{t,f} = \sum_a {\bf v}_{t,f,a}^\dagger {\bf v}_{t,f,a}. \]
+\pagebreak
+
+$N_a \times N_f \times N_p \times N_p$
+\pagebreak
+
+${\bf J}^{-1}{\bf v}$
+\pagebreak
+
+$N_t \times N_f \times N_a$
+\pagebreak
+
+\[ \tilde{\bf e}_{t,f,a} = {\bf J}^{-1}_{a,f}{\bf v}_{t,f,a}. \]
+\pagebreak
+
+$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.$
+\pagebreak
+
+$N_a \times N_f$
+\pagebreak
+
+$N_t \times N_f \times N_p$
+\pagebreak
+
+$N_t \times N_s \times N_f$
+\pagebreak
+
+\[ {\bf e}_{t,f} = \frac{1}{N_a} \sum_a e^{i\varphi} \tilde{\bf e}_{t,f,a}. \]
+\pagebreak
+
+$S = [I, Q, U, V]$
+\pagebreak
+
+${\bf S}$
+\pagebreak
+
+\[ \hat{\bf S} = \frac{{\bf S} - \text{offset}}{\text{scale}}, \]
+\pagebreak
+
+\begin{align*} \text{scale} &= \frac{S_\text{max} - S_\text{min}}{256} \\ \text{offset} &= S_\text{min} + 0.5 \times \text{scale}. \end{align*}
+\pagebreak
+
+$\langle\langle\langle N_b,(N_f, N_s)\rangle\rangle\rangle.$
+\pagebreak
+
+${\bf J}^{-1} {\bf v}$
+\pagebreak
+
+${\bf J}^{-1} = \left({\bf D}{\bf B}\right)^{-1}$
 \pagebreak
 
 \[ \begin{aligned} {\bf e} &= {\bf J}^{-1} {\bf v}, \\ \begin{bmatrix} e_x \\ e_y \end{bmatrix} &= \begin{bmatrix} J_{xq} & J_{xp} \\ J_{yq} & J_{yp} \end{bmatrix} \begin{bmatrix} v_q \\ v_p \end{bmatrix}. \end{aligned} \]
@@ -217,18 +379,6 @@ ${\bf J}^{-1}$
 \pagebreak
 
 $(N_a \times N_f \times N_p \times N_p)$
-\pagebreak
-
-$N_a$
-\pagebreak
-
-$N_f$
-\pagebreak
-
-$N_p$
-\pagebreak
-
-$e^{i\varphi}$
 \pagebreak
 
 ${\bf M}_\text{in}$
@@ -280,6 +430,99 @@ ${\bf H} = {\bf M}^\dagger$
 \pagebreak
 
 ${\bf C} = {\bf M}{\bf M}^\dagger$
+\pagebreak
+
+${\bf J}{\bf v}$
+\pagebreak
+
+\[ X_k[m] \sum_n^{K-1} b_m[n] e^{-2\pi jkn/K}, \]
+\pagebreak
+
+\[ b_m[n] = \sum_\rho^{P-1} h[K\rho - n] x[n + mM - K\rho]. \]
+\pagebreak
+
+$X$
+\pagebreak
+
+$h$
+\pagebreak
+
+$b$
+\pagebreak
+
+$\text{nspectra}$
+\pagebreak
+
+$K$
+\pagebreak
+
+$x[n]$
+\pagebreak
+
+$h[n]$
+\pagebreak
+
+$b[n]$
+\pagebreak
+
+$ \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle $
+\pagebreak
+
+\[ \begin{cases} \left\lfloor \frac{x}{2^{14}} + 0.5 \right\rfloor, & x > 0, \\ \left\lfloor \frac{x}{2^{14}} \right\rfloor, & x \le 0. \end{cases} \]
+\pagebreak
+
+$\langle\langle\langle (\text{nspectra} \times I), K \rangle\rangle\rangle$
+\pagebreak
+
+$\langle\langle\langle(\text{nspectra},K),I\rangle\rangle\rangle$
+\pagebreak
+
+$M = K$
+\pagebreak
+
+\[ \hat{x}[n] = \frac{1}{K} \sum_m f[n - mM] \sum_{k=0}^{K-1} X_k[m]\,e^{2\pi jkn/K} \]
+\pagebreak
+
+$X_k[m]$
+\pagebreak
+
+$f[n]\,e^{2\pi jkn/K}$
+\pagebreak
+
+$N = KP$
+\pagebreak
+
+$\hat{x}[n]$
+\pagebreak
+
+\[ \text{result}[i] = f[n] \times exp{2\pi jk/K}, \]
+\pagebreak
+
+$n = i \% N$
+\pagebreak
+
+$k = i / N$
+\pagebreak
+
+$N$
+\pagebreak
+
+\[ {\bf B} = \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix}. \]
+\pagebreak
+
+$N_b \times N_a \times N_p \times N_p$
+\pagebreak
+
+$N_i \times N_d$
+\pagebreak
+
+$N_i$
+\pagebreak
+
+${\bf P}_\text{pa}$
+\pagebreak
+
+\[ {\bf P}_\text{pa} = \begin{bmatrix} P_{\theta x} & P_{\theta y} \\ P_{\phi x} & P_{\phi y} \end{bmatrix}. \]
 \pagebreak
 
 \end{document}
