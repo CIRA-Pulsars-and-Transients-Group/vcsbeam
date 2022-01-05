@@ -253,6 +253,7 @@ Functions</h2></td></tr>
 <p>Populates a PSRFITS struct with data derived from the observation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
     <tr><td class="paramname">pf</td><td>The PSRFITS struct to be populated </td></tr>
     <tr><td class="paramname">max_sec_per_file</td><td>The number of seconds written to each output PSRFITS file </td></tr>
     <tr><td class="paramname">outpol</td><td>Either 1 (for Stokes I only) or 4 (for full Stokes) </td></tr>
@@ -263,7 +264,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <p>This function is designed for PSRFITS files containing a single coarse channel.</p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000005">Todo:</a></b></dt><dd>Merge with <a class="el" href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98" title="Populates a PSRFITS struct with data derived from the observation.">populate_spliced_psrfits_header()</a> to avoid code duplication. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo:</a></b></dt><dd>Merge with <a class="el" href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98" title="Populates a PSRFITS struct with data derived from the observation.">populate_spliced_psrfits_header()</a> to avoid code duplication. </dd></dl>
 
 </div>
 </div>
@@ -326,6 +327,7 @@ Functions</h2></td></tr>
 <p>Populates a PSRFITS struct with data derived from the observation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
     <tr><td class="paramname">pf</td><td>The PSRFITS struct to be populated </td></tr>
     <tr><td class="paramname">max_sec_per_file</td><td>The number of seconds written to each output PSRFITS file </td></tr>
     <tr><td class="paramname">outpol</td><td>Either 1 (for Stokes I only) or 4 (for full Stokes) </td></tr>
@@ -336,7 +338,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <p>This function is designed for PSRFITS files containing multiple coarse channels.</p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000004">Todo:</a></b></dt><dd>Change the name to conform to standard. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000005">Todo:</a></b></dt><dd>Change the name to conform to standard. </dd></dl>
 
 </div>
 </div>
@@ -399,6 +401,7 @@ Functions</h2></td></tr>
 <p>Initialises a struct for managing multiple PSRFITS files via MPI processes. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
     <tr><td class="paramname">mpf</td><td>A pointer to the new struct to be initialised </td></tr>
     <tr><td class="paramname">max_sec_per_file</td><td>The number of seconds written to each output PSRFITS file </td></tr>
     <tr><td class="paramname">nstokes</td><td>Either 1 (for Stokes I only) or 4 (for full Stokes) </td></tr>

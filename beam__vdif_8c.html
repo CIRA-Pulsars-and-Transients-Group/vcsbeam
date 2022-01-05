@@ -154,16 +154,11 @@ Functions</h2></td></tr>
 <p>Converts floats to 8-bit integers. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">f</td><td>The (source) buffer of floats </td></tr>
-    <tr><td class="paramname">n</td><td>The number of floats in <code>f</code> </td></tr>
-    <tr><td class="paramname">min</td><td>The smallest allowed float </td></tr>
-    <tr><td class="paramname">max</td><td>The largest allowed float </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="retval"><dt>Return values</dt><dd>
-  <table class="retval">
-    <tr><td class="paramname">i</td><td>The (destination) buffer of 8-bit integers </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">f</td><td>The (source) buffer of floats </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">n</td><td>The number of floats in <code>f</code> </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">min</td><td>The smallest allowed float </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">max</td><td>The largest allowed float </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">i</td><td>The (destination) buffer of 8-bit integers </td></tr>
   </table>
   </dd>
 </dl>
@@ -241,7 +236,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo:</a></b></dt><dd>Make sure that the header file is unneccesarily re-written each time this function is called. If so, put this bit somewhere more sensible. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000007">Todo:</a></b></dt><dd>Make sure that the header file is unneccesarily re-written each time this function is called. If so, put this bit somewhere more sensible. </dd></dl>
 
 </div>
 </div>
@@ -319,6 +314,7 @@ Functions</h2></td></tr>
 <p>Populates a VDIF header with data derived from the observation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
     <tr><td class="paramname">beam_geom_vals</td><td>A <code>beam_geom</code> struct containing pointing information </td></tr>
   </table>
   </dd>

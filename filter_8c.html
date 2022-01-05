@@ -150,7 +150,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>A list of all complex numbers <img class="formulaInl" alt="$z$" src="form_95.svg"/> such that <img class="formulaInl" alt="$z^N = 1$" src="form_96.svg"/>. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>A list of all complex numbers <img class="formulaInl" alt="$z$" src="form_98.svg"/> such that <img class="formulaInl" alt="$z^N = 1$" src="form_99.svg"/>. </dd></dl>
 
 </div>
 </div>
@@ -195,13 +195,14 @@ Functions</h2></td></tr>
 <p>Load a set of filter coefficients. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">filtername</td><td>String specifying a filter. There should be a corresponding file in the RUNTIME_DIR called &lt;filtername&gt;.dat. </td></tr>
+    <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
+    <tr><td class="paramname">filtername</td><td>String specifying a filter. There should be a corresponding file in the RUNTIME_DIR called <code>&lt;filtername&gt;.dat</code>. </td></tr>
     <tr><td class="paramname">type</td><td>Either ANALYSIS_FILTER or SYNTHESIS_FILTER </td></tr>
     <tr><td class="paramname">nchans</td><td>The number of channels that this filter will be applied to. For both ANALYSIS and SYNTHESIS filters, this should be the number of ANALYSIS channels.</td></tr>
   </table>
   </dd>
 </dl>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000007">Todo:</a></b></dt><dd>Change nchans so that it uses <code>vm&rarr;nfine_chans</code> </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000008">Todo:</a></b></dt><dd>Change nchans so that it uses <code>vm&rarr;nfine_chans</code> </dd></dl>
 
 </div>
 </div>
@@ -240,6 +241,7 @@ Functions</h2></td></tr>
 <p>Scale the filter coefficients by constant factor. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
     <tr><td class="paramname">type</td><td>Either ANALYSIS_FILTER or SYNTHESIS_FILTER </td></tr>
     <tr><td class="paramname">scale_factor</td><td>The scaling factor </td></tr>
   </table>
