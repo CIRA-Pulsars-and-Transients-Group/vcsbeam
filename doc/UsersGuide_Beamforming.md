@@ -32,7 +32,7 @@ Summary table for downloading instructions:
 | ------ | ---- |
 | [Documentation](https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-Downloadingdatadownloading) | [Documentation](https://wiki.mwatelescope.org/display/MP/Data+Access) |
 
-## Obtaining a calibration solution {#usersguidecalibration}
+## Obtaining a calibration solution
 
 Which calibration software to use (RTS vs Hyperdrive) depends on whether the data is Legacy or MWAX, and whether it is VCS or already-correlated data (e.g. a dedicated calibration observation).
 The following table summarises the possibilities:
@@ -47,6 +47,10 @@ The following table summarises the possibilities:
 
 The links in the table will take you to the corresponding documentation.
 Apart from [the MWA Telescope Wiki][Hyperdrive] (same link as given in the table), Hyperdrive also has some documentation on [its Github main page](https://github.com/MWATelescope/mwa_hyperdrive), and [its Github Wiki page](https://github.com/MWATelescope/mwa_hyperdrive/wiki).
+
+The [RTS][RTS] link describes a workflow for preparing a calibration solution using the RTS.
+The equivalent workflow for Hyperdrive is found at the page [Preparing a calibration solution](@ref usersguidecalibration).
+However, it should be noted that the visualisation tools used for Hyperdrive can also be used for RTS solutions.
 
 ## Beamforming
 
@@ -91,7 +95,7 @@ To find the RA and Dec for one or more specific pulsars, use [the ATNF database]
 psrcat -c "raj decj" -x B0031-07 J0437-4715 | awk '{print $1, $4}' > pointings.txt
 ```
 
-### Choosing the output format
+### Output options
 
 VCSBeam currently supports two output file formats:
 
@@ -109,11 +113,129 @@ The SMART survey uses PRESTO as part of its search pipeline.
 VCSBeam can output either PSRFITS or VDIF formats, or both, by including the `-p` (PSRFITS) and `-v` (VDIF) options.
 If neither `-p` nor `-v` is explicitly given, the default behaviour is to output only PSRFITS.
 
+By default, PSRFITS files are written out with 200 seconds per file.
+This behaviour can be altered with the `-t` option.
+
 #### Channelisation options
+
+Currently, only coarse (1.28 MHz) channels and fine (10 kHz) channels are supported, but this will eventually be generalised to allow arbitrary channelisation.
 
 Internally, VCSBeam always performs the beamforming operation on fine (10 kHz) channels.
 Therefore, conversion to fine channels is necessary if the input data are MWAX coarse channels.
 Conversion back to coarse channels is performed if VDIF output is requested.
+This is illustrated in the following diagram (as well as in table form in the docstring for the function vmSetOutputChannelisation()):
 
 \dotfile channelisation.dot
 
+VCSBeam allows the filters used for the analysis and synthesis PFBs to be chosen by the user, via the options `-A` and `-S`, respectively.
+The available filters are supplied in [the pfb_filter folder](https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/tree/main/pfb_filter), which are copied to `RUNTIME_DIR` during installation.
+If no filters are explicitly given, the default filters are used: `FINEPFB` for the analysis filter, `LSQ12` for the synthesis filter.
+`FINEPFB` is the same filter that was implemented on Legacy MWA FPGAs.
+
+Custom filters can also be used by placing the filter coefficients in a file with the name `<FILTER_NAME>.dat` and placing the file in `RUNTIME_DIR`.
+Only analysis and synthesis filters with 12 taps (and therefore 12x128 = 1536 coefficients) have been tested, and behaviour for filters with different lengths is currently undefined.
+Additionally, [make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) currently only supports critically-sampled PFBs, although this will also be generalised in the future.
+
+**WARNING**: the analysis filter coefficients **MUST** be integers.
+A scaling factor is applied in order to ensure that the output fits the VDIF dynamic range.
+Therefore, if a custom analysis filter is used, it is highly recommended to scale the coefficients so that (1) they are integers, and (2) they are normalised in the same way as `FINEPFB` (i.e. they sum to 15106424).
+
+##### Fine channel sample formats (SMART survey option)
+
+[McSweeney2020]: https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/mwa-tiedarray-processing-iii-microsecond-time-resolution-via-a-polyphase-synthesis-filter/C76837FE84A1DCFAA696C9AC10C44F2D
+
+The Legacy MWA pdemoted the output of the analysis PFB to (4+4)bit complex integers. While this saves space, it marginally degrades the precision of the beamformer output.
+As the fine channelisation of MWAX data is now done entirely in (GPU) memory, the demotion is no longer necessary; however, to ensure that the SMART survey data (which spans both Legacy and MWAX phases) is processed in a homogeneous way, an option to replicate the same demotion step prior to beamforming, the `-s` option is provided.
+It should be noted that this demotion step implements an "asymmetric rounding" scheme, which is described in the Appendix of [McSweeney et al. (2020)][McSweeney2020].
+Therefore, the use of this option is not recommended, outside of the express purpose of producing fine channels equivalent to MWA Phase 1 & 2.
+
+### Input options
+
+The default behaviour of [make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) is to look for the input files in the current working directory, and to process all time steps, and as many coarse channels as MPI processes are used.
+If the input data are in another directory, this directory can be passed to the `-d` option.
+
+#### Choosing which timesteps to process
+
+You can set the range of timesteps to be processed via the `-b` and `-T` options.
+
+`-b` is the beginning time, and can be either an absolute time (GPS second) or a relative time.
+To indicate a relative time, the first character of the argument must be either '`+`' or '`-`'.
+If it is `'+'`, then the number is considered an offset from the first "good" second, where "good" is defined in the metafits file as the first second after the "quack time" has elapsed.
+If it is `'-'`, then the number is considered an offset from the *end* of the observation, with `-1` indicating the last second (similar to Python-style indexing).
+The default value for `-b` is `+0`.
+
+`-T` is the number of seconds of data to process.
+If not supplied, it will process all available seconds from the specified beginning time onwards.
+
+\todo There might be a bug whereby using all the defaults crashes because the default total number of seconds to be processed is more than the number of seconds after the "good" time starts.
+
+#### Choosing which coarse channels to process
+
+You can set the range of coarse channels to be processed via the `-f` option and by setting the number of MPI processes, with one coarse channel processed per process.
+
+`-f` is the lowest coarse channel to be processed.
+It can either be an MWA receiver channel number (equal to the coarse channel centre frequency divided by 1.28 MHz), or a relative receiver channel number.
+To indicate a relative channel number, the first character of the argument must be either '`+`' or '`-`'.
+If it is `'+'`, then the number is considered an offset from the lowest coarse channel.
+If it is `'-'`, then the number is considered an offset from the highest coarse channel plus one, with `-1` therefore indicating the highest channel (similar to Python-style indexing).
+The default value is `+0`.
+
+The number of channels processed is equal to the number of MPI processes chosen.
+For example,
+```
+mpirun -np 6 make_mwa_tied_array_beam ...
+```
+will process the lowest 6 coarse channels in the observation,
+```
+mpirun -np 6 make_mwa_tied_array_beam -f -6 ...
+```
+will process the highest 6 channels, and
+```
+mpirun -np 6 make_mwa_tied_array_beam -f 115 ...
+```
+will process channels 115, 116, 117, 118, 119, and 120.
+
+For VDIF output, each coarse channel is written to a separate file, so there is no difference between running, e.g.
+```
+mpirun -np 24 make_mwa_tied_array_beam -v ...
+```
+and
+```
+mpirun -np 1 make_mwa_tied_array_beam -v -f +0 ...
+mpirun -np 1 make_mwa_tied_array_beam -v -f +1 ...
+mpirun -np 1 make_mwa_tied_array_beam -v -f +2 ...
+...
+```
+However, for PSRFITS output, the coarse channels are spliced together before being written out.
+Therefore, running
+```
+mpirun -np 24 make_mwa_tied_array_beam -p ...
+```
+will result in a single PSRFITS file with all 24 coarse channels included, whereas running
+```
+mpirun -np 1 make_mwa_tied_array_beam -p -f +0 ...
+mpirun -np 1 make_mwa_tied_array_beam -p -f +1 ...
+mpirun -np 1 make_mwa_tied_array_beam -p -f +2 ...
+...
+```
+will result in 24 separate PSRFITS files, one per coarse channel.
+The advantage to running a single multi-process MPI job is that splicing is done automatically.
+The disadvantage is that this can potentially lead to slower wall time completion of the beamforming job, since the splicing occurs after each second of data, requiring that the MPI processes are synchronised after processing each second of data.
+However, this is unlikely to affect the wall time significantly (although this remains to be benchmarked) since the splicing is performed synchronously with the reading in of the subsequent second's worth of data, which is believed to be the current bottleneck for throughput.
+
+### Calibration options
+
+[make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) will expect an RTS style solution unless the `-O` option is explicitly given (this default behaviour may change in the future as Hyperdrive eventually supercedes the RTS as the primary calibration tool used for VCS data).
+
+The calibration solutions provided by the RTS or Hyperdrive can be further manipulated in several ways before they are applied to the input voltages.
+Many of these manipulates are still experimental, and mostly affect the fidelity of the polarisation response, whose verification is still a work in progress.
+
+#### Flagging extra tiles
+
+Extra tiles can be flagged by passing a text file containing TileNames to be flagged to the `-F` option.
+(To decide *which* tiles need flagging, and how to prepare this file, see [Preparing a calibration solution](@ref usersguidecalibration).)
+
+#### Including the Bandpass solutions
+
+The `-B` option signals that the fine channel calibration solutions should be used.
+This only applies to the RTS solutions, where the solutions are separated out into "coarse channel" (DIJones) and "fine channel" (Bandpass) solutions (see.

@@ -16,6 +16,7 @@ The source code for this software can be found [here](https://github.com/CIRA-Pu
    + [Overview](@ref usersguideoverview)
    + Workflows
      * [Beamforming](@ref usersguidebeamforming)
+     * [Preparing a calibration solution](@ref usersguidecalibration).
      * [Examples](@ref usersguideexamples)
    + Applications
      * [Fine PFB Offline](@ref applicationsfinepfboffline) -- Convert coarse channels to fine channels

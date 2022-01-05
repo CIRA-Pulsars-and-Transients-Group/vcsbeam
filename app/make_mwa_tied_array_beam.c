@@ -34,7 +34,6 @@ struct make_tied_array_beam_opts {
     // Output options
     bool               out_fine;         // Output fine channelised data (PSRFITS)
     bool               out_coarse;       // Output coarse channelised data (VDIF)
-    bool               emulate_legacy;   // Use the offline forward pfb if input data is MWAX
 
     // Calibration options
     char              *cal_metafits;     // Filename of the metafits file
@@ -384,10 +383,6 @@ void usage()
     printf( "\nCHANNELISATION OPTIONS\n\n"
             "\t-A, --analysis_filter=FILTER  Apply the named filter during fine channelisation (for MWAX only).\n"
             "\t                           [default: FINEPFB]\n"
-            "\t-e, --emulate-legacy       Emulate the legacy system by converting MWAX data into\n"
-            "\t                           VCS-recombined-style data using the offline forward fine\n"
-            "\t                           PFB. If the input data is already legacy data, this has\n"
-            "\t                           no effect [default: off]\n"
             "\t-s, --smart                Use legacy settings for fine channelisation [default: off]\n"
             "\t-S, --synth_filter=filter  Apply the named filter during high-time resolution synthesis.\n"
             "\t                           filter can be MIRROR or LSQ12.\n"
@@ -466,7 +461,6 @@ void make_tied_array_beam_parse_cmdline(
     opts->coarse_chan_str      = NULL;  // Absolute or relative coarse channel
     opts->out_fine             = false; // Output fine channelised data (PSRFITS)
     opts->out_coarse           = false; // Output coarse channelised data (VDIF)
-    opts->emulate_legacy       = false; // Emulate the legacy VCS system using the offline fine PFB
     opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
@@ -495,7 +489,6 @@ void make_tied_array_beam_parse_cmdline(
                 {"bandpass",        no_argument,       0, 'B'},
                 {"out-fine",        no_argument,       0, 'p'},
                 {"out-coarse",      no_argument,       0, 'v'},
-                {"emulate_legacy",  no_argument,       0, 'e'},
                 {"max_t",           required_argument, 0, 't'},
                 {"analysis_filter", required_argument, 0, 'A'},
                 {"synth_filter",    required_argument, 0, 'S'},
@@ -549,9 +542,6 @@ void make_tied_array_beam_parse_cmdline(
                 case 'd':
                     opts->datadir = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->datadir, optarg );
-                    break;
-                case 'e':
-                    opts->emulate_legacy = true;
                     break;
                 case 'f':
                     opts->coarse_chan_str = (char *)malloc( strlen(optarg) + 1 );

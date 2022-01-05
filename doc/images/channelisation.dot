@@ -5,8 +5,8 @@ digraph overview {
     legacy [ label="Legacy\n(fine channels)", fillcolor=green ];
     forwardpfb [ label="Analysis PFB (&rarr;fine channels)", shape=record ];
     inversepfb [ label="Synthesis PFB (&rarr;coarse channels)", shape=record ];
-    psrfits [ label="PSRFITS\nFull Stokes", fillcolor=green ];
-    vdif [ label="VDIF\nVoltages", fillcolor=green ];
+    psrfits [ label="PSRFITS\n(fine channels)", fillcolor=green ];
+    vdif [ label="VDIF\n(coarse channels)", fillcolor=green ];
     beamforming [ label="Beamforming", shape=record ];
 
     mwax -> forwardpfb;
@@ -15,4 +15,7 @@ digraph overview {
     beamforming -> psrfits;
     beamforming -> inversepfb;
     inversepfb -> vdif;
+
+    { rank=same; mwax; legacy; }
+    { rank=same; vdif; psrfits; }
 }
