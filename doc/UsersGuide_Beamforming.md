@@ -115,5 +115,5 @@ Internally, VCSBeam always performs the beamforming operation on fine (10 kHz) c
 Therefore, conversion to fine channels is necessary if the input data are MWAX coarse channels.
 Conversion back to coarse channels is performed if VDIF output is requested.
 
-\dotfile channlisation.dot
+\dotfile channelisation.dot
 
