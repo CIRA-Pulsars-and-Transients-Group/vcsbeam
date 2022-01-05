@@ -17,6 +17,8 @@ Green nodes represent data files that are stored on disk, until deleted by the u
 Grey boxes represent applications, some of which are provided by VCSBeam, and some of which are external applications.
 The links in the diagram take to you each application's documentation.
 
+________________
+
 ## Downloading the data
 
 The new ASVO system for downloading is almost, but not quite ready for general use.
@@ -31,6 +33,8 @@ Summary table for downloading instructions:
 | Legacy | MWAX |
 | ------ | ---- |
 | [Documentation](https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-Downloadingdatadownloading) | [Documentation](https://wiki.mwatelescope.org/display/MP/Data+Access) |
+
+________________
 
 ## Obtaining a calibration solution
 
@@ -52,9 +56,13 @@ The [RTS][RTS] link describes a workflow for preparing a calibration solution us
 The equivalent workflow for Hyperdrive is found at the page [Preparing a calibration solution](@ref usersguidecalibration).
 However, it should be noted that the visualisation tools used for Hyperdrive can also be used for RTS solutions.
 
+________________
+
 ## Beamforming
 
-### Set up
+________________
+
+### Setting up
 Once the data for the target observation have been downloaded, and a calibration solution obtained, the data may be beamformed.
 This is achieved by using the application `make_mwa_tied_array_beam`.
 
@@ -94,6 +102,8 @@ To find the RA and Dec for one or more specific pulsars, use [the ATNF database]
 ```
 psrcat -c "raj decj" -x B0031-07 J0437-4715 | awk '{print $1, $4}' > pointings.txt
 ```
+
+________________
 
 ### Output options
 
@@ -149,6 +159,8 @@ As the fine channelisation of MWAX data is now done entirely in (GPU) memory, th
 It should be noted that this demotion step implements an "asymmetric rounding" scheme, which is described in the Appendix of [McSweeney et al. (2020)][McSweeney2020].
 Therefore, the use of this option is not recommended, outside of the express purpose of producing fine channels equivalent to MWA Phase 1 & 2.
 
+________________
+
 ### Input options
 
 The default behaviour of [make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) is to look for the input files in the current working directory, and to process all time steps, and as many coarse channels as MPI processes are used.
@@ -158,13 +170,13 @@ If the input data are in another directory, this directory can be passed to the 
 
 You can set the range of timesteps to be processed via the `-b` and `-T` options.
 
-`-b` is the beginning time, and can be either an absolute time (GPS second) or a relative time.
+The argument of `-b` is the beginning time, which can be either an absolute time (GPS second) or a relative time.
 To indicate a relative time, the first character of the argument must be either '`+`' or '`-`'.
-If it is `'+'`, then the number is considered an offset from the first "good" second, where "good" is defined in the metafits file as the first second after the "quack time" has elapsed.
-If it is `'-'`, then the number is considered an offset from the *end* of the observation, with `-1` indicating the last second (similar to Python-style indexing).
-The default value for `-b` is `+0`.
+If it is '`+`', then the number is considered an offset from the first "good" second, where "good" is defined in the metafits file as the first second after the "quack time" has elapsed.
+If it is '`-`', then the number is considered an offset from the *end* of the observation, with `-1` indicating the last second (similar to Python-style indexing).
+The default value is `+0`.
 
-`-T` is the number of seconds of data to process.
+The argument of `-T` is the number of seconds of data to process.
 If not supplied, it will process all available seconds from the specified beginning time onwards.
 
 \todo There might be a bug whereby using all the defaults crashes because the default total number of seconds to be processed is more than the number of seconds after the "good" time starts.
@@ -173,11 +185,11 @@ If not supplied, it will process all available seconds from the specified beginn
 
 You can set the range of coarse channels to be processed via the `-f` option and by setting the number of MPI processes, with one coarse channel processed per process.
 
-`-f` is the lowest coarse channel to be processed.
+The argument of `-f` is the lowest coarse channel to be processed.
 It can either be an MWA receiver channel number (equal to the coarse channel centre frequency divided by 1.28 MHz), or a relative receiver channel number.
 To indicate a relative channel number, the first character of the argument must be either '`+`' or '`-`'.
-If it is `'+'`, then the number is considered an offset from the lowest coarse channel.
-If it is `'-'`, then the number is considered an offset from the highest coarse channel plus one, with `-1` therefore indicating the highest channel (similar to Python-style indexing).
+If it is '`+`', then the number is considered an offset from the lowest coarse channel.
+If it is '`-`', then the number is considered an offset from the highest coarse channel plus one, with `-1` therefore indicating the highest channel (similar to Python-style indexing).
 The default value is `+0`.
 
 The number of channels processed is equal to the number of MPI processes chosen.
@@ -223,14 +235,14 @@ The advantage to running a single multi-process MPI job is that splicing is done
 The disadvantage is that this can potentially lead to slower wall time completion of the beamforming job, since the splicing occurs after each second of data, requiring that the MPI processes are synchronised after processing each second of data.
 However, this is unlikely to affect the wall time significantly (although this remains to be benchmarked) since the splicing is performed synchronously with the reading in of the subsequent second's worth of data, which is believed to be the current bottleneck for throughput.
 
+________________
+
 ### Calibration options
 
 [make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) will expect an RTS style solution unless the `-O` option is explicitly given (this default behaviour may change in the future as Hyperdrive eventually supercedes the RTS as the primary calibration tool used for VCS data).
 
 The calibration solutions provided by the RTS or Hyperdrive can be further manipulated in several ways before they are applied to the input voltages.
 Many of these manipulates are still experimental, and mostly affect the fidelity of the polarisation response, whose verification is still a work in progress.
-
-
 
 #### Flagging extra tiles
 
@@ -240,4 +252,87 @@ Extra tiles can be flagged by passing a text file containing TileNames to be fla
 #### Including the Bandpass solutions
 
 The `-B` option signals that the fine channel calibration solutions should be used.
-This only applies to the RTS solutions, where the solutions are separated out into "coarse channel" (DIJones) and "fine channel" (Bandpass) solutions (see.
+This only applies to the RTS solutions, where the solutions are separated out into "coarse channel" (DIJones) and "fine channel" (Bandpass) solutions (see [Calibration](@ref calibration) for more details).
+
+The advantage of using the Bandpass solutions is that the solutions may be more accurate (i.e. more accurately reflect the true instrumental response) for individual fine channels, whereas the DIJones solutions, by themselves, only include a zeroth order (i.e. constant) approximation to the solution for the whole coarse channel.
+If the phases do not not change with respect to frequency too rapidly, then the DIJones solutions are probably a good enough approximation and do not degrade the S/N too much.
+If the phases *do* change rapidly for a given antenna, then that antenna's contribution near the coarse channel edges will be degraded to some extent.
+
+Ironically, the edge channels are usually flagged (by default) when producing the calibration solution in the first place.
+Thus, if the Bandpass solutions are used, the edge channels "remain" flagged during beamforming, so any signal present there will be lost anyway.
+
+#### Keeping the cross terms?
+
+By default, the off-diagonal ("cross") terms of the Jones matrices (PQ and QP) are set to zero, based on the premise that these terms are dominated by noise.
+This claim is tantamount to saying that there is negligible instrumental leakage between the two polarisations (P and Q).
+Anecdotally, the MWA imaging group claim that in their experience, the solutions produce better images when the cross terms are zeroed.
+
+The `-X` option can be used to retain the cross terms.
+
+#### Dividing a reference antenna
+
+The calibration solution is a Jones matrix whose absolute phase carries no physical signifance.
+Said another way, calibration solutions are unique only up to a complex unit scalar factor, so that if \f$\{{\bf J}_1, {\bf J}_2, \dots, {\bf J}_{N_a}\}\f$ is a set of calibration solutions for antennas \f$1, 2, \dots, N_a\f$, then \f$\{e^{i\theta}{\bf J}_1, e^{i\theta}{\bf J}_2, \dots, e^{i\theta}{\bf J}_{N_a}\}\f$ is an equivalent set of solutions, for any arbitrary \f$\theta\f$.
+Thus, the solutions produced by the RTS and/or Hyperdrive may "look" worse than they really are because the solutions for different frequency channels may have different arbitrary phases.
+Thus, in order to compare the solutions across frequency, it is useful to divide the elements of all Jones matrix by a unit complex number which has the same phase as an arbitrarily chosen reference antenna.
+This will make the reference antenna itself have a calibration solution consisting only of real-valued elements, but the phases of the other antennas can now be more easily evaluated for "goodness".
+
+\todo Finish the calibration section (and probably move it all to the Calibration workflow page).
+
+________________
+
+### Memory management
+
+With such large data sizes, it is possible that there is not enough memory on the GPU to carry all the necessary data arrays to process even one second of one coarse channel!
+(This is almost certainly true for desktop computers, but probably not true for supercomputers.)
+
+Currently, the amount of memory needed is not calculated (but will be implemented in future).
+If the required memory is larger than the available memory, this problem can be mitigated by using the `-n` option, which tells [make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) to process only 1/`nchunks` seconds of data at a time, where `nchunks` is the argument to `-n`.
+If `nchunks` does not divide evenly into the number of samples per second of fine channelised data (10,000), then it is automatically increased until it does.
+
+________________
+
+## Examples
+
+### MWAX observation of PSR B0031-07
+
+ 1. Get the metafits files for the target observation and the calibration observation:
+```
+wget -O 1320499816.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320499816
+wget -O 1320412440.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320412440
+```
+
+ 2. Generate a pointing file for B0031-07:
+```
+psrcat -c "raj decj" -x B0031-07 | awk '{print $1, $4}' > pointings.txt
+```
+which produces the file `pointings.txt`:
+```
+00:34:08.8703 -07:21:53.409
+```
+
+ 3. The calibration solution was obtained by the method given in the example on the [Calibration](@ref usersguidecalibration) page.
+During that process, it was discovered that tile HexE2 needed to be flagged, so a file `flagged_tilenames.txt` was created with the following single entry:
+```
+HexE2
+```
+Otherwise, the solutions already looked good enough, so that no further amendments were deemed necessary.
+
+ 4. After deciding how much of the data to process, and what I wanted for the output format, the final [make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) command is:
+```
+mpirun -np 24 make_mwa_tied_array_beam \      # Use 24 MPI processes to beamform 24 coarse channels and splice them together in the output PSRFITS
+    -m 1320499816.fits \                      # The target observation metafits file
+    -c 1320412440.fits \                      # The calibration observation metafits file
+    -C 1320412440_hyperdrive_solutions.bin \  # The calibration solution
+    -O \                                      # Signal that the above calibration solution is an Offringa-style solution
+    -d /astro/mwavcs/asvo/252057 \            # The location of the MWAX voltage (.sub) files
+    -P pointings.txt \                        # The pointings file
+    -b 1320499824 \                           # Start 8 seconds in
+    -T 592 \                                  # Process 592 seconds
+    -f 109 \                                  # Start at channel 109
+    -F flagged_tilenames.txt \                # The flagged channels file
+    -p \                                      # Output PSRFITS (10 kHz, full Stokes)
+    -R NONE \                                 # Do not divide through any reference tile
+    -U 0,0 \                                  # Do not apply any extra phase ramp
+    -X                                        # Keep the cross terms
+```

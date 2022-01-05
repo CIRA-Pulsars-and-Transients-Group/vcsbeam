@@ -3,8 +3,8 @@ digraph overview {
 
     mwax [ label="MWAX\n(coarse channels)", fillcolor=green ];
     legacy [ label="Legacy\n(fine channels)", fillcolor=green ];
-    forwardpfb [ label="Analysis PFB (&rarr;fine channels)", shape=record ];
-    inversepfb [ label="Synthesis PFB (&rarr;coarse channels)", shape=record ];
+    forwardpfb [ label="Analysis PFB\n(&rarr;fine channels)", shape=record ];
+    inversepfb [ label="Synthesis PFB\n(&rarr;coarse channels)", shape=record ];
     psrfits [ label="PSRFITS\n(fine channels)", fillcolor=green ];
     vdif [ label="VDIF\n(coarse channels)", fillcolor=green ];
     beamforming [ label="Beamforming", shape=record ];

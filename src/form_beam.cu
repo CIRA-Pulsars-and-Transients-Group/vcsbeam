@@ -626,6 +626,7 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
  * Renormalises the detected Stokes parameters and copies them into PSRFITS
  * structs, ready for frequency splicing.
  *
+ * @param vm The VCSBeam context struct
  * @param mpfs The MPI PSRFITS struct that manages the splicing operation.
  */
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
