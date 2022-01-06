@@ -2,19 +2,19 @@ digraph overview {
     node [ shape=cylinder, style="filled" ];
     //splines = curved;
 
-    targetobs [ label="Target\nObs", shape=circle, fixedsize=true, width=1.2 ];
-    calobs [ label="Calibration\nObs", shape=circle, fixedsize=true, width=1.2 ];
-    calvcs [ label="Is data VCS or\ncorrelated visibilities?", shape=diamond, fillcolor=yellow, fixedsize=true, width=2.5, height=1.2 ];
-    date [ label="Before\nSep 2021?", shape=diamond, fillcolor=yellow ];
-    date2 [ label="Before\nSep 2021?", shape=diamond, fillcolor=yellow ];
-    raw [ label="Fine channel\nvoltages (.raw)", fillcolor=green ];
-    sub [ label="Coarse channel\nvoltages (.sub)", fillcolor=green ];
-    dat [ label="Recombined\nvoltages (.dat)", fillcolor=green ];
-    vis [ label="Correlated\nvisibilities (.fits)", fillcolor=green ];
-    outputchannelisation [ label="Output\nchannelisation?", shape=diamond, fillcolor=yellow ];
-    psrfits [ label="PSRFITS\nFull Stokes", fillcolor=green ];
-    vdif [ label="VDIF\nVoltages", fillcolor=green ];
-    calsol [ label="Calibration solution\n(.bin or RTS)", fillcolor=green ];
+    targetobs [ label="Target\nObs", shape=circle, fixedsize=true, width=1.2, fillcolor=lightgreen ];
+    calobs [ label="Calibration\nObs", shape=circle, fixedsize=true, width=1.2, fillcolor=lightgreen ];
+    calvcs [ label="Is data VCS or\ncorrelated visibilities?", shape=diamond, fillcolor=lightgoldenrod1, fixedsize=true, width=2.5, height=1.2 ];
+    date [ label="Before\nSep 2021?", shape=diamond, fillcolor=lightgoldenrod1 ];
+    date2 [ label="Before\nSep 2021?", shape=diamond, fillcolor=lightgoldenrod1 ];
+    raw [ label="Fine channel\nvoltages (.raw)", fillcolor=lightskyblue ];
+    sub [ label="Coarse channel\nvoltages (.sub)", fillcolor=lightskyblue ];
+    dat [ label="Recombined\nvoltages (.dat)", fillcolor=lightskyblue ];
+    vis [ label="Correlated\nvisibilities (.fits)", fillcolor=lightskyblue ];
+    outputchannelisation [ label="Output\nchannelisation?", shape=diamond, fillcolor=lightgoldenrod1 ];
+    psrfits [ label="PSRFITS\nFull Stokes", fillcolor=lightskyblue ];
+    vdif [ label="VDIF\nVoltages", fillcolor=lightskyblue ];
+    calsol [ label="Calibration solution\n(.bin or RTS)", fillcolor=lightskyblue ];
     recombine [ label="recombine", shape=record, href="https://github.com/ICRAR/mwa-voltage.git", fontcolor=blue ];
     tiedarray [ label="make_mwa_tied_array_beam", shape=record, href="@ref applicationsmakemwatiedarraybeam", fontcolor=blue ];
     rts [ label="RTS/Hyperdrive", shape=record, href="@ref usersguidecalibration", fontcolor=blue ];
@@ -45,4 +45,5 @@ digraph overview {
     {rank = same; targetobs; calobs; }
     {rank = same; date; calvcs; }
     {rank = same; raw; sub;}
+    {rank = same; dat; calsol;}
 }
