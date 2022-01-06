@@ -10,7 +10,7 @@ Thus, the full calibration solution for each tile is represented by a \f$2\times
 \f[
     {\bf v} = {\bf J}{\bf e}.
 \f]
-The form of \f${\bf J}\f$ depends on the coordinate bases used for \f${\bf v}\f$ and \f${\bf e}\f$.
+The form of \f${\bf J}\f$ depends on the [coordinate bases](@ref coordinatesystems) used for \f${\bf v}\f$ and \f${\bf e}\f$.
 For example,
 \f[
     \begin{bmatrix} v_q \\ v_p \end{bmatrix}
@@ -35,7 +35,9 @@ where
 \f${\bf D}\f$ is obtained either from the Real Time System, or Hyperdrive.
 \f${\bf B}\f$ is obtained from Hyperbeam.
 
-## Real Time System (RTS) {#rts}
+## Obtaining the instrumental gains
+
+### Real Time System (RTS) {#rts}
 
 The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation.
 The solutions are given in two sets of files, called "DI_JonesMatrices_nodeCCC.dat" (hereafter, DIJones) and ``BandpassCalibration_nodeCCC.dat'' (hereafter, Bandpass), where CCC represents a coarse channel index.
@@ -48,7 +50,7 @@ The bases of these matrices are as follows:
     {\bf J}_b &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, &
     {\bf B}_\text{cal} &= \begin{bmatrix} B_{px} & B_{py} \\ B_{qx} & B_{qy} \end{bmatrix}.
 \f}
-If you want to apply these calibration solutions to the same observation, then you can set
+If you want to apply these calibration solutions to the same observation (an in particular, to the same calibrator source), then you can set
 \f[
     {\bf J} = {\bf J}_d
 \f]
@@ -65,9 +67,10 @@ The resulting instrumental gains matrix is in the basis
     {\bf D} = \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}.
 \f]
 
-## Hyperdrive {#hyperdrive}
+### Hyperdrive {#hyperdrive}
 
-Hyperdrive outputs the instrumental gains matrices (per tile per fine channel) in the "Offringa" format, described in [Offringa format](#offringa).
+Hyperdrive is the faster, better successor to the RTS.
+Hyperdrive can output the instrumental gains matrices (per tile per fine channel) in the "Offringa" format, described in [Offringa format](#offringa).
 The matrices are in the basis:
 \f[
     {\bf D} = \begin{bmatrix}
@@ -76,7 +79,9 @@ The matrices are in the basis:
     \end{bmatrix}.
 \f]
 
-## Hyperbeam {#hyperbeam}
+## Obtaining the primary beam model
+
+### Hyperbeam {#hyperbeam}
 
 The primary beam is obtained using [Hyperbeam](https://github.com/MWATelescope/mwa_hyperbeam), which is based on the FEE beam model described in [Sokolowski et al., 2017](https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#).
 This gives the \f${\bf B}\f$ matrix in the basis

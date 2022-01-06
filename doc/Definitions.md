@@ -2,7 +2,7 @@
 
 [TOC]
 
-## Coordinate systems
+## Coordinate systems {#coordinatesystems}
 
 There are three coordinate systems in use throughout VCSBeam:
  - Instrumental (\f$p\f$,\f$q\f$)
