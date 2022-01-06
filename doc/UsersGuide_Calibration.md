@@ -2,6 +2,11 @@
 
 [TOC]
 
+## Overview
+
+\dotfile calibration.dot
+_______________
+
 ## RTS vs Hyperdrive
 
 Which calibration software to use (RTS vs Hyperdrive) depends on whether the data is Legacy or MWAX, and whether it is VCS or already-correlated data (e.g. a dedicated calibration observation).

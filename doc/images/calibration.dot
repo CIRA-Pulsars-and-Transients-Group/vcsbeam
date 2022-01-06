@@ -1,0 +1,29 @@
+digraph overview {
+    node [ shape=cylinder, style="filled" ];
+    //splines = curved;
+
+    calobs [ label="Calibration\nObs", shape=circle, fixedsize=true, width=1.2, fillcolor=lightgreen ];
+    calvcs [ label="VCS or correlated\nVISibilities?", shape=diamond, fillcolor=lightgoldenrod1, fixedsize=true, width=2.5, height=1.2 ];
+    date2 [ label="Before\nSep 2021?", shape=diamond, fillcolor=lightgoldenrod1, fixedsize=true, width=2.5, height=1.2 ];
+    legacyvis [ label="(Headerless) correlated\nvisibilities (.fits)", fillcolor=lightskyblue ];
+    mwaxvis [ label="Correlated\nvisibilities (.fits)", fillcolor=lightskyblue ];
+    calsol [ label="Calibration\nsolution", fillcolor=lightskyblue ];
+    rts [ label="RTS", shape=record, href="https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-CalibratingwiththeRealTimeSystem(RTS)", fontcolor=blue ];
+    hyperdrive [ label="Hyperdrive", shape=record, href="https://wiki.mwatelescope.org/pages/viewpage.action?pageId=52068764", fontcolor=blue ];
+
+    offlinecorrlegacy [ label="(Legacy) offline_correlator", shape=record, href="@ref applicationsofflinecorrelator", fontcolor=blue ];
+    offlinecorrmwax [ label="MWAX Offline Correlator", shape=record, href="https://wiki.mwatelescope.org/display/MP/MWAX+Offline+Correlator", fontcolor=blue ];
+
+    calobs -> calvcs;
+    calvcs -> date2 [ label="VCS" ];
+    date2 -> offlinecorrlegacy [ xlabel="Yes" ];
+    date2 -> offlinecorrmwax [ xlabel="No" ];
+    offlinecorrlegacy -> legacyvis;
+    offlinecorrmwax -> mwaxvis;
+    calvcs -> mwaxvis [ label="VIS" ];
+    legacyvis -> rts;
+    mwaxvis -> rts;
+    mwaxvis -> hyperdrive;
+    rts -> calsol;
+    hyperdrive -> calsol;
+}
