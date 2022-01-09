@@ -27,6 +27,7 @@
 <table cellspacing="0" cellpadding="0">
  <tbody>
  <tr style="height: 56px;">
+  <td id="projectlogo"><img alt="Logo" src="logo_tiny.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">VCSBeam
    </div>
@@ -73,9 +74,13 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#rts">Real Time System (RTS)</a></li>
-<li class="level1"><a href="#hyperdrive">Hyperdrive</a></li>
-<li class="level1"><a href="#hyperbeam">Hyperbeam</a></li>
+<ul><li class="level1"><a href="#autotoc_md10">Obtaining the instrumental gains</a><ul><li class="level2"><a href="#rts">Real Time System (RTS)</a></li>
+<li class="level2"><a href="#hyperdrive">Hyperdrive</a></li>
+</ul>
+</li>
+<li class="level1"><a href="#autotoc_md11">Obtaining the primary beam model</a><ul><li class="level2"><a href="#hyperbeam">Hyperbeam</a></li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="textblock"><p><a class="anchor" id="md_Calibration"></a></p>
@@ -83,7 +88,7 @@ $(function() {
 <p>For the MWA, calibration solutions are modelled as a tile-dependent, linear transformation of two orthogonal polarisations. Thus, the full calibration solution for each tile is represented by a \(2\times2\) Jones matrix, \({\bf J}\), which is multiplied to the incident electric field, \({\bf e}\), to predict the measured voltages, \({\bf v}\). </p><p class="formulaDsp">
 \[ {\bf v} = {\bf J}{\bf e}. \]
 </p>
-<p> The form of \({\bf J}\) depends on the coordinate bases used for \({\bf v}\) and \({\bf e}\). For example, </p><p class="formulaDsp">
+<p> The form of \({\bf J}\) depends on the <a class="el" href="definitions.html#coordinatesystems">coordinate bases</a> used for \({\bf v}\) and \({\bf e}\). For example, </p><p class="formulaDsp">
 \[ \begin{bmatrix} v_q \\ v_p \end{bmatrix} = \begin{bmatrix} J_{qx} &amp; J_{qy} \\ J_{px} &amp; J_{py} \end{bmatrix} \begin{bmatrix} e_x \\ e_y \end{bmatrix}, \]
 </p>
 <p> In practise, of course, the inverse operations are used to reconstruct the electric field from the measured voltages: </p><p class="formulaDsp">
@@ -96,13 +101,15 @@ $(function() {
 <li>\({\bf D}\) represents the (direction independent) instrumental gains, and</li>
 <li>\({\bf B}\) represents the (direction dependent) tile beam response. \({\bf D}\) is obtained either from the Real Time System, or Hyperdrive. \({\bf B}\) is obtained from Hyperbeam.</li>
 </ul>
-<h1><a class="anchor" id="rts"></a>
-Real Time System (RTS)</h1>
+<h1><a class="anchor" id="autotoc_md10"></a>
+Obtaining the instrumental gains</h1>
+<h2><a class="anchor" id="rts"></a>
+Real Time System (RTS)</h2>
 <p>The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation. The solutions are given in two sets of files, called "DI_JonesMatrices_nodeCCC.dat" (hereafter, DIJones) and `&lsquo;BandpassCalibration_nodeCCC.dat&rsquo;' (hereafter, Bandpass), where CCC represents a coarse channel index. The DIJones files contain both the Jones matrices for each tile for the given coarse channel, \({\bf J}_d\), as well as the beam response matrix that was used by the RTS during calibration, \({\bf B}_\text{cal}\). To get the calibration solutions for the fine channels, one must multiply \({\bf J}_d\) on the right by the matrices in the Bandpass files, \({\bf J}_b\).</p>
 <p>The bases of these matrices are as follows: </p><p class="formulaDsp">
 \begin{align*} {\bf J}_d &amp;= \begin{bmatrix} J_{px} &amp; J_{py} \\ J_{qx} &amp; J_{qy} \end{bmatrix}, &amp; {\bf J}_b &amp;= \begin{bmatrix} J_{px} &amp; J_{py} \\ J_{qx} &amp; J_{qy} \end{bmatrix}, &amp; {\bf B}_\text{cal} &amp;= \begin{bmatrix} B_{px} &amp; B_{py} \\ B_{qx} &amp; B_{qy} \end{bmatrix}. \end{align*}
 </p>
-<p> If you want to apply these calibration solutions to the same observation, then you can set </p><p class="formulaDsp">
+<p> If you want to apply these calibration solutions to the same observation (an in particular, to the same calibrator source), then you can set </p><p class="formulaDsp">
 \[ {\bf J} = {\bf J}_d \]
 </p>
 <p> for coarse channel approximations, or, for the fine channel solutions, </p><p class="formulaDsp">
@@ -114,13 +121,15 @@ Real Time System (RTS)</h1>
 <p> The resulting instrumental gains matrix is in the basis </p><p class="formulaDsp">
 \[ {\bf D} = \begin{bmatrix} D_{pp} &amp; D_{pq} \\ D_{qp} &amp; D_{qq} \end{bmatrix}. \]
 </p>
-<h1><a class="anchor" id="hyperdrive"></a>
-Hyperdrive</h1>
-<p>Hyperdrive outputs the instrumental gains matrices (per tile per fine channel) in the "Offringa" format, described in <a href="#offringa">Offringa format</a>. The matrices are in the basis: </p><p class="formulaDsp">
+<h2><a class="anchor" id="hyperdrive"></a>
+Hyperdrive</h2>
+<p>Hyperdrive is the faster, better successor to the RTS. Hyperdrive can output the instrumental gains matrices (per tile per fine channel) in the "Offringa" format, described in <a href="#offringa">Offringa format</a>. The matrices are in the basis: </p><p class="formulaDsp">
 \[ {\bf D} = \begin{bmatrix} D_{qq} &amp; D_{qp} \\ D_{pq} &amp; D_{pp} \end{bmatrix}. \]
 </p>
-<h1><a class="anchor" id="hyperbeam"></a>
-Hyperbeam</h1>
+<h1><a class="anchor" id="autotoc_md11"></a>
+Obtaining the primary beam model</h1>
+<h2><a class="anchor" id="hyperbeam"></a>
+Hyperbeam</h2>
 <p>The primary beam is obtained using <a href="https://github.com/MWATelescope/mwa_hyperbeam">Hyperbeam</a>, which is based on the FEE beam model described in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/calibration-and-stokes-imaging-with-full-embedded-element-primary-beam-model-for-the-murchison-widefield-array/FBA84B9EB94000BD6258A8F75840C476#">Sokolowski et al., 2017</a>. This gives the \({\bf B}\) matrix in the basis </p><p class="formulaDsp">
 \[ {\bf B}_\text{hb} = \begin{bmatrix} B_{q\theta} &amp; B_{q\phi} \\ B_{p\theta} &amp; B_{p\phi} \end{bmatrix}. \]
 </p>

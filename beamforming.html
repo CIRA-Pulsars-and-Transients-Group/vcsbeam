@@ -27,6 +27,7 @@
 <table cellspacing="0" cellpadding="0">
  <tbody>
  <tr style="height: 56px;">
+  <td id="projectlogo"><img alt="Logo" src="logo_tiny.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">VCSBeam
    </div>
@@ -73,10 +74,10 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#autotoc_md11">Generating and applying the calibration solutions</a></li>
-<li class="level1"><a href="#autotoc_md12">Phasing up</a></li>
-<li class="level1"><a href="#autotoc_md13">Averaging the voltages</a></li>
-<li class="level1"><a href="#autotoc_md14">Detection (forming Stokes parameters)</a></li>
+<ul><li class="level1"><a href="#autotoc_md12">Generating and applying the calibration solutions</a></li>
+<li class="level1"><a href="#autotoc_md13">Phasing up</a></li>
+<li class="level1"><a href="#autotoc_md14">Averaging the voltages</a></li>
+<li class="level1"><a href="#autotoc_md15">Detection (forming Stokes parameters)</a></li>
 </ul>
 </div>
 <div class="textblock"><p><a class="anchor" id="md_Beamforming"></a></p>
@@ -102,7 +103,7 @@ $(function() {
 </ol>
 <p>For some operating modes, VCSBeam also performs <em>detection</em>, which means forming Stokes parameters, also described below.</p>
 <p>These steps are described more fully in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/abs/mwa-tiedarray-processing-i-calibration-and-beamformation/E9A7A9981AE9A935C9E08500CA6A1C1E">Ord et al., 2019</a>, but are discussed further in the following subsections.</p>
-<h1><a class="anchor" id="autotoc_md11"></a>
+<h1><a class="anchor" id="autotoc_md12"></a>
 Generating and applying the calibration solutions</h1>
 <p>The Jones matrix consists of a <em>direction independent</em> component, \({\bf D}_a\), and a <em>direction dependent</em> component, \({\bf B}_{a,f}\), such that </p><p class="formulaDsp">
 \[ {\bf J}_{a,f} = {\bf D}_a {\bf B}_{a,f} \]
@@ -117,7 +118,7 @@ Generating and applying the calibration solutions</h1>
 <p>The product obtained by multiplying \({\bf J}^{-1}\) to the voltage data is </p><p class="formulaDsp">
 \[ \tilde{\bf e}_{a,f} = {\bf J}^{-1}_{a,f} {\bf v}_{a,f}. \]
 </p>
-<h1><a class="anchor" id="autotoc_md12"></a>
+<h1><a class="anchor" id="autotoc_md13"></a>
 Phasing up</h1>
 <p>Phasing up refers to the process of accounting for the fact that each antenna will "see" an astrophysical signal arriving at a different time due to</p>
 <ol type="1">
@@ -127,12 +128,12 @@ Phasing up</h1>
 <p>Accounting for these time differences can be achieved either by a simple shift in the time domain, or, equivalently, the application of a phase ramp in the frequency domain, via the shift theorem. The latter is what's implemented in VCSBeam, as indicated by the \(e^{i\varphi}\) term in the expression above. Thus, the result of phasing up is </p><p class="formulaDsp">
 \[ {\bf e}_{a,f} = e^{i\varphi_f} \tilde{\bf e}_{a,f}. \]
 </p>
-<h1><a class="anchor" id="autotoc_md13"></a>
+<h1><a class="anchor" id="autotoc_md14"></a>
 Averaging the voltages</h1>
 <p>The final step is simply summing the voltages over all antennas. As long as the correct delays have been applied, summing the voltages will coherently combine any astrophysical signal arriving from the specified look-direction. The result is </p><p class="formulaDsp">
 \[ {\bf e}_f = \frac{1}{N_a}\sum_a \tilde{\bf e}_{a,f}. \]
 </p>
-<h1><a class="anchor" id="autotoc_md14"></a>
+<h1><a class="anchor" id="autotoc_md15"></a>
 Detection (forming Stokes parameters)</h1>
 <p>VCSBeam converts the summed voltages into Stokes parameters if the PSRFITS output format is requested. This is achieved by forming the <em>coherency matrix</em>: </p><p class="formulaDsp">
 \[ {\bf e}{\bf e}^\dagger = \begin{bmatrix} e_x e_x^\ast &amp; e_x e_y^\ast \\ e_y e_x^\ast &amp; e_y e_y^\ast \end{bmatrix} = \frac12 \begin{bmatrix} I + Q &amp; U + Vi \\ U - Vi &amp; I - Q \end{bmatrix} \]

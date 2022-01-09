@@ -27,6 +27,7 @@
 <table cellspacing="0" cellpadding="0">
  <tbody>
  <tr style="height: 56px;">
+  <td id="projectlogo"><img alt="Logo" src="logo_tiny.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">VCSBeam
    </div>
@@ -73,23 +74,23 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#autotoc_md3">Coordinate systems</a><ul><li class="level2"><a href="#autotoc_md4">Instrumental coordinates</a></li>
-<li class="level2"><a href="#autotoc_md5">Local sky coordinates</a></li>
-<li class="level2"><a href="#autotoc_md6">Celestial sky coordinates</a></li>
+<ul><li class="level1"><a href="#coordinatesystems">Coordinate systems</a><ul><li class="level2"><a href="#autotoc_md3">Instrumental coordinates</a></li>
+<li class="level2"><a href="#autotoc_md4">Local sky coordinates</a></li>
+<li class="level2"><a href="#autotoc_md5">Celestial sky coordinates</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#autotoc_md7">Coordinate transformations</a><ul><li class="level2"><a href="#parallacticangle">Parallactic angle correction</a></li>
+<li class="level1"><a href="#autotoc_md6">Coordinate transformations</a><ul><li class="level2"><a href="#parallacticangle">Parallactic angle correction</a></li>
 </ul>
 </li>
 <li class="level1"><a href="#datadimensions">Data dimensions</a></li>
-<li class="level1"><a href="#autotoc_md8">Comparison of notation in other documents</a><ul><li class="level2"><a href="#autotoc_md9">Coordinate systems</a></li>
-<li class="level2"><a href="#autotoc_md10">Jones matrices</a></li>
+<li class="level1"><a href="#autotoc_md7">Comparison of notation in other documents</a><ul><li class="level2"><a href="#autotoc_md8">Coordinate systems</a></li>
+<li class="level2"><a href="#autotoc_md9">Jones matrices</a></li>
 </ul>
 </li>
 </ul>
 </div>
 <div class="textblock"><p><a class="anchor" id="md_Definitions"></a></p>
-<h1><a class="anchor" id="autotoc_md3"></a>
+<h1><a class="anchor" id="coordinatesystems"></a>
 Coordinate systems</h1>
 <p>There are three coordinate systems in use throughout VCSBeam:</p><ul>
 <li>Instrumental ( \(p\), \(q\))</li>
@@ -99,18 +100,18 @@ Coordinate systems</h1>
 <div class="image">
 <img src="coords.png" alt="" width="800"/>
 </div>
- <h2><a class="anchor" id="autotoc_md4"></a>
+ <h2><a class="anchor" id="autotoc_md3"></a>
 Instrumental coordinates</h2>
 <p>This is a Cartesian coordinate system aligned with local (ground) compass directions. Positive \(p\) points towards local North, and positive \(q\) towards local East. The \(P\) polarisation refers to the physical set of dipoles parallel to the N-S line; the \(Q\) polarisation, to the E-W line.</p>
-<h2><a class="anchor" id="autotoc_md5"></a>
+<h2><a class="anchor" id="autotoc_md4"></a>
 Local sky coordinates</h2>
 <p>This is a spherical coordinate system defined with respect to a local observer. \(\theta\) is the <em>zenith angle</em>, i.e. a <em>colatitude</em>, with zenith itself therefore defined as \(\theta = 0\) and the horizon as \(\theta = \pi/2\). \(\phi\) is the <em>azimuth</em>, and we define \(\phi = 0\) in the North direction, with positive azimuth moving clockwise as viewed from above (i.e. N&rarr;E&rarr;S&rarr;W&rarr;N). Moreover, the <em>elevation</em> is denoted by the symbol \(\tilde{\theta}\), and is related to the zenith angle by </p><p class="formulaDsp">
 \[ \tilde{\theta} = \frac{\pi}{2} - \theta. \]
 </p>
-<h2><a class="anchor" id="autotoc_md6"></a>
+<h2><a class="anchor" id="autotoc_md5"></a>
 Celestial sky coordinates</h2>
 <p>This is a spherical coordinate system defined with respect to the celestial sphere. \(x\) is the <em>declination</em> (Dec) and \(y\) is the <em>right ascension</em> (RA).</p>
-<h1><a class="anchor" id="autotoc_md7"></a>
+<h1><a class="anchor" id="autotoc_md6"></a>
 Coordinate transformations</h1>
 <p>All coordinate transformations can be effected by applying the appropriate Jacobian matrix for the desired transformation. In this documentation, a boldface \({\bf P}\) will always be used to denote transformation matrices. For general coordinates \((a,b)\) and \((c,d)\), </p><p class="formulaDsp">
 \[ {\bf P}_{(a,b)\rightarrow(c,d)} \equiv \begin{bmatrix} P_{ca} &amp; P_{cb} \\ P_{da} &amp; P_{db} \end{bmatrix} \equiv \begin{bmatrix} \frac{\partial c}{\partial a} &amp; \frac{\partial c}{\partial b} \\[5 pt] \frac{\partial d}{\partial a} &amp; \frac{\partial d}{\partial b} \end{bmatrix} \]
@@ -162,9 +163,9 @@ Data dimensions</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyCenter">\(N_t\)   </td><td class="markdownTableBodyLeft">Number of timesteps/samples per second   </td><td class="markdownTableBodyCenter">10000   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md8"></a>
+<h1><a class="anchor" id="autotoc_md7"></a>
 Comparison of notation in other documents</h1>
-<h2><a class="anchor" id="autotoc_md9"></a>
+<h2><a class="anchor" id="autotoc_md8"></a>
 Coordinate systems</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -174,7 +175,7 @@ Coordinate systems</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyLeft">MWA metafits files   </td><td class="markdownTableBodyCenter">Y   </td><td class="markdownTableBodyCenter">X   </td><td class="markdownTableBodyCenter">-   </td><td class="markdownTableBodyCenter">-   </td><td class="markdownTableBodyCenter">-   </td><td class="markdownTableBodyCenter">-   </td></tr>
 </table>
-<h2><a class="anchor" id="autotoc_md10"></a>
+<h2><a class="anchor" id="autotoc_md9"></a>
 Jones matrices</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
