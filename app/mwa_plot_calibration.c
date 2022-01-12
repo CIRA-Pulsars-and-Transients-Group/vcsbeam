@@ -66,9 +66,11 @@ int main(int argc, char **argv)
     vm.log = log;
 
     // Create some "shorthand" variables for code brevity
-    uintptr_t nants          = vm.obs_metadata->num_ants;
-    uintptr_t nchans         = vm.obs_metadata->num_volt_fine_chans_per_coarse;
-    uintptr_t npols          = vm.obs_metadata->num_ant_pols;   // (X,Y)
+    // Assume Legacy fine channelisation.
+    // ^^^--- This counts as a bug, since in the future, there will be other options available
+    uintptr_t nants          = vm.obs_metadata_legacy->num_ants;
+    uintptr_t nchans         = vm.obs_metadata_legacy->num_volt_fine_chans_per_coarse;
+    uintptr_t npols          = vm.obs_metadata_legacy->num_ant_pols;   // (X,Y)
 
     // Now, do the following for each coarse channel
     uintptr_t ncoarse_chans = opts.ncoarse_chans;
