@@ -54,15 +54,6 @@ int main(int argc, char **argv)
     struct mwa_plot_calibration_opts opts;
     mwa_plot_calibration_parse_cmdline( argc, argv, &opts );
 
-    calibration cal;  // Variables for calibration settings
-    init_calibration( &cal );
-
-    cal.ref_ant      = strdup( opts.ref_ant );
-    cal.phase_offset = opts.phase_offset;
-    cal.phase_slope  = opts.phase_slope;
-    cal.custom_pq_correction = opts.custom_pq_correction;
-    cal.keep_cross_terms     = opts.keep_cross_terms;
-
     int i; // Generic counter
 
     // Start a logger for output messages and time-keeping
@@ -86,6 +77,16 @@ int main(int argc, char **argv)
     uintptr_t Ch, ch; // (Coarse channel idx, fine channel idx)
     cuDoubleComplex *D[ncoarse_chans]; // See Eqs. (27) to (29) in Ord et al. (2019)
 
+    init_calibration( &vm.cal );
+    vm.cal.metafits             = strdup( opts.cal_metafits );
+    vm.cal.ref_ant              = strdup( opts.ref_ant );
+    vm.cal.phase_offset         = opts.phase_offset;
+    vm.cal.phase_slope          = opts.phase_slope;
+    vm.cal.custom_pq_correction = opts.custom_pq_correction;
+    vm.cal.keep_cross_terms     = opts.keep_cross_terms;
+
+    // Allocate memory as if this were a legacy observation
+    vm.nfine_chan = vm.obs_metadata_legacy->num_volt_fine_chans_per_coarse;
     vmMallocDHost( &vm );
 
     for (Ch = 0; Ch < ncoarse_chans; Ch++)
@@ -101,7 +102,7 @@ int main(int argc, char **argv)
         memcpy( D[Ch], vm.D, vm.D_size_bytes );
 
         // Apply any calibration corrections
-        parse_calibration_correction_file( vm.cal_metadata->obs_id, &cal );
+        parse_calibration_correction_file( vm.cal_metadata->obs_id, &vm.cal );
         vmApplyCalibrationCorrections( &vm );
     }
 

@@ -1312,8 +1312,8 @@ void vmDestroyFilenames( vcsbeam_context *vm )
  *
  * This function loads the metadata into `vm&rarr;obs_context` and
  * `vm&rarr;obs_metadata`, using mwalib's API.
- * It also loads a "Legacy" version of the context into
- * `vm&rarr;obs_context_legacy`.
+ * It also loads a "Legacy" version of the context and metafits into
+ * `vm&rarr;obs_context_legacy` and `vm&rarr;obs_metafits_legacy`.
  * The observation to be loaded should be the "target" observation, i.e. the
  * observation whose VCS data is to be processed.
  */
@@ -1341,8 +1341,16 @@ void vmLoadObsMetafits( vcsbeam_context *vm, char *filename )
         exit(EXIT_FAILURE);
     }
 
+    // Create OBS_METADATA_LEGACY
+    if (mwalib_metafits_metadata_get( vm->obs_context_legacy, NULL, NULL, &vm->obs_metadata_legacy, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
+    {
+        fprintf( stderr, "error (mwalib): cannot create metafits metadata: %s\n", vm->error_message );
+        exit(EXIT_FAILURE);
+    }
+
     vm->seconds_per_file = (vm->obs_metadata->mwa_version == VCSMWAXv2 ? 8 : 1);
                         // ^-- Raise an issue with mwalib (I shouldn't have to do this)
+
 }
 
 /**

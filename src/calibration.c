@@ -427,7 +427,7 @@ void read_bandpass_file(
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    int coarse_chan_idx = vm->coarse_chan_idx;
 
     // Open the calibration file for reading
     FILE *fp = NULL;
@@ -718,7 +718,7 @@ void parse_calibration_correction_file( uint32_t gpstime, calibration *cal )
  */
 void vmApplyCalibrationCorrections( vcsbeam_context *vm )
 {
-    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    int coarse_chan_idx = vm->coarse_chan_idx;
 
     // Three locally defined booleans for whether to do the corrections
     bool apply_ref_ant         = true; // Whether this should be true is checked below

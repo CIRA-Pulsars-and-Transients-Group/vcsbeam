@@ -529,6 +529,7 @@ typedef struct vcsbeam_context_t
     MetafitsMetadata *cal_metadata;   // The mwalib metadata   "      "   "       "            "         "       "
 
     MetafitsContext  *obs_context_legacy; // The same as obs_context, but forced to be legacy
+    MetafitsMetadata *obs_metadata_legacy; // The same as obs_context, but forced to be legacy
 
     char *datadir;                    // The directory containing the input data
     char **filenames;                 // The input filenames
