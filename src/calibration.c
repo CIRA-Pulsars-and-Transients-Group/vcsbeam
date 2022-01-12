@@ -748,28 +748,34 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
         return;
 
     // Report on what's being done, if requested
+    if (apply_ref_ant | apply_zero_PQ_and_QP | apply_phase_slope)
+    {
+        sprintf( vm->log_message, "Applying calibration solution corrections to coarse channel %d", coarse_chan_idx );
+        logger_timed_message( vm->log, vm->log_message );
+    }
+
     if (apply_ref_ant)
     {
-        sprintf( vm->log_message, "Using tile %s as reference tile for rotating phases", vm->cal.ref_ant );
+        sprintf( vm->log_message, "    Using tile %s as reference tile for rotating phases", vm->cal.ref_ant );
         logger_timed_message( vm->log, vm->log_message );
     }
     else
     {
-        logger_timed_message( vm->log, "Rotation of phases relative to reference tile is turned OFF" );
+        logger_timed_message( vm->log, "    Rotation of phases relative to reference tile is turned OFF" );
     }
 
     if (apply_zero_PQ_and_QP)
-        logger_timed_message( vm->log, "Setting off-diagonal terms of calibration Jones matrix (PQ and QP) to zero" );
+        logger_timed_message( vm->log, "    Setting off-diagonal terms of calibration Jones matrix (PQ and QP) to zero" );
     else
-        logger_timed_message( vm->log, "Retaining off-diagonal terms of calibration Jones matrix (PQ and QP)" );
+        logger_timed_message( vm->log, "    Retaining off-diagonal terms of calibration Jones matrix (PQ and QP)" );
 
     if (apply_phase_slope)
     {
-        sprintf( vm->log_message, "Applying phase slope %e*FREQ + %e (rad) to PP", vm->cal.phase_slope, vm->cal.phase_offset );
+        sprintf( vm->log_message, "    Applying phase slope %e*FREQ + %e (rad) to PP", vm->cal.phase_slope, vm->cal.phase_offset );
         logger_timed_message( vm->log, vm->log_message );
     }
     else
-        logger_timed_message( vm->log, "Phase slope correction turned OFF" );
+        logger_timed_message( vm->log, "    Phase slope correction turned OFF" );
 
     // Variables for converting slope and offset to a complex phase
     //     z = exp(i*phi) = cos(phi) + i*sin(phi),

@@ -99,13 +99,13 @@ int main(int argc, char **argv)
         vmBindCalibrationData( &vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
         vmReadCalibration( &vm );
 
-        // Copy the solution into the "D" arrays
-        D[Ch] = (cuDoubleComplex *)malloc( vm.D_size_bytes );
-        memcpy( D[Ch], vm.D, vm.D_size_bytes );
-
         // Apply any calibration corrections
         parse_calibration_correction_file( vm.cal_metadata->obs_id, &vm.cal );
         vmApplyCalibrationCorrections( &vm );
+
+        // Copy the solution into the "D" arrays
+        D[Ch] = (cuDoubleComplex *)malloc( vm.D_size_bytes );
+        memcpy( D[Ch], vm.D, vm.D_size_bytes );
     }
 
     vmFreeDHost( &vm );
