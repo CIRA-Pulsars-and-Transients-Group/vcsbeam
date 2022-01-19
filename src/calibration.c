@@ -55,7 +55,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     const char *caldir       = vm->cal.caldir;
 
     // Find the "GPUBox" number for this coarse channel
-    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    int coarse_chan_idx = vm->coarse_chan_idx;
     uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1;
 
     // With the gpubox number in hand, construct the filenames for the

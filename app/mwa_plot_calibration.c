@@ -213,6 +213,7 @@ void usage()
             "\t                                exp(PH*F + OFFS)\n"
             "\t                           Setting PH = OFFS = 0 is equivalent to not performing any phase correction\n"
             "\t-X, --cross-terms          Retain the PQ and QP terms of the calibration solution [default: off]\n"
+            "\t-z, --zero-string=STR      Write STR instead of 0 for Jones matrices that are identically 0\n"
           );
 
     printf( "\nCALIBRATION OPTIONS (OFFRINGA)\n\n"
