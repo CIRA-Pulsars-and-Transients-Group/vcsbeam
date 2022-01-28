@@ -881,6 +881,7 @@ INPUT                  = Mainpage.md \
                          UsersGuide_Beamforming.md \
                          UsersGuide_Calibration.md \
                          UsersGuide_Examples.md \
+                         UsersGuide_HelloWorld.md \
                          Applications_FinePFBOffline.md \
                          Applications_MakeMWAIncohBeam.md \
                          Applications_MakeMWATiedArrayBeam.md \
