@@ -15,6 +15,7 @@
 #include <mwalib.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 /**
  * Creates arrays of indexes for antennas and polarisation according to the
@@ -94,7 +95,7 @@ void vmSetPolIdxLists( vcsbeam_context *vm )
  *
  * @todo <a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/issues/9">Issue #9</a>
  */
-void vmCalcJ( vcsbeam_context *vm )
+void vmCalcJ( vcsbeam_context *vm, primary_beam *pb )
 {
 
     // Give "shorthand" variables for often-used values in metafits
@@ -127,14 +128,14 @@ void vmCalcJ( vcsbeam_context *vm )
                 j_idx  = J_IDX(ant,ch,0,0,nchan,npol);
                 pb_idx = PB_IDX(p, ant, 0, nant, npol*npol);
 
-                mult2x2d(&(vm->D[j_idx]), &(vm->pb.B[pb_idx]), Ji); // the gain in the desired look direction
+                mult2x2d(&(vm->D[j_idx]), &(pb->B[pb_idx]), Ji); // the gain in the desired look direction
 
 #ifdef DEBUG
 if (ch == 50 && ant == 0)
 {
     //fprintf( stderr, "Dd = "); fprintf_complex_matrix( stderr, Dd[dd_idx] );
     fprintf( stderr, "D       = "); fprintf_complex_matrix( stderr, &(vm->D[j_idx]) );
-    fprintf( stderr, "BP      = "); fprintf_complex_matrix( stderr, &(vm->pb.B[pb_idx]) );
+    fprintf( stderr, "BP      = "); fprintf_complex_matrix( stderr, &(pb->B[pb_idx]) );
     fprintf( stderr, "J = DBP = "); fprintf_complex_matrix( stderr, Ji );
 }
 #endif
@@ -158,6 +159,7 @@ if (ch == 50 && ant == 0)
  * Wrapper function for vmCalcPhi(), vmCalcB(), and vmCalcJ().
  *
  * @param vm The VCSBeam context struct
+ * @param pb The primary beam struct
  * @param ras_hours An array of right ascensions, in decimal hours, one for each pointing.
  * @param decs_degs An array of declinations, in decimal degrees, one for each pointing.
  * @param beam_geom_vals An array of beam geometries, one for each pointing.
@@ -165,7 +167,8 @@ if (ch == 50 && ant == 0)
  * For each pointing, the quantities \f$e^{i\varphi}\f$, \f${\bf B}\f$, and \f${\bf J}^{-1}\f$ are calculated.
  * (\f${\bf D}\f$ is not recalculated, but is used in the calculation of \f${\bf J}^{-1}\f$).
  */
-void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals )
+void vmCalcJonesAndDelays( vcsbeam_context *vm, primary_beam *pb,
+        double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals )
 {
     logger_start_stopwatch( vm->log, "delay", true );
 
@@ -179,8 +182,8 @@ void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_
 
     // Calculate the geometric delays, primary beam and Jones matrices
     vmCalcPhi( vm, beam_geom_vals );
-    vmCalcB( vm, beam_geom_vals );
-    vmCalcJ( vm );
+    vmCalcB( pb, beam_geom_vals );
+    vmCalcJ( vm, pb );
 
     logger_stop_stopwatch( vm->log, "delay" );
 }

@@ -14,6 +14,7 @@
 #include <cuda_runtime.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 /* Wrapper function for GPU/CUDA error handling.
  * 

@@ -13,10 +13,13 @@
 
 // Non-standard dependencies
 #include <mwalib.h>
+#include <psrfits.h>
+#include <vdifio.h>
 #include <mpi.h>
 
 // Local includes
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"  /* <-- TODO: Remove the need for this */
 
 #define MAX_COMMAND_LENGTH 1024
 
@@ -218,14 +221,16 @@ int main(int argc, char **argv)
     // ------------------
     // Prepare primary beam and geometric delay arrays
     // ------------------
-    vmCreatePrimaryBeam( vm );
+    primary_beam pb;
+    vmCreatePrimaryBeam( vm, &pb );
     vmCreateGeometricDelays( vm );
     vmCreateStatistics( vm, mpfs );
 
     // ------------------
 
     // Populate the relevant header structs
-    vmPopulateVDIFHeader( vm, beam_geom_vals );
+    vdif_header vhdr;
+    vmPopulateVDIFHeader( vm, &vhdr, beam_geom_vals );
 
     // Begin the main loop: go through data one second at a time
 
@@ -240,7 +245,7 @@ int main(int argc, char **argv)
         vmReadNextSecond( vm );
 
         // Calculate J (inverse) and Phi (geometric delays)
-        vmCalcJonesAndDelays( vm, vm->ras_hours, vm->decs_degs, beam_geom_vals );
+        vmCalcJonesAndDelays( vm, &pb, vm->ras_hours, vm->decs_degs, beam_geom_vals );
 
         // Move the needed (just calculated) quantities to the GPU
         vmPushPhi( vm );
@@ -252,7 +257,7 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif );
+            write_step( vm, mpfs, vm->vf, &vhdr, data_buffer_vdif );
         }
 
         // Do the forward PFB (if needed), and form the beams
@@ -290,7 +295,7 @@ int main(int argc, char **argv)
     }
 
     // Write out the last second's worth of data
-    write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif );
+    write_step( vm, mpfs, vm->vf, &vhdr, data_buffer_vdif );
 
     logger_message( vm->log, "\n*****END BEAMFORMING*****\n" );
 
@@ -355,7 +360,7 @@ int main(int argc, char **argv)
     }
 
     // Clean up memory associated with the Jones matrices
-    free_primary_beam( &vm->pb );
+    free_primary_beam( &pb );
     free_geometric_delays( &vm->gdelays );
 
     // Free the CUDA streams

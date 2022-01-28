@@ -13,9 +13,26 @@
 
 // Non-standard dependencies
 #include <mwalib.h>
+#include <cuComplex.h>
 
 // Local includes
 #include "vcsbeam.h"
+
+/* THIS PROGRAM IS NOW DEPRECATED, since a better plotting program is provided by
+ * Hyperbeam, which should be used instead. The following definitions are replicated
+ * here from the private header just to keep this program working until it is
+ * finally decommissioned. */
+
+#define J_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol*npol*(nc))      + \
+                                    (c)  * (npol*npol)           + \
+                                    (p1) * (npol)                + \
+                                    (p2))
+
+bool is2x2zero( cuDoubleComplex *M );
+
+void parse_calibration_correction_file( uint32_t gpstime, calibration *cal );
+
+/* END DEPRECATION WARNING */
 
 struct mwa_plot_calibration_opts {
     char      *metafits; // filename of the metafits file
@@ -56,14 +73,10 @@ int main(int argc, char **argv)
 
     int i; // Generic counter
 
-    // Start a logger for output messages and time-keeping
-    logger *log = create_logger( stderr, 0 );
-
     // Get metadata for obs and cal
     vcsbeam_context vm;
     vmLoadObsMetafits( &vm, opts.metafits );
     vmLoadCalMetafits( &vm, opts.cal_metafits );
-    vm.log = log;
 
     // Create some "shorthand" variables for code brevity
     // Assume Legacy fine channelisation.
@@ -79,7 +92,11 @@ int main(int argc, char **argv)
     uintptr_t Ch, ch; // (Coarse channel idx, fine channel idx)
     cuDoubleComplex *D[ncoarse_chans]; // See Eqs. (27) to (29) in Ord et al. (2019)
 
-    init_calibration( &vm.cal );
+    vm.cal.caldir               = NULL;
+    vm.cal.ref_ant              = NULL;
+    vm.cal.flags_file           = NULL;
+    vm.cal.nflags               = 0;
+    vm.cal.flagged_tilenames    = NULL;
     vm.cal.metafits             = strdup( opts.cal_metafits );
     vm.cal.ref_ant              = strdup( opts.ref_ant );
     vm.cal.phase_offset         = opts.phase_offset;
@@ -186,8 +203,6 @@ int main(int argc, char **argv)
     mwalib_metafits_context_free( vm.cal_context );
     mwalib_metafits_metadata_free( vm.obs_metadata );
     mwalib_metafits_metadata_free( vm.cal_metadata );
-
-    destroy_logger( log );
 
     return EXIT_SUCCESS;
 }

@@ -13,6 +13,7 @@
 #include <mwa_hyperbeam.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 #define NCOMPLEXELEMENTS 4
 
@@ -58,12 +59,9 @@ const double *sky[] = { Isky, Qsky, Usky, Vsky };
  * \f]
  */
 void vmCalcB(
-        vcsbeam_context   *vm,
+        primary_beam      *pb,
         beam_geom         *beam_geom_vals )
 {
-    // Shorthand variable for where to put the answer
-    primary_beam *pb = &vm->pb;
-
     // Calculate some array sizes
     uintptr_t nant      = pb->nant;
     uintptr_t npol      = pb->npol; // = 4 (XX, XY, YX, YY)
@@ -157,26 +155,26 @@ if (config_idx == 0)
  * The resulting array (`vm&rarr;B`) has dimensions
  * \f$N_b \times N_a \times N_p \times N_p\f$.
  */
-void vmCreatePrimaryBeam( vcsbeam_context *vm )
+void vmCreatePrimaryBeam( vcsbeam_context *vm, primary_beam *pb )
 {
     // Calculate some array sizes
-    vm->pb.npointings = vm->npointing;
-    vm->pb.nant = vm->obs_metadata->num_ants;
-    vm->pb.npol = vm->obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
+    pb->npointings = vm->npointing;
+    pb->nant = vm->obs_metadata->num_ants;
+    pb->npol = vm->obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
 
-    size_t size = vm->pb.npointings * vm->pb.nant * vm->pb.npol * sizeof(cuDoubleComplex);
+    size_t size = pb->npointings * pb->nant * pb->npol * sizeof(cuDoubleComplex);
 
     // Allocate memory
-    vm->pb.B = (cuDoubleComplex *)malloc( size );
+    pb->B = (cuDoubleComplex *)malloc( size );
 
-    vm->pb.beam = NULL;
-    vm->pb.beam = new_fee_beam( HYPERBEAM_HDF5 );
+    pb->beam = NULL;
+    pb->beam = new_fee_beam( HYPERBEAM_HDF5 );
 
-    create_delays_amps_from_metafits( vm->obs_metadata, &(vm->pb.delays), &(vm->pb.amps) );
+    create_delays_amps_from_metafits( vm->obs_metadata, &(pb->delays), &(pb->amps) );
 
-    vm->pb.freq_hz = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_centre_hz;
+    pb->freq_hz = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_centre_hz;
 
-    vm->pb.obs_metadata = vm->obs_metadata;
+    pb->obs_metadata = vm->obs_metadata;
 }
 
 /**

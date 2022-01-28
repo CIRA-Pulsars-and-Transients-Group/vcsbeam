@@ -14,6 +14,7 @@
 
 // Local includes
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"  /* <-- TODO: Remove the need for this */
 
 struct mwa_tied_array_beam_psf_opts {
     char *metafits;        // filename of the metafits file
@@ -68,7 +69,8 @@ int main(int argc, char **argv)
 
     vm.npointing = 1;
     vm.coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
-    vmCreatePrimaryBeam( &vm );
+    primary_beam pb;
+    vmCreatePrimaryBeam( &vm, &pb );
 
     // This program assumes no dead dipoles
     uint32_t *delays = vm.obs_metadata->delays;
@@ -126,7 +128,7 @@ int main(int argc, char **argv)
             calc_beam_geom( X, Y, mjd, &arrf_bg );
             array_factor = calc_array_factor( vm.obs_metadata, freq_hz, &arrf_bg, &bg );
 
-            calc_normalised_beam_response( vm.pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, true );
+            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, true );
 
             // Print out the results
             fprintf( opts.fout, "%f %f %f %f %f %f\n",
@@ -150,7 +152,7 @@ int main(int argc, char **argv)
         fclose( opts.fout );
     }
 
-    free_primary_beam( &vm.pb );
+    free_primary_beam( &pb );
 
     // Exit gracefully
     return EXIT_SUCCESS;

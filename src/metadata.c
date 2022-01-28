@@ -11,6 +11,7 @@
 #include <mwalib.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 /**
  * Initialises a VCSBeam context struct.
@@ -573,7 +574,8 @@ void vmMallocPQIdxsHost( vcsbeam_context *vm )
  */
 void vmFreeVHost( vcsbeam_context *vm )
 {
-    vmFreeReadBuffer( vm->v );
+    if (vm->v != NULL)
+        vmFreeReadBuffer( vm->v );
 }
 
 /**

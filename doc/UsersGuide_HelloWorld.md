@@ -27,8 +27,15 @@ void main()
 
 ### Compiling
 
+(There are currently far too many dependencies. This is intended to be cleaned up!!)
 ```
-gcc -o helloworld helloworld.c -lvcsbeam
+g++ -o helloworld helloworld.c \
+    -I/opt/cuda/targets/x86_64-linux/include \
+    -lvcsbeam -lm -lcudart -lcufft \
+    -L/opt/cuda/targets/x86_64-linux/lib \
+    -pthread $(mpicc -showme:compile) $(mpicc -showme:link) \
+    -lmwalib -lmwa_hyperbeam -lpal \
+    -lcudadevrt -lcudart_static -lrt
 ```
 
 ### Running
@@ -37,8 +44,8 @@ gcc -o helloworld helloworld.c -lvcsbeam
 ./helloworld
 ```
 
-#### Output
+#### Output (example)
 
 ```
-...
+------- VCSBeam (v3.3.34_61fcd3e): Hello World! -------
 ```

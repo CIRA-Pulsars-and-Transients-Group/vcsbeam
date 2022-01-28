@@ -30,7 +30,8 @@ find_package(HYPERBEAM)
 find_package(VDIFIO)
 find_package(XGPU)
 
-configure_file(include/vcsbeam.h.in vcsbeam.h)
+configure_file(include/vcsbeam_private.h.in vcsbeam_private.h)
+configure_file(include/vcsbeam.h vcsbeam.h)
 
 add_subdirectory(src)
 add_subdirectory(app)

@@ -14,6 +14,7 @@
 #include <vdifio.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 #include "mwa_header.h"
 #include "ascii_header.h"
@@ -133,6 +134,7 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
  */
 void vmPopulateVDIFHeader(
         vcsbeam_context  *vm,
+        vdif_header      *vhdr,
         beam_geom        *beam_geom_vals )
 {
     // Write log message
@@ -175,7 +177,7 @@ void vmPopulateVDIFHeader(
         // One full second (1.28 million 2 bit samples)
         vm->vf[p].sizeof_buffer = vm->vf[p].frame_rate * vm->vf[p].sizeof_beam;                            // = 5120000
 
-        createVDIFHeader( &vm->vhdr, vm->vf[p].dataarraylength, vm->vf[p].threadid, vm->vf[p].bits, vm->vf[p].nchan,
+        createVDIFHeader( vhdr, vm->vf[p].dataarraylength, vm->vf[p].threadid, vm->vf[p].bits, vm->vf[p].nchan,
                                 vm->vf[p].iscomplex, vm->vf[p].stationid);
 
         // Now we have to add the time
@@ -183,9 +185,9 @@ void vmPopulateVDIFHeader(
         uint64_t start_sec = roundf( beam_geom_vals->fracmjd * 86400.0 );
         uint64_t mjdsec    = (start_day * 86400) + start_sec; // Note the VDIFEpoch is strange - from the standard
 
-        setVDIFEpochMJD( &vm->vhdr, start_day );
-        setVDIFFrameMJDSec( &vm->vhdr, mjdsec );
-        setVDIFFrameNumber( &vm->vhdr, 0 );
+        setVDIFEpochMJD( vhdr, start_day );
+        setVDIFFrameMJDSec( vhdr, mjdsec );
+        setVDIFFrameNumber( vhdr, 0 );
 
         strcpy( vm->vf[p].exp_name, vm->obs_metadata->project_id );
         snprintf( vm->vf[p].scan_name, 17, "%d", vm->obs_metadata->obs_id );

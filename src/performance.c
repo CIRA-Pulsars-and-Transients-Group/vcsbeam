@@ -12,6 +12,7 @@
 #include <math.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 
 /********************************************

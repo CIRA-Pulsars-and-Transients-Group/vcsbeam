@@ -11,6 +11,7 @@
 #include <cuComplex.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 /**
  * Calculates complex roots of unity.

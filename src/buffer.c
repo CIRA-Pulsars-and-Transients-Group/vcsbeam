@@ -11,6 +11,7 @@
 #include <mwalib.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 /**
  * Initialise a buffer for reading in voltage data.

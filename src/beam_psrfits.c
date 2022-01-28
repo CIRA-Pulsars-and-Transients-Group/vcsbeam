@@ -17,6 +17,7 @@
 #include <psrfits.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 /**
  * Populates a PSRFITS struct with data derived from the observation.

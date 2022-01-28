@@ -16,6 +16,7 @@
 #include <star/palmac.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 /**
  * Calculates the phase delays required for phasing up each antenna.

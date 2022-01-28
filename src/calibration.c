@@ -13,6 +13,7 @@
 #include <cuComplex.h>
 
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"
 
 /**
  * Loads a Real Time System (RTS) calibration solution.

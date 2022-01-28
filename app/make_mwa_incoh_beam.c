@@ -13,11 +13,14 @@
 
 // Non-standard dependencies
 #include <mwalib.h>
+#include <psrfits.h>
+#include <vdifio.h>
 #include <cuda_runtime.h>
 #include <mpi.h>
 
 // Local includes
 #include "vcsbeam.h"
+#include "vcsbeam_private.h"  /* <-- TODO: Remove the need for this */
 
 #define MAX_COMMAND_LENGTH 1024
 
