@@ -13,7 +13,7 @@ The following diagram gives an overview of the beamforming pipeline:
 
 \dotfile beamforming.dot
 
-Green nodes represent data files that are stored on disk, until deleted by the user.
+Blue nodes represent data files that are stored on disk, until deleted by the user.
 Grey boxes represent applications, some of which are provided by VCSBeam, and some of which are external applications.
 The links in the diagram take to you each application's documentation.
 
