@@ -470,3 +470,69 @@ double calc_array_factor(
 
     return array_factor;
 }
+
+/**
+ * Parses RA/Dec pointings from a file.
+ *
+ * @param vm The VCSBeam context struct
+ * @param filename The name of the file to be parsed.
+ *
+ * The file must contain whitespace-separated RAs and Decs in the format
+ * `HH:MM:SS.S DD:MM:SS.S`.
+ *
+ * This function allocates memory for ras_hours and decs_degs arrays, which
+ * will be destroyed during destroy_vcsbeam_context().
+ */
+void vmParsePointingFile( vcsbeam_context *vm, const char *filename )
+{
+    // Print a log message
+    sprintf( vm->log_message, "Reading pointings file %s", filename );
+    logger_timed_message( vm->log, vm->log_message );
+
+    // Open the file for reading
+    FILE *f = fopen( filename, "r" );
+    if (f == NULL)
+    {
+        fprintf( stderr, "error: cannot open pointings file %s\n", filename );
+        exit(EXIT_FAILURE);
+    }
+
+    // Do one pass through the file to count "words"
+    // The RAs and Decs are expected to be whitespace-delimited
+    int nwords = 0;
+    char word[64];
+    while (fscanf( f, "%s", word ) != EOF)
+        nwords++;
+
+    // Check that we have an even number of words (they should be in RA/Dec pairs)
+    if (nwords % 2 != 0)
+    {
+        fprintf( stderr, "error: cannot parse pointings file %s\n", filename );
+        exit(EXIT_FAILURE);
+    }
+    vmSetNumPointings( vm, nwords/2 );
+    // Allocate memory
+    vm->ras_hours = (double *)malloc( vm->npointing * sizeof(double) );
+    vm->decs_degs = (double *)malloc( vm->npointing * sizeof(double) );
+
+    // Rewind to beginning of file, read the words in again, and parse them
+    rewind( f );
+    char ra_str[64], dec_str[64];
+    unsigned int p;
+    for (p = 0; p < vm->npointing; p++)
+    {
+        // Read in the next Ra/Dec pair
+        fscanf( f, "%s %s", ra_str, dec_str );
+
+        // Parse them and make them decimal
+        vm->ras_hours[p] = parse_ra( ra_str );
+        vm->decs_degs[p] = parse_dec( dec_str );
+    }
+
+    // Close the file
+    fclose( f );
+
+    // Set up CUDA streams (one stream per pointing)
+    vmCreateCudaStreams( vm );
+}
+

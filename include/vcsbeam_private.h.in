@@ -20,10 +20,9 @@
 #include <mpi.h>
 
 #include <mwalib.h>
-#include <star/pal.h>
-#include <star/palmac.h>
 #include <psrfits.h>
 #include <vdifio.h>
+
 #include <mwa_hyperbeam.h>
 
 #include "vcsbeam.h"
@@ -570,14 +569,6 @@ typedef struct primary_beam_t
 extern "C" {
 #endif
 
-void vmCreatePrimaryBeam( vcsbeam_context *vm, primary_beam *pb );
-void vmCalcJonesAndDelays( vcsbeam_context *vm, primary_beam *pb,
-        double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals );
-
-void vmCalcJ( vcsbeam_context *vm, primary_beam *pb );
-void vmCalcB(
-        primary_beam      *pb,
-        beam_geom         *beam_geom_vals );
 
 void create_delays_amps_from_metafits(
         MetafitsMetadata *metafits_metadata, uint32_t ***delays, double ***amps );
@@ -592,6 +583,15 @@ void parallactic_angle_correction(
     double za);   // zenith angle (radians)
 
 int hash_dipole_config( double * );
+
+void vmCreatePrimaryBeam( vcsbeam_context *vm, primary_beam *pb );
+void vmCalcJonesAndDelays( vcsbeam_context *vm, primary_beam *pb,
+        double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals );
+
+void vmCalcJ( vcsbeam_context *vm, primary_beam *pb );
+void vmCalcB(
+        primary_beam      *pb,
+        beam_geom         *beam_geom_vals );
 
 void free_primary_beam( primary_beam *pb );
 

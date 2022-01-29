@@ -82,8 +82,7 @@ int main(int argc, char **argv)
     int i; // Generic counter
 
     // Create an mwalib metafits context and associated metadata
-    bool use_mpi = true;
-    vcsbeam_context *vm = vmInit( use_mpi );
+    vcsbeam_context *vm = vmInit();
 
     vmPrintTitle( vm, "Beamformer" );
 

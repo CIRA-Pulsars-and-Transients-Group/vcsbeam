@@ -12,6 +12,9 @@
 #include <assert.h>
 #include <time.h>
 
+#include <star/pal.h>
+#include <star/palmac.h>
+
 // Local includes
 #include "vcsbeam.h"
 #include "vcsbeam_private.h"  /* <-- TODO: Remove the need for this */

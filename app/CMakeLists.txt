@@ -13,7 +13,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/mwa_plot_calibration DESTINATION bi
 
 # Tied array beamformer
 
-if (PAL_FOUND AND PSRFITS_UTILS_FOUND AND HYPERBEAM_FOUND AND VDIFIO_FOUND)
+if (PAL_FOUND AND PSRFITS_UTILS_FOUND AND HYPERBEAM_FOUND AND VDIFIO_FOUND AND MPI_FOUND)
     add_executable(make_mwa_tied_array_beam make_mwa_tied_array_beam.c)
     target_link_libraries(make_mwa_tied_array_beam vcsbeam)
     target_include_directories(make_mwa_tied_array_beam PUBLIC ${CMAKE_BINARY_DIR})
@@ -22,7 +22,7 @@ endif ()
 
 # Incoherent beamformer
 
-if (PSRFITS_UTILS_FOUND)
+if (PAL_FOUND AND PSRFITS_UTILS_FOUND AND MPI_FOUND)
     add_executable(make_mwa_incoh_beam make_mwa_incoh_beam.c)
     target_link_libraries(make_mwa_incoh_beam vcsbeam)
     target_include_directories(make_mwa_incoh_beam PUBLIC ${CMAKE_BINARY_DIR})

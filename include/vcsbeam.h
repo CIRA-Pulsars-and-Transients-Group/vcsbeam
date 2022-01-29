@@ -410,7 +410,7 @@ typedef struct vcsbeam_context_t
 extern "C" {
 #endif
 
-vcsbeam_context *vmInit( bool use_mpi );
+vcsbeam_context *vmInit();
 
 void vmBindObsData(
         vcsbeam_context *vm,

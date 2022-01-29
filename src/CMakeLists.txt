@@ -1,7 +1,7 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 #set(COMPILE_FLAGS "${COMPILE_FLAGS} -DDEBUG")
 
-add_library(vcsbeam STATIC
+add_library(vcsbeam
     ascii_header.c
     performance.c
     filter.c
@@ -11,6 +11,10 @@ add_library(vcsbeam STATIC
     pfb.cu
     calibration.c
     metadata.c)
+
+if (MPI_FOUND)
+    target_compile_definitions(vcsbeam PUBLIC -DMPI_FOUND)
+endif ()
 
 if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
     target_sources(vcsbeam PRIVATE beam_psrfits.c)
@@ -44,6 +48,7 @@ target_include_directories(vcsbeam PUBLIC
     ${CMAKE_BINARY_DIR})
 
 target_link_libraries(vcsbeam
+    PUBLIC
     ${PSRFITS_UTILS_LIBRARY}
     ${VDIFIO_LIBRARY}
     ${CFITSIO_LIBRARY}

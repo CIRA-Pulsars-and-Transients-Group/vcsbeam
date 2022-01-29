@@ -15,7 +15,7 @@ void main()
 {
     // Initialise a VCSBeam context
     bool use_mpi = false;
-    vcsbeam_context *vm = vmInit( use_mpi );
+    vcsbeam_context *vm = vmInit();
 
     // Print a Hello World message
     vmPrintTitle( vm, "Hello World!" );
@@ -31,11 +31,9 @@ void main()
 ```
 g++ -o helloworld helloworld.c \
     -I/opt/cuda/targets/x86_64-linux/include \
-    -lvcsbeam -lm -lcudart -lcufft \
     -L/opt/cuda/targets/x86_64-linux/lib \
-    -pthread $(mpicc -showme:compile) $(mpicc -showme:link) \
-    -lmwalib -lmwa_hyperbeam -lpal \
-    -lcudadevrt -lcudart_static -lrt
+    -lvcsbeam -lcudart -lcufft \
+    -lmwalib \
 ```
 
 ### Running
