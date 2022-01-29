@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     vmLoadCalMetafits( vm, opts.cal_metafits );
 
     vmBindObsData( vm,
-        opts.coarse_chan_str, 1, vm->mpi_rank,
+        opts.coarse_chan_str, 1, vm->coarse_chan_idx,
         opts.begin_str, opts.nseconds, 0,
         opts.datadir );
 
