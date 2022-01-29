@@ -8,13 +8,13 @@ Below is a basic example program whose purpose is to demonstrate how to compile 
 
 ### Code
 
+**helloworld.c:**
 ```
 #include <vcsbeam.h>
 
 void main()
 {
     // Initialise a VCSBeam context
-    bool use_mpi = false;
     vcsbeam_context *vm = vmInit();
 
     // Print a Hello World message

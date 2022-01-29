@@ -28,5 +28,6 @@ The source code for this software can be found [here](https://github.com/CIRA-Pu
      * [MWA Track Primary Beam Response](@ref applicationsmwatrackprimarybeamresponse) -- Track the sensitivity of a tied-array beam for a given RA/Dec as it passes through the MWA's primary beam
    + Using the VCSBeam library to create custom applications
      * [Hello World](@ref usersguidehelloworld) -- Compiling and running a basic VCSBeam application
+     * [Apply Calibration](@ref usersguideapplycalibration) -- Applying a calibration solution to voltages
  - Appendices
    + [File formats](@ref fileformats) - RTS, Offringa
