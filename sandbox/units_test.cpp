@@ -18,6 +18,8 @@ int main()
     std::cout << u_pcG.name << " (" << u_pcG << ") = " << u_pcG.base_units_str() << std::endl;
 
     SIUnit u_DM = u_pc / (u_cm * u_cm * u_cm);
+    u_DM.name = "DM units";
+    u_DM.abbr = "pc cm^-3";
     std::cout << u_DM.name << " (" << u_DM << ") = " << u_DM.base_units_str() << std::endl;
 
     return 0;

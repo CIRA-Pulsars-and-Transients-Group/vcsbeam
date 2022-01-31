@@ -7,8 +7,6 @@
 #include <map>
 #include <complex>
 
-#define NUM_SI_BASE_UNITS 7
-
 /** Class for base (SI) units */
 class SIUnit
 {
