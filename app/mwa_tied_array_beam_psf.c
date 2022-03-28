@@ -17,8 +17,10 @@
 
 struct mwa_tied_array_beam_psf_opts {
     char *metafits;        // filename of the metafits file
-    char *ra_str;          // String representing the RA
-    char *dec_str;         // String representing the Dec
+    char *ra_str;          // String representing the RA of the pointing
+    char *dec_str;         // String representing the Dec of the pointing
+    char *ra_image_str;    // String representing the RA of the centre of the image
+    char *dec_image_str;   // String representing the Dec of the centre of the image
     double height_deg;     // Height of image in degrees
     double width_deg;      // Width of image in degrees
     int height_pixels;     // Height of image in pixels
@@ -45,8 +47,8 @@ int main(int argc, char **argv)
     double width_hours = opts.width_deg / cos( dec_degs*D2R ) * D2R*R2H;
     double dX = width_hours / opts.width_pixels;
     double dY = opts.height_deg / opts.height_pixels;
-    double X0 = ra_hours - width_hours/2.0 + dX/2.0;
-    double Y0 = dec_degs - opts.height_deg/2.0 + dY/2.0;
+    double X0 = parse_ra( opts.ra_image_str ) - width_hours/2.0 + dX/2.0;
+    double Y0 = parse_dec( opts.dec_image_str ) - opts.height_deg/2.0 + dY/2.0;
 
     // Get the metadata for the selected observation
     vcsbeam_context vm;
@@ -164,6 +166,8 @@ void usage()
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation (required)\n"
             "\t-r, --RA=HH:MM:SS          Tied-array pointing direction, right ascension (required)\n"
             "\t-d, --Dec=DD:MM:SS         Tied-array pointing direction, declination (required)\n"
+            "\t-R, --RA=HH:MM:SS          Image pointing direction, right ascension [default: same as -r]\n"
+            "\t-D, --Dec=DD:MM:SS         Image pointing direction, declination [default: same as -d]\n"
             "\t-f, --freq_MHz=MHZ         Frequency in MHz [default: mid-frequency of observation]\n"
             "\t-x, --width=DEG            Width of image in degrees [default: 1.0]\n"
             "\t-X, --npixelsx=PIXELS      Width of image in pixels [default: 100]\n"
@@ -181,6 +185,8 @@ void mwa_tied_array_beam_psf_parse_cmdline(
     opts->metafits        = NULL;
     opts->ra_str          = NULL;
     opts->dec_str         = NULL;
+    opts->ra_image_str    = NULL;
+    opts->dec_image_str   = NULL;
     opts->height_deg      = 1.0;     // Height of image in degrees
     opts->width_deg       = 1.0;     // Width of image in degrees
     opts->height_pixels   = 100;     // Height of image in pixels
@@ -197,6 +203,8 @@ void mwa_tied_array_beam_psf_parse_cmdline(
                 {"metafits",        required_argument, 0, 'm'},
                 {"RA",              required_argument, 0, 'r'},
                 {"Dec",             required_argument, 0, 'd'},
+                {"RA_image",        required_argument, 0, 'R'},
+                {"Dec_image",       required_argument, 0, 'D'},
                 {"width",           required_argument, 0, 'x'},
                 {"npixelsx",        required_argument, 0, 'X'},
                 {"height",          required_argument, 0, 'y'},
@@ -207,7 +215,7 @@ void mwa_tied_array_beam_psf_parse_cmdline(
             };
 
             int option_index = 0;
-            c = getopt_long( argc, argv, "d:f:hm:o:r:x:X:y:Y:", long_options, &option_index);
+            c = getopt_long( argc, argv, "d:D:f:hm:o:r:R:x:X:y:Y:", long_options, &option_index);
 
             if (c == -1)
                 break;
@@ -217,6 +225,10 @@ void mwa_tied_array_beam_psf_parse_cmdline(
                 case 'd':
                     opts->dec_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->dec_str, optarg );
+                    break;
+                case 'D':
+                    opts->dec_image_str = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->dec_image_str, optarg );
                     break;
                 case 'f':
                     opts->freq_MHz = atof( optarg );
@@ -240,6 +252,10 @@ void mwa_tied_array_beam_psf_parse_cmdline(
                 case 'r':
                     opts->ra_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->ra_str, optarg );
+                    break;
+                case 'R':
+                    opts->ra_image_str = (char *)malloc( strlen(optarg) + 1 );
+                    strcpy( opts->ra_image_str, optarg );
                     break;
                 case 'x':
                     opts->width_deg = atof( optarg );
@@ -276,5 +292,16 @@ void mwa_tied_array_beam_psf_parse_cmdline(
     assert( opts->width_pixels   > 0   );
     assert( opts->height_pixels  > 0   );
 
+    if (opts->ra_image_str == NULL)
+    {
+        opts->ra_image_str = (char *)malloc( strlen(opts->ra_str) + 1 );
+        strcpy( opts->ra_image_str, opts->ra_str );
+    }
+
+    if (opts->dec_image_str == NULL)
+    {
+        opts->dec_image_str = (char *)malloc( strlen(opts->dec_str) + 1 );
+        strcpy( opts->dec_image_str, opts->dec_str );
+    }
 }
 
