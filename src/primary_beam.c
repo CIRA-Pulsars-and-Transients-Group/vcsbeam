@@ -64,6 +64,8 @@ void vmCalcB(
     // Shorthand variable for where to put the answer
     primary_beam *pb = &vm->pb;
 
+
+
     // Calculate some array sizes
     uintptr_t nant      = pb->nant;
     uintptr_t npol      = pb->npol; // = 4 (XX, XY, YX, YY)
@@ -92,6 +94,15 @@ void vmCalcB(
 
     double az, za; // (az)imuth and (z)enith (a)ngle in radians
 
+    uint8_t doParallactic=0; //Boolean 0= don't do parallactic convertion in calcJones
+
+    uint32_t numAmps=16; //number of dipole gains used (16 or 32)
+
+    int32_t errInt; //exit code integer for calcJones
+
+    char errBuff[1024]; //Error Buffer for CalcJones
+    
+    
     // Loop through the pointings and calculate the primary beam matrices
     for (p = 0; p < pb->npointings; p++)
     {
@@ -119,34 +130,42 @@ void vmCalcB(
             {
                 // Use the 'dead' configuration temporarily
                 config_idx = DEAD_CONFIG;
-                configs[config_idx] = (cuDoubleComplex *)calc_jones(
-                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
-            }
+                errInt = calc_jones(
+                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, doParallactic , (double *)configs[config_idx], errBuff );
+	    }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
-                configs[config_idx] = (cuDoubleComplex *)calc_jones(
-                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
+                errInt = calc_jones(
+                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, doParallactic , (double *)configs[config_idx], errBuff );
+             
+
 
                 // Apply the parallactic angle correction
 #ifdef DEBUG
-if (config_idx == 0)
-{
-    fprintf( stderr, "Bhb     = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
-    fprintf( stderr, "Ppa     = " ); fprintf( stderr, "[ %lf, %lf; %lf, %lf ]\n", P[0], P[1], P[2], P[3]  );
-}
+		if (config_idx == 0)
+		{
+			fprintf( stderr, "Bhb     = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
+			fprintf( stderr, "Ppa     = " ); fprintf( stderr, "[ %lf, %lf; %lf, %lf ]\n", P[0], P[1], P[2], P[3]  );
+		}
 #endif
                 mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );
 #ifdef DEBUG
-if (config_idx == 0)
-{
-    fprintf( stderr, "B       = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
-}
+		if (config_idx == 0)
+		{
+			fprintf( stderr, "B       = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
+		}
 #endif
-            }
+	    }
+	    
+	    if (errInt !=0)
+	    {
+		    fprintf(stderr, "%d   %s \n", errInt,errBuff);
+		    exit(EXIT_FAILURE);
+	    }
 
-            // Copy the answer into the B matrix (for this antenna)
-            cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, ant, 0, nant, npol)]) );
+	    // Copy the answer into the B matrix (for this antenna)
+	    cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, ant, 0, nant, npol)]) );
         }
     }
 }
@@ -159,6 +178,9 @@ if (config_idx == 0)
  */
 void vmCreatePrimaryBeam( vcsbeam_context *vm )
 {
+    int32_t  errInt; //new_fee_beam Error integer
+    char errBuff[1024]; //Error string		      
+
     // Calculate some array sizes
     vm->pb.npointings = vm->npointing;
     vm->pb.nant = vm->obs_metadata->num_ants;
@@ -170,13 +192,22 @@ void vmCreatePrimaryBeam( vcsbeam_context *vm )
     vm->pb.B = (cuDoubleComplex *)malloc( size );
 
     vm->pb.beam = NULL;
-    vm->pb.beam = new_fee_beam( HYPERBEAM_HDF5 );
+    errInt= new_fee_beam( HYPERBEAM_HDF5, &vm->pb.beam,errBuff );
+
+    if (errInt != 0)
+    {
+	    fprintf(stderr, "%d   %s \n", errInt,errBuff);
+	    exit(EXIT_FAILURE);
+    }
+    
 
     create_delays_amps_from_metafits( vm->obs_metadata, &(vm->pb.delays), &(vm->pb.amps) );
 
     vm->pb.freq_hz = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_centre_hz;
 
     vm->pb.obs_metadata = vm->obs_metadata;
+
+
 }
 
 /**
@@ -431,13 +462,28 @@ void parallactic_angle_correction(
  */
 void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction )
 {
+    
+    uint8_t doParallactic=0; //Boolean 0= don't do parallactic convertion in calcJones
+
+    uint32_t numAmps=16; //number of dipole gains used (16 or 32)
+
+    int32_t errInt; //exit code integer for calcJones
+
+    char errBuff[1024]; //Error Buffer for CalcJones
+    
     cuDoubleComplex JH[NCOMPLEXELEMENTS];
     cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
     cuDoubleComplex coherency[NCOMPLEXELEMENTS];
 
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
-    *J = (cuDoubleComplex *)calc_jones( beam, az, za, freq_hz, delays, amps, zenith_norm );
+    errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, doParallactic , (double *) *J, errBuff );
+    
+    if (errInt !=0)
+    {
+	    fprintf(stderr, "%d   %s \n", errInt,errBuff);
+	    exit(EXIT_FAILURE);
+    }
 
     // Optionally apply the parallactic angle correction
     double P[NCOMPLEXELEMENTS]; // (Real-valued) parallactic angle correction matrix
