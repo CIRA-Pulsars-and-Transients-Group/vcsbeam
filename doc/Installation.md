@@ -13,7 +13,7 @@ It consists of
  - [PAL](https://github.com/Starlink/pal)
  - [cfitsio](https://heasarc.gsfc.nasa.gov/fitsio/)
  - [psrfits\_utils](https://github.com/demorest/psrfits_utils)
- - [mwa\_hyperbeam](https://github.com/mwatelescope/mwa_hyperbeam)
+ - [mwa\_hyperbeam](https://github.com/mwatelescope/mwa_hyperbeam) (>=0.4.0)
  - [mwalib](https://github.com/MWATelescope/mwalib) (required)
  - [vdifio](https://github.com/demorest/vdifio)
  - [xGPU](https://github.com/GPU-correlators/xGPU)
