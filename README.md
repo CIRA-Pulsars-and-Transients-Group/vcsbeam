@@ -1,8 +1,6 @@
 # ![VCSBeam logo](doc/images/logo_tiny.png) VCSBeam
 
-
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/92fea04b2f1843188da4987526cf88f6)](https://www.codacy.com/gh/CIRA-Pulsars-and-Transients-Group/vcsbeam/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=CIRA-Pulsars-and-Transients-Group/vcsbeam&amp;utm_campaign=Badge_Grade)
-
 
 VCSBeam is designed to process high time resolution (HTR) data recorded by the Voltage Capture System (VCS) subsystem of the Murchison Widefield Array (MWA) telescope.
 It consists of
