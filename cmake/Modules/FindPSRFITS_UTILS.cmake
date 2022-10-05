@@ -24,7 +24,7 @@ if(NOT PSRFITS_UTILS_FOUND)
   find_path(PSRFITS_UTILS_INCLUDE_DIR psrfits.h
     HINTS ${PSRFITS_UTILS_ROOT_DIR} PATH_SUFFIXES /include /include/psrfits_utils)
   find_library(PSRFITS_UTILS_LIBRARY psrfits_utils
-    HINTS ${PSRFITS_UTILS_ROOT_DIR} PATH_SUFFIXES lib )
+    HINTS ${PSRFITS_UTILS_ROOT_DIR} PATH_SUFFIXES .libs )
 
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(PSRFITS_UTILS DEFAULT_MSG
