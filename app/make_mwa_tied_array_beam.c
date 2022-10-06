@@ -676,19 +676,12 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif )
 {
     int p;
-//    printf("writestep found \n");
-//    fflush(stdout);
-//    sleep(1);
     for (p = 0; p < vm->npointing; p++)
     {
         logger_start_stopwatch( vm->log, "write", true );
 
         if (vm->output_fine_channels)
         {
-
-//             printf("writestep start fine chan \n");
-  //          fflush(stdout);
-    //        sleep(1);
 
             // Write out the spliced channels
             wait_splice_psrfits( &(mpfs[p]) );
@@ -701,26 +694,12 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
                     exit(EXIT_FAILURE);
                 }
 
-      //           printf("writestep preWrite \n");
-        //         fflush(stdout);
-          //       sleep(1);
-
                 mpfs[p].spliced_pf.sub.offs = roundf(mpfs[p].spliced_pf.tot_rows * mpfs[p].spliced_pf.sub.tsubint) + 0.5*mpfs[p].spliced_pf.sub.tsubint;
                 mpfs[p].spliced_pf.sub.lst += mpfs[p].spliced_pf.sub.tsubint;
 
-
-          //        printf("writestep postWrite \n");
-          //       fflush(stdout);
-           //      sleep(1);
-
             }
-         //   printf("writestep end fine chan \n");
-          //  fflush(stdout);
-           // sleep(1);
 
         }
-
-
 
         if (vm->output_coarse_channels)
         {
@@ -730,8 +709,5 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
 
         logger_stop_stopwatch( vm->log, "write" );
     }
-//    printf("writestep ended \n");
- //   fflush(stdout);
-  //  sleep(1);
 
 }

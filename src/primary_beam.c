@@ -104,9 +104,6 @@ void vmCalcB(
     double * tempJones;
     tempJones = malloc(8*sizeof(double));
 
-     
-
-
     // Normalise to zenith
     int zenith_norm = 1;
 
@@ -155,19 +152,14 @@ void vmCalcB(
             {
                 // Use the 'dead' configuration temporarily
                 config_idx = DEAD_CONFIG;
-//                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , (double *)configs[config_idx]);
                 errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
                 configs[config_idx]=(cuDoubleComplex *)(tempJones);
             }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
-  //              errInt = calc_jones(
-    //                    pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad,iauOrder , (double *)configs[config_idx]);
                 errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
                 configs[config_idx]=(cuDoubleComplex *)(tempJones);
-
-
 
                 // Apply the parallactic angle correction
 #ifdef DEBUG
@@ -187,9 +179,8 @@ void vmCalcB(
             }
 
             if (errInt !=0)
-            {
-             
-                handle_hyperbeam_error("Primary Beam",180, "calc_jones");   
+            {             
+                handle_hyperbeam_error("Primary Beam",183, "calc_jones");   
                 exit(EXIT_FAILURE);
             }
 
@@ -229,14 +220,11 @@ void vmCreatePrimaryBeam( vcsbeam_context *vm )
         exit(EXIT_FAILURE);
     }
 
-
     create_delays_amps_from_metafits( vm->obs_metadata, &(vm->pb.delays), &(vm->pb.amps) );
 
     vm->pb.freq_hz = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_centre_hz;
 
     vm->pb.obs_metadata = vm->obs_metadata;
-
-
 }
 
 /**
@@ -498,8 +486,6 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
 
     int32_t errInt=0; //exit code integer for calcJones
 
-//    char errBuff[1024]; //Error Buffer for CalcJones
-
     double * tempJones;
     tempJones=malloc(8*sizeof(double));
     
@@ -513,11 +499,8 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
     printf("ERRoR ");
     fflush(stdout);
 
-   // *J=malloc(8*sizeof(double));
-
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
-//  errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , (double *) *J );
     errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones );
 
     *J = (cuDoubleComplex *)(tempJones);
@@ -525,7 +508,7 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
 
     if (errInt !=0)
     {
-        handle_hyperbeam_error("primary beam",503 ,"calc_jones");
+        handle_hyperbeam_error("primary beam",504 ,"calc_jones");
         exit(EXIT_FAILURE);
     }
 
