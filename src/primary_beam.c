@@ -62,8 +62,7 @@ const double *sky[] = { Isky, Qsky, Usky, Vsky };
 
 
 void handle_hyperbeam_error(char file[], int line_num, const char function_name[]) {
-    int err_length = hb_last_error_length();
-    printf("File %s:%d: hyperbeam error in %s: %s\n", file, line_num, function_name);
+    int err_length = hb_last_error_length(); 
     char *err = malloc(err_length * sizeof(char));
     int err_status = hb_last_error_message(err, err_length);
     if (err_status == -1) {
