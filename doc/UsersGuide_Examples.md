@@ -4,7 +4,7 @@
 
 ## Observation 1320499816
 
-This example was made using VCSBeam v3.2.1.
+This example was made using VCSBeam v4.0.0.
 
 ```
 # On Garrawarla, test vcsbeam version
@@ -13,7 +13,9 @@ $ module load vcsbeam
 $ make_mwa_tied_array_beam -V
 ```
 
-## Calibration (Hyperdrive, 1320412440)
+## Calibration (using Hyperdrive)
+
+### Producing a solution
 
 ```
 $ cd /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive
@@ -45,14 +47,38 @@ which hyperdrive
 METAFITS=/astro/mwavcs/asvo/252007/1320412440.metafits
  
 if [[ ! -r srclist_1000.yaml ]]; then
-   hyperdrive srclist-by-beam -n 1000 -m ${METAFITS} --tile-flags 57 /pawsey/mwa/software/python3/srclists/master/srclist_pumav3_EoR0aegean_fixedEoR1pietro+ForA_phase1+2.txt srclist_1000.yaml
+   hyperdrive srclist-by-beam -n 1000 -m ${METAFITS} /pawsey/mwa/software/python3/srclists/master/srclist_pumav3_EoR0aegean_fixedEoR1pietro+ForA_phase1+2.txt srclist_1000.yaml
 fi
  
-hyperdrive di-calibrate -s srclist_1000.yaml -d /astro/mwavcs/asvo/252007/*.fits ${METAFITS}
-This outputs hyperdrive_solutions.fits. The --tile-flags 57 corresponds to TileName HexE2. It is used because doing it without shows the amplitudes for that tile are much higher than the others.
+hyperdrive di-calibrate -s srclist_1000.yaml --tile-flags HexE2 -d /astro/mwavcs/asvo/252007/*.fits ${METAFITS}
 ```
 
-To plot the solutions, use `hyerdrive solutions-plot` (see `hyperdrive` documentation).
+This outputs hyperdrive_solutions.fits.
+
+### Plot the solutions
+
+```
+hyperdrive solutions-plot -m /astro/mwavcs/asvo/252007/1320412440.metafits hyperdrive_solutions.fits
+```
+
+\image html example_1320499816_phases.png width=500px
+\image latex example_1320499816_phases.png width=0.7\textwidth
+
+\image html example_1320499816_amps.png width=500px
+\image latex example_1320499816_amps.png width=0.7\textwidth
+
+### Convert the solutions
+
+Hyperdrive's default is to output the calibration solutions in a FITS format.
+Currently, VCSBeam only supports RTS and Offringa formats.
+Hyperdrive includes a utility to convert the solutions into different formats.
+However, the RTS format is now officially deprecated, and its use is discouraged and [not officially supported by hyperdrive](https://MWATelescope.github.io/mwa_hyperdrive/defs/cal_sols.html).
+
+The conversion to the Offringa format, however, [is supported](https://mwatelescope.github.io/mwa_hyperdrive/defs/cal_sols_ao.html).
+In this example, this is achieved by
+```
+hyperdrive solutions-convert -m /astro/mwavcs/asvo/252007/1320412440.metafits hyperdrive_solutions.fits hyperdrive_solutions.bin
+```
 
 ## Beamforming
 
