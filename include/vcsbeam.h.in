@@ -394,6 +394,14 @@ typedef struct mpi_psrfits_t
     MPI_Datatype    total_spectrum_type;
     MPI_Datatype    spliced_type;
 
+    MPI_Datatype    coarse_chan_OFFS;
+    MPI_Datatype    total_OFFS;
+    MPI_Datatype    spliced_OFFS;
+
+    MPI_Datatype    coarse_chan_SCL;
+    MPI_Datatype    total_SCL;
+    MPI_Datatype    spliced_SCL;
+    
     MPI_Request     request_data;
     MPI_Request     request_offsets;
     MPI_Request     request_scales;
@@ -1165,6 +1173,9 @@ void to_offset_binary( int8_t *i, int n );
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+void handle_hyperbeam_error(char file[], int line_num, const char function_name[]);
 
 void create_delays_amps_from_metafits(
         MetafitsMetadata *metafits_metadata, uint32_t ***delays, double ***amps );

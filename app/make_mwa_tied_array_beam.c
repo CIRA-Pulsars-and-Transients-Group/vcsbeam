@@ -682,6 +682,7 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
 
         if (vm->output_fine_channels)
         {
+
             // Write out the spliced channels
             wait_splice_psrfits( &(mpfs[p]) );
 
@@ -692,9 +693,12 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
                     fprintf(stderr, "error: Write PSRFITS subint failed. File exists?\n");
                     exit(EXIT_FAILURE);
                 }
+
                 mpfs[p].spliced_pf.sub.offs = roundf(mpfs[p].spliced_pf.tot_rows * mpfs[p].spliced_pf.sub.tsubint) + 0.5*mpfs[p].spliced_pf.sub.tsubint;
                 mpfs[p].spliced_pf.sub.lst += mpfs[p].spliced_pf.sub.tsubint;
+
             }
+
         }
 
         if (vm->output_coarse_channels)
@@ -705,4 +709,5 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
 
         logger_stop_stopwatch( vm->log, "write" );
     }
+
 }

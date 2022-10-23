@@ -145,7 +145,7 @@ void populate_spliced_psrfits_header(
 
     int i; // idx into dat_freqs
     int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
-    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz;
+    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[0].chan_start_hz;
     for (i = 0 ; i < pf->hdr.nchan; i++)
     {
         iC = i / vm->nfine_chan + first_coarse_chan_idx;
@@ -503,6 +503,32 @@ void vmInitMPIPsrfits(
 
     MPI_Type_create_resized( mpf->total_spectrum_type, 0, mpf->coarse_chan_pf.hdr.nchan, &(mpf->spliced_type) );
     MPI_Type_commit( &(mpf->spliced_type) );
+
+
+    //for scl and offs
+    // Create MPI vector types designed to splice the coarse channels together
+    // correctly during MPI_Gather
+    // Proccess can be replaced by storing scales and offsets into their final 
+    // position for each channel and using an MPI_Reduce with sum to collect data
+    
+    MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan, MPI_FLOAT, &(mpf->coarse_chan_OFFS) );
+    MPI_Type_commit( &(mpf->coarse_chan_OFFS) );
+
+    MPI_Type_vector( nstokes, 1, vm->ncoarse_chans, mpf->coarse_chan_OFFS , &(mpf->total_OFFS) );
+    MPI_Type_commit( &(mpf->total_OFFS) );
+
+    MPI_Type_create_resized( mpf->total_OFFS, 0, 4*mpf->coarse_chan_pf.hdr.nchan, &(mpf->spliced_OFFS) );
+    MPI_Type_commit( &(mpf->spliced_OFFS) );
+
+    MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan, MPI_FLOAT, &(mpf->coarse_chan_SCL) );
+    MPI_Type_commit( &(mpf->coarse_chan_SCL) );
+
+    MPI_Type_vector( nstokes, 1, vm->ncoarse_chans ,mpf->coarse_chan_SCL, &(mpf->total_SCL) );
+    MPI_Type_commit( &(mpf->total_SCL) );
+
+    MPI_Type_create_resized( mpf->total_SCL, 0,4*mpf->coarse_chan_pf.hdr.nchan, &(mpf->spliced_SCL) );
+    MPI_Type_commit( &(mpf->spliced_SCL) );
+
 }
 
 /**
@@ -513,12 +539,24 @@ void vmInitMPIPsrfits(
  * Only the memory associated with member variables are freed.
  * The `mpi_psrfits` itself is not freed.
  */
+
 void free_mpi_psrfits( mpi_psrfits *mpf )
 {
     MPI_Type_free( &(mpf->spliced_type) );
     MPI_Type_free( &(mpf->total_spectrum_type) );
     MPI_Type_free( &(mpf->coarse_chan_spectrum) );
 
+
+/*    MPI_Type_free( &(mpf->spliced_OFFS) );
+    MPI_Type_free( &(mpf->total_OFFS) );
+    MPI_Type_free( &(mpf->coarse_chan_OFFS) );
+
+    
+    MPI_Type_free( &(mpf->spliced_SCL) );
+    MPI_Type_free( &(mpf->total_SCL) );
+    MPI_Type_free( &(mpf->coarse_chan_SCL) );
+*/
+ 
     free_psrfits( &(mpf->coarse_chan_pf) );
 
     int mpi_proc_id;
@@ -549,12 +587,12 @@ void gather_splice_psrfits( mpi_psrfits *mpf )
 
     MPI_Igather(
             mpf->coarse_chan_pf.sub.dat_offsets, nfinechans*nstokes, MPI_FLOAT,
-            mpf->spliced_pf.sub.dat_offsets, nfinechans*nstokes, MPI_FLOAT,
+            mpf->spliced_pf.sub.dat_offsets, 1, mpf->spliced_OFFS,
             mpf->writer_id, MPI_COMM_WORLD, &(mpf->request_offsets) );
 
     MPI_Igather(
             mpf->coarse_chan_pf.sub.dat_scales, nfinechans*nstokes, MPI_FLOAT,
-            mpf->spliced_pf.sub.dat_scales, nfinechans*nstokes, MPI_FLOAT,
+            mpf->spliced_pf.sub.dat_scales, 1, mpf->spliced_SCL,
             mpf->writer_id, MPI_COMM_WORLD, &(mpf->request_scales) );
 }
 

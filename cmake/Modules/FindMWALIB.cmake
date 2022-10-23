@@ -21,7 +21,7 @@ if(NOT MWALIB_FOUND)
   find_path(MWALIB_INCLUDE_DIR mwalib.h
     HINTS ${MWALIB_ROOT} PATH_SUFFIXES /include)
   find_library(MWALIB_LIB mwalib
-    HINTS ${MWALIB_ROOT} PATH_SUFFIXES lib )
+    HINTS ${MWALIB_ROOT} PATH_SUFFIXES /lib )
 
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(MWALIB DEFAULT_MSG

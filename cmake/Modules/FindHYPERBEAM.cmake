@@ -25,7 +25,7 @@ if(NOT HYPERBEAM_FOUND)
   find_path(HYPERBEAM_INCLUDE_DIR mwa_hyperbeam.h
     HINTS ${HYPERBEAM_ROOT} PATH_SUFFIXES /include /include/mwa_hyperbeam)
   find_library(HYPERBEAM_LIB mwa_hyperbeam
-    HINTS ${HYPERBEAM_ROOT} PATH_SUFFIXES lib )
+    HINTS ${HYPERBEAM_ROOT} PATH_SUFFIXES /lib )
 
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(HYPERBEAM DEFAULT_MSG

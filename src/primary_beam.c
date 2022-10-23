@@ -57,6 +57,25 @@ const double *sky[] = { Isky, Qsky, Usky, Vsky };
  *         \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix}.
  * \f]
  */
+
+
+
+
+void handle_hyperbeam_error(char file[], int line_num, const char function_name[]) {
+    int err_length = hb_last_error_length(); 
+    char *err = malloc(err_length * sizeof(char));
+    int err_status = hb_last_error_message(err, err_length);
+    if (err_status == -1) {
+        printf("Something really bad happened!\n");
+        exit(EXIT_FAILURE);
+    }
+    printf("File %s:%d: hyperbeam error in %s: %s\n", file, line_num, function_name, err);
+
+    exit(EXIT_FAILURE);
+}
+
+
+
 void vmCalcB(
         vcsbeam_context   *vm,
         beam_geom         *beam_geom_vals )
@@ -81,6 +100,9 @@ void vmCalcB(
     for (config_idx = 0; config_idx < NCONFIGS; config_idx++)
         configs[config_idx] = NULL;
 
+    double * tempJones;
+    tempJones = malloc(8*sizeof(double));
+
     // Normalise to zenith
     int zenith_norm = 1;
 
@@ -94,14 +116,13 @@ void vmCalcB(
 
     double az, za; // (az)imuth and (z)enith (a)ngle in radians
 
-    uint8_t doParallactic=0; //Boolean 0= don't do parallactic convertion in calcJones
+    uint8_t iauOrder=0; //Boolean 0= don't set Jones matrix to be iau order but instead mwa order in CalcJones
 
     uint32_t numAmps=16; //number of dipole gains used (16 or 32)
 
     int32_t errInt; //exit code integer for calcJones
 
-    char errBuff[1024]; //Error Buffer for CalcJones
-
+    double * arrayLatitudeRad=NULL;
 
     // Loop through the pointings and calculate the primary beam matrices
     for (p = 0; p < pb->npointings; p++)
@@ -130,16 +151,14 @@ void vmCalcB(
             {
                 // Use the 'dead' configuration temporarily
                 config_idx = DEAD_CONFIG;
-                errInt = calc_jones(
-                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, doParallactic , (double *)configs[config_idx], errBuff );
+                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
+                configs[config_idx]=(cuDoubleComplex *)(tempJones);
             }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
-                errInt = calc_jones(
-                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, doParallactic , (double *)configs[config_idx], errBuff );
-
-
+                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
+                configs[config_idx]=(cuDoubleComplex *)(tempJones);
 
                 // Apply the parallactic angle correction
 #ifdef DEBUG
@@ -159,8 +178,8 @@ void vmCalcB(
             }
 
             if (errInt !=0)
-            {
-                fprintf(stderr, "%d   %s \n", errInt,errBuff);
+            {             
+                handle_hyperbeam_error("Primary Beam",183, "calc_jones");   
                 exit(EXIT_FAILURE);
             }
 
@@ -168,6 +187,7 @@ void vmCalcB(
             cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, ant, 0, nant, npol)]) );
         }
     }
+    free(tempJones);
 }
 
 /**
@@ -179,8 +199,7 @@ void vmCalcB(
 void vmCreatePrimaryBeam( vcsbeam_context *vm )
 {
     int32_t  errInt; //new_fee_beam Error integer
-    char errBuff[1024]; //Error string              
-
+    
     // Calculate some array sizes
     vm->pb.npointings = vm->npointing;
     vm->pb.nant = vm->obs_metadata->num_ants;
@@ -192,22 +211,19 @@ void vmCreatePrimaryBeam( vcsbeam_context *vm )
     vm->pb.B = (cuDoubleComplex *)malloc( size );
 
     vm->pb.beam = NULL;
-    errInt= new_fee_beam( HYPERBEAM_HDF5, &vm->pb.beam,errBuff );
+    errInt= new_fee_beam( HYPERBEAM_HDF5, &vm->pb.beam );
 
     if (errInt != 0)
     {
-        fprintf(stderr, "%d   %s \n", errInt,errBuff);
+        handle_hyperbeam_error("Primary Beam", 213, "new_fee_beam");
         exit(EXIT_FAILURE);
     }
-
 
     create_delays_amps_from_metafits( vm->obs_metadata, &(vm->pb.delays), &(vm->pb.amps) );
 
     vm->pb.freq_hz = vm->obs_metadata->metafits_coarse_chans[vm->coarse_chan_idx].chan_centre_hz;
 
     vm->pb.obs_metadata = vm->obs_metadata;
-
-
 }
 
 /**
@@ -463,25 +479,35 @@ void parallactic_angle_correction(
 void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction )
 {
 
-    uint8_t doParallactic=0; //Boolean 0= don't do parallactic convertion in calcJones
+    uint8_t iauOrder=0; //Boolean 0= don't set Jones matrix to be iau order but instead mwa order in CalcJones
 
     uint32_t numAmps=16; //number of dipole gains used (16 or 32)
 
-    int32_t errInt; //exit code integer for calcJones
+    int32_t errInt=0; //exit code integer for calcJones
 
-    char errBuff[1024]; //Error Buffer for CalcJones
+    double * tempJones;
+    tempJones=malloc(8*sizeof(double));
+    
+    double * arrayLatitudeRad;             
+    arrayLatitudeRad=NULL;
 
     cuDoubleComplex JH[NCOMPLEXELEMENTS];
     cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
     cuDoubleComplex coherency[NCOMPLEXELEMENTS];
 
+    printf("ERRoR ");
+    fflush(stdout);
+
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
-    errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, doParallactic , (double *) *J, errBuff );
+    errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones );
+
+    *J = (cuDoubleComplex *)(tempJones);
+    free(tempJones);
 
     if (errInt !=0)
     {
-        fprintf(stderr, "%d   %s \n", errInt,errBuff);
+        handle_hyperbeam_error("primary beam",504 ,"calc_jones");
         exit(EXIT_FAILURE);
     }
 
