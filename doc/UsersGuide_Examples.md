@@ -49,21 +49,10 @@ if [[ ! -r srclist_1000.yaml ]]; then
 fi
  
 hyperdrive di-calibrate -s srclist_1000.yaml -d /astro/mwavcs/asvo/252007/*.fits ${METAFITS}
-This outputs hyperdrive_solutions.bin. The --tile-flags 57 corresponds to TileName HexE2. It is used because doing it without shows the amplitudes for that tile are much higher than the others.
+This outputs hyperdrive_solutions.fits. The --tile-flags 57 corresponds to TileName HexE2. It is used because doing it without shows the amplitudes for that tile are much higher than the others.
 ```
 
-```
-$ mwa_plot_calibration -m 1320499816_legacy.metafits -c 1320412440.fits -C hyperdrive_solutions.bin -R NONE -U 0,0 -O -X -z nan > solution.txt
-$ plot_calibration.py --phases_png phases.png --amps_png amps.png solution.txt
-```
-
-\image html example_1320499816_phases.png width=1000px
-\image latex example_1320499816_phases.png width=0.7\textwidth
-
-\image html example_1320499816_amps.png width=1000px
-\image latex example_1320499816_amps.png width=0.7\textwidth
-
-Weirdly, even though I flagged HexE2 in Hyperdrive (corresponding to Antenna #57), it still shows up in these solution plots. This might be a bug in Hyperdrive. For now, I'll just also flag it when I try to beamform.
+To plot the solutions, use `hyerdrive solutions-plot` (see `hyperdrive` documentation).
 
 ## Beamforming
 
@@ -121,7 +110,7 @@ $ module load singularity
 $ /pawsey/mwa/singularity/presto/presto.sif prepfold -psr J0034-0721 -nosearch -nodmsearch C001_1320499816_00:34:08.87_-07:21:53.41_ch109-132_000?.fits
 ```
 
-\image html example_1320499816_presto_24chan.png width=1000px
+\image html example_1320499816_presto_24chan.png width=500px
 \image latex example_1320499816_presto_24chan.png width=0.7\textwidth
 ***(Needs to be updated)***
 
@@ -165,7 +154,7 @@ $ module load singularity
 $ /pawsey/mwa/singularity/presto/presto.sif prepfold -psr J0034-0721 -nosearch -nodmsearch C001_1320499816_00:34:08.87_-07:21:53.41_ch109_000?.fits
 ```
 
-\image html example_1320499816_presto_1chan.png width=1000px
+\image html example_1320499816_presto_1chan.png width=500px
 \image latex example_1320499816_presto_1chan.png width=0.7\textwidth
 
 ### A good single pulse for testing purposes
@@ -211,7 +200,7 @@ $ module load singularity
 $ /pawsey/mwa/singularity/dspsr/dspsr.sif dspsr -c 1 -D 0 -b 1024 -turns 1 -U 600 -A C001_1320499816_00:34:08.87_-07:21:53.41_ch109-132_0001.fits
 $ singularity run -B ~/.Xauthority /pawsey/mwa/singularity/psrchive_tempo2/psrchive_tempo2.sif pav -G -f 4 2021-11-09-13\:29\:57.ar
 ```
-\image html example_1320499816_single_pulse.png width=1000px
+\image html example_1320499816_single_pulse.png width=500px
 \image latex example_1320499816_single_pulse.png width=0.7\textwidth
 
 ## Other processes
@@ -466,5 +455,5 @@ $ module load singularity
 $ /pawsey/mwa/singularity/presto/presto.sif prepfold -psr J0034-0721 -nosearch -nodmsearch -start 0.01 incoh*.fits
 ```
 
-\image html example_1320499816_presto_incoh.png width=1000px
+\image html example_1320499816_presto_incoh.png width=500px
 \image latex example_1320499816_presto_incoh.png width=0.7\textwidth
