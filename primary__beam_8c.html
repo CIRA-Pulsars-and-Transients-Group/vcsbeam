@@ -102,8 +102,10 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a0e15358949313fde334e4ec99caa6a3d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a0e15358949313fde334e4ec99caa6a3d">handle_hyperbeam_error</a> (char file[], int line_num, const char function_name[])</td></tr>
+<tr class="memdesc:a0e15358949313fde334e4ec99caa6a3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the beam model Jones matrices for the given pointings.  <a href="primary__beam_8c.html#a0e15358949313fde334e4ec99caa6a3d">More...</a><br /></td></tr>
+<tr class="separator:a0e15358949313fde334e4ec99caa6a3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a39d7cb51f87c2ee201508a19bb9a8285"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285">vmCalcB</a> (vcsbeam_context *vm, beam_geom *beam_geom_vals)</td></tr>
-<tr class="memdesc:a39d7cb51f87c2ee201508a19bb9a8285"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the beam model Jones matrices for the given pointings.  <a href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285">More...</a><br /></td></tr>
 <tr class="separator:a39d7cb51f87c2ee201508a19bb9a8285"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b05c0aa7ccd995a5c7262829e5f84cf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a4b05c0aa7ccd995a5c7262829e5f84cf">vmCreatePrimaryBeam</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:a4b05c0aa7ccd995a5c7262829e5f84cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates memory for the beam model Jones matrices.  <a href="primary__beam_8c.html#a4b05c0aa7ccd995a5c7262829e5f84cf">More...</a><br /></td></tr>
@@ -361,6 +363,54 @@ Variables</h2></td></tr>
 
 </div>
 </div>
+<a id="a0e15358949313fde334e4ec99caa6a3d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0e15358949313fde334e4ec99caa6a3d">&#9670;&nbsp;</a></span>handle_hyperbeam_error()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void handle_hyperbeam_error </td>
+          <td>(</td>
+          <td class="paramtype">char&#160;</td>
+          <td class="paramname"><em>file</em>[], </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>line_num</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char&#160;</td>
+          <td class="paramname"><em>function_name</em>[]&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculates the beam model Jones matrices for the given pointings. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
+    <tr><td class="paramname">beam_geom_vals</td><td>An array of beam_geom objects containing the pointing information</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This function uses Hyperbeam to calculate the beam model Jones matrices for each pointing in <code>beam_geom_vals</code>.</p>
+<p>Only those configurations of live (i.e. non-dead) dipoles which exist in the array are calculated, in order to save calculation time.</p>
+<p>The parallactic angle correction is applied, so that the final matrices, which are stored in <code>pb&rarr;B</code>, are in the basis </p><p class="formulaDsp">
+\[ {\bf B} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix}. \]
+</p>
+ 
+</div>
+</div>
 <a id="abed728c1e058dd6b81dd9771b431a2c1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#abed728c1e058dd6b81dd9771b431a2c1">&#9670;&nbsp;</a></span>hash_dipole_config()</h2>
 
@@ -495,20 +545,6 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Calculates the beam model Jones matrices for the given pointings. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
-    <tr><td class="paramname">beam_geom_vals</td><td>An array of beam_geom objects containing the pointing information</td></tr>
-  </table>
-  </dd>
-</dl>
-<p>This function uses Hyperbeam to calculate the beam model Jones matrices for each pointing in <code>beam_geom_vals</code>.</p>
-<p>Only those configurations of live (i.e. non-dead) dipoles which exist in the array are calculated, in order to save calculation time.</p>
-<p>The parallactic angle correction is applied, so that the final matrices, which are stored in <code>pb&rarr;B</code>, are in the basis </p><p class="formulaDsp">
-\[ {\bf B} = \begin{bmatrix} B_{qx} &amp; B_{qy} \\ B_{px} &amp; B_{py} \end{bmatrix}. \]
-</p>
- 
 </div>
 </div>
 <a id="a4b05c0aa7ccd995a5c7262829e5f84cf"></a>
