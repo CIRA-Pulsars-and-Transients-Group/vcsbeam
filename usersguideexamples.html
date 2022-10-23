@@ -132,16 +132,8 @@ Calibration (Hyperdrive, 1320412440)</h1>
 <div class="line">fi</div>
 <div class="line"> </div>
 <div class="line">hyperdrive di-calibrate -s srclist_1000.yaml -d /astro/mwavcs/asvo/252007/*.fits ${METAFITS}</div>
-<div class="line">This outputs hyperdrive_solutions.bin. The --tile-flags 57 corresponds to TileName HexE2. It is used because doing it without shows the amplitudes for that tile are much higher than the others.</div>
-</div><!-- fragment --><div class="fragment"><div class="line">$ mwa_plot_calibration -m 1320499816_legacy.metafits -c 1320412440.fits -C hyperdrive_solutions.bin -R NONE -U 0,0 -O -X -z nan &gt; solution.txt</div>
-<div class="line">$ plot_calibration.py --phases_png phases.png --amps_png amps.png solution.txt</div>
-</div><!-- fragment --><div class="image">
-<img src="example_1320499816_phases.png" alt="" width="1000px"/>
-</div>
- <div class="image">
-<img src="example_1320499816_amps.png" alt="" width="1000px"/>
-</div>
- <p>Weirdly, even though I flagged HexE2 in Hyperdrive (corresponding to Antenna #57), it still shows up in these solution plots. This might be a bug in Hyperdrive. For now, I'll just also flag it when I try to beamform.</p>
+<div class="line">This outputs hyperdrive_solutions.fits. The --tile-flags 57 corresponds to TileName HexE2. It is used because doing it without shows the amplitudes for that tile are much higher than the others.</div>
+</div><!-- fragment --><p>To plot the solutions, use <code>hyerdrive solutions-plot</code> (see <code>hyperdrive</code> documentation).</p>
 <h1><a class="anchor" id="autotoc_md50"></a>
 Beamforming</h1>
 <h2><a class="anchor" id="autotoc_md51"></a>
@@ -181,7 +173,7 @@ All 24 channels</h2>
 </div><!-- fragment --><div class="fragment"><div class="line">$ module load singularity</div>
 <div class="line">$ /pawsey/mwa/singularity/presto/presto.sif prepfold -psr J0034-0721 -nosearch -nodmsearch C001_1320499816_00:34:08.87_-07:21:53.41_ch109-132_000?.fits</div>
 </div><!-- fragment --><div class="image">
-<img src="example_1320499816_presto_24chan.png" alt="" width="1000px"/>
+<img src="example_1320499816_presto_24chan.png" alt="" width="500px"/>
 </div>
 <p>  <em><b>(Needs to be updated)</b></em></p>
 <h2><a class="anchor" id="autotoc_md52"></a>
@@ -217,7 +209,7 @@ Single Channel</h2>
 </div><!-- fragment --><div class="fragment"><div class="line">$ module load singularity</div>
 <div class="line">$ /pawsey/mwa/singularity/presto/presto.sif prepfold -psr J0034-0721 -nosearch -nodmsearch C001_1320499816_00:34:08.87_-07:21:53.41_ch109_000?.fits</div>
 </div><!-- fragment --><div class="image">
-<img src="example_1320499816_presto_1chan.png" alt="" width="1000px"/>
+<img src="example_1320499816_presto_1chan.png" alt="" width="500px"/>
 </div>
  <h2><a class="anchor" id="autotoc_md53"></a>
 A good single pulse for testing purposes</h2>
@@ -254,7 +246,7 @@ A good single pulse for testing purposes</h2>
 <div class="line">$ /pawsey/mwa/singularity/dspsr/dspsr.sif dspsr -c 1 -D 0 -b 1024 -turns 1 -U 600 -A C001_1320499816_00:34:08.87_-07:21:53.41_ch109-132_0001.fits</div>
 <div class="line">$ singularity run -B ~/.Xauthority /pawsey/mwa/singularity/psrchive_tempo2/psrchive_tempo2.sif pav -G -f 4 2021-11-09-13\:29\:57.ar</div>
 </div><!-- fragment --> <div class="image">
-<img src="example_1320499816_single_pulse.png" alt="" width="1000px"/>
+<img src="example_1320499816_single_pulse.png" alt="" width="500px"/>
 </div>
  <h1><a class="anchor" id="autotoc_md54"></a>
 Other processes</h1>
@@ -462,7 +454,7 @@ Incoherent Beam</h2>
 <div class="fragment"><div class="line">$ module load singularity</div>
 <div class="line">$ /pawsey/mwa/singularity/presto/presto.sif prepfold -psr J0034-0721 -nosearch -nodmsearch -start 0.01 incoh*.fits</div>
 </div><!-- fragment --><div class="image">
-<img src="example_1320499816_presto_incoh.png" alt="" width="1000px"/>
+<img src="example_1320499816_presto_incoh.png" alt="" width="500px"/>
 </div>
   </div></div><!-- contents -->
 </div><!-- PageDoc -->

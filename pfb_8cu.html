@@ -165,7 +165,7 @@ Functions</h2></td></tr>
 <tr class="separator:ac08e04314a805c456827f9b39c930180"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><h1><a class="anchor" id="autotoc_md76"></a>
+<div class="textblock"><h1><a class="anchor" id="autotoc_md81"></a>
 Forward (analysis) fine PFB</h1>
 <p>The following kernels are part of an "offline" version of the "fine PFB" algorithm that was implemented on the FPGAs of Phase 1 &amp; 2 of the MWA. As described in <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/mwa-tiedarray-processing-iii-microsecond-time-resolution-via-a-polyphase-synthesis-filter/C76837FE84A1DCFAA696C9AC10C44F2D">McSweeney et al. (2020)</a>, this algorithm is a version of the "weighted overlap-add" algorithm (see their Eq. (3)): </p><p class="formulaDsp">
 \[ X_k[m] \sum_n^{K-1} b_m[n] e^{-2\pi jkn/K}, \]
@@ -202,14 +202,14 @@ Forward (analysis) fine PFB</h1>
 <li>the FFT, which is implemented using the cuFFT library, and</li>
 <li>the demotion and packaging of the result into the output format, which is described in the Appendix of <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/mwa-tiedarray-processing-iii-microsecond-time-resolution-via-a-polyphase-synthesis-filter/C76837FE84A1DCFAA696C9AC10C44F2D">McSweeney et al. (2020)</a></li>
 </ol>
-<h2><a class="anchor" id="autotoc_md77"></a>
+<h2><a class="anchor" id="autotoc_md82"></a>
 Notes:</h2>
 <ul>
 <li><code>indata</code> is expected to have the same data layout as delivered by mwalib's mwalib_voltage_context_read_second() function when applied to MWAX high time resolution data, whose format description can be found <a href="https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System">here</a>. The samples are organised according to the <code>vMWAX_IDX</code> macro.</li>
 <li><code>outdata</code> will have the same data layout as "recombined" legacy VCS data, as per the <code>v_IDX</code> macro.</li>
 <li>Each thread will operate on one RF input (i.e. antenna/pol combination) and generate the spectrum for a single "fine-channelised" time step (the <code>m</code> index). The <code>weighted overlap-add</code> array (<code>b</code>) also resides in device memory, in order that it can make use of cuFFT.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md78"></a>
+<h1><a class="anchor" id="autotoc_md83"></a>
 Backwards (synthesis) fine PFB</h1>
 <p>The backwards, inverse, or synthesis PFB is implemented in a single CUDA kernel, so see <a class="el" href="pfb_8cu.html#aa6eb2332a6371d8a576e6422d7bc9d79" title="CUDA kernel implementing the synthesis PFB.">ipfb_kernel()</a> for more information. </p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
