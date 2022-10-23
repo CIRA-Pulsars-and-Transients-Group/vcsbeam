@@ -199,13 +199,13 @@ int main(int argc, char **argv)
 
 void usage()
 {
-    printf( "\nusage: make_incoh_beam [OPTIONS]\n");
+    printf( "\nusage: make_mwa_incoh_beam [OPTIONS]\n");
 
     printf( "\nREQUIRED OPTIONS\n\n"
             "\t-m, --metafits=FILE       FILE is the metafits file for the target observation\n"
            );
 
-    printf( "\nOUTPUT OPTIONS\n\n"
+    printf( "\nINPUT & OUTPUT OPTIONS\n\n"
             "\t-b, --begin=GPSTIME       Begin time of observation, in GPS seconds\n"
             "\t                          If GPSTIME starts with a '+' or a '-', then the time\n"
             "\t                          is taken relative to the start or end of the observation\n"
