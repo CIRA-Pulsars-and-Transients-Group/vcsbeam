@@ -5,7 +5,7 @@ var searchData=
   ['calc_5fcoherency_5fmatrix_20',['calc_coherency_matrix',['../jones_8c.html#a6c6ec805c1f3139a266be79b44e56d24',1,'jones.c']]],
   ['calc_5fgeometric_5fdelays_21',['calc_geometric_delays',['../geometry_8c.html#ae70052b290c7584548822ba40b9909d3',1,'geometry.c']]],
   ['calc_5fhermitian_22',['calc_hermitian',['../jones_8c.html#af2d2c07ed8d82064c00fdf85ff48eadf',1,'jones.c']]],
-  ['calc_5fnormalised_5fbeam_5fresponse_23',['calc_normalised_beam_response',['../primary__beam_8c.html#a07d76803151480bdee46ceb53fd93d74',1,'primary_beam.c']]],
+  ['calc_5fnormalised_5fbeam_5fresponse_23',['calc_normalised_beam_response',['../primary__beam_8c.html#a9ac26c8fd985e50bf21503b1dc0d4ee0',1,'primary_beam.c']]],
   ['calc_5fstopwatch_5fmean_24',['calc_stopwatch_mean',['../performance_8c.html#aa98913e94b89dce1c549c1850dae9de5',1,'performance.c']]],
   ['calc_5fstopwatch_5fstd_25',['calc_stopwatch_std',['../performance_8c.html#a9f02ae91a19bf47cbff59335442cd328',1,'performance.c']]],
   ['calibration_26',['Calibration',['../calibration.html',1,'']]],
