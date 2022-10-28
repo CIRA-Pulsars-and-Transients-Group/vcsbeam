@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         sprintf( coord2, "ϕ" );
     }
 
-    cuDoubleComplex *J = NULL; // For the FEE beam
+    cuDoubleComplex *J = malloc( 4*sizeof(cuDoubleComplex) ); // For the FEE beam
     vm.npointing = 1;
     vm.coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
     vmCreatePrimaryBeam( &vm );
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
                 array_factor = calc_array_factor( vm.obs_metadata, freq_hz, &bg, &arrf_bg );
             }
 
-            calc_normalised_beam_response( vm.pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, opts.apply_pa_correction );
+            calc_normalised_beam_response( vm.pb.beam, az, za, freq_hz, delays, amps, IQUV, J, opts.apply_pa_correction );
 
             // Print out the results
             fprintf( opts.fout, "%lu %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n",
@@ -180,13 +180,14 @@ int main(int argc, char **argv)
                     cuCreal( J[3] ), cuCimag( J[3] )
                    );
 
-            free( J );
         }
 
         // Insert a blank line in the output, to delimit different frequencies
         if (opts.empty_lines)
             fprintf( opts.fout, "\n" );
     }
+
+    free( J );
 
     // Close output file, if necessary
     if (opts.fout != stderr)

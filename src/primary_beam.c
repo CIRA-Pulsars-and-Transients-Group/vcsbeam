@@ -476,7 +476,7 @@ void parallactic_angle_correction(
  * This function will allocate memory for `J`, which must be freed by the
  * caller.
  */
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex **J, bool apply_pa_correction )
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex *J, bool apply_pa_correction )
 {
 
     uint8_t iauOrder=0; //Boolean 0= don't set Jones matrix to be iau order but instead mwa order in CalcJones
@@ -485,9 +485,6 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
 
     int32_t errInt=0; //exit code integer for calcJones
 
-    double * tempJones;
-    tempJones=malloc(8*sizeof(double));
-    
     double * arrayLatitudeRad;             
     arrayLatitudeRad=NULL;
 
@@ -495,15 +492,9 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
     cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
     cuDoubleComplex coherency[NCOMPLEXELEMENTS];
 
-    printf("ERRoR ");
-    fflush(stdout);
-
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
-    errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones );
-
-    *J = (cuDoubleComplex *)(tempJones);
-    free(tempJones);
+    errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , (double *)J );
 
     if (errInt !=0)
     {
@@ -518,16 +509,16 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
         // Calculate the parallactic angle correction
         parallactic_angle_correction( P, MWA_LATITUDE_RADIANS, az, za );
 
-        mult2x2d_RxC( P, *J, *J );
+        mult2x2d_RxC( P, J, J );
     }
 
     // Convert this jones matrix to Stokes parameters for I, Q, U, V skies
     int stokes;
     for (stokes = 0; stokes < 4; stokes++)
     {
-        calc_hermitian( *J, JH );
+        calc_hermitian( J, JH );
         mult2x2d( (cuDoubleComplex *)sky[stokes], JH, sky_x_JH );
-        mult2x2d( *J, sky_x_JH, coherency );
+        mult2x2d( J, sky_x_JH, coherency );
 
         if (stokes == 0) // Stokes I
             IQUV[0] = 0.5*cuCreal( cuCadd( coherency[0], coherency[3] ) );

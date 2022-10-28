@@ -115,7 +115,7 @@ int main(int argc, char **argv)
     // Loop over RA
     int X_idx, Y_idx;
     double X, Y;
-    cuDoubleComplex *J=  NULL;
+    cuDoubleComplex *J = malloc( 4*sizeof(cuDoubleComplex) );
     for (X_idx = 0; X_idx < opts.width_pixels; X_idx++)
     {
         X = X0 + X_idx*dX;
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
             calc_beam_geom( X, Y, mjd, &arrf_bg );
             array_factor = calc_array_factor( vm.obs_metadata, freq_hz, &arrf_bg, &bg );
 
-            calc_normalised_beam_response( vm.pb.beam, az, za, freq_hz, delays, amps, IQUV, &J, true );
+            calc_normalised_beam_response( vm.pb.beam, az, za, freq_hz, delays, amps, IQUV, J, true );
 
             // Print out the results
             fprintf( opts.fout, "%f %f %f %f %f %f\n",
@@ -139,12 +139,13 @@ int main(int argc, char **argv)
                     array_factor*IQUV[3]
                    );
 
-            free( J );
         }
 
         // Insert a blank line in the output, to delimit different rows
         fprintf( opts.fout, "\n" );
     }
+
+    free( J );
 
     // Close output file, if necessary
     if (opts.fout != stderr)
