@@ -92,7 +92,7 @@ To obtain the beam matrix that converts from the \f$(x,y)\f$ basis to the \f$(q,
 \f[
     {\bf B} = {\bf B}_\text{hb}{\bf P}_\text{pa}
             = \begin{bmatrix} B_{q\theta} & B_{q\phi} \\ B_{p\theta} & B_{p\phi} \end{bmatrix}
-              \begin{bmatrix} P_{\theta x} & B_{\theta y} \\ B_{\phi x} & B_{\phi y} \end{bmatrix}
+              \begin{bmatrix} P_{\theta x} & P_{\theta y} \\ P_{\phi x} & P_{\phi y} \end{bmatrix}
             = \begin{bmatrix} B_{qx} & B_{qy} \\ B_{px} & B_{py} \end{bmatrix}
 \f]
 
