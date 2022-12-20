@@ -31,9 +31,14 @@ struct make_tied_array_beam_opts {
     // Variables for MWA/VCS configuration
     char              *custom_flags;     // Use custom list for flagging antennas
 
-    // Output options
-    bool               out_fine;         // Output fine channelised data (PSRFITS)
-    bool               out_coarse;       // Output coarse channelised data (VDIF)
+    // Output format options
+    bool               out_psrfits;      // Output PSRFITS format
+    bool               out_vdif;         // Output VDIF format
+    bool               out_filterbank;   // Output FILTERBANK format
+
+    // These are worked out from the output format options
+    bool               out_fine;         // Output fine channelised data
+    bool               out_coarse;       // Output coarse channelised data
 
     // Calibration options
     char              *cal_metafits;     // Filename of the metafits file
@@ -64,7 +69,8 @@ void usage();
 void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts );
 
 void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
-        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif );
+        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif,
+        struct make_tied_array_beam_opts *opts );
 
 /********
  * MAIN *
@@ -195,7 +201,7 @@ int main(int argc, char **argv)
 
     // Create structures for holding header information
     mpi_psrfits mpfs[vm->npointing];
-    if (vm->output_fine_channels)
+    if (opts.out_psrfits)
     {
         for (p = 0; p < vm->npointing; p++)
         {
@@ -252,7 +258,7 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif );
+            write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif, &opts );
         }
 
         // Do the forward PFB (if needed), and form the beams
@@ -264,7 +270,7 @@ int main(int argc, char **argv)
             logger_start_stopwatch( vm->log, "ipfb", true );
 
             vmPullE( vm );
-            prepare_detected_beam( detected_beam, mpfs, vm );
+            prepare_detected_beam( detected_beam, vm );
             cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vm->vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
@@ -272,8 +278,8 @@ int main(int argc, char **argv)
             logger_stop_stopwatch( vm->log, "ipfb" );
         }
 
-        // Splice channels together
-        if (vm->output_fine_channels) // Only PSRFITS output can be combined into a single file
+        // Splice channels together for PSRFITS
+        if (opts.out_psrfits)
         {
             vmPullS( vm );
             vmSendSToFits( vm, mpfs );
@@ -290,19 +296,19 @@ int main(int argc, char **argv)
     }
 
     // Write out the last second's worth of data
-    write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif );
+    write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif, &opts );
 
     logger_message( vm->log, "\n*****END BEAMFORMING*****\n" );
 
     // Clean up channel-dependent memory
     for (p = 0; p < vm->npointing; p++)
     {
-        if (vm->output_fine_channels)
+        if (opts.out_psrfits)
         {
             free_mpi_psrfits( &(mpfs[p]) );
         }
 
-        if (vm->output_coarse_channels)
+        if (opts.out_vdif)
         {
             free( vm->vf[p].b_scales  );
             free( vm->vf[p].b_offsets );
@@ -405,11 +411,10 @@ void usage()
           );
 
     printf( "\nOUTPUT OPTIONS\n\n"
-            "\t-p, --out-fine             Output fine-channelised, full-Stokes data (PSRFITS)\n"
-            "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
-            "\t-t, --max_t                Maximum number of seconds per output FITS file. [default: 200]\n"
-            "\t-v, --out-coarse           Output coarse-channelised, 2-pol (XY) data (VDIF)\n"
-            "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
+            "\t-o, --output-format=FMT    Define the output format (FMT can be FILTERBANK, PSRFIT, or VDIF).\n"
+            "\t                           To generate more than one output format, repeat -o for each format.\n"
+            "\t                           At least one output format must be supplied.\n"
+            "\t-t, --max_t                Maximum number of seconds per output PSRFITS file. [default: 200]\n"
           );
 
     printf( "\nCALIBRATION OPTIONS\n\n"
@@ -459,8 +464,11 @@ void make_tied_array_beam_parse_cmdline(
     opts->datadir              = NULL;  // The path to where the recombined data live
     opts->metafits             = NULL;  // filename of the metafits file for the target observation
     opts->coarse_chan_str      = NULL;  // Absolute or relative coarse channel
-    opts->out_fine             = false; // Output fine channelised data (PSRFITS)
-    opts->out_coarse           = false; // Output coarse channelised data (VDIF)
+    opts->out_psrfits          = false; // Output PSRFITS format
+    opts->out_vdif             = false; // Output VDIF format
+    opts->out_filterbank       = false; // Output FILTERBANK format
+    opts->out_fine             = false; // Output fine channelised data
+    opts->out_coarse           = false; // Output coarse channelised data
     opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
@@ -487,8 +495,7 @@ void make_tied_array_beam_parse_cmdline(
             static struct option long_options[] = {
                 {"begin",           required_argument, 0, 'b'},
                 {"bandpass",        no_argument,       0, 'B'},
-                {"out-fine",        no_argument,       0, 'p'},
-                {"out-coarse",      no_argument,       0, 'v'},
+                {"out-format",      required_argument, 0, 'o'},
                 {"max_t",           required_argument, 0, 't'},
                 {"analysis_filter", required_argument, 0, 'A'},
                 {"synth_filter",    required_argument, 0, 'S'},
@@ -513,7 +520,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:hm:n:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:hm:n:o:OP:R:sS:t:T:U:VX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -563,6 +570,29 @@ void make_tied_array_beam_parse_cmdline(
                     break;
                 case 'n':
                     opts->nchunks = atoi(optarg);
+                    break;
+                case 'o':
+                    if (strcmp( optarg, "PSRFITS" ) == 0)
+                    {
+                        opts->out_psrfits = true;
+                        opts->out_fine = true;
+                    }
+                    else if (strcmp( optarg, "VDIF" ) == 0)
+                    {
+                        opts->out_vdif = true;
+                        opts->out_coarse = true;
+                    }
+                    else if (strcmp( optarg, "FILTERBANK" ) == 0)
+                    {
+                        opts->out_filterbank = true;
+                        opts->out_fine = true;
+                    }
+                    else
+                    {
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "unrecognised output format \"%s\"\n", optarg );
+                        exit(EXIT_FAILURE);
+                    }
                     break;
                 case 'O':
                     opts->cal_type = CAL_OFFRINGA;
@@ -636,6 +666,7 @@ void make_tied_array_beam_parse_cmdline(
     assert( opts->caldir          != NULL );
     assert( opts->metafits        != NULL );
     assert( opts->cal_metafits    != NULL );
+    assert( opts->out_psrfits | opts->out_vdif | opts->out_filterbank );
     assert( opts->nchunks         >= 1 );
 
     if (opts->datadir == NULL)
@@ -673,14 +704,15 @@ void make_tied_array_beam_parse_cmdline(
 
 
 void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
-        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif )
+        struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif,
+        struct make_tied_array_beam_opts *opts )
 {
     int p;
     for (p = 0; p < vm->npointing; p++)
     {
         logger_start_stopwatch( vm->log, "write", true );
 
-        if (vm->output_fine_channels)
+        if (opts->out_psrfits)
         {
 
             // Write out the spliced channels
@@ -701,7 +733,7 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
 
         }
 
-        if (vm->output_coarse_channels)
+        if (opts->out_vdif)
         {
             vdif_write_second( &vf[p], vhdr,
                     data_buffer_vdif + p * vf->sizeof_buffer );

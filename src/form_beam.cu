@@ -593,7 +593,7 @@ void vmPullS( vcsbeam_context *vm )
  * @todo Remove prepare_detected_beam() and use a "host buffer" instead.
  */
 void prepare_detected_beam( cuDoubleComplex ****detected_beam,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm )
+        vcsbeam_context *vm )
 {
     // Get shortcut variables
     uintptr_t nchan  = vm->nfine_chan;

@@ -1013,8 +1013,9 @@ void vmBeamformSecond( vcsbeam_context *vm );
 void vmPullE( vcsbeam_context *vm );
 void vmPullS( vcsbeam_context *vm );
 
-void prepare_detected_beam( cuDoubleComplex ****detected_beam,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm );
+void prepare_detected_beam(
+        cuDoubleComplex ****detected_beam,
+        vcsbeam_context *vm );
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs );
 
 float *create_pinned_data_buffer( size_t size );
