@@ -61,7 +61,7 @@ The following applications are built along with the vcsbeam library. The table l
 |-----------------------------------|:----:|:---:|:---:|:-------:|:--------------:|:--------------:|:------:|:------:|:----:|
 | `fine_pfb_offline`                |   Y  |     |     |         |                |                |    Y   |        |      |
 | `make_mwa_incoh_beam`             |   Y  |  Y  |     |    Y    |        Y       |                |    Y   |        |      |
-| `make_mwa_tied_array_beam`        |   Y  |  Y  |  Y  |    Y    |        Y       |        Y       |    Y   |    Y   |      |
+| `make_mwa_tied_array_beam`        |   Y  |  Y  |  Y  |    Y    |                |        Y       |    Y   |    Y   |      |
 | `mwa_track_primary_beam_response` |   C  |     |  Y  |         |                |        Y       |    Y   |        |      |
 | `mwa_mwa_tied_array_beam_psf`     |   C  |     |  Y  |         |                |        Y       |    Y   |        |      |
 | `offline_correlator`              |   Y  |     |     |    Y    |                |                |    C   |        |   Y  |

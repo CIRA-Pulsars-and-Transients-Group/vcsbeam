@@ -1064,6 +1064,8 @@ void vmDestroyCudaStreams( vcsbeam_context *vm )
     free( vm->streams );
 }
 
+#ifdef HAVE_PSRFITS
+
 /**
  * Allocates both CPU and GPU memory for the scales, offsets, and data for
  * PSRFITS output.
@@ -1120,6 +1122,8 @@ void vmDestroyStatistics( vcsbeam_context *vm )
     cudaFree( vm->d_Cscaled );
     cudaCheckErrors( "vmDestroyStatistics: cudaFree(Cscaled) failed" );
 }
+
+#endif
 
 /**
  * Sets the number of pointings.

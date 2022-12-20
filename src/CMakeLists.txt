@@ -12,6 +12,14 @@ add_library(vcsbeam STATIC
     calibration.c
     metadata.c)
 
+if (PSRFITS_UTILS_FOUND)
+    target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_PSRFITS>)
+endif ()
+
+if (SIGPROC_FOUND)
+    target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_FILTERBANK>)
+endif ()
+
 if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
     target_sources(vcsbeam PRIVATE beam_psrfits.c)
 endif ()
@@ -22,6 +30,7 @@ endif ()
 
 if (VDIFIO_FOUND)
     target_sources(vcsbeam PRIVATE beam_vdif.c)
+    target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_VDIFIO>)
 endif ()
 
 if (HYPERBEAM_FOUND)
@@ -33,8 +42,6 @@ set_target_properties(vcsbeam
     COMPILE_FLAGS "${COMPILE_FLAGS}")
 
 target_include_directories(vcsbeam PUBLIC
-    ${PSRFITS_UTILS_INCLUDE_DIR}
-    ${VDIFIO_INCLUDE_DIR}
     ${CFITSIO_INCLUDE_DIR}
     ${PAL_INCLUDE_DIR}
     ${CUDA_INCLUDE_DIRS}
@@ -44,8 +51,6 @@ target_include_directories(vcsbeam PUBLIC
     ${CMAKE_BINARY_DIR})
 
 target_link_libraries(vcsbeam
-    ${PSRFITS_UTILS_LIBRARY}
-    ${VDIFIO_LIBRARY}
     ${CFITSIO_LIBRARY}
     ${PAL_LIBRARY}
     ${M_LIBRARY}
@@ -53,6 +58,21 @@ target_link_libraries(vcsbeam
     ${MWALIB_LIB}
     ${MPI_C_LIBRARIES}
     cufft)
+
+if (PSRFITS_UTILS_FOUND)
+    target_include_directories(vcsbeam PUBLIC ${PSRFITS_UTILS_INCLUDE_DIR})
+    target_link_libraries(vcsbeam ${PSRFITS_UTILS_LIBRARY})
+endif ()
+
+if (VDIFIO_FOUND)
+    target_include_directories(vcsbeam PUBLIC ${VDIFIO_INCLUDE_DIR})
+    target_link_libraries(vcsbeam ${VDIFIO_LIBRARY})
+endif ()
+
+if (SIGPROC_FOUND)
+    target_include_directories(vcsbeam PUBLIC ${SIGPROC_INCLUDE_DIR})
+    target_link_libraries(vcsbeam ${SIGPROC_LIBRARY})
+endif ()
 
 install(TARGETS vcsbeam
     LIBRARY DESTINATION lib

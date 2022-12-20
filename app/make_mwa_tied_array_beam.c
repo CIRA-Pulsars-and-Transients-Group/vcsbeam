@@ -68,8 +68,13 @@ struct make_tied_array_beam_opts {
 void usage();
 void make_tied_array_beam_parse_cmdline( int argc, char **argv, struct make_tied_array_beam_opts *opts );
 
-void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
+void write_step( vcsbeam_context *vm,
+#ifdef HAVE_PSRFITS
+        mpi_psrfits *mpfs,
+#endif
+#ifdef HAVE_VDIFIO
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif,
+#endif
         struct make_tied_array_beam_opts *opts );
 
 /********
@@ -200,6 +205,7 @@ int main(int argc, char **argv)
     }
 
     // Create structures for holding header information
+#ifdef HAVE_PSRFITS
     mpi_psrfits mpfs[vm->npointing];
     if (opts.out_psrfits)
     {
@@ -209,6 +215,7 @@ int main(int argc, char **argv)
                     &(beam_geom_vals[p]), NULL, true );
         }
     }
+#endif
 
     /****************************
      * GET CALIBRATION SOLUTION *
@@ -226,7 +233,9 @@ int main(int argc, char **argv)
     // ------------------
     vmCreatePrimaryBeam( vm );
     vmCreateGeometricDelays( vm );
+#ifdef HAVE_PSRFITS
     vmCreateStatistics( vm, mpfs );
+#endif
 
     // ------------------
 
@@ -258,7 +267,15 @@ int main(int argc, char **argv)
         // has terminated
         if (timestep_idx > 0) // i.e. don't do this the first time around
         {
-            write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif, &opts );
+            write_step(
+                    vm,
+#ifdef HAVE_PSRFITS
+                    mpfs,
+#endif
+#ifdef HAVE_VDIFIO
+                    vm->vf, &vm->vhdr, data_buffer_vdif,
+#endif
+                    &opts );
         }
 
         // Do the forward PFB (if needed), and form the beams
@@ -278,6 +295,7 @@ int main(int argc, char **argv)
             logger_stop_stopwatch( vm->log, "ipfb" );
         }
 
+#ifdef HAVE_PSRFITS
         // Splice channels together for PSRFITS
         if (opts.out_psrfits)
         {
@@ -293,26 +311,39 @@ int main(int argc, char **argv)
 
             logger_stop_stopwatch( vm->log, "splice" );
         }
+#endif
     }
 
     // Write out the last second's worth of data
-    write_step( vm, mpfs, vm->vf, &vm->vhdr, data_buffer_vdif, &opts );
+    write_step(
+            vm,
+#ifdef HAVE_PSRFITS
+            mpfs,
+#endif
+#ifdef HAVE_VDIFIO
+            vm->vf, &vm->vhdr, data_buffer_vdif,
+#endif
+            &opts );
 
     logger_message( vm->log, "\n*****END BEAMFORMING*****\n" );
 
     // Clean up channel-dependent memory
     for (p = 0; p < vm->npointing; p++)
     {
+#ifdef HAVE_PSRFITS
         if (opts.out_psrfits)
         {
             free_mpi_psrfits( &(mpfs[p]) );
         }
+#endif
 
+#ifdef HAVE_VDIFIO
         if (opts.out_vdif)
         {
             free( vm->vf[p].b_scales  );
             free( vm->vf[p].b_offsets );
         }
+#endif
     }
 
     // Report performace statistics
@@ -332,7 +363,9 @@ int main(int argc, char **argv)
         cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
     }
 
+#ifdef HAVE_PSRFITS
     vmDestroyStatistics( vm );
+#endif
 
     free( opts.pointings_file  );
     free( opts.datadir         );
@@ -411,9 +444,16 @@ void usage()
           );
 
     printf( "\nOUTPUT OPTIONS\n\n"
-            "\t-o, --output-format=FMT    Define the output format (FMT can be FILTERBANK, PSRFIT, or VDIF).\n"
-            "\t                           To generate more than one output format, repeat -o for each format.\n"
-            "\t                           At least one output format must be supplied.\n"
+            "\t-o, --output-format=FMT    Define the output format. To generate more than one output format, \n"
+            "\t                           repeat -o for each format. At least one output format must be supplied.\n"
+            "\t                           Available formats (FMT):\n"
+#ifdef HAVE_PSRFITS
+            "\t                               PSRFITS    (  10 kHz channels) ✓\n"
+#else
+            "\t                               PSRFITS    (  10 kHz channels) ✗ (requires PSRFITS_UTILS)\n"
+#endif
+            "\t                               FILTERBANK (  10 kHz channels) ✗\n"
+            "\t                               VDIF       (1.28 MHz channels) ✓\n"
             "\t-t, --max_t                Maximum number of seconds per output PSRFITS file. [default: 200]\n"
           );
 
@@ -574,8 +614,15 @@ void make_tied_array_beam_parse_cmdline(
                 case 'o':
                     if (strcmp( optarg, "PSRFITS" ) == 0)
                     {
+#ifdef HAVE_PSRFITS
                         opts->out_psrfits = true;
                         opts->out_fine = true;
+#else
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "VCSBeam compiled without the PSRFITS_UTILS library, "
+                                "so PSRFITS output is not available.\n" );
+                        exit(EXIT_FAILURE);
+#endif
                     }
                     else if (strcmp( optarg, "VDIF" ) == 0)
                     {
@@ -703,8 +750,13 @@ void make_tied_array_beam_parse_cmdline(
 
 
 
-void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
+void write_step( vcsbeam_context *vm,
+#ifdef HAVE_PSRFITS
+        mpi_psrfits *mpfs,
+#endif
+#ifdef HAVE_VDIFIO
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif,
+#endif
         struct make_tied_array_beam_opts *opts )
 {
     int p;
@@ -712,6 +764,7 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
     {
         logger_start_stopwatch( vm->log, "write", true );
 
+#ifdef HAVE_PSRFITS
         if (opts->out_psrfits)
         {
 
@@ -732,12 +785,15 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
             }
 
         }
+#endif
 
+#ifdef HAVE_VDIFIO
         if (opts->out_vdif)
         {
             vdif_write_second( &vf[p], vhdr,
                     data_buffer_vdif + p * vf->sizeof_buffer );
         }
+#endif
 
         logger_stop_stopwatch( vm->log, "write" );
     }

@@ -622,6 +622,8 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
     }
 }
 
+#ifdef HAVE_PSRFITS
+
 /**
  * Renormalises the detected Stokes parameters and copies them into PSRFITS
  * structs, ready for frequency splicing.
@@ -650,6 +652,8 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
     }
 
 }
+
+#endif
 
 /**
  * Copies the index arrays for antennas and polarisations from CPU memory to

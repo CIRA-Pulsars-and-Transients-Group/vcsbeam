@@ -8,7 +8,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/fine_pfb_offline DESTINATION bin)
 
 # Tied array beamformer
 
-if (PAL_FOUND AND PSRFITS_UTILS_FOUND AND HYPERBEAM_FOUND AND VDIFIO_FOUND)
+if (PAL_FOUND AND HYPERBEAM_FOUND)
     add_executable(make_mwa_tied_array_beam make_mwa_tied_array_beam.c)
     target_link_libraries(make_mwa_tied_array_beam vcsbeam)
     target_include_directories(make_mwa_tied_array_beam PUBLIC ${CMAKE_BINARY_DIR})

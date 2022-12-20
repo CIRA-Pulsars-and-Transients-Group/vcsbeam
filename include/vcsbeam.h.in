@@ -22,7 +22,11 @@
 #include <mwalib.h>
 #include <star/pal.h>
 #include <star/palmac.h>
+
+#ifdef HAVE_PSRFITS
 #include <psrfits.h>
+#endif
+
 #include <vdifio.h>
 #include <mwa_hyperbeam.h>
 
@@ -387,7 +391,7 @@ typedef struct beam_geom_t {
     double unit_H;
 } beam_geom;
 
-
+#ifdef HAVE_PSRFITS
 typedef struct mpi_psrfits_t
 {
     MPI_Datatype    coarse_chan_spectrum;
@@ -411,6 +415,7 @@ typedef struct mpi_psrfits_t
 
     int             writer_id;
 } mpi_psrfits;
+#endif
 
 typedef struct host_buffer_t
 {
@@ -769,8 +774,10 @@ void vmCreateGeometricDelays( vcsbeam_context *vm );
 void vmCreateCudaStreams( vcsbeam_context *vm );
 void vmDestroyCudaStreams( vcsbeam_context *vm );
 
+#ifdef HAVE_PSRFITS
 void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs );
 void vmDestroyStatistics( vcsbeam_context *vm );
+#endif
 
 void vmSetPolIdxLists( vcsbeam_context *vm );
 void vmCalcJ( vcsbeam_context *vm );
@@ -1016,7 +1023,9 @@ void vmPullS( vcsbeam_context *vm );
 void prepare_detected_beam(
         cuDoubleComplex ****detected_beam,
         vcsbeam_context *vm );
+#ifdef HAVE_PSRFITS
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs );
+#endif
 
 float *create_pinned_data_buffer( size_t size );
 
@@ -1046,6 +1055,8 @@ void free_input_output_arrays( void *data, void *d_data );
  *                  *
  ********************/
 
+#ifdef HAVE_PSRFITS
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1068,6 +1079,8 @@ void wait_splice_psrfits( mpi_psrfits *mpf );
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 

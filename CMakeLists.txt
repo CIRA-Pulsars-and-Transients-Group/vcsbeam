@@ -26,9 +26,22 @@ find_package(MPI)
 find_package(PAL)
 find_package(CFITSIO)
 find_package(PSRFITS_UTILS)
-find_package(HYPERBEAM)
 find_package(VDIFIO)
+find_package(SIGPROC)
+find_package(HYPERBEAM)
 find_package(XGPU)
+
+if (PSRFITS_UTILS_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_PSRFITS")
+endif ()
+
+if (VDIFIO_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_VDIFIO")
+endif ()
+
+if (SIGPROC_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_FILTERBANK")
+endif ()
 
 configure_file(include/vcsbeam.h.in vcsbeam.h)
 
