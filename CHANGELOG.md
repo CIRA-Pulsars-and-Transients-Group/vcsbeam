@@ -12,7 +12,7 @@
 ### Changed
 
 - [x] `make_mwa_tied_array_beam` options `-p` (PSRFITS output) and `-v` (VDIF OUTPUT) replaced by more generalisable `-o` option.
-- [x] Made `make_mwa_tied_array_beam`'s dependence on `PSRFITS_UTILS` optional.
+- [x] Made `make_mwa_tied_array_beam`'s dependence on `PSRFITS_UTILS` and `VDIFIO` optional.
 
 ## v4.0
 

@@ -30,7 +30,7 @@ endif ()
 
 if (VDIFIO_FOUND)
     target_sources(vcsbeam PRIVATE beam_vdif.c)
-    target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_VDIFIO>)
+    target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_VDIF>)
 endif ()
 
 if (HYPERBEAM_FOUND)

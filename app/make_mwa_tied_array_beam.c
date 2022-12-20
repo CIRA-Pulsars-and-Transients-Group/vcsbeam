@@ -72,7 +72,7 @@ void write_step( vcsbeam_context *vm,
 #ifdef HAVE_PSRFITS
         mpi_psrfits *mpfs,
 #endif
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif,
 #endif
         struct make_tied_array_beam_opts *opts );
@@ -196,6 +196,7 @@ int main(int argc, char **argv)
     // Create output buffer arrays
 
     struct gpu_ipfb_arrays gi;
+#ifdef HAVE_VDIF
     float *data_buffer_vdif   = NULL;
     if (vm->do_inverse_pfb)
     {
@@ -203,6 +204,7 @@ int main(int argc, char **argv)
         malloc_ipfb( &gi, vm->synth_filter, nsamples, npols, vm->npointing );
         cu_load_ipfb_filter( vm->synth_filter, &gi );
     }
+#endif
 
     // Create structures for holding header information
 #ifdef HAVE_PSRFITS
@@ -239,8 +241,10 @@ int main(int argc, char **argv)
 
     // ------------------
 
+#ifdef HAVE_VDIF
     // Populate the relevant header structs
     vmPopulateVDIFHeader( vm, beam_geom_vals );
+#endif
 
     // Begin the main loop: go through data one second at a time
 
@@ -272,7 +276,7 @@ int main(int argc, char **argv)
 #ifdef HAVE_PSRFITS
                     mpfs,
 #endif
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
                     vm->vf, &vm->vhdr, data_buffer_vdif,
 #endif
                     &opts );
@@ -288,9 +292,14 @@ int main(int argc, char **argv)
 
             vmPullE( vm );
             prepare_detected_beam( detected_beam, vm );
+#ifdef HAVE_VDIF
+// The need for this HAVE_VDIF counts as a bug. The inverse PFB should work
+// without knowing anything about the VDIF output. However, cu_invert_pfb()
+// currently uses the sizeof_buffer from the vdif struct.
             cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vm->vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
+#endif
 
             logger_stop_stopwatch( vm->log, "ipfb" );
         }
@@ -320,7 +329,7 @@ int main(int argc, char **argv)
 #ifdef HAVE_PSRFITS
             mpfs,
 #endif
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
             vm->vf, &vm->vhdr, data_buffer_vdif,
 #endif
             &opts );
@@ -337,7 +346,7 @@ int main(int argc, char **argv)
         }
 #endif
 
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
         if (opts.out_vdif)
         {
             free( vm->vf[p].b_scales  );
@@ -352,6 +361,7 @@ int main(int argc, char **argv)
     // Free up memory
     logger_timed_message( vm->log, "Starting clean-up" );
 
+#ifdef HAVE_VDIF
     if (vm->do_inverse_pfb)
     {
         destroy_detected_beam( detected_beam, vm->npointing, 2*nsamples, nchans );
@@ -362,6 +372,7 @@ int main(int argc, char **argv)
         cudaFreeHost( data_buffer_vdif  );
         cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
     }
+#endif
 
 #ifdef HAVE_PSRFITS
     vmDestroyStatistics( vm );
@@ -452,8 +463,16 @@ void usage()
 #else
             "\t                               PSRFITS    (  10 kHz channels) ✗ (requires PSRFITS_UTILS)\n"
 #endif
-            "\t                               FILTERBANK (  10 kHz channels) ✗\n"
+#ifdef HAVE_VDIF
+            "\t                               FILTERBANK (  10 kHz channels) ✓\n"
+#else
+            "\t                               FILTERBANK (  10 kHz channels) ✗ (requires SIGPROC)\n"
+#endif
+#ifdef HAVE_VDIF
             "\t                               VDIF       (1.28 MHz channels) ✓\n"
+#else
+            "\t                               VDIF       (1.28 MHz channels) ✗ (requires VDIFIO)\n"
+#endif
             "\t-t, --max_t                Maximum number of seconds per output PSRFITS file. [default: 200]\n"
           );
 
@@ -626,13 +645,27 @@ void make_tied_array_beam_parse_cmdline(
                     }
                     else if (strcmp( optarg, "VDIF" ) == 0)
                     {
+#ifdef HAVE_VDIF
                         opts->out_vdif = true;
                         opts->out_coarse = true;
+#else
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "VCSBeam compiled without the VDIFIO library, "
+                                "so VDIF output is not available.\n" );
+                        exit(EXIT_FAILURE);
+#endif
                     }
                     else if (strcmp( optarg, "FILTERBANK" ) == 0)
                     {
+#ifdef HAVE_FILTERBANK
                         opts->out_filterbank = true;
                         opts->out_fine = true;
+#else
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "VCSBeam compiled without the SIGPROC library, "
+                                "so FILTERBANK output is not available.\n" );
+                        exit(EXIT_FAILURE);
+#endif
                     }
                     else
                     {
@@ -754,7 +787,7 @@ void write_step( vcsbeam_context *vm,
 #ifdef HAVE_PSRFITS
         mpi_psrfits *mpfs,
 #endif
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif,
 #endif
         struct make_tied_array_beam_opts *opts )
@@ -787,7 +820,7 @@ void write_step( vcsbeam_context *vm,
         }
 #endif
 
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
         if (opts->out_vdif)
         {
             vdif_write_second( &vf[p], vhdr,

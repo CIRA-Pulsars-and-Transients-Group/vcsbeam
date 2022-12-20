@@ -27,7 +27,10 @@
 #include <psrfits.h>
 #endif
 
+#ifdef HAVE_VDIFIO
 #include <vdifio.h>
+#endif
+
 #include <mwa_hyperbeam.h>
 
 
@@ -628,9 +631,11 @@ typedef struct vcsbeam_context_t
     int nchan;                        // Number of channels
     int nfine_chan;                   // Number of fine channels
 
+#ifdef HAVE_VDIFIO
     // VDIF output
     vdif_header      vhdr;
     struct vdifinfo *vf;
+#endif
 
     // Beam output statistics
     float *d_offsets, *offsets;
@@ -1084,6 +1089,9 @@ void wait_splice_psrfits( mpi_psrfits *mpf );
 #endif
 
 
+
+#ifdef HAVE_VDIFIO
+
 /*******************
  *                 *
  *    BEAM_VDIF    *
@@ -1131,6 +1139,7 @@ struct vdifinfo
     int got_scales;
 };
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1149,6 +1158,8 @@ void to_offset_binary( int8_t *i, int n );
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 
