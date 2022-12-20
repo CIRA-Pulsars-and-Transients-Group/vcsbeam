@@ -30,24 +30,27 @@
  * @param basename The prefix for the output PSRFITS files
  * @param is_coherent `true` for tied-array beamforming, `false` for
  *        incoherent beamforming
+ * @param is_single_coarse_channel Is the target PSRFITS header intended
+ *        to represent a single coarse channel or several?
  *
  * This function is designed for PSRFITS files containing multiple
  * coarse channels.
  *
  * @todo Change the name to conform to standard.
  */
-void populate_spliced_psrfits_header(
+void vmPopulatePsrfitsHeader(
         vcsbeam_context  *vm,
         struct psrfits   *pf,
         int               max_sec_per_file,
         int               outpol,
         beam_geom        *beam_geom_vals,
         char             *basename,
-        bool              is_coherent )
+        bool              is_coherent,
+        bool              is_single_coarse_channel)
 {
     if ( !( outpol == 1 || outpol == 4 ) )
     {
-        fprintf( stderr, "warning: populate_spliced_psrfits_header: "
+        fprintf( stderr, "warning: vmPopulatePsrfitsHeader: "
                 "unusual number of output pols = %d\n", outpol );
     }
 
@@ -58,8 +61,10 @@ void populate_spliced_psrfits_header(
 
     // Get the sample rate
     unsigned int sample_rate = vm->fine_sample_rate;
+
     int coarse_chan_idx = vm->vcs_metadata->provided_coarse_chan_indices[0];
     int first_coarse_chan_idx = coarse_chan_idx - vm->mpi_rank;
+    int last_coarse_chan_idx = first_coarse_chan_idx + vm->ncoarse_chans - 1;
 
     // Now set values for our hdrinfo structure
     strcpy( pf->hdr.project_id, vm->obs_metadata->project_id );
@@ -81,21 +86,30 @@ void populate_spliced_psrfits_header(
     strcpy(pf->hdr.feed_mode,  "FA");
 
     pf->hdr.dt   = 1.0/sample_rate; // (sec)
-    int last_coarse_chan_idx = first_coarse_chan_idx + vm->ncoarse_chans - 1;
-    pf->hdr.fctr = 0.5*(
-            vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_centre_hz +
-            vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_centre_hz) / 1e6; // (MHz)
-    pf->hdr.BW = (
-            vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_end_hz -
-            vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz
-            ) / 1e6; // MHz
+
+    if (is_single_coarse_channel)
+    {
+        pf->hdr.fctr = vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz / 1e6; // (MHz)
+        pf->hdr.BW   = vm->obs_metadata->coarse_chan_width_hz / 1e6;  // (MHz)
+        pf->hdr.nchan = vm->nfine_chan;
+    }
+    else
+    {
+        pf->hdr.fctr = 0.5*(
+                vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_centre_hz +
+                vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_centre_hz) / 1e6; // (MHz)
+        pf->hdr.BW = (
+                vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_end_hz -
+                vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz
+                ) / 1e6; // MHz
+        pf->hdr.nchan = vm->nfine_chan * vm->ncoarse_chans;
+    }
 
     // npols + nbits and whether pols are added
     pf->filenum       = 0;       // This is the crucial one to set to initialize things
     pf->rows_per_file = max_sec_per_file;     // I assume this is a max subint issue
 
     pf->hdr.npol         = outpol;
-    pf->hdr.nchan        = vm->nfine_chan * vm->ncoarse_chans;
     pf->hdr.onlyI        = 0;
 
     pf->hdr.scan_number   = 1;
@@ -144,19 +158,39 @@ void populate_spliced_psrfits_header(
     pf->sub.dat_weights = (float *)malloc(sizeof(float) * pf->hdr.nchan);
 
     int i; // idx into dat_freqs
-    int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
-    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[0].chan_start_hz;
-    for (i = 0 ; i < pf->hdr.nchan; i++)
-    {
-        iC = i / vm->nfine_chan + first_coarse_chan_idx;
-        iF = (iC * vm->nfine_chan) + (i % vm->nfine_chan);
-        pf->sub.dat_freqs[i] = (start_hz + iF*fine_chan_width)*1e-6;
-        pf->sub.dat_weights[i] = 1.0;
-    }
 
-    // the following is definitely needed for 8 bit numbers
-    pf->sub.dat_offsets = (float *)malloc(sizeof(float) * pf->hdr.nchan * pf->hdr.npol);
-    pf->sub.dat_scales  = (float *)malloc(sizeof(float) * pf->hdr.nchan * pf->hdr.npol);
+    if (is_single_coarse_channel)
+    {
+        double dtmp = pf->hdr.fctr - 0.5 * pf->hdr.BW + 0.5 * pf->hdr.df;
+        for (i = 0 ; i < pf->hdr.nchan ; i++) {
+            pf->sub.dat_freqs[i] = dtmp + i * pf->hdr.df;
+            pf->sub.dat_weights[i] = 1.0;
+        }
+
+        // the following is definitely needed for 8 bit numbers
+        pf->sub.dat_offsets = (float *)malloc(sizeof(float) * pf->hdr.nchan * pf->hdr.npol);
+        pf->sub.dat_scales  = (float *)malloc(sizeof(float) * pf->hdr.nchan * pf->hdr.npol);
+        for (i = 0 ; i < pf->hdr.nchan * pf->hdr.npol ; i++) {
+            pf->sub.dat_offsets[i] = 0.0;
+            pf->sub.dat_scales[i]  = 1.0;
+        }
+    }
+    else
+    {
+        int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
+        uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[0].chan_start_hz;
+        for (i = 0 ; i < pf->hdr.nchan; i++)
+        {
+            iC = i / vm->nfine_chan + first_coarse_chan_idx;
+            iF = (iC * vm->nfine_chan) + (i % vm->nfine_chan);
+            pf->sub.dat_freqs[i] = (start_hz + iF*fine_chan_width)*1e-6;
+            pf->sub.dat_weights[i] = 1.0;
+        }
+
+        // the following is definitely needed for 8 bit numbers
+        pf->sub.dat_offsets = (float *)malloc(sizeof(float) * pf->hdr.nchan * pf->hdr.npol);
+        pf->sub.dat_scales  = (float *)malloc(sizeof(float) * pf->hdr.nchan * pf->hdr.npol);
+    }
 
     pf->sub.data    = (unsigned char *)malloc(pf->sub.bytes_per_subint);
     pf->sub.rawdata = pf->sub.data;
@@ -200,37 +234,61 @@ void populate_spliced_psrfits_header(
         pf->sub.tel_zen  = pf->hdr.zenith_ang;
 
         // Construct the output filename
-        if (basename != NULL)
-            strcpy( pf->basefilename, basename );
-        else
+        if (is_single_coarse_channel)
         {
-            char chan_str[16];
-            if (first_coarse_chan_idx == last_coarse_chan_idx)
-            {
-                sprintf( chan_str, "%03ld",
-                        vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].rec_chan_number );
-            }
-            else
-            {
-                sprintf( chan_str, "%03ld-%03ld",
-                        vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].rec_chan_number,
-                        vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].rec_chan_number );
-            }
-
             if (is_coherent)
             {
-                sprintf( pf->basefilename, "%s_%s_%s_%s_ch%s",
+                sprintf( pf->basefilename, "%s_%s_%s_%s_ch%03ld",
                         pf->hdr.project_id,
-                        pf->hdr.source, 
+                        pf->hdr.source,
                         pf->hdr.ra_str, pf->hdr.dec_str,
-                        chan_str );
+                        vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
             }
             else
             {
-                sprintf( pf->basefilename, "%s_%s_ch%s_incoh",
-                        pf->hdr.project_id,
-                        pf->hdr.source,
-                        chan_str );
+                if (basename != NULL)
+                    strcpy( pf->basefilename, basename );
+                else
+                    sprintf( pf->basefilename, "%s_%s_incoh_ch%03ld",
+                            pf->hdr.project_id,
+                            pf->hdr.source,
+                            vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
+            }
+        }
+        else
+        {
+            if (basename != NULL)
+                strcpy( pf->basefilename, basename );
+            else
+            {
+                char chan_str[16];
+                if (first_coarse_chan_idx == last_coarse_chan_idx)
+                {
+                    sprintf( chan_str, "%03ld",
+                            vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].rec_chan_number );
+                }
+                else
+                {
+                    sprintf( chan_str, "%03ld-%03ld",
+                            vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].rec_chan_number,
+                            vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].rec_chan_number );
+                }
+
+                if (is_coherent)
+                {
+                    sprintf( pf->basefilename, "%s_%s_%s_%s_ch%s",
+                            pf->hdr.project_id,
+                            pf->hdr.source, 
+                            pf->hdr.ra_str, pf->hdr.dec_str,
+                            chan_str );
+                }
+                else
+                {
+                    sprintf( pf->basefilename, "%s_%s_ch%s_incoh",
+                            pf->hdr.project_id,
+                            pf->hdr.source,
+                            chan_str );
+                }
             }
         }
     }
@@ -246,7 +304,7 @@ void populate_spliced_psrfits_header(
  * @param outpol Either 1 (for Stokes I only) or 4 (for full Stokes)
  * @param beam_geom_vals A `beam_geom` struct containing pointing
  *        information
- * @param incoh_basename The prefix for the output PSRFITS files (only for
+ * @param basename The prefix for the output PSRFITS files (only for
  *        incoherent beamforming)
  * @param is_coherent `true` for tied-array beamforming, `false` for
  *        incoherent beamforming
@@ -254,7 +312,7 @@ void populate_spliced_psrfits_header(
  * This function is designed for PSRFITS files containing a single
  * coarse channel.
  *
- * @todo Merge with populate_spliced_psrfits_header() to avoid code
+ * @todo Merge with vmPopulatePsrfitsHeader() to avoid code
  * duplication.
  */
 void populate_psrfits_header(
@@ -263,7 +321,7 @@ void populate_psrfits_header(
         int               max_sec_per_file,
         int               outpol,
         beam_geom        *beam_geom_vals,
-        char             *incoh_basename,
+        char             *basename,
         bool              is_coherent )
 {
     if ( !( outpol == 1 || outpol == 4 ) )
@@ -423,8 +481,8 @@ void populate_psrfits_header(
         }
         else
         {
-            if (incoh_basename != NULL)
-                strcpy( pf->basefilename, incoh_basename );
+            if (basename != NULL)
+                strcpy( pf->basefilename, basename );
             else
                 sprintf( pf->basefilename, "%s_%s_incoh_ch%03ld",
                         pf->hdr.project_id,
@@ -484,13 +542,19 @@ void vmInitMPIPsrfits(
 
     // Populate the PSRFITS header struct for the combined (spliced) output file
     if (vm->mpi_rank == mpf->writer_id)
-        populate_spliced_psrfits_header( vm, &(mpf->spliced_pf),
+        vmPopulatePsrfitsHeader(
+                vm, &(mpf->spliced_pf),
                 max_sec_per_file, nstokes,
-                bg, outfile, is_coherent );
+                bg, outfile, is_coherent,
+                true );
 
     // Populate the PSRFITS header struct for a single channel
-    populate_psrfits_header( vm, &(mpf->coarse_chan_pf), max_sec_per_file,
-            nstokes, bg, outfile, is_coherent );
+    //vmPopulatePsrfitsHeader(
+    populate_psrfits_header(
+            vm, &(mpf->coarse_chan_pf),
+            max_sec_per_file, nstokes,
+            bg, outfile, is_coherent );
+            //false );
 
     // Create MPI vector types designed to splice the coarse channels together
     // correctly during MPI_Gather
