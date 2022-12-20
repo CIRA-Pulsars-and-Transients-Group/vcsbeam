@@ -27,7 +27,7 @@
 #include <psrfits.h>
 #endif
 
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
 #include <vdifio.h>
 #endif
 
@@ -631,7 +631,7 @@ typedef struct vcsbeam_context_t
     int nchan;                        // Number of channels
     int nfine_chan;                   // Number of fine channels
 
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
     // VDIF output
     vdif_header      vhdr;
     struct vdifinfo *vf;
@@ -1090,7 +1090,7 @@ void wait_splice_psrfits( mpi_psrfits *mpf );
 
 
 
-#ifdef HAVE_VDIFIO
+#ifdef HAVE_VDIF
 
 /*******************
  *                 *

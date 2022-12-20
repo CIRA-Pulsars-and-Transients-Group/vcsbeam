@@ -463,7 +463,7 @@ void usage()
 #else
             "\t                               PSRFITS    (  10 kHz channels) ✗ (requires PSRFITS_UTILS)\n"
 #endif
-#ifdef HAVE_VDIF
+#ifdef HAVE_FILTERBANK
             "\t                               FILTERBANK (  10 kHz channels) ✓\n"
 #else
             "\t                               FILTERBANK (  10 kHz channels) ✗ (requires SIGPROC)\n"

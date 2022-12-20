@@ -16,6 +16,11 @@ if (PSRFITS_UTILS_FOUND)
     target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_PSRFITS>)
 endif ()
 
+if (VDIFIO_FOUND)
+    target_sources(vcsbeam PRIVATE beam_vdif.c)
+    target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_VDIF>)
+endif ()
+
 if (SIGPROC_FOUND)
     target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_FILTERBANK>)
 endif ()
@@ -26,11 +31,6 @@ endif ()
 
 if (PAL_FOUND)
     target_sources(vcsbeam PRIVATE geometry.c)
-endif ()
-
-if (VDIFIO_FOUND)
-    target_sources(vcsbeam PRIVATE beam_vdif.c)
-    target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_VDIF>)
 endif ()
 
 if (HYPERBEAM_FOUND)
