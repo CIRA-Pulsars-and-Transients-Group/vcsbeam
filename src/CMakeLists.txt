@@ -1,3 +1,5 @@
+add_subdirectory(sigproc)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
 #set(COMPILE_FLAGS "${COMPILE_FLAGS} -DDEBUG")
 
@@ -10,7 +12,8 @@ add_library(vcsbeam STATIC
     buffer.c
     pfb.cu
     calibration.c
-    metadata.c)
+    metadata.c
+    beam_filterbank.c)
 
 if (PSRFITS_UTILS_FOUND)
     target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_PSRFITS>)
@@ -22,6 +25,7 @@ if (VDIFIO_FOUND)
 endif ()
 
 if (SIGPROC_FOUND)
+    target_sources(vcsbeam PRIVATE beam_filterbank.c)
     target_compile_options(vcsbeam PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -DHAVE_FILTERBANK>)
 endif ()
 
