@@ -305,22 +305,32 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 
     // SM: Hopefully this is better, but I'm still not sure about possible
     // race conditions -- where's atomicAdd for complexDoubles??
+    /*
     __syncthreads();
     if (ant != 0)
     {
-        /*
-        ex[0]  = cuCadd( ex[0],  ex[ant] );
-        ey[0]  = cuCadd( ey[0],  ey[ant] );
-        Nxx[0] = cuCadd( Nxx[0], Nxx[ant] );
-        Nxy[0] = cuCadd( Nxy[0], Nxy[ant] );
-        //Nyx[0]=cuCadd( Nyx[0], Nyx[ant] );
-        Nyy[0] = cuCadd( Nyy[0], Nyy[ant] );
-        */
         atomicAdd(&ex[0].x, ex[ant].x);   atomicAdd(&ex[0].y, ex[ant].y);
         atomicAdd(&ey[0].x, ey[ant].x);   atomicAdd(&ey[0].y, ey[ant].y);
         atomicAdd(&Nxx[0].x, Nxx[ant].x);   atomicAdd(&Nxx[0].y, Nxx[ant].y);
         atomicAdd(&Nxy[0].x, Nxy[ant].x);   atomicAdd(&Nxy[0].y, Nxy[ant].y);
         atomicAdd(&Nyy[0].x, Nyy[ant].x);   atomicAdd(&Nyy[0].y, Nyy[ant].y);
+    }
+    __syncthreads();
+    */
+
+    // Finally, the safest, slowest option: Just get one thread to do it
+    __syncthreads();
+    if ( ant == 0 )
+    {
+        for (int i = 1; i < nant; i++)
+        {
+            ex[0]  = cuCadd( ex[0],  ex[i] );
+            ey[0]  = cuCadd( ey[0],  ey[i] );
+            Nxx[0] = cuCadd( Nxx[0], Nxx[i] );
+            Nxy[0] = cuCadd( Nxy[0], Nxy[i] );
+            //Nyx[0]=cuCadd( Nyx[0], Nyx[i] );
+            Nyy[0] = cuCadd( Nyy[0], Nyy[i] );
+        }
     }
     __syncthreads();
 
