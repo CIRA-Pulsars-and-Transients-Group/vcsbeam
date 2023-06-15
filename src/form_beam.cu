@@ -275,22 +275,16 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     //Nyx[ant] = cuCmul( ey[ant], cuConj(ex[ant]) ); // Not needed as it's degenerate with Nxy[]
     Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
 
-#ifdef DEBUG
-    if (c==50 && s==0 && ant==0)
-    {
-        printf( "e    = [ex; ey] = [%lf%+lf*i; %lf%+lf*i]\n",
-                cuCreal( ex[ant] ), cuCimag( ex[ant] ),
-                cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
-        printf( "phi  = %lf%+lf*i\n",
-                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
-                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
-    }
-#endif
-
     // Detect the coherent beam
     // A summation over an array is faster on a GPU if you add half on array
     // to its other half as than can be done in parallel. Then this is repeated
     // with half of the previous array until the array is down to 1.
+
+    // SM (15 Jun 2023): I _think_ The below adding only works deterministically
+    // if the number of antennas is a power of 2. Hence, I'm commenting it out
+    // and replacing it with a slower, more reliable version.
+
+    /* // START UNRELIABLE ANTENNA SUMMING
     __syncthreads();
     for ( int h_ant = nant / 2; h_ant > 0; h_ant = h_ant / 2 )
     {
@@ -304,9 +298,31 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
             Nyy[ant] = cuCadd( Nyy[ant], Nyy[ant + h_ant] );
         }
         // below makes no difference so removed
-        // else return;
+        //else return;
         __syncthreads();
     }
+    */ // <--- END UNRELIABLE ANTENNA SUMMING
+
+    // SM: Hopefully this is better, but I'm still not sure about possible
+    // race conditions -- where's atomicAdd for complexDoubles??
+    __syncthreads();
+    if (ant != 0)
+    {
+        /*
+        ex[0]  = cuCadd( ex[0],  ex[ant] );
+        ey[0]  = cuCadd( ey[0],  ey[ant] );
+        Nxx[0] = cuCadd( Nxx[0], Nxx[ant] );
+        Nxy[0] = cuCadd( Nxy[0], Nxy[ant] );
+        //Nyx[0]=cuCadd( Nyx[0], Nyx[ant] );
+        Nyy[0] = cuCadd( Nyy[0], Nyy[ant] );
+        */
+        atomicAdd(&ex[0].x, ex[ant].x);   atomicAdd(&ex[0].y, ex[ant].y);
+        atomicAdd(&ey[0].x, ey[ant].x);   atomicAdd(&ey[0].y, ey[ant].y);
+        atomicAdd(&Nxx[0].x, Nxx[ant].x);   atomicAdd(&Nxx[0].y, Nxx[ant].y);
+        atomicAdd(&Nxy[0].x, Nxy[ant].x);   atomicAdd(&Nxy[0].y, Nxy[ant].y);
+        atomicAdd(&Nyy[0].x, Nyy[ant].x);   atomicAdd(&Nyy[0].y, Nyy[ant].y);
+    }
+    __syncthreads();
 
     // Form the stokes parameters for the coherent beam
     // Only doing it for ant 0 so that it only prints once
@@ -327,6 +343,21 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
         e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = ex[0];
         e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = ey[0];
     }
+
+    if (c==50 && s < 4 && ant==0)
+    {
+        printf( "e[s=%d]    = [ex; ey] = [%lf%+lf*i; %lf%+lf*i]\n",
+                s,
+                cuCreal( ex[ant] ), cuCimag( ex[ant] ),
+                cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
+        /*
+        printf( "phi[%d]  = %lf%+lf*i\n",
+                s,
+                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
+                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
+        */
+    }
+
 }
 
 /**
@@ -564,6 +595,7 @@ void vmBeamformSecond( vcsbeam_context *vm )
 
     // Unlock the buffer for reading
     // TODO: generalise this for arbitrary pipelines
+    // SM: This custom "lock" implementation might prove futile in the face of asynchronous CUDA calls...
     vm->v->locked = false;
 }
 

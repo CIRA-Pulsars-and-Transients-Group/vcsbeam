@@ -993,6 +993,13 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
 
     vmReadBufferCopyMargin( vm->v );
 
+    /*
+    mwalib_voltage_context_display(
+            vm->vcs_context,
+            vm->error_message,
+            ERROR_MESSAGE_LEN);
+    */
+
     if (mwalib_voltage_context_read_second(
                 vm->vcs_context,
                 gps_second,
@@ -1001,11 +1008,17 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
                 vm->v->read_ptr,
                 vm->v->read_size,
                 vm->error_message,
-                ERROR_MESSAGE_LEN ) != EXIT_SUCCESS)
+                ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
     {
         fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
         exit(EXIT_FAILURE);
     }
+
+    printf("\nread_size = %lu\nread_ptr = %p\n", vm->v->read_size, vm->v->read_ptr);
+    printf("gps_second = %lu\n", gps_second);
+    printf("vm->vcs_context = %p\n", vm->vcs_context);
+    printf("coarse_chan_idx = %d\n", coarse_chan_idx);
+    printf("error_message = %s\n", vm->error_message);
 
     logger_stop_stopwatch( vm->log, "read" );
 
@@ -1194,7 +1207,10 @@ void vmCreateFilenames( vcsbeam_context *vm )
     for (t_idx = 0; t_idx < vm->nfiletimes; t_idx++)
     {
         // Get the GPS second for this time index
+        //printf("gps_second = file_start_timestep_second + t_idx*vm->seconds_per_file\n");
+
         gps_second = file_start_timestep_second + t_idx*vm->seconds_per_file;
+        //printf("   %lu = %lu + %d*%d\n", gps_second, file_start_timestep_second, t_idx, vm->seconds_per_file);
 
         for (c_idx = coarse_chan_idx; c_idx < coarse_chan_idx + ncoarse_chans; c_idx++)
         {
@@ -1235,6 +1251,7 @@ void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint6
     uint64_t t0_gps_second = vm->obs_metadata->metafits_timesteps[0].gps_time_ms/1000;
     uintptr_t timestep_idx = (gps_second - t0_gps_second) / vm->seconds_per_file;
 
+    printf("vmGetVoltFilename: gps_second = %lu; t0_gps_second = %lu\n", gps_second, t0_gps_second);
     if (mwalib_metafits_get_expected_volt_filename(
                 vm->obs_context,
                 timestep_idx,
@@ -1758,4 +1775,25 @@ void vmPrintTitle( vcsbeam_context *vm, const char *title )
     sprintf( vm->log_message, "------- VCSBeam (%s): %s -------",
             VCSBEAM_VERSION, title );
     logger_message( vm->log, vm->log_message );
+}
+
+void vmCheckError( vm_error err )
+{
+    switch (err)
+    {
+        case VM_END_OF_DATA:
+            fprintf( stderr, "Error: End of data\n" );
+            exit(EXIT_FAILURE);
+            break;
+        case VM_READ_BUFFER_NOT_SET:
+            fprintf( stderr, "Error: Buffer not set\n" );
+            exit(EXIT_FAILURE);
+            break;
+        case VM_READ_BUFFER_LOCKED:
+            fprintf( stderr, "Error: Buffer locked\n" );
+            exit(EXIT_FAILURE);
+            break;
+        default:
+            break;
+    }
 }

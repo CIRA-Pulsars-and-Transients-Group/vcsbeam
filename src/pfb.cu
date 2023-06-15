@@ -988,7 +988,6 @@ void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
                                              g->d_ft_real, g->d_ft_imag,
                                              g->ntaps, npol, g->d_out );
     gpuErrchk( cudaPeekAtLastError() );
-    cudaDeviceSynchronize();
 
     // Copy the result back into host memory
     gpuErrchk(cudaMemcpy( data_buffer_vdif, g->d_out, g->out_size, cudaMemcpyDeviceToHost ));
