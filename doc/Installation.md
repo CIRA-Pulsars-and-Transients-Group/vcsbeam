@@ -18,6 +18,12 @@ It consists of
  - [vdifio](https://github.com/demorest/vdifio)
  - [xGPU](https://github.com/GPU-correlators/xGPU)
 
+### Observations with more than 128 tiles
+
+When the MWA was upgraded from 128T to 144T, any code that depended on the legacy VCS data format tile ordering broke.
+This was fixed in `vcsbeam` v4.1, but part of the solution also depended on a [fix that was made in `mwalib`](https://github.com/MWATelescope/mwalib/issues/58#event-9547619338).
+Therefore, when processing observations with more than 128 tiles, make sure that you use a `vcsbeam` version >= 4.1.0 which was built against an `mwalib` version >= 0.16.4.
+
 ## Compiling
 
 cmake will attempt to locate the dependencies automatically. Assuming it succeeds, a typical (and minimal) cmake command will be
