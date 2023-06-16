@@ -91,7 +91,10 @@ Dependencies</h1>
 <li><a href="https://github.com/demorest/vdifio">vdifio</a></li>
 <li><a href="https://github.com/GPU-correlators/xGPU">xGPU</a></li>
 </ul>
-<h1><a class="anchor" id="autotoc_md22"></a>
+<h2><a class="anchor" id="autotoc_md22"></a>
+Observations with more than 128 tiles</h2>
+<p>When the MWA was upgraded from 128T to 144T, any code that depended on the legacy VCS data format tile ordering broke. This was fixed in <code>vcsbeam</code> v4.1, but part of the solution also depended on a <a href="https://github.com/MWATelescope/mwalib/issues/58#event-9547619338">fix that was made in <code>mwalib</code></a>. Therefore, when processing observations with more than 128 tiles, make sure that you use a <code>vcsbeam</code> version &gt;= 4.1.0 which was built against an <code>mwalib</code> version &gt;= 0.16.4.</p>
+<h1><a class="anchor" id="autotoc_md23"></a>
 Compiling</h1>
 <p>cmake will attempt to locate the dependencies automatically. Assuming it succeeds, a typical (and minimal) cmake command will be</p>
 <div class="fragment"><div class="line">mkdir -p build &amp;&amp; cd build</div>

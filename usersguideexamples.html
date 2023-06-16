@@ -74,40 +74,40 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#autotoc_md48">Observation 1320499816</a></li>
-<li class="level1"><a href="#autotoc_md49">Calibration (using Hyperdrive)</a><ul><li class="level2"><a href="#autotoc_md50">Producing a solution</a></li>
-<li class="level2"><a href="#autotoc_md51">Plot the solutions</a></li>
-<li class="level2"><a href="#autotoc_md52">Convert the solutions</a></li>
+<ul><li class="level1"><a href="#autotoc_md49">Observation 1320499816</a></li>
+<li class="level1"><a href="#autotoc_md50">Calibration (using Hyperdrive)</a><ul><li class="level2"><a href="#autotoc_md51">Producing a solution</a></li>
+<li class="level2"><a href="#autotoc_md52">Plot the solutions</a></li>
+<li class="level2"><a href="#autotoc_md53">Convert the solutions</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#autotoc_md53">Beamforming</a><ul><li class="level2"><a href="#autotoc_md54">All 24 channels</a></li>
-<li class="level2"><a href="#autotoc_md55">Single Channel</a></li>
-<li class="level2"><a href="#autotoc_md56">A good single pulse for testing purposes</a></li>
+<li class="level1"><a href="#autotoc_md54">Beamforming</a><ul><li class="level2"><a href="#autotoc_md55">All 24 channels</a></li>
+<li class="level2"><a href="#autotoc_md56">Single Channel</a></li>
+<li class="level2"><a href="#autotoc_md57">A good single pulse for testing purposes</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#autotoc_md57">Other processes</a><ul><li class="level2"><a href="#autotoc_md58">Offline FinePFB</a></li>
-<li class="level2"><a href="#autotoc_md59">Legacy Offline Correlator</a></li>
-<li class="level2"><a href="#autotoc_md60">RTS (failed!)</a><ul><li class="level3"><a href="#autotoc_md61">Create source list</a></li>
-<li class="level3"><a href="#autotoc_md62">Set up initial RTS job</a></li>
-<li class="level3"><a href="#autotoc_md63">Run the RTS</a></li>
+<li class="level1"><a href="#autotoc_md58">Other processes</a><ul><li class="level2"><a href="#autotoc_md59">Offline FinePFB</a></li>
+<li class="level2"><a href="#autotoc_md60">Legacy Offline Correlator</a></li>
+<li class="level2"><a href="#autotoc_md61">RTS (failed!)</a><ul><li class="level3"><a href="#autotoc_md62">Create source list</a></li>
+<li class="level3"><a href="#autotoc_md63">Set up initial RTS job</a></li>
+<li class="level3"><a href="#autotoc_md64">Run the RTS</a></li>
 </ul>
 </li>
-<li class="level2"><a href="#autotoc_md64">Incoherent Beam</a></li>
+<li class="level2"><a href="#autotoc_md65">Incoherent Beam</a></li>
 </ul>
 </li>
 </ul>
 </div>
 <div class="textblock"><p><a class="anchor" id="md_UsersGuide_Examples"></a></p>
-<h1><a class="anchor" id="autotoc_md48"></a>
+<h1><a class="anchor" id="autotoc_md49"></a>
 Observation 1320499816</h1>
 <p>This example was made using VCSBeam v4.0.0.</p>
 <div class="fragment"><div class="line"># On Garrawarla, test vcsbeam version</div>
 <div class="line">$ module use /pawsey/mwa/software/python3/modulefiles</div>
 <div class="line">$ module load vcsbeam</div>
 <div class="line">$ make_mwa_tied_array_beam -V</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md49"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md50"></a>
 Calibration (using Hyperdrive)</h1>
-<h2><a class="anchor" id="autotoc_md50"></a>
+<h2><a class="anchor" id="autotoc_md51"></a>
 Producing a solution</h2>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive</div>
 <div class="line">$ sbatch hyperdrive.sbatch</div>
@@ -139,7 +139,7 @@ Producing a solution</h2>
 <div class="line"> </div>
 <div class="line">hyperdrive di-calibrate -s srclist_1000.yaml --tile-flags HexE2 -d /astro/mwavcs/asvo/252007/*.fits ${METAFITS}</div>
 </div><!-- fragment --><p>This outputs&#160;hyperdrive_solutions.fits.</p>
-<h2><a class="anchor" id="autotoc_md51"></a>
+<h2><a class="anchor" id="autotoc_md52"></a>
 Plot the solutions</h2>
 <div class="fragment"><div class="line">hyperdrive solutions-plot -m /astro/mwavcs/asvo/252007/1320412440.metafits hyperdrive_solutions.fits</div>
 </div><!-- fragment --><div class="image">
@@ -148,13 +148,13 @@ Plot the solutions</h2>
  <div class="image">
 <img src="example_1320499816_amps.png" alt="" width="500px"/>
 </div>
- <h2><a class="anchor" id="autotoc_md52"></a>
+ <h2><a class="anchor" id="autotoc_md53"></a>
 Convert the solutions</h2>
 <p>Hyperdrive's default is to output the calibration solutions in a FITS format. Currently, VCSBeam only supports RTS and Offringa formats. Hyperdrive includes a utility to convert the solutions into different formats. However, the RTS format is now officially deprecated, and its use is discouraged and <a href="https://MWATelescope.github.io/mwa_hyperdrive/defs/cal_sols.html">not officially supported by hyperdrive</a>.</p>
 <p>The conversion to the Offringa format, however, <a href="https://mwatelescope.github.io/mwa_hyperdrive/defs/cal_sols_ao.html">is supported</a>. In this example, this is achieved by </p><div class="fragment"><div class="line">hyperdrive solutions-convert -m /astro/mwavcs/asvo/252007/1320412440.metafits hyperdrive_solutions.fits hyperdrive_solutions.bin</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md53"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md54"></a>
 Beamforming</h1>
-<h2><a class="anchor" id="autotoc_md54"></a>
+<h2><a class="anchor" id="autotoc_md55"></a>
 All 24 channels</h2>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/vcs/1320499816/vcsbeam/coh</div>
 <div class="line">$ wget -O 1320412440_metafits_ppds.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320412440&amp;include_ppds=1</div>
@@ -194,7 +194,7 @@ All 24 channels</h2>
 <img src="example_1320499816_presto_24chan.png" alt="" width="500px"/>
 </div>
 <p>  <em><b>(Needs to be updated)</b></em></p>
-<h2><a class="anchor" id="autotoc_md55"></a>
+<h2><a class="anchor" id="autotoc_md56"></a>
 Single Channel</h2>
 <p>Changing all the number of nodes "24" to "1" in the sbatch script above produces the following:</p>
 <p><b>vcsbeam.sbatch</b>: </p><div class="fragment"><div class="line">#!/bin/bash -l</div>
@@ -229,7 +229,7 @@ Single Channel</h2>
 </div><!-- fragment --><div class="image">
 <img src="example_1320499816_presto_1chan.png" alt="" width="500px"/>
 </div>
- <h2><a class="anchor" id="autotoc_md56"></a>
+ <h2><a class="anchor" id="autotoc_md57"></a>
 A good single pulse for testing purposes</h2>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/vcs/1320499816/vcsbeam/coh</div>
 <div class="line">$ sbatch vcsbeam_single_pulse.sbatch</div>
@@ -266,9 +266,9 @@ A good single pulse for testing purposes</h2>
 </div><!-- fragment --> <div class="image">
 <img src="example_1320499816_single_pulse.png" alt="" width="500px"/>
 </div>
- <h1><a class="anchor" id="autotoc_md57"></a>
+ <h1><a class="anchor" id="autotoc_md58"></a>
 Other processes</h1>
-<h2><a class="anchor" id="autotoc_md58"></a>
+<h2><a class="anchor" id="autotoc_md59"></a>
 Offline FinePFB</h2>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/asvo/252057</div>
 <div class="line">$ wget -O 1320499816.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320499816</div>
@@ -297,7 +297,7 @@ Offline FinePFB</h2>
 <div class="line">DATAPATH=/astro/mwavcs/asvo/252057</div>
 <div class="line"> </div>
 <div class="line">srun -N 1 -n 1 fine_pfb_offline -m $DATAPATH/1320499816.metafits -b 1320499816 -T 600 -f FREQ -d $DATAPATH</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md59"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md60"></a>
 Legacy Offline Correlator</h2>
 <p>The legacy offline correlator can be run on recombined files created with Offline Fine PFB.</p>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/vcs/1320499816/cal/1320499816/vis</div>
@@ -346,21 +346,21 @@ Legacy Offline Correlator</h2>
 <div class="line">        -o ${OUTPUT_PREFIX}</div>
 <div class="line"> </div>
 <div class="line">done</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md60"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md61"></a>
 RTS (failed!)</h2>
-<h3><a class="anchor" id="autotoc_md61"></a>
+<h3><a class="anchor" id="autotoc_md62"></a>
 Create source list</h3>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/vcs/1320499816/cal/1320499816</div>
 <div class="line">$ module load srclists/v1.0.0</div>
 <div class="line">$ wget -O 1320499816_metafits_ppds.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320499816&amp;include_ppds=1</div>
 <div class="line">$ srclist_by_beam.py -m 1320499816_metafits_ppds.fits -n 1000 -s ${SRCLISTS_DIR}/srclist_pumav3_EoR0aegean_EoR1pietro+ForA.txt</div>
-</div><!-- fragment --><h3><a class="anchor" id="autotoc_md62"></a>
+</div><!-- fragment --><h3><a class="anchor" id="autotoc_md63"></a>
 Set up initial RTS job</h3>
 <p>First, we need a calibration metafits file (mode = 'HW_LFILES'), which for the moment I edited by hand. It doesn't matter whether the file is one with PPDs or without, but apparently some script somewhere is expected the file to be called <code>obsid_metafits_ppds.fits</code>. So I manually edited the (MWAX VCS) metafits file and just changed the mode, and then made a symbolic link to is called&#160;<code>/astro/mwavcs/vcs/1320499816/cal/1320499816/rts/1320499816_metafits_ppds.fits</code>. Then I ran the script from VCSTools:</p>
 <div class="fragment"><div class="line">cd /astro/mwavcs/vcs/1320499816/cal/1320499816/rts</div>
 <div class="line">$ calibrate_vcs.py -O 1320499816 -o 1320499816 -m 1320499816_metafits_ppds.fits -s ../srclist_pumav3_EoR0aegean_EoR1pietro+ForA_1320499816_patch1000.txt --offline --nosubmit</div>
 </div><!-- fragment --><p> There's no good reason I couldn't have left off the <code>--nosubmit</code> option and had it run, but I just wanted to check it worked before trying it.</p>
-<h3><a class="anchor" id="autotoc_md63"></a>
+<h3><a class="anchor" id="autotoc_md64"></a>
 Run the RTS</h3>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/vcs/1320499816/cal/1320499816/rts</div>
 <div class="line">$ sbatch /astro/mwavcs/vcs/1320499816/batch/RTS_1320499816.batch</div>
@@ -440,7 +440,7 @@ Run the RTS</h3>
 <div class="line">calShortBaselineTaper=40.0</div>
 <div class="line">FieldOfViewDegrees=1</div>
 </div><!-- fragment --><p>For an as yet unknown reason, this RTS job timed out, even after allowing 4 hours of wall time.</p>
-<h2><a class="anchor" id="autotoc_md64"></a>
+<h2><a class="anchor" id="autotoc_md65"></a>
 Incoherent Beam</h2>
 <p>(Currently not tested since v2.18. Results not guaranteed. As of this writing, 21 Dec 2021, only supported for legacy data.)</p>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/vcs/1320499816/vcsbeam/incoh</div>

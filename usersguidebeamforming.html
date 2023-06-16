@@ -74,39 +74,39 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#autotoc_md24">Overview</a></li>
-<li class="level1"><a href="#autotoc_md25">Downloading the data</a></li>
-<li class="level1"><a href="#autotoc_md26">Obtaining a calibration solution</a></li>
-<li class="level1"><a href="#autotoc_md27">Beamforming</a><ul><li class="level2"><a href="#autotoc_md28">Setting up</a><ul><li class="level3"><a href="#autotoc_md29">Obtaining metafits files</a></li>
-<li class="level3"><a href="#autotoc_md30">The calibration path</a></li>
-<li class="level3"><a href="#autotoc_md31">The pointings file</a></li>
+<ul><li class="level1"><a href="#autotoc_md25">Overview</a></li>
+<li class="level1"><a href="#autotoc_md26">Downloading the data</a></li>
+<li class="level1"><a href="#autotoc_md27">Obtaining a calibration solution</a></li>
+<li class="level1"><a href="#autotoc_md28">Beamforming</a><ul><li class="level2"><a href="#autotoc_md29">Setting up</a><ul><li class="level3"><a href="#autotoc_md30">Obtaining metafits files</a></li>
+<li class="level3"><a href="#autotoc_md31">The calibration path</a></li>
+<li class="level3"><a href="#autotoc_md32">The pointings file</a></li>
 </ul>
 </li>
-<li class="level2"><a href="#autotoc_md32">Output options</a><ul><li class="level3"><a href="#autotoc_md33">Channelisation options</a><ul><li class="level4"><a href="#autotoc_md34">Fine channel sample formats (SMART survey option)</a></li>
+<li class="level2"><a href="#autotoc_md33">Output options</a><ul><li class="level3"><a href="#autotoc_md34">Channelisation options</a><ul><li class="level4"><a href="#autotoc_md35">Fine channel sample formats (SMART survey option)</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="level2"><a href="#autotoc_md35">Input options</a><ul><li class="level3"><a href="#autotoc_md36">Choosing which timesteps to process</a></li>
-<li class="level3"><a href="#autotoc_md37">Choosing which coarse channels to process</a></li>
+<li class="level2"><a href="#autotoc_md36">Input options</a><ul><li class="level3"><a href="#autotoc_md37">Choosing which timesteps to process</a></li>
+<li class="level3"><a href="#autotoc_md38">Choosing which coarse channels to process</a></li>
 </ul>
 </li>
-<li class="level2"><a href="#autotoc_md38">Calibration options</a><ul><li class="level3"><a href="#autotoc_md39">Flagging extra tiles</a></li>
-<li class="level3"><a href="#autotoc_md40">Including the Bandpass solutions</a></li>
-<li class="level3"><a href="#autotoc_md41">Keeping the cross terms?</a></li>
-<li class="level3"><a href="#autotoc_md42">Dividing a reference antenna</a></li>
+<li class="level2"><a href="#autotoc_md39">Calibration options</a><ul><li class="level3"><a href="#autotoc_md40">Flagging extra tiles</a></li>
+<li class="level3"><a href="#autotoc_md41">Including the Bandpass solutions</a></li>
+<li class="level3"><a href="#autotoc_md42">Keeping the cross terms?</a></li>
+<li class="level3"><a href="#autotoc_md43">Dividing a reference antenna</a></li>
 </ul>
 </li>
-<li class="level2"><a href="#autotoc_md43">Memory management</a></li>
+<li class="level2"><a href="#autotoc_md44">Memory management</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#autotoc_md44">Examples</a><ul><li class="level2"><a href="#autotoc_md45">MWAX observation of PSR B0031-07</a></li>
+<li class="level1"><a href="#autotoc_md45">Examples</a><ul><li class="level2"><a href="#autotoc_md46">MWAX observation of PSR B0031-07</a></li>
 </ul>
 </li>
 </ul>
 </div>
 <div class="textblock"><p><a class="anchor" id="md_UsersGuide_Beamforming"></a></p>
-<h1><a class="anchor" id="autotoc_md24"></a>
+<h1><a class="anchor" id="autotoc_md25"></a>
 Overview</h1>
 <p>To form a tied-array beam with a VCS observation, you will need both</p>
 <ol type="1">
@@ -119,7 +119,7 @@ Overview</h1>
 </p>
 <p>Blue nodes represent data files that are stored on disk, until deleted by the user. Grey boxes represent applications, some of which are provided by VCSBeam, and some of which are external applications. The links in the diagram take to you each application's documentation.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md25"></a>
+<h1><a class="anchor" id="autotoc_md26"></a>
 Downloading the data</h1>
 <p>The new ASVO system for downloading is almost, but not quite ready for general use. The documentation can be found <a href="https://wiki.mwatelescope.org/display/MP/Data+Access">here</a>. For downloading Legacy (pre- September 2021) data, instructions can be found <a href="https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-Downloadingdatadownloading">here</a>. At some point, the deprecated Legacy method will no longer work, but when this will happen is currently unclear.</p>
 <p>Note that the Legacy downloading method includes a built-in call to <code>recombine</code>, so that "downloading the data" will always result in a set of "Recombined voltages (.dat)" files. However, there is currently no automated way of running <code>recombine</code> on Legacy data downloaded with the new ASVO system, and must be done manually.</p>
@@ -130,7 +130,7 @@ Downloading the data</h1>
 <td class="markdownTableBodyNone"><a href="https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-Downloadingdatadownloading">Documentation</a>   </td><td class="markdownTableBodyNone"><a href="https://wiki.mwatelescope.org/display/MP/Data+Access">Documentation</a>   </td></tr>
 </table>
 <hr  />
-<h1><a class="anchor" id="autotoc_md26"></a>
+<h1><a class="anchor" id="autotoc_md27"></a>
 Obtaining a calibration solution</h1>
 <p>Which calibration software to use (RTS vs Hyperdrive) depends on whether the data is Legacy or MWAX, and whether it is VCS or already-correlated data (e.g. a dedicated calibration observation). The following table summarises the possibilities:</p>
 <table class="markdownTable">
@@ -144,10 +144,10 @@ Obtaining a calibration solution</h1>
 <p>The links in the table will take you to the corresponding documentation. Apart from <a href="https://wiki.mwatelescope.org/pages/viewpage.action?pageId=52068764">the MWA Telescope Wiki</a> (same link as given in the table), Hyperdrive also has some documentation on <a href="https://github.com/MWATelescope/mwa_hyperdrive">its Github main page</a>, and <a href="https://github.com/MWATelescope/mwa_hyperdrive/wiki">its Github Wiki page</a>.</p>
 <p>The <a href="https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-CalibratingwiththeRealTimeSystem(RTS)">RTS</a> link describes a workflow for preparing a calibration solution using the RTS. The equivalent workflow for Hyperdrive is found at the page <a class="el" href="usersguidecalibration.html">Preparing a calibration solution</a>. However, it should be noted that the visualisation tools used for Hyperdrive can also be used for RTS solutions.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md27"></a>
+<h1><a class="anchor" id="autotoc_md28"></a>
 Beamforming</h1>
 <hr  />
-<h2><a class="anchor" id="autotoc_md28"></a>
+<h2><a class="anchor" id="autotoc_md29"></a>
 Setting up</h2>
 <p>Once the data for the target observation have been downloaded, and a calibration solution obtained, the data may be beamformed. This is achieved by using the application <code>make_mwa_tied_array_beam</code>.</p>
 <p><code>make_mwa_tied_array_beam</code> is highly configurable, and the full set of options can be seen by running </p><div class="fragment"><div class="line">make_mwa_tied_array_beam -h</div>
@@ -157,21 +157,21 @@ Setting up</h2>
 <li>The path to the calibration solution,</li>
 <li>A "pointings" file containing a list of RA/Decs.</li>
 </ol>
-<h3><a class="anchor" id="autotoc_md29"></a>
+<h3><a class="anchor" id="autotoc_md30"></a>
 Obtaining metafits files</h3>
 <p>The metafits files can be obtained via an <a href="https://wiki.mwatelescope.org/display/MP/Web+Services">MWA Web Service</a>, e.g. </p><div class="fragment"><div class="line">wget -O &lt;obsid&gt;_metafits.fits http://ws.mwatelescope.org/metadata/fits?obs_id=&lt;obsid&gt;</div>
 </div><!-- fragment --><p> where <code>&lt;obsid&gt;</code> is a placeholder for the MWA Observation ID. For beamforming purposes, the metafits files can be given any arbitrary names.</p>
-<h3><a class="anchor" id="autotoc_md30"></a>
+<h3><a class="anchor" id="autotoc_md31"></a>
 The calibration path</h3>
 <p>The path to the calibration solution will be either the calibration file solution itself if it is an <a class="el" href="fileformats.html#offringafileformat">Offringa-style format binary file</a>, or the directory containing the calibration solution files if it is an <a class="el" href="fileformats.html#rtsfileformat">RTS solution</a>.</p>
-<h3><a class="anchor" id="autotoc_md31"></a>
+<h3><a class="anchor" id="autotoc_md32"></a>
 The pointings file</h3>
 <p>The "pointings" file is a text file containing one or more whitespace-separated RA/Dec pairs in the format </p><div class="fragment"><div class="line">HH:MM:SS.S  DD:MM:SS.S</div>
 <div class="line">HH:MM:SS.S  DD:MM:SS.S</div>
 <div class="line">...</div>
 </div><!-- fragment --><p> Eventually, pulsar names may also be used instead of RAs and Decs, but this is not yet supported. To find the RA and Dec for one or more specific pulsars, use <a href="https://www.atnf.csiro.au/research/pulsar/psrcat/">the ATNF database</a>, or equivalently, the <code>psrcat</code> utility, e.g.: </p><div class="fragment"><div class="line">psrcat -c &quot;raj decj&quot; -x B0031-07 J0437-4715 | awk &#39;{print $1, $4}&#39; &gt; pointings.txt</div>
 </div><!-- fragment --><hr  />
-<h2><a class="anchor" id="autotoc_md32"></a>
+<h2><a class="anchor" id="autotoc_md33"></a>
 Output options</h2>
 <p>VCSBeam currently supports two output file formats:</p>
 <ol type="1">
@@ -181,7 +181,7 @@ Output options</h2>
 <p>Whether you choose PSRFITS or VDIF depends on your particular science case. Since PSRFITS records <b>detected</b> samples, they cannot subsequently be coherently beamformed. Therefore, S/N may be degraded if dispersion smearing across a 10 kHz channel is larger than the intrinsic pulse width. For example, at 150 MHz, the dispersion smearing of PSR J2241-5236 across a 10 kHz channel is 0.28 ms, whereas the width of its pulse window is W50 = 0.07 ms, so its profile will be significantly smeared (see <a href="https://ui.adsabs.harvard.edu/abs/2019ApJ...882..133K/abstract">Kaur et al., 2019</a>). In contrast, VDIF files are coherently de-dispersed when processed with <a href="http://dspsr.sourceforge.net/">DSPSR</a> and <a href="http://psrchive.sourceforge.net/">PSRCHIVE</a>. The advantage to using PSRFITS is that PSRFITS is a supported format of <a href="https://github.com/scottransom/presto">PRESTO</a>, which is designed with searching for accelerated binary pulsars in mind. The SMART survey uses PRESTO as part of its search pipeline.</p>
 <p>VCSBeam can output either PSRFITS or VDIF formats, or both, by including the <code>-p</code> (PSRFITS) and <code>-v</code> (VDIF) options. If neither <code>-p</code> nor <code>-v</code> is explicitly given, the default behaviour is to output the same channelisation as the input (i.e. MWAX&rarr;VDIF, Legacy&rarr;PSRFITS).</p>
 <p>By default, PSRFITS files are written out with 200 seconds per file. This behaviour can be altered with the <code>-t</code> option.</p>
-<h3><a class="anchor" id="autotoc_md33"></a>
+<h3><a class="anchor" id="autotoc_md34"></a>
 Channelisation options</h3>
 <p>Currently, only coarse (1.28 MHz) channels and fine (10 kHz) channels are supported, but this will eventually be generalised to allow arbitrary channelisation.</p>
 <p>Internally, VCSBeam always performs the beamforming operation on fine (10 kHz) channels. Therefore, conversion to fine channels is necessary if the input data are MWAX coarse channels. Conversion back to coarse channels is performed if VDIF output is requested. This is illustrated in the following diagram (as well as in table form in the docstring for the function <a class="el" href="metadata_8c.html#ab000c14b3b5a0101dc26391aa8c38c3d" title="Sets flags governing whether the PFB and inverse PFB routines are run depending on the input and outp...">vmSetOutputChannelisation()</a>):</p>
@@ -191,20 +191,20 @@ Channelisation options</h3>
 <p>VCSBeam allows the filters used for the analysis and synthesis PFBs to be chosen by the user, via the options <code>-A</code> and <code>-S</code>, respectively. The available filters are supplied in <a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/tree/main/pfb_filter">the pfb_filter folder</a>, which are copied to <code>RUNTIME_DIR</code> during installation. If no filters are explicitly given, the default filters are used: <code>FINEPFB</code> for the analysis filter, <code>LSQ12</code> for the synthesis filter. <code>FINEPFB</code> is the same filter that was implemented on Legacy MWA FPGAs.</p>
 <p>Custom filters can also be used by placing the filter coefficients in a file with the name <code>&lt;FILTER_NAME&gt;.dat</code> and placing the file in <code>RUNTIME_DIR</code>. Only analysis and synthesis filters with 12 taps (and therefore 12x128 = 1536 coefficients) have been tested, and behaviour for filters with different lengths is currently undefined. Additionally, <a class="el" href="applicationsmakemwatiedarraybeam.html">make_mwa_tied_array_beam</a> currently only supports critically-sampled PFBs, although this will also be generalised in the future.</p>
 <p><b>WARNING</b>: the analysis filter coefficients <b>MUST</b> be integers. A scaling factor is applied in order to ensure that the output fits the VDIF dynamic range. Therefore, if a custom analysis filter is used, it is highly recommended to scale the coefficients so that (1) they are integers, and (2) they are normalised in the same way as <code>FINEPFB</code> (i.e. they sum to 15106424).</p>
-<h4><a class="anchor" id="autotoc_md34"></a>
+<h4><a class="anchor" id="autotoc_md35"></a>
 Fine channel sample formats (SMART survey option)</h4>
 <p>The Legacy MWA pdemoted the output of the analysis PFB to (4+4)bit complex integers. While this saves space, it marginally degrades the precision of the beamformer output. As the fine channelisation of MWAX data is now done entirely in (GPU) memory, the demotion is no longer necessary; however, to ensure that the SMART survey data (which spans both Legacy and MWAX phases) is processed in a homogeneous way, an option to replicate the same demotion step prior to beamforming, the <code>-s</code> option is provided. It should be noted that this demotion step implements an "asymmetric rounding" scheme, which is described in the Appendix of <a href="https://www.cambridge.org/core/journals/publications-of-the-astronomical-society-of-australia/article/mwa-tiedarray-processing-iii-microsecond-time-resolution-via-a-polyphase-synthesis-filter/C76837FE84A1DCFAA696C9AC10C44F2D">McSweeney et al. (2020)</a>. Therefore, the use of this option is not recommended, outside of the express purpose of producing fine channels equivalent to MWA Phase 1 &amp; 2.</p>
 <hr  />
-<h2><a class="anchor" id="autotoc_md35"></a>
+<h2><a class="anchor" id="autotoc_md36"></a>
 Input options</h2>
 <p>The default behaviour of <a class="el" href="applicationsmakemwatiedarraybeam.html">make_mwa_tied_array_beam</a> is to look for the input files in the current working directory, and to process all time steps, and as many coarse channels as MPI processes are used. If the input data are in another directory, this directory can be passed to the <code>-d</code> option.</p>
-<h3><a class="anchor" id="autotoc_md36"></a>
+<h3><a class="anchor" id="autotoc_md37"></a>
 Choosing which timesteps to process</h3>
 <p>You can set the range of timesteps to be processed via the <code>-b</code> and <code>-T</code> options.</p>
 <p>The argument of <code>-b</code> is the beginning time, which can be either an absolute time (GPS second) or a relative time. To indicate a relative time, the first character of the argument must be either '<code>+</code>' or '<code>-</code>'. If it is '<code>+</code>', then the number is considered an offset from the first "good" second, where "good" is defined in the metafits file as the first second after the "quack time" has elapsed. If it is '<code>-</code>', then the number is considered an offset from the <em>end</em> of the observation, with <code>-1</code> indicating the last second (similar to Python-style indexing). The default value is <code>+0</code>.</p>
 <p>The argument of <code>-T</code> is the number of seconds of data to process. If not supplied, it will process all available seconds from the specified beginning time onwards.</p>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000003">Todo:</a></b></dt><dd>There might be a bug whereby using all the defaults crashes because the default total number of seconds to be processed is more than the number of seconds after the "good" time starts.</dd></dl>
-<h3><a class="anchor" id="autotoc_md37"></a>
+<h3><a class="anchor" id="autotoc_md38"></a>
 Choosing which coarse channels to process</h3>
 <p>You can set the range of coarse channels to be processed via the <code>-f</code> option and by setting the number of MPI processes, with one coarse channel processed per process.</p>
 <p>The argument of <code>-f</code> is the lowest coarse channel to be processed. It can either be an MWA receiver channel number (equal to the coarse channel centre frequency divided by 1.28 MHz), or a relative receiver channel number. To indicate a relative channel number, the first character of the argument must be either '<code>+</code>' or '<code>-</code>'. If it is '<code>+</code>', then the number is considered an offset from the lowest coarse channel. If it is '<code>-</code>', then the number is considered an offset from the highest coarse channel plus one, with <code>-1</code> therefore indicating the highest channel (similar to Python-style indexing). The default value is <code>+0</code>.</p>
@@ -224,35 +224,35 @@ Choosing which coarse channels to process</h3>
 <div class="line">...</div>
 </div><!-- fragment --><p> will result in 24 separate PSRFITS files, one per coarse channel. The advantage to running a single multi-process MPI job is that splicing is done automatically. The disadvantage is that this can potentially lead to slower wall time completion of the beamforming job, since the splicing occurs after each second of data, requiring that the MPI processes are synchronised after processing each second of data. However, this is unlikely to affect the wall time significantly (although this remains to be benchmarked) since the splicing is performed synchronously with the reading in of the subsequent second's worth of data, which is believed to be the current bottleneck for throughput.</p>
 <hr  />
-<h2><a class="anchor" id="autotoc_md38"></a>
+<h2><a class="anchor" id="autotoc_md39"></a>
 Calibration options</h2>
 <p><a class="el" href="applicationsmakemwatiedarraybeam.html">make_mwa_tied_array_beam</a> will expect an RTS style solution unless the <code>-O</code> option is explicitly given (this default behaviour may change in the future as Hyperdrive eventually supercedes the RTS as the primary calibration tool used for VCS data).</p>
 <p>The calibration solutions provided by the RTS or Hyperdrive can be further manipulated in several ways before they are applied to the input voltages. Many of these manipulates are still experimental, and mostly affect the fidelity of the polarisation response, whose verification is still a work in progress.</p>
-<h3><a class="anchor" id="autotoc_md39"></a>
+<h3><a class="anchor" id="autotoc_md40"></a>
 Flagging extra tiles</h3>
 <p>Extra tiles can be flagged by passing a text file containing TileNames to be flagged to the <code>-F</code> option. (To decide <em>which</em> tiles need flagging, and how to prepare this file, see <a class="el" href="usersguidecalibration.html">Preparing a calibration solution</a>.)</p>
-<h3><a class="anchor" id="autotoc_md40"></a>
+<h3><a class="anchor" id="autotoc_md41"></a>
 Including the Bandpass solutions</h3>
 <p>The <code>-B</code> option signals that the fine channel calibration solutions should be used. This only applies to the RTS solutions, where the solutions are separated out into "coarse channel" (DIJones) and "fine channel" (Bandpass) solutions (see <a class="el" href="calibration.html">Calibration</a> for more details).</p>
 <p>The advantage of using the Bandpass solutions is that the solutions may be more accurate (i.e. more accurately reflect the true instrumental response) for individual fine channels, whereas the DIJones solutions, by themselves, only include a zeroth order (i.e. constant) approximation to the solution for the whole coarse channel. If the phases do not not change with respect to frequency too rapidly, then the DIJones solutions are probably a good enough approximation and do not degrade the S/N too much. If the phases <em>do</em> change rapidly for a given antenna, then that antenna's contribution near the coarse channel edges will be degraded to some extent.</p>
 <p>Ironically, the edge channels are usually flagged (by default) when producing the calibration solution in the first place. Thus, if the Bandpass solutions are used, the edge channels "remain" flagged during beamforming, so any signal present there will be lost anyway.</p>
-<h3><a class="anchor" id="autotoc_md41"></a>
+<h3><a class="anchor" id="autotoc_md42"></a>
 Keeping the cross terms?</h3>
 <p>By default, the off-diagonal ("cross") terms of the Jones matrices (PQ and QP) are set to zero, based on the premise that these terms are dominated by noise. This claim is tantamount to saying that there is negligible instrumental leakage between the two polarisations (P and Q). Anecdotally, the MWA imaging group claim that in their experience, the solutions produce better images when the cross terms are zeroed.</p>
 <p>The <code>-X</code> option can be used to retain the cross terms.</p>
-<h3><a class="anchor" id="autotoc_md42"></a>
+<h3><a class="anchor" id="autotoc_md43"></a>
 Dividing a reference antenna</h3>
 <p>The calibration solution is a Jones matrix whose absolute phase carries no physical signifance. Said another way, calibration solutions are unique only up to a complex unit scalar factor, so that if \(\{{\bf J}_1, {\bf J}_2, \dots, {\bf J}_{N_a}\}\) is a set of calibration solutions for antennas \(1, 2, \dots, N_a\), then \(\{e^{i\theta}{\bf J}_1, e^{i\theta}{\bf J}_2, \dots, e^{i\theta}{\bf J}_{N_a}\}\) is an equivalent set of solutions, for any arbitrary \(\theta\). Thus, the solutions produced by the RTS and/or Hyperdrive may "look" worse than they really are because the solutions for different frequency channels may have different arbitrary phases. Thus, in order to compare the solutions across frequency, it is useful to divide the elements of all Jones matrix by a unit complex number which has the same phase as an arbitrarily chosen reference antenna. This will make the reference antenna itself have a calibration solution consisting only of real-valued elements, but the phases of the other antennas can now be more easily evaluated for "goodness".</p>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000004">Todo:</a></b></dt><dd>Finish the calibration section (and probably move it all to the Calibration workflow page).</dd></dl>
 <hr  />
-<h2><a class="anchor" id="autotoc_md43"></a>
+<h2><a class="anchor" id="autotoc_md44"></a>
 Memory management</h2>
 <p>With such large data sizes, it is possible that there is not enough memory on the GPU to carry all the necessary data arrays to process even one second of one coarse channel! (This is almost certainly true for desktop computers, but probably not true for supercomputers.)</p>
 <p>Currently, the amount of memory needed is not calculated (but will be implemented in future). If the required memory is larger than the available memory, this problem can be mitigated by using the <code>-n</code> option, which tells <a class="el" href="applicationsmakemwatiedarraybeam.html">make_mwa_tied_array_beam</a> to process only 1/<code>nchunks</code> seconds of data at a time, where <code>nchunks</code> is the argument to <code>-n</code>. If <code>nchunks</code> does not divide evenly into the number of samples per second of fine channelised data (10,000), then it is automatically increased until it does.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md44"></a>
+<h1><a class="anchor" id="autotoc_md45"></a>
 Examples</h1>
-<h2><a class="anchor" id="autotoc_md45"></a>
+<h2><a class="anchor" id="autotoc_md46"></a>
 MWAX observation of PSR B0031-07</h2>
 <ol type="1">
 <li>Get the metafits files for the target observation and the calibration observation: <div class="fragment"><div class="line">wget -O 1320499816.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320499816</div>
