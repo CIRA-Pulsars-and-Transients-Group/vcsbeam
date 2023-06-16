@@ -242,15 +242,6 @@ int main(int argc, char **argv)
         err = vmReadNextSecond( vm );
         vmCheckError( err );
 
-        printf("\nJUST READ-IN DATA (buffer size = %lu):\n", vm->v->read_size);
-        for (int i = vm->v->read_size/16-48; i < vm->v->read_size/16 + 48; i++)
-        {
-            printf("%02x ", *((uint8_t *)(vm->v->read_ptr) + i));
-            if ((i % 16) == 15) printf("\n");
-            if ((i % 16) == 7) printf(" ");
-        }
-        printf("...\n");
-
         // Calculate J (inverse) and Phi (geometric delays)
         vmCalcJonesAndDelays( vm, vm->ras_hours, vm->decs_degs, beam_geom_vals );
 
@@ -273,20 +264,9 @@ int main(int argc, char **argv)
         // Invert the PFB, if requested
         if (vm->do_inverse_pfb)
         {
-            printf("invert pfb: TIMESTEP_IDX = %lu\n", timestep_idx);
             logger_start_stopwatch( vm->log, "ipfb", true );
 
             vmPullE( vm );
-            // vm->e, vm->d_e, vm->e_size_bytes
-            printf("\nJUST BEAMFORMED DATA (buffer size = %lu):\n", vm->v->read_size);
-            for (int i = 10000; i < 10096; i++)
-            {
-                printf("(%f, %f) ", vm->e[i].x, vm->e[i].y);
-                if ((i % 16) == 15) printf("\n");
-                if ((i % 16) == 7) printf(" ");
-            }
-            printf("...\n");
-
 
             prepare_detected_beam( detected_beam, mpfs, vm );
             cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,

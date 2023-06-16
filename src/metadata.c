@@ -1014,12 +1014,6 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
         exit(EXIT_FAILURE);
     }
 
-    printf("\nread_size = %lu\nread_ptr = %p\n", vm->v->read_size, vm->v->read_ptr);
-    printf("gps_second = %lu\n", gps_second);
-    printf("vm->vcs_context = %p\n", vm->vcs_context);
-    printf("coarse_chan_idx = %d\n", coarse_chan_idx);
-    printf("error_message = %s\n", vm->error_message);
-
     logger_stop_stopwatch( vm->log, "read" );
 
     // Increment the count of number of seconds read

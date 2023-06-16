@@ -169,18 +169,25 @@ __global__ void vmApplyJ_kernel( void            *data,
                                            cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], vp ) );
     Jv_P[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], vq ),
                                            cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], vp ) );
+
 #ifdef DEBUG
-    if (c==50 && s==0 && ant==0)
+    if (c==50 && s == 3 && ant==0)
     {
-        printf( "Jinv = [jyq, jyp; jxq; jxp]\n"
-                "     = [%lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i]\n",
-                cuCreal(J[J_IDX(ant,c,0,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,0,nc,npol)]),
-                cuCreal(J[J_IDX(ant,c,0,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,1,nc,npol)]),
-                cuCreal(J[J_IDX(ant,c,1,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,0,nc,npol)]),
-                cuCreal(J[J_IDX(ant,c,1,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,1,nc,npol)]) );
-        printf( "v    = [vq; vp] = [%.1lf%+.1lf*i; %.1lf%+.1lf*i]\n",
-                cuCreal( vq ), cuCimag( vq ),
-                cuCreal( vp ), cuCimag( vp ) );
+        for (int i = 0; i < nant; i++)
+        {
+            printf( "Jinv[%3d] = [%5.1lf,%5.1lf], [%5.1lf,%5.1lf]; [%5.1lf,%5.1lf], [%5.1lf,%5.1lf]   ",
+                    i,
+                    cuCreal(J[J_IDX(i,c,0,0,nc,npol)]), cuCimag(J[J_IDX(i,c,0,0,nc,npol)]),
+                    cuCreal(J[J_IDX(i,c,0,1,nc,npol)]), cuCimag(J[J_IDX(i,c,0,1,nc,npol)]),
+                    cuCreal(J[J_IDX(i,c,1,0,nc,npol)]), cuCimag(J[J_IDX(i,c,1,0,nc,npol)]),
+                    cuCreal(J[J_IDX(i,c,1,1,nc,npol)]), cuCimag(J[J_IDX(i,c,1,1,nc,npol)]) );
+            cuDoubleComplex *v = (cuDoubleComplex *)data;
+            printf( "v[Q=%3d,P=%3d] = [%5.1lf,%5.1lf]; [%5.1lf,%5.1lf]\n",
+                    polQ_idxs[i], polP_idxs[i],
+                    cuCreal( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ),
+                    cuCreal( v[v_IDX(s,c,polP_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polP_idxs[i],nc,ni)] )
+                  );
+        }
     }
 #endif
 }
@@ -250,6 +257,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[5*nant]);
     cuDoubleComplex *Nxy = (cuDoubleComplex *)(&arrays[7*nant]);
     cuDoubleComplex *Nyy = (cuDoubleComplex *)(&arrays[9*nant]);
+    // (Nyx is not needed as it's degenerate with Nxy)
 
     // Calculate the beam and the noise floor
 
@@ -264,6 +272,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     Nxy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     //Nyx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     Nyy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
+    __syncthreads();
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
@@ -272,7 +281,6 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 
     Nxx[ant] = cuCmul( ex[ant], cuConj(ex[ant]) );
     Nxy[ant] = cuCmul( ex[ant], cuConj(ey[ant]) );
-    //Nyx[ant] = cuCmul( ey[ant], cuConj(ex[ant]) ); // Not needed as it's degenerate with Nxy[]
     Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
 
     // Detect the coherent beam
@@ -353,20 +361,41 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
         e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = ex[0];
         e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = ey[0];
     }
+    __syncthreads();
 
-    if (c==50 && s < 4 && ant==0)
+#ifdef DEBUG
+    if (c==50 && s == 3 && ant==0)
     {
-        printf( "e[s=%d]    = [ex; ey] = [%lf%+lf*i; %lf%+lf*i]\n",
-                s,
+        printf( "Pre-add:\n" );
+        for (int i = 1; i < nant; i++)
+        {
+            printf( "    "
+                    "ex[%3d];ey[%3d]=[%5.1lf,%5.1lf];[%5.1lf,%5.1lf]  "
+                    "ph[%3d]=[%5.1lf,%5.1lf]  "
+                    "JQ[%3d]=[%5.1lf,%5.1lf]  "
+                    "JP[%3d]=[%5.1lf,%5.1lf]  "
+                    "\n",
+                    i, i,
+                    cuCreal( ex[i] ), cuCimag( ex[i] ),
+                    cuCreal( ey[i] ), cuCimag( ey[i] ),
+                    i,
+                    cuCreal( phi[PHI_IDX(p,i,c,nant,nc)] ), cuCimag( phi[PHI_IDX(p,i,c,nant,nc)] ),
+                    i,
+                    cuCreal( Jv_Q[Jv_IDX(s,c,i,nc,nant)] ), cuCimag( Jv_Q[Jv_IDX(s,c,i,nc,nant)] ),
+                    i,
+                    cuCreal( Jv_P[Jv_IDX(s,c,i,nc,nant)] ), cuCimag( Jv_P[Jv_IDX(s,c,i,nc,nant)] )
+                    );
+        }
+        printf( "Post-add: ex[0]; ey[0] = [%.1lf, %.1lf]; [%.1lf, %.1lf]\n",
                 cuCreal( ex[ant] ), cuCimag( ex[ant] ),
                 cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
-        /*
-        printf( "phi[%d]  = %lf%+lf*i\n",
-                s,
+    /*
+        printf( "phi[3]  = [%lf, %lf]\n",
                 cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
                 cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
-        */
+    */
     }
+#endif
 
 }
 
