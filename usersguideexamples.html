@@ -108,7 +108,7 @@ Observation 1320499816</h1>
 Calibration (using Hyperdrive)</h1>
 <h2><a class="anchor" id="autotoc_md51"></a>
 Producing a solution</h2>
-<dl class="section warning"><dt>Warning</dt><dd>{See <a href="https://mwatelescope.github.io/mwa_hyperdrive/user/intro.html">the hyperdrive documentation</a> for the most up-to-date information.}</dd></dl>
+<dl class="section warning"><dt>Warning</dt><dd>See <a href="https://mwatelescope.github.io/mwa_hyperdrive/user/intro.html">the hyperdrive documentation</a> for the most up-to-date information.</dd></dl>
 <div class="fragment"><div class="line">$ cd /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive</div>
 <div class="line">$ sbatch hyperdrive.sbatch</div>
 </div><!-- fragment --><p><b>hyperdrive.sbatch</b>: </p><div class="fragment"><div class="line">#!/bin/bash -l</div>
@@ -156,9 +156,7 @@ Convert the solutions</h2>
 Beamforming</h1>
 <h2><a class="anchor" id="autotoc_md55"></a>
 All 24 channels</h2>
-<div class="fragment"></div><!-- fragment --><p><b>pointings.txt</b>: </p><div class="fragment"><div class="line">00:34:08.8703 -07:21:53.409</div>
-</div><!-- fragment --><p><b>flagged_tilenames.txt</b>: </p><div class="fragment"><div class="line">HexE2</div>
-</div><!-- fragment --><p><b>vcsbeam.sbatch</b>: </p><div class="fragment"><div class="line">#!/bin/bash -l</div>
+<p><b>vcsbeam.sbatch</b>: </p><div class="fragment"><div class="line">#!/bin/bash -l</div>
 <div class="line"> </div>
 <div class="line">#SBATCH --nodes=1</div>
 <div class="line">#SBATCH --ntasks-per-node=1</div>
