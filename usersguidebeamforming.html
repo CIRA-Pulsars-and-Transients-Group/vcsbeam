@@ -223,6 +223,7 @@ Choosing which coarse channels to process</h3>
 <div class="line">mpirun -np 1 make_mwa_tied_array_beam -p -f +2 ...</div>
 <div class="line">...</div>
 </div><!-- fragment --><p> will result in 24 separate PSRFITS files, one per coarse channel. The advantage to running a single multi-process MPI job is that splicing is done automatically. The disadvantage is that this can potentially lead to slower wall time completion of the beamforming job, since the splicing occurs after each second of data, requiring that the MPI processes are synchronised after processing each second of data. However, this is unlikely to affect the wall time significantly (although this remains to be benchmarked) since the splicing is performed synchronously with the reading in of the subsequent second's worth of data, which is believed to be the current bottleneck for throughput.</p>
+<p><b>In summary, for VDIF, it is recommended to process the channels as individual jobs</b> (this also avoids any potential MPI-related bugs). On SLURM systems, the recommended way of doing this is using job arrays (see example below).</p>
 <hr  />
 <h2><a class="anchor" id="autotoc_md39"></a>
 Calibration options</h2>
