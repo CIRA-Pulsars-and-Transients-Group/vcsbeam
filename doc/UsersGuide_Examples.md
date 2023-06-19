@@ -17,7 +17,7 @@ $ make_mwa_tied_array_beam -V
 
 ### Producing a solution
 
-\warning {See [the hyperdrive documentation](https://mwatelescope.github.io/mwa_hyperdrive/user/intro.html) for the most up-to-date information.}
+\warning See [the hyperdrive documentation](https://mwatelescope.github.io/mwa_hyperdrive/user/intro.html) for the most up-to-date information.
 
 ```
 $ cd /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive
@@ -85,19 +85,6 @@ hyperdrive solutions-convert -m /astro/mwavcs/asvo/252007/1320412440.metafits hy
 ## Beamforming
 
 ### All 24 channels
-
-```
-```
-
-**pointings.txt**:
-```
-00:34:08.8703 -07:21:53.409
-```
-
-**flagged_tilenames.txt**:
-```
-HexE2
-```
 
 **vcsbeam.sbatch**:
 ```
