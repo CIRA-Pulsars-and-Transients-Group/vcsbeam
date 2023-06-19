@@ -130,12 +130,12 @@ void vmCalcJ( vcsbeam_context *vm )
                 mult2x2d(&(vm->D[j_idx]), &(vm->pb.B[pb_idx]), Ji); // the gain in the desired look direction
 
 #ifdef DEBUG
-if (ch == 50 && ant == 0)
+if (ch == 50)
 {
-    //fprintf( stderr, "Dd = "); fprintf_complex_matrix( stderr, Dd[dd_idx] );
-    fprintf( stderr, "D       = "); fprintf_complex_matrix( stderr, &(vm->D[j_idx]) );
-    fprintf( stderr, "BP      = "); fprintf_complex_matrix( stderr, &(vm->pb.B[pb_idx]) );
-    fprintf( stderr, "J = DBP = "); fprintf_complex_matrix( stderr, Ji );
+    fprintf( stderr, "ant = %d:\n", ant );
+    fprintf( stderr, "\tD       = "); fprintf_complex_matrix( stderr, &(vm->D[j_idx]) );
+    fprintf( stderr, "\tBP      = "); fprintf_complex_matrix( stderr, &(vm->pb.B[pb_idx]) );
+    fprintf( stderr, "\tJ = DBP = "); fprintf_complex_matrix( stderr, Ji );
 }
 #endif
                 // Now, calculate the inverse Jones matrix

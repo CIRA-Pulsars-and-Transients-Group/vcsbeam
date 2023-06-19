@@ -427,7 +427,7 @@ void read_bandpass_file(
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    int coarse_chan_idx = vm->coarse_chan_idx;
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
 
     // Open the calibration file for reading
     FILE *fp = NULL;
@@ -527,8 +527,11 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
                 Ch       *                (JONES_SIZE_BYTES);
             fseek( fp, fpos, SEEK_SET );
 
+//fprintf(stderr, "ftell=%lu    ", ftell(fp));
             // Read in one Jones matrix
             fread( Dread, 1, JONES_SIZE_BYTES, fp );
+
+//fprintf(stderr, "Dread (Interval = %d, ant = %d, Ch = %d): ", Interval, ant, Ch); fprintf_complex_matrix( stderr, Dread );
 
             // If there are any nans, set them to zero instead
             // Assume that if there are any nans in the Jones matrix, then
