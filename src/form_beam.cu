@@ -463,8 +463,8 @@ __global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets
     }
 
     // Rescale the incoherent beam to fit the available 8 bits
-    scale  = (max - min) / 256.0; // (for 8-bit values)
-    offset = min + 0.5*scale;
+    scale  = (max - min) / 256.0; // (for 8-bit unsigned values)
+    offset = min;
 
     for (i = 0; i < nstep; i++)
     {
