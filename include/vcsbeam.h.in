@@ -664,6 +664,8 @@ typedef struct vcsbeam_context_t
 extern "C" {
 #endif
 
+void vmCheckError( vm_error err );
+
 vcsbeam_context *vmInit( bool use_mpi );
 
 /**    

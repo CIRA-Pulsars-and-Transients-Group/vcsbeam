@@ -79,6 +79,15 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
 
     // Write a full second's worth of samples
     vdif_write_data( vf, out_buffer_8_vdif );
+    /*
+    for (int i = 0; i < 96; i++)
+    {
+        printf("%02x ", *(uint8_t *)(out_buffer_8_vdif + i));
+        if ((i % 16) == 15) printf("\n");
+        if ((i % 16) == 7) printf(" ");
+    }
+    printf("...\n");
+    */
 
     free( out_buffer_8_vdif );
 }

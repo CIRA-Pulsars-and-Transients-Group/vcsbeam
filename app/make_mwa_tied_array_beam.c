@@ -10,6 +10,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 // Non-standard dependencies
 #include <mwalib.h>
@@ -252,11 +253,13 @@ int main(int argc, char **argv)
 
     uintptr_t ntimesteps = vm->num_gps_seconds_to_process;
     uintptr_t timestep_idx;
+    vm_error err;
 
     for (timestep_idx = 0; timestep_idx < ntimesteps; timestep_idx++)
     {
         // Read in data from next file
-        vmReadNextSecond( vm );
+        err = vmReadNextSecond( vm );
+        vmCheckError( err );
 
         // Calculate J (inverse) and Phi (geometric delays)
         vmCalcJonesAndDelays( vm, vm->ras_hours, vm->decs_degs, beam_geom_vals );
@@ -291,11 +294,8 @@ int main(int argc, char **argv)
             logger_start_stopwatch( vm->log, "ipfb", true );
 
             vmPullE( vm );
-            prepare_detected_beam( detected_beam, vm );
-#ifdef HAVE_VDIF
-// The need for this HAVE_VDIF counts as a bug. The inverse PFB should work
-// without knowing anything about the VDIF output. However, cu_invert_pfb()
-// currently uses the sizeof_buffer from the vdif struct.
+
+            prepare_detected_beam( detected_beam, mpfs, vm );
             cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vm->vf->sizeof_buffer,
                     &gi, data_buffer_vdif );

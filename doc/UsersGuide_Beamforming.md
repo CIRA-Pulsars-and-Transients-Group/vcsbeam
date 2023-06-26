@@ -235,6 +235,9 @@ The advantage to running a single multi-process MPI job is that splicing is done
 The disadvantage is that this can potentially lead to slower wall time completion of the beamforming job, since the splicing occurs after each second of data, requiring that the MPI processes are synchronised after processing each second of data.
 However, this is unlikely to affect the wall time significantly (although this remains to be benchmarked) since the splicing is performed synchronously with the reading in of the subsequent second's worth of data, which is believed to be the current bottleneck for throughput.
 
+**In summary, for VDIF, it is recommended to process the channels as individual jobs** (this also avoids any potential MPI-related bugs).
+On SLURM systems, the recommended way of doing this is using job arrays (see example below).
+
 ________________
 
 ### Calibration options

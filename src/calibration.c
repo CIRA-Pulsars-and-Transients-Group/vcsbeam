@@ -427,7 +427,7 @@ void read_bandpass_file(
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    int coarse_chan_idx = vm->coarse_chan_idx;
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
 
     // Open the calibration file for reading
     FILE *fp = NULL;
@@ -463,8 +463,8 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     // making sure it matches the metadata
     if (intervalCount > 1)
     {
-        fprintf( stderr, "Warning: Only the first interval in the calibration " );
-        fprintf( stderr, "solution (%s) will be used\n", vm->cal.caldir );
+        fprintf( stdout, "Warning: Only the first interval in the calibration " );
+        fprintf( stdout, "solution (%s) will be used\n", vm->cal.caldir );
     }
     if (antennaCount != nant)
     {
@@ -475,13 +475,13 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     }
     if (channelCount != nChan)
     {
-        fprintf( stderr, "Warning: Calibration solution (%s) ", vm->cal.caldir );
-        fprintf( stderr, "contains a different number (%d) ", channelCount );
-        fprintf( stderr, "than the expected (%d) channels.\n", nChan );
+        fprintf( stdout, "Warning: Calibration solution (%s) ", vm->cal.caldir );
+        fprintf( stdout, "contains a different number (%d) ", channelCount );
+        fprintf( stdout, "than the expected (%d) channels.\n", nChan );
         nChan = channelCount;
         nchan = nChan / vm->cal_metadata->num_metafits_coarse_chans;
         interp_factor = vcs_nchan / nchan;
-        fprintf( stderr, "Assuming calibration channels are "
+        fprintf( stdout, "Assuming calibration channels are "
                 "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
     }
     if (coarse_chan_idx >= (int)vm->cal_metadata->num_metafits_coarse_chans)
@@ -527,8 +527,11 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
                 Ch       *                (JONES_SIZE_BYTES);
             fseek( fp, fpos, SEEK_SET );
 
+//fprintf(stderr, "ftell=%lu    ", ftell(fp));
             // Read in one Jones matrix
             fread( Dread, 1, JONES_SIZE_BYTES, fp );
+
+//fprintf(stderr, "Dread (Interval = %d, ant = %d, Ch = %d): ", Interval, ant, Ch); fprintf_complex_matrix( stderr, Dread );
 
             // If there are any nans, set them to zero instead
             // Assume that if there are any nans in the Jones matrix, then

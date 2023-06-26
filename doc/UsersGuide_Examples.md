@@ -17,6 +17,8 @@ $ make_mwa_tied_array_beam -V
 
 ### Producing a solution
 
+\warning See [the hyperdrive documentation](https://mwatelescope.github.io/mwa_hyperdrive/user/intro.html) for the most up-to-date information.
+
 ```
 $ cd /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive
 $ sbatch hyperdrive.sbatch
@@ -84,66 +86,6 @@ hyperdrive solutions-convert -m /astro/mwavcs/asvo/252007/1320412440.metafits hy
 
 ### All 24 channels
 
-```
-$ cd /astro/mwavcs/vcs/1320499816/vcsbeam/coh
-$ wget -O 1320412440_metafits_ppds.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320412440&include_ppds=1
-$ sbatch vcsbeam.sbatch
-```
-
-**pointings.txt**:
-```
-00:34:08.8703 -07:21:53.409
-```
-
-**flagged_tilenames.txt**:
-```
-HexE2
-```
-
-**vcsbeam.sbatch**:
-```
-#!/bin/bash -l
-
-#SBATCH --nodes=24
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=370gb
-#SBATCH --partition=gpuq
-#SBATCH --gres=gpu:1
-#SBATCH --time=01:00:00
-#SBATCH --account=mwavcs
-#SBATCH --nice=0
-#SBATCH --export=NONE
- 
-module use /pawsey/mwa/software/python3/modulefiles
-module load vcsbeam
- 
-srun -N 24 -n 24 make_mwa_tied_array_beam \
-    -m /astro/mwavcs/asvo/252057/1320499816.fits \
-    -b 1320499824 \
-    -T 592 \
-    -f 109 \
-    -d /astro/mwavcs/asvo/252057 \
-    -P pointings.txt \
-    -F flagged_tilenames.txt \
-    -c 1320412440_metafits_ppds.fits \
-    -C /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive/hyperdrive_solutions.bin \
-    -p -R NONE -U 0,0 -O -X
-```
-
-```
-$ module load singularity
-$ /pawsey/mwa/singularity/presto/presto.sif prepfold -psr J0034-0721 -nosearch -nodmsearch C001_1320499816_00:34:08.87_-07:21:53.41_ch109-132_000?.fits
-```
-
-\image html example_1320499816_presto_24chan.png width=500px
-\image latex example_1320499816_presto_24chan.png width=0.7\textwidth
-***(Needs to be updated)***
-
-### Single Channel
-
-Changing all the number of nodes "24" to "1" in the sbatch script above produces the following:
-
 **vcsbeam.sbatch**:
 ```
 #!/bin/bash -l
@@ -151,37 +93,51 @@ Changing all the number of nodes "24" to "1" in the sbatch script above produces
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=370gb
+#SBATCH --mem=50gb
 #SBATCH --partition=gpuq
 #SBATCH --gres=gpu:1
 #SBATCH --time=01:00:00
 #SBATCH --account=mwavcs
 #SBATCH --nice=0
 #SBATCH --export=NONE
+#SBATCH --array=109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132
  
 module use /pawsey/mwa/software/python3/modulefiles
-module load vcsbeam
+module load vcsbeam/4.1
  
+cd /astro/mwavcs/vcs/1320499816/vcsbeam/coh
+
+# Download the metafits files
+if [ ! -f 1320499816.fits ]; then
+    wget -O 1320499816.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320499816
+fi
+
+if [ ! -f 1320412440.fits ]; then
+    wget -O 1320412440.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320412440
+fi
+
+# Populate pointings file
+echo "00:34:08.8703 -07:21:53.409" > pointints.txt
+
+# Populate flag tiles file
+echo "HexE2" > flagged_tilenames.txt
+
 srun -N 1 -n 1 make_mwa_tied_array_beam \
-    -m /astro/mwavcs/asvo/252057/1320499816.fits \
+    -m 1320499816.fits \
     -b 1320499824 \
     -T 592 \
-    -f 109 \
+    -f ${SLURM_ARRAY_TASK_ID} \
     -d /astro/mwavcs/asvo/252057 \
     -P pointings.txt \
     -F flagged_tilenames.txt \
-    -c 1320412440_metafits_ppds.fits \
-    -C /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive/hyperdrive_solutions.bin \
-    -p -R NONE -U 0,0 -O -X
+    -c 1320412440.fits \
+    -C hyperdrive_solutions.bin \
+    -v -R NONE -U 0,0 -O -X
 ```
 
-```
-$ module load singularity
-$ /pawsey/mwa/singularity/presto/presto.sif prepfold -psr J0034-0721 -nosearch -nodmsearch C001_1320499816_00:34:08.87_-07:21:53.41_ch109_000?.fits
-```
-
-\image html example_1320499816_presto_1chan.png width=500px
-\image latex example_1320499816_presto_1chan.png width=0.7\textwidth
+\image html example_1320499816_presto_24chan.png width=500px
+\image latex example_1320499816_presto_24chan.png width=0.7\textwidth
+***(Needs to be updated)***
 
 ### A good single pulse for testing purposes
 

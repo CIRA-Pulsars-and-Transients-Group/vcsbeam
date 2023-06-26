@@ -169,18 +169,25 @@ __global__ void vmApplyJ_kernel( void            *data,
                                            cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], vp ) );
     Jv_P[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], vq ),
                                            cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], vp ) );
+
 #ifdef DEBUG
-    if (c==50 && s==0 && ant==0)
+    if (c==50 && s == 3 && ant==0)
     {
-        printf( "Jinv = [jyq, jyp; jxq; jxp]\n"
-                "     = [%lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i]\n",
-                cuCreal(J[J_IDX(ant,c,0,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,0,nc,npol)]),
-                cuCreal(J[J_IDX(ant,c,0,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,0,1,nc,npol)]),
-                cuCreal(J[J_IDX(ant,c,1,0,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,0,nc,npol)]),
-                cuCreal(J[J_IDX(ant,c,1,1,nc,npol)]), cuCimag(J[J_IDX(ant,c,1,1,nc,npol)]) );
-        printf( "v    = [vq; vp] = [%.1lf%+.1lf*i; %.1lf%+.1lf*i]\n",
-                cuCreal( vq ), cuCimag( vq ),
-                cuCreal( vp ), cuCimag( vp ) );
+        for (int i = 0; i < nant; i++)
+        {
+            printf( "Jinv[%3d] = [%5.1lf,%5.1lf], [%5.1lf,%5.1lf]; [%5.1lf,%5.1lf], [%5.1lf,%5.1lf]   ",
+                    i,
+                    cuCreal(J[J_IDX(i,c,0,0,nc,npol)]), cuCimag(J[J_IDX(i,c,0,0,nc,npol)]),
+                    cuCreal(J[J_IDX(i,c,0,1,nc,npol)]), cuCimag(J[J_IDX(i,c,0,1,nc,npol)]),
+                    cuCreal(J[J_IDX(i,c,1,0,nc,npol)]), cuCimag(J[J_IDX(i,c,1,0,nc,npol)]),
+                    cuCreal(J[J_IDX(i,c,1,1,nc,npol)]), cuCimag(J[J_IDX(i,c,1,1,nc,npol)]) );
+            cuDoubleComplex *v = (cuDoubleComplex *)data;
+            printf( "v[Q=%3d,P=%3d] = [%5.1lf,%5.1lf]; [%5.1lf,%5.1lf]\n",
+                    polQ_idxs[i], polP_idxs[i],
+                    cuCreal( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ),
+                    cuCreal( v[v_IDX(s,c,polP_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polP_idxs[i],nc,ni)] )
+                  );
+        }
     }
 #endif
 }
@@ -250,6 +257,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[5*nant]);
     cuDoubleComplex *Nxy = (cuDoubleComplex *)(&arrays[7*nant]);
     cuDoubleComplex *Nyy = (cuDoubleComplex *)(&arrays[9*nant]);
+    // (Nyx is not needed as it's degenerate with Nxy)
 
     // Calculate the beam and the noise floor
 
@@ -264,6 +272,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     Nxy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     //Nyx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     Nyy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
+    __syncthreads();
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
@@ -272,25 +281,18 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 
     Nxx[ant] = cuCmul( ex[ant], cuConj(ex[ant]) );
     Nxy[ant] = cuCmul( ex[ant], cuConj(ey[ant]) );
-    //Nyx[ant] = cuCmul( ey[ant], cuConj(ex[ant]) ); // Not needed as it's degenerate with Nxy[]
     Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
-
-#ifdef DEBUG
-    if (c==50 && s==0 && ant==0)
-    {
-        printf( "e    = [ex; ey] = [%lf%+lf*i; %lf%+lf*i]\n",
-                cuCreal( ex[ant] ), cuCimag( ex[ant] ),
-                cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
-        printf( "phi  = %lf%+lf*i\n",
-                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
-                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
-    }
-#endif
 
     // Detect the coherent beam
     // A summation over an array is faster on a GPU if you add half on array
     // to its other half as than can be done in parallel. Then this is repeated
     // with half of the previous array until the array is down to 1.
+
+    // SM (15 Jun 2023): I _think_ The below adding only works deterministically
+    // if the number of antennas is a power of 2. Hence, I'm commenting it out
+    // and replacing it with a slower, more reliable version.
+
+    /* // START UNRELIABLE ANTENNA SUMMING
     __syncthreads();
     for ( int h_ant = nant / 2; h_ant > 0; h_ant = h_ant / 2 )
     {
@@ -304,9 +306,41 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
             Nyy[ant] = cuCadd( Nyy[ant], Nyy[ant + h_ant] );
         }
         // below makes no difference so removed
-        // else return;
+        //else return;
         __syncthreads();
     }
+    */ // <--- END UNRELIABLE ANTENNA SUMMING
+
+    // SM: Hopefully this is better, but I'm still not sure about possible
+    // race conditions -- where's atomicAdd for complexDoubles??
+    /*
+    __syncthreads();
+    if (ant != 0)
+    {
+        atomicAdd(&ex[0].x, ex[ant].x);   atomicAdd(&ex[0].y, ex[ant].y);
+        atomicAdd(&ey[0].x, ey[ant].x);   atomicAdd(&ey[0].y, ey[ant].y);
+        atomicAdd(&Nxx[0].x, Nxx[ant].x);   atomicAdd(&Nxx[0].y, Nxx[ant].y);
+        atomicAdd(&Nxy[0].x, Nxy[ant].x);   atomicAdd(&Nxy[0].y, Nxy[ant].y);
+        atomicAdd(&Nyy[0].x, Nyy[ant].x);   atomicAdd(&Nyy[0].y, Nyy[ant].y);
+    }
+    __syncthreads();
+    */
+
+    // Finally, the safest, slowest option: Just get one thread to do it
+    __syncthreads();
+    if ( ant == 0 )
+    {
+        for (int i = 1; i < nant; i++)
+        {
+            ex[0]  = cuCadd( ex[0],  ex[i] );
+            ey[0]  = cuCadd( ey[0],  ey[i] );
+            Nxx[0] = cuCadd( Nxx[0], Nxx[i] );
+            Nxy[0] = cuCadd( Nxy[0], Nxy[i] );
+            //Nyx[0]=cuCadd( Nyx[0], Nyx[i] );
+            Nyy[0] = cuCadd( Nyy[0], Nyy[i] );
+        }
+    }
+    __syncthreads();
 
     // Form the stokes parameters for the coherent beam
     // Only doing it for ant 0 so that it only prints once
@@ -327,6 +361,42 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
         e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = ex[0];
         e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = ey[0];
     }
+    __syncthreads();
+
+#ifdef DEBUG
+    if (c==50 && s == 3 && ant==0)
+    {
+        printf( "Pre-add:\n" );
+        for (int i = 1; i < nant; i++)
+        {
+            printf( "    "
+                    "ex[%3d];ey[%3d]=[%5.1lf,%5.1lf];[%5.1lf,%5.1lf]  "
+                    "ph[%3d]=[%5.1lf,%5.1lf]  "
+                    "JQ[%3d]=[%5.1lf,%5.1lf]  "
+                    "JP[%3d]=[%5.1lf,%5.1lf]  "
+                    "\n",
+                    i, i,
+                    cuCreal( ex[i] ), cuCimag( ex[i] ),
+                    cuCreal( ey[i] ), cuCimag( ey[i] ),
+                    i,
+                    cuCreal( phi[PHI_IDX(p,i,c,nant,nc)] ), cuCimag( phi[PHI_IDX(p,i,c,nant,nc)] ),
+                    i,
+                    cuCreal( Jv_Q[Jv_IDX(s,c,i,nc,nant)] ), cuCimag( Jv_Q[Jv_IDX(s,c,i,nc,nant)] ),
+                    i,
+                    cuCreal( Jv_P[Jv_IDX(s,c,i,nc,nant)] ), cuCimag( Jv_P[Jv_IDX(s,c,i,nc,nant)] )
+                    );
+        }
+        printf( "Post-add: ex[0]; ey[0] = [%.1lf, %.1lf]; [%.1lf, %.1lf]\n",
+                cuCreal( ex[ant] ), cuCimag( ex[ant] ),
+                cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
+    /*
+        printf( "phi[3]  = [%lf, %lf]\n",
+                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
+                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
+    */
+    }
+#endif
+
 }
 
 /**
@@ -393,8 +463,8 @@ __global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets
     }
 
     // Rescale the incoherent beam to fit the available 8 bits
-    scale  = (max - min) / 256.0; // (for 8-bit values)
-    offset = min + 0.5*scale;
+    scale  = (max - min) / 256.0; // (for 8-bit unsigned values)
+    offset = min;
 
     for (i = 0; i < nstep; i++)
     {
@@ -564,6 +634,7 @@ void vmBeamformSecond( vcsbeam_context *vm )
 
     // Unlock the buffer for reading
     // TODO: generalise this for arbitrary pipelines
+    // SM: This custom "lock" implementation might prove futile in the face of asynchronous CUDA calls...
     vm->v->locked = false;
 }
 
