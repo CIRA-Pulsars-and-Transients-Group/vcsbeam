@@ -1455,6 +1455,16 @@ void vmGetVoltageMetadata( vcsbeam_context *vm )
         exit(EXIT_FAILURE);
     }
 
+#ifdef DEBUG
+    // Print out the digital gains as delivered by mwalib
+    for (uintptr_t i = 0; i < vm->obs_metadata->num_rf_inputs; i++)
+    {
+        printf("RF input %lu:\n", i);
+        for (uintptr_t j = 0; j < vm->obs_metadata->rf_inputs[i].num_digital_gains; j++)
+            printf("    %3lu: %lf\n", j, vm->obs_metadata->rf_inputs[i].digital_gains[j]);
+    }
+#endif
+
     // Replace the existing OBS_METADATA with a new one that knows this is a VCS observation
     mwalib_metafits_metadata_free( vm->obs_metadata );
     if (mwalib_metafits_metadata_get( NULL, NULL, vm->vcs_context, &vm->obs_metadata, vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
