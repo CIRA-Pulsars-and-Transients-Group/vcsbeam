@@ -92,6 +92,34 @@ void vmSetPolIdxLists( vcsbeam_context *vm )
  * The antenna ordering is given by the "Antenna" keyword in the observation's
  * metafits file. The frequencies are ordered from lowest to highest.
  *
+ * This function *also* includes the digital gains into \f${\bf J}\f$.
+ * These digital gains, which are available in the metafits file, are the original
+ * scaling factors used to make best use of the available number of bits for storing
+ * voltage samples, as described
+ * <a href="https://wiki.mwatelescope.org/display/MP/Metafits+files">here</a>.
+ *
+ * The digital gains serve two purposes, one necessary, and one convenient.
+ * The necessary purpose is to weight the antennas before performing the beamforming
+ * sum. Actually, it is properly more correct to say that the purpose is to
+ * *un*-weight the antennas, so that they are all in equivalent units before summing
+ * them together. The "convenient" purpose is to make the final calibrated voltages
+ * be in Jys, or in some other "sensible" unit. Exactly what this unit is, I have
+ * yet to discover.
+ *
+ * The digital gains have units of "voltage sample units / voltage physical units".
+ * This means to return to physical units, one needs to divide the voltages by the
+ * digital gains. Equivalently, one can divide \f${\bf J}^{-1}\f$ by the gains, since
+ * \f${\bf J}^{-1}\f$ is multiplied to the voltages anyway, prior to beamforming. And
+ * this, in turn, is equivalent to *multiplying* \f${\bf J}\f$ by the gains, which is
+ * what is implemented in this function.
+ *
+ * Since there is a (possibly) different digital gain per polarisation, care must be
+ * taken to multiply the gains to \f${\bf J}\f$ in the correct way. To wit, as implied
+ * by the equation explaining how the Jones matrix is applied
+ * (<a href="https://cira-pulsars-and-transients-group.github.io/vcsbeam/calibration.html">in the documentation</a>),
+ * the digital gain for the "q" polarisation should be multiplied to the top row of
+ * the Jones matrix, and that for "p" on the bottom row.
+ *
  * @todo <a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/issues/9">Issue #9</a>
  */
 void vmCalcJ( vcsbeam_context *vm )
@@ -101,11 +129,14 @@ void vmCalcJ( vcsbeam_context *vm )
     int nant           = vm->obs_metadata->num_ants;
     int nchan          = vm->nfine_chan;
     int npol           = vm->obs_metadata->num_ant_pols;   // (X,Y)
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0]; // TODO Check this is correct!
 
     unsigned int p;  // Pointing number
     int ant;         // Antenna number
     int ch;          // Channel number
     int p1, p2;      // Counters for polarisation
+    int rfx, rfy;    // Indices for x and y pols for each antenna in rf_inputs array in metadata
+    double gx, gy;   // Gains for x and y pols (x <-> q; y <-> p)
 
     /* easy -- now the positions from the database */
 
@@ -138,6 +169,16 @@ if (ch == 50)
     fprintf( stderr, "\tJ = DBP = "); fprintf_complex_matrix( stderr, Ji );
 }
 #endif
+                // Now, include the digital gains
+                rfx = vm->obs_metadata->antennas[ant].rfinput_x;
+                rfy = vm->obs_metadata->antennas[ant].rfinput_y;
+                gx = vm->obs_metadata->rf_inputs[rfx].digital_gains[coarse_chan_idx];
+                gy = vm->obs_metadata->rf_inputs[rfy].digital_gains[coarse_chan_idx];
+                Ji[0] *= gx;
+                Ji[1] *= gx;
+                Ji[2] *= gy;
+                Ji[3] *= gy;
+
                 // Now, calculate the inverse Jones matrix
                 Fnorm = norm2x2( Ji, Ji );
 
