@@ -284,49 +284,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
 
     // Detect the coherent beam
-    // A summation over an array is faster on a GPU if you add half on array
-    // to its other half as than can be done in parallel. Then this is repeated
-    // with half of the previous array until the array is down to 1.
-
-    // SM (15 Jun 2023): I _think_ The below adding only works deterministically
-    // if the number of antennas is a power of 2. Hence, I'm commenting it out
-    // and replacing it with a slower, more reliable version.
-
-    /* // START UNRELIABLE ANTENNA SUMMING
-    __syncthreads();
-    for ( int h_ant = nant / 2; h_ant > 0; h_ant = h_ant / 2 )
-    {
-        if (ant < h_ant)
-        {
-            ex[ant]  = cuCadd( ex[ant],  ex[ant  + h_ant] );
-            ey[ant]  = cuCadd( ey[ant],  ey[ant  + h_ant] );
-            Nxx[ant] = cuCadd( Nxx[ant], Nxx[ant + h_ant] );
-            Nxy[ant] = cuCadd( Nxy[ant], Nxy[ant + h_ant] );
-            //Nyx[ant]=cuCadd( Nyx[ant], Nyx[ant + h_ant] );
-            Nyy[ant] = cuCadd( Nyy[ant], Nyy[ant + h_ant] );
-        }
-        // below makes no difference so removed
-        //else return;
-        __syncthreads();
-    }
-    */ // <--- END UNRELIABLE ANTENNA SUMMING
-
-    // SM: Hopefully this is better, but I'm still not sure about possible
-    // race conditions -- where's atomicAdd for complexDoubles??
-    /*
-    __syncthreads();
-    if (ant != 0)
-    {
-        atomicAdd(&ex[0].x, ex[ant].x);   atomicAdd(&ex[0].y, ex[ant].y);
-        atomicAdd(&ey[0].x, ey[ant].x);   atomicAdd(&ey[0].y, ey[ant].y);
-        atomicAdd(&Nxx[0].x, Nxx[ant].x);   atomicAdd(&Nxx[0].y, Nxx[ant].y);
-        atomicAdd(&Nxy[0].x, Nxy[ant].x);   atomicAdd(&Nxy[0].y, Nxy[ant].y);
-        atomicAdd(&Nyy[0].x, Nyy[ant].x);   atomicAdd(&Nyy[0].y, Nyy[ant].y);
-    }
-    __syncthreads();
-    */
-
-    // Finally, the safest, slowest option: Just get one thread to do it
+    // The safest, slowest option: Just get one thread to do it
     __syncthreads();
     if ( ant == 0 )
     {
