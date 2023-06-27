@@ -135,7 +135,7 @@ void vmCalcJ( vcsbeam_context *vm )
     int ant;         // Antenna number
     int ch;          // Channel number
     int p1, p2;      // Counters for polarisation
-    int rfx, rfy;    // Indices for x and y pols for each antenna in rf_inputs array in metadata
+    uintptr_t rfx, rfy;    // Indices for x and y pols for each antenna in rf_inputs array in metadata
     double gx, gy;   // Gains for x and y pols (x <-> q; y <-> p)
 
     /* easy -- now the positions from the database */
@@ -170,14 +170,16 @@ if (ch == 50)
 }
 #endif
                 // Now, include the digital gains
+                printf("here!\n");
                 rfx = vm->obs_metadata->antennas[ant].rfinput_x;
                 rfy = vm->obs_metadata->antennas[ant].rfinput_y;
+                printf("Here: rfx = %lu; rfy = %lu\n", rfx, rfy);
                 gx = vm->obs_metadata->rf_inputs[rfx].digital_gains[coarse_chan_idx];
                 gy = vm->obs_metadata->rf_inputs[rfy].digital_gains[coarse_chan_idx];
-                Ji[0] *= gx;
-                Ji[1] *= gx;
-                Ji[2] *= gy;
-                Ji[3] *= gy;
+                Ji[0].x *= gx;   Ji[0].y *= gx;
+                Ji[1].x *= gx;   Ji[1].y *= gx;
+                Ji[2].x *= gy;   Ji[2].y *= gy;
+                Ji[3].x *= gy;   Ji[3].y *= gy;
 
                 // Now, calculate the inverse Jones matrix
                 Fnorm = norm2x2( Ji, Ji );
