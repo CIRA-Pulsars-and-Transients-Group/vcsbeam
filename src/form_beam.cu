@@ -306,6 +306,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 
         for (int i = 0; i < nant; i++)
         {
+            /*
             if (isnan(ex[i].x) || isnan(ex[i].y) &&
                     isnan(ey[i].x) || isnan(ey[i].y) &&
                     isnan(Nxx[i].x) || isnan(Nxx[i].y) &&
@@ -313,6 +314,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                     isnan(Nyy[i].x) || isnan(Nyy[i].y)
                )
                 continue;
+            */
 
             avg_ex = cuCadd( avg_ex,  ex[i] );
             avg_ey  = cuCadd( avg_ey,  ey[i] );
@@ -322,13 +324,21 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 
             N++;
         }
+        //printf("%d vs %f\n", N, 1.0/invw);
 
         // Make the above summed results genuine averages
+        /*
         avg_ex.x /= N;    avg_ex.y /= N;
         avg_ey.x /= N;    avg_ey.y /= N;
         avg_Nxx.x /= N;   avg_Nxx.y /= N;
         avg_Nxy.x /= N;   avg_Nxy.y /= N;
         avg_Nyy.x /= N;   avg_Nyy.y /= N;
+        */
+        avg_ex.x *= invw;    avg_ex.y *= invw;
+        avg_ey.x *= invw;    avg_ey.y *= invw;
+        avg_Nxx.x *= invw;   avg_Nxx.y *= invw;
+        avg_Nxy.x *= invw;   avg_Nxy.y *= invw;
+        avg_Nyy.x *= invw;   avg_Nyy.y *= invw;
 
         // Form the stokes parameters for the coherent beam
         // Only doing it for ant 0 so that it only prints once
