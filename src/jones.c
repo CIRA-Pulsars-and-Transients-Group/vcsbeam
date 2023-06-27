@@ -129,7 +129,8 @@ void vmCalcJ( vcsbeam_context *vm )
     int nant           = vm->obs_metadata->num_ants;
     int nchan          = vm->nfine_chan;
     int npol           = vm->obs_metadata->num_ant_pols;   // (X,Y)
-    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0]; // TODO Check this is correct!
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[vm->coarse_chan_idx]; // TODO Check this is correct!
+    printf("Rank: %d --> vm->coarse_chan_idx = %d; coarse_chan_idx = %d\n", vm->mpi_rank, vm->coarse_chan_idx, coarse_chan_idx);
 
     unsigned int p;  // Pointing number
     int ant;         // Antenna number
