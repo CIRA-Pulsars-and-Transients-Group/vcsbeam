@@ -286,76 +286,70 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     __syncthreads();
 
     // Detect the coherent beam
-    // A summation over an array is faster on a GPU if you add half on array
-    // to its other half as than can be done in parallel. Then this is repeated
-    // with half of the previous array until the array is down to 1.
+
+    // Make variables for the summed results
+    cuDoubleComplex sum_ex = make_cuDoubleComplex( 0.0, 0.0 );
+    cuDoubleComplex sum_ey = make_cuDoubleComplex( 0.0, 0.0 );
+    cuDoubleComplex sum_Nxx = make_cuDoubleComplex( 0.0, 0.0 );
+    cuDoubleComplex sum_Nxy = make_cuDoubleComplex( 0.0, 0.0 );
+    cuDoubleComplex sum_Nyy = make_cuDoubleComplex( 0.0, 0.0 );
+
+    // Keep track of how many antennas are included in the sum
+    int N = 0;
 
     // The safest, slowest option: Just get one thread to do it
     __syncthreads();
     if ( ant == 0 )
     {
-        // Make variables for the avged results
-        cuDoubleComplex avg_ex = make_cuDoubleComplex( 0.0, 0.0 );
-        cuDoubleComplex avg_ey = make_cuDoubleComplex( 0.0, 0.0 );
-        cuDoubleComplex avg_Nxx = make_cuDoubleComplex( 0.0, 0.0 );
-        cuDoubleComplex avg_Nxy = make_cuDoubleComplex( 0.0, 0.0 );
-        cuDoubleComplex avg_Nyy = make_cuDoubleComplex( 0.0, 0.0 );
-
-        // Keep track of how many antennas are included in the sum
-        int N = 0;
-
         for (int i = 0; i < nant; i++)
         {
-            /*
-            if (isnan(ex[i].x) || isnan(ex[i].y) &&
-                    isnan(ey[i].x) || isnan(ey[i].y) &&
-                    isnan(Nxx[i].x) || isnan(Nxx[i].y) &&
-                    isnan(Nxy[i].x) || isnan(Nxy[i].y) &&
+            if (isnan(ex[i].x) || isnan(ex[i].y) ||
+                    isnan(ey[i].x) || isnan(ey[i].y) ||
+                    isnan(Nxx[i].x) || isnan(Nxx[i].y) ||
+                    isnan(Nxy[i].x) || isnan(Nxy[i].y) ||
                     isnan(Nyy[i].x) || isnan(Nyy[i].y)
                )
                 continue;
-            */
 
-            avg_ex = cuCadd( avg_ex,  ex[i] );
-            avg_ey  = cuCadd( avg_ey,  ey[i] );
-            avg_Nxx = cuCadd( avg_Nxx, Nxx[i] );
-            avg_Nxy = cuCadd( avg_Nxy, Nxy[i] );
-            avg_Nyy = cuCadd( avg_Nyy, Nyy[i] );
+            sum_ex = cuCadd( sum_ex,  ex[i] );
+            sum_ey  = cuCadd( sum_ey,  ey[i] );
+            sum_Nxx = cuCadd( sum_Nxx, Nxx[i] );
+            sum_Nxy = cuCadd( sum_Nxy, Nxy[i] );
+            sum_Nyy = cuCadd( sum_Nyy, Nyy[i] );
 
             N++;
         }
         //printf("%d vs %f\n", N, 1.0/invw);
 
-        // Make the above summed results genuine averages
-        /*
-        avg_ex.x /= N;    avg_ex.y /= N;
-        avg_ey.x /= N;    avg_ey.y /= N;
-        avg_Nxx.x /= N;   avg_Nxx.y /= N;
-        avg_Nxy.x /= N;   avg_Nxy.y /= N;
-        avg_Nyy.x /= N;   avg_Nyy.y /= N;
-        */
-        avg_ex.x *= invw;    avg_ex.y *= invw;
-        avg_ey.x *= invw;    avg_ey.y *= invw;
-        avg_Nxx.x *= invw;   avg_Nxx.y *= invw;
-        avg_Nxy.x *= invw;   avg_Nxy.y *= invw;
-        avg_Nyy.x *= invw;   avg_Nyy.y *= invw;
-
         // Form the stokes parameters for the coherent beam
         // Only doing it for ant 0 so that it only prints once
-        float bnXX = DETECT(avg_ex) - cuCreal(avg_Nxx);
-        float bnYY = DETECT(avg_ey) - cuCreal(avg_Nyy);
-        cuDoubleComplex bnXY = cuCsub( cuCmul( avg_ex, cuConj( avg_ey ) ),
-                                    avg_Nxy );
-
-        // Stokes I, Q, U, V:
-        S[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = (bnXX + bnYY);
-        S[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = (bnXX - bnYY);
-        S[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] =  2.0*cuCreal( bnXY );
-        S[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*cuCimag( bnXY );
+        float bnXX = DETECT(sum_ex) - cuCreal(sum_Nxx);
+        float bnYY = DETECT(sum_ey) - cuCreal(sum_Nyy);
+        cuDoubleComplex bnXY = cuCsub( cuCmul( sum_ex, cuConj( sum_ey ) ),
+                                    sum_Nxy );
 
         // The beamformed products
-        e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = avg_ex;
-        e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = avg_ey;
+        e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = sum_ex;
+        e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = sum_ey;
+
+        // Stokes I, Q, U, V:
+        if (N == 0)
+        {
+            // SM (27 June 2023): I would have though it would be ok to set these samples
+            // to NAN, but it appears that PRESTO (one of the main anticipated consumers
+            // of these detected data samples) doesn't know how to handle NANs.
+            S[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = 0.0;
+            S[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = 0.0;
+            S[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] = 0.0;
+            S[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = 0.0;
+        }
+        else
+        {
+            S[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = (bnXX + bnYY)/N;
+            S[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = (bnXX - bnYY)/N;
+            S[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] =  2.0*cuCreal( bnXY )/N;
+            S[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*cuCimag( bnXY )/N;
+        }
     }
     __syncthreads();
 
@@ -444,28 +438,48 @@ __global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets
     float val, scale, offset;
     //float summed = 0.0;
 
-    // Initialise min and max values to the first sample
-    float min = S[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
-    float max = S[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
+    // Initialise min and max values to positive and negative infinity
+    float min = INFINITY;
+    float max = -INFINITY;
 
     // Get the data statistics
     int i;
     for (i = 0; i < nstep; i++)
     {
         val = S[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)];
+        if (val == 0.0)
+            continue;
         min = (val < min ? val : min);
         max = (val > max ? val : max);
         //summed += fabsf(val);
     }
 
     // Rescale the incoherent beam to fit the available 8 bits
-    scale  = (max - min) / 256.0; // (for 8-bit unsigned values)
-    offset = min;
+    scale  = (max - min) / 255.9999; // Use slightly less than 256 so that the sample whose value = max doesn't overflow.
+                                     // SM: There must be a less dirty way to do this.
+    offset = min + 0.5*scale;
+    // To explain why offset is "min + 0.5*scale" and not just "min":
+    //
+    //   min                                     max  <-- true value
+    //    |--o--|-----|----- ... -----|-----|-----|
+    //       0     1     2        253   254   255     <-- quantised value
+    //       
+    //       The "o" indicates the offset value
+    //
+    // Therefore, a "0" value should get mapped back to min + "half a bin width".
+    // But "half a bin width" = 0.5*scale.
 
     for (i = 0; i < nstep; i++)
     {
-        val = (S[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) / scale;
-        Sscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 0.5);
+        if (isfinite(scale))
+        {
+            val = (S[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - min) / scale;
+            Sscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)val;
+        }
+        else
+        {
+            Sscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(-min/scale); // Should translate back to "zero"
+        }
     }
 
     // Set the scales and offsets

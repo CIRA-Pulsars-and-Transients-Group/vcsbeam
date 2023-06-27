@@ -129,8 +129,7 @@ void vmCalcJ( vcsbeam_context *vm )
     int nant           = vm->obs_metadata->num_ants;
     int nchan          = vm->nfine_chan;
     int npol           = vm->obs_metadata->num_ant_pols;   // (X,Y)
-    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0]; // TODO Check this is correct!
-    printf("Rank: %d --> vm->coarse_chan_idx = %d; coarse_chan_idx = %d\n", vm->mpi_rank, vm->coarse_chan_idx, coarse_chan_idx);
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
 
     unsigned int p;  // Pointing number
     int ant;         // Antenna number
@@ -161,37 +160,37 @@ void vmCalcJ( vcsbeam_context *vm )
 
                 mult2x2d(&(vm->D[j_idx]), &(vm->pb.B[pb_idx]), Ji); // the gain in the desired look direction
 
-#ifdef DEBUG
-if (ch == 50)
-{
-    fprintf( stderr, "ant = %d:\n", ant );
-    fprintf( stderr, "\tD       = "); fprintf_complex_matrix( stderr, &(vm->D[j_idx]) );
-    fprintf( stderr, "\tBP      = "); fprintf_complex_matrix( stderr, &(vm->pb.B[pb_idx]) );
-    fprintf( stderr, "\tJ = DBP = "); fprintf_complex_matrix( stderr, Ji );
-}
-#endif
                 // Now, include the digital gains
                 rfx = vm->obs_metadata->antennas[ant].rfinput_x;
                 rfy = vm->obs_metadata->antennas[ant].rfinput_y;
                 gx = vm->obs_metadata->rf_inputs[rfx].digital_gains[coarse_chan_idx];
                 gy = vm->obs_metadata->rf_inputs[rfy].digital_gains[coarse_chan_idx];
-                /*
                 Ji[0].x *= gx;   Ji[0].y *= gx;
                 Ji[1].x *= gx;   Ji[1].y *= gx;
                 Ji[2].x *= gy;   Ji[2].y *= gy;
                 Ji[3].x *= gy;   Ji[3].y *= gy;
-                */
 
                 // Now, calculate the inverse Jones matrix
-                Fnorm = norm2x2( Ji, Ji );
+                Fnorm = norm2x2( Ji );
 
                 if (Fnorm != 0.0)
                     inv2x2S( Ji, &(vm->J[j_idx]) );
                 else {
                     for (p1 = 0; p1 < npol;  p1++)
                     for (p2 = 0; p2 < npol;  p2++)
-                        vm->J[J_IDX(ant,ch,p1,p2,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
+                        vm->J[J_IDX(ant,ch,p1,p2,nchan,npol)] = make_cuDoubleComplex( NAN, NAN );
                 }
+/*
+if (ch == 50)
+{
+    fprintf( stderr, "ant = %d:\n", ant );
+    fprintf( stderr, "\tD        = "); fprintf_complex_matrix( stderr, &(vm->D[j_idx]) );
+    fprintf( stderr, "\tBP       = "); fprintf_complex_matrix( stderr, &(vm->pb.B[pb_idx]) );
+    fprintf( stderr, "\t[gx, gy] = [%lf, %lf]\n", gx, gy);
+    fprintf( stderr, "\tJ = gDBP = "); fprintf_complex_matrix( stderr, Ji );
+    fprintf( stderr, "\tJ^-1     = "); fprintf_complex_matrix( stderr, &(vm->J[j_idx]) );
+}
+*/
 
             } // end loop through antenna/pol (rf_input)
         } // end loop through fine channels (ch)
@@ -436,31 +435,18 @@ void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
 
 
 /**
- * Normalises a \f$2\times2\f$ matrix via the Frobenius norm.
+ * Calculates the square of the Frobenius norm of a \f$2\times2\f$ matrix.
  *
  * @param M The input matrix, \f${\bf M}\f$.
- * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = |{\bf M}_\text{in}|\f$.
- *
- * It is safe for `M` and `Mout` to point to the same matrix.
+ * @return The square of the Frobenius norm of \f${\bf M}\f$.
  */
-double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
+double norm2x2(cuDoubleComplex *M)
 {
     // Calculate the normalising factor
     double Fnorm = 0.0;
     int i;
     for (i = 0; i < 4; i++)
         Fnorm += cuCreal( cuCmul( M[i], cuConj(M[i]) ) );
-
-    Fnorm = sqrt(Fnorm);
-
-    // Divide each element through by the normalising factor.
-    // If norm is 0, then output zeros everywhere
-    for (i = 0; i < 4; i++) {
-        if (Fnorm == 0.0)
-            Mout[i] = make_cuDoubleComplex( 0.0, 0.0 );
-        else
-            Mout[i] = make_cuDoubleComplex( cuCreal(M[i])/Fnorm, cuCimag(M[i])/Fnorm );
-    }
 
     return Fnorm;
 }
