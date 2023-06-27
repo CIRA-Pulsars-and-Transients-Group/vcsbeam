@@ -469,22 +469,29 @@ __global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets
     // Therefore, a "0" value should get mapped back to min + "half a bin width".
     // But "half a bin width" = 0.5*scale.
 
-    for (i = 0; i < nstep; i++)
+    if (isfinite(scale))
     {
-        if (isfinite(scale))
+        for (i = 0; i < nstep; i++)
         {
             val = (S[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - min) / scale;
             Sscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)val;
         }
-        else
-        {
-            Sscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(-min/scale); // Should translate back to "zero"
-        }
-    }
 
-    // Set the scales and offsets
-    scales[p*nstokes*nchan + stokes*nchan + chan] = scale;
-    offsets[p*nstokes*nchan + stokes*nchan + chan] = offset;
+        // Set the scales and offsets
+        scales[p*nstokes*nchan + stokes*nchan + chan] = scale;
+        offsets[p*nstokes*nchan + stokes*nchan + chan] = offset;
+    }
+    else
+    {
+        for (i = 0; i < nstep; i++)
+        {
+            Sscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = 0x00;
+        }
+
+        // Set the scales and offsets
+        scales[p*nstokes*nchan + stokes*nchan + chan] = 0.0;
+        offsets[p*nstokes*nchan + stokes*nchan + chan] = 0.0;
+    }
 }
 
 
