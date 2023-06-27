@@ -170,10 +170,8 @@ if (ch == 50)
 }
 #endif
                 // Now, include the digital gains
-                printf("here!\n");
                 rfx = vm->obs_metadata->antennas[ant].rfinput_x;
                 rfy = vm->obs_metadata->antennas[ant].rfinput_y;
-                printf("Here: rfx = %lu; rfy = %lu\n", rfx, rfy);
                 gx = vm->obs_metadata->rf_inputs[rfx].digital_gains[coarse_chan_idx];
                 gy = vm->obs_metadata->rf_inputs[rfy].digital_gains[coarse_chan_idx];
                 Ji[0].x *= gx;   Ji[0].y *= gx;

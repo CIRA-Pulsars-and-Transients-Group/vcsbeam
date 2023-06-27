@@ -283,83 +283,69 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     Nxy[ant] = cuCmul( ex[ant], cuConj(ey[ant]) );
     Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
 
+    __syncthreads();
+
     // Detect the coherent beam
     // A summation over an array is faster on a GPU if you add half on array
     // to its other half as than can be done in parallel. Then this is repeated
     // with half of the previous array until the array is down to 1.
 
-    // SM (15 Jun 2023): I _think_ The below adding only works deterministically
-    // if the number of antennas is a power of 2. Hence, I'm commenting it out
-    // and replacing it with a slower, more reliable version.
-
-    /* // START UNRELIABLE ANTENNA SUMMING
-    __syncthreads();
-    for ( int h_ant = nant / 2; h_ant > 0; h_ant = h_ant / 2 )
-    {
-        if (ant < h_ant)
-        {
-            ex[ant]  = cuCadd( ex[ant],  ex[ant  + h_ant] );
-            ey[ant]  = cuCadd( ey[ant],  ey[ant  + h_ant] );
-            Nxx[ant] = cuCadd( Nxx[ant], Nxx[ant + h_ant] );
-            Nxy[ant] = cuCadd( Nxy[ant], Nxy[ant + h_ant] );
-            //Nyx[ant]=cuCadd( Nyx[ant], Nyx[ant + h_ant] );
-            Nyy[ant] = cuCadd( Nyy[ant], Nyy[ant + h_ant] );
-        }
-        // below makes no difference so removed
-        //else return;
-        __syncthreads();
-    }
-    */ // <--- END UNRELIABLE ANTENNA SUMMING
-
-    // SM: Hopefully this is better, but I'm still not sure about possible
-    // race conditions -- where's atomicAdd for complexDoubles??
-    /*
-    __syncthreads();
-    if (ant != 0)
-    {
-        atomicAdd(&ex[0].x, ex[ant].x);   atomicAdd(&ex[0].y, ex[ant].y);
-        atomicAdd(&ey[0].x, ey[ant].x);   atomicAdd(&ey[0].y, ey[ant].y);
-        atomicAdd(&Nxx[0].x, Nxx[ant].x);   atomicAdd(&Nxx[0].y, Nxx[ant].y);
-        atomicAdd(&Nxy[0].x, Nxy[ant].x);   atomicAdd(&Nxy[0].y, Nxy[ant].y);
-        atomicAdd(&Nyy[0].x, Nyy[ant].x);   atomicAdd(&Nyy[0].y, Nyy[ant].y);
-    }
-    __syncthreads();
-    */
-
-    // Finally, the safest, slowest option: Just get one thread to do it
+    // The safest, slowest option: Just get one thread to do it
     __syncthreads();
     if ( ant == 0 )
     {
-        for (int i = 1; i < nant; i++)
-        {
-            ex[0]  = cuCadd( ex[0],  ex[i] );
-            ey[0]  = cuCadd( ey[0],  ey[i] );
-            Nxx[0] = cuCadd( Nxx[0], Nxx[i] );
-            Nxy[0] = cuCadd( Nxy[0], Nxy[i] );
-            //Nyx[0]=cuCadd( Nyx[0], Nyx[i] );
-            Nyy[0] = cuCadd( Nyy[0], Nyy[i] );
-        }
-    }
-    __syncthreads();
+        // Make variables for the avged results
+        cuDoubleComplex avg_ex = make_cuDoubleComplex( 0.0, 0.0 );
+        cuDoubleComplex avg_ey = make_cuDoubleComplex( 0.0, 0.0 );
+        cuDoubleComplex avg_Nxx = make_cuDoubleComplex( 0.0, 0.0 );
+        cuDoubleComplex avg_Nxy = make_cuDoubleComplex( 0.0, 0.0 );
+        cuDoubleComplex avg_Nyy = make_cuDoubleComplex( 0.0, 0.0 );
 
-    // Form the stokes parameters for the coherent beam
-    // Only doing it for ant 0 so that it only prints once
-    if ( ant == 0 )
-    {
-        float bnXX = DETECT(ex[0]) - cuCreal(Nxx[0]);
-        float bnYY = DETECT(ey[0]) - cuCreal(Nyy[0]);
-        cuDoubleComplex bnXY = cuCsub( cuCmul( ex[0], cuConj( ey[0] ) ),
-                                    Nxy[0] );
+        // Keep track of how many antennas are included in the sum
+        int N = 0;
+
+        for (int i = 0; i < nant; i++)
+        {
+            if (isnan(ex[i].x) || isnan(ex[i].y) &&
+                    isnan(ey[i].x) || isnan(ey[i].y) &&
+                    isnan(Nxx[i].x) || isnan(Nxx[i].y) &&
+                    isnan(Nxy[i].x) || isnan(Nxy[i].y) &&
+                    isnan(Nyy[i].x) || isnan(Nyy[i].y)
+               )
+                continue;
+
+            avg_ex = cuCadd( avg_ex,  ex[i] );
+            avg_ey  = cuCadd( avg_ey,  ey[i] );
+            avg_Nxx = cuCadd( avg_Nxx, Nxx[i] );
+            avg_Nxy = cuCadd( avg_Nxy, Nxy[i] );
+            avg_Nyy = cuCadd( avg_Nyy, Nyy[i] );
+
+            N++;
+        }
+
+        // Make the above summed results genuine averages
+        avg_ex.x /= N;    avg_ex.y /= N;
+        avg_ey.x /= N;    avg_ey.y /= N;
+        avg_Nxx.x /= N;   avg_Nxx.y /= N;
+        avg_Nxy.x /= N;   avg_Nxy.y /= N;
+        avg_Nyy.x /= N;   avg_Nyy.y /= N;
+
+        // Form the stokes parameters for the coherent beam
+        // Only doing it for ant 0 so that it only prints once
+        float bnXX = DETECT(avg_ex) - cuCreal(avg_Nxx);
+        float bnYY = DETECT(avg_ey) - cuCreal(avg_Nyy);
+        cuDoubleComplex bnXY = cuCsub( cuCmul( avg_ex, cuConj( avg_ey ) ),
+                                    avg_Nxy );
 
         // Stokes I, Q, U, V:
-        S[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = invw*(bnXX + bnYY);
-        S[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = invw*(bnXX - bnYY);
-        S[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] =  2.0*invw*cuCreal( bnXY );
-        S[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
+        S[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = (bnXX + bnYY);
+        S[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = (bnXX - bnYY);
+        S[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] =  2.0*cuCreal( bnXY );
+        S[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*cuCimag( bnXY );
 
         // The beamformed products
-        e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = ex[0];
-        e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = ey[0];
+        e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = avg_ex;
+        e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = avg_ey;
     }
     __syncthreads();
 
