@@ -459,6 +459,7 @@ void vmMallocVHost( vcsbeam_context *vm )
 void vmMallocJVHost( vcsbeam_context *vm )
 {
     vm->Jv_size_bytes =
+        vm->npointing *
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->fine_sample_rate *
@@ -517,6 +518,7 @@ void vmMallocSHost( vcsbeam_context *vm )
 void vmMallocJHost( vcsbeam_context *vm )
 {
     vm->J_size_bytes =
+        vm->npointing *
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
@@ -693,6 +695,7 @@ void vmMallocVDevice( vcsbeam_context *vm )
 void vmMallocJVDevice( vcsbeam_context *vm )
 {
     vm->d_Jv_size_bytes = 
+        vm->npointing *
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->fine_sample_rate *
@@ -752,6 +755,7 @@ void vmMallocSDevice( vcsbeam_context *vm )
 void vmMallocJDevice( vcsbeam_context *vm )
 {
     vm->d_J_size_bytes =
+        vm->npointing *
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *

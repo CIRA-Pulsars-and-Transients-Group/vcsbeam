@@ -113,7 +113,7 @@ void vmCalcJ( vcsbeam_context *vm )
 
     double Fnorm;
 
-    int j_idx, pb_idx;
+    int d_idx, j_idx, pb_idx;
 
     for (p = 0; p < vm->npointing; p++)
     {
@@ -124,20 +124,22 @@ void vmCalcJ( vcsbeam_context *vm )
             {
                 // The index to the first element in the Jones matrix for this
                 // antenna and channel. Applies to both the D and J arrays.
-                j_idx  = J_IDX(ant,ch,0,0,nchan,npol);
+                d_idx  = D_IDX(ant,ch,0,0,nchan,npol);
+                j_idx  = J_IDX(p,ant,ch,0,0,nant,nchan,npol);
                 pb_idx = PB_IDX(p, ant, 0, nant, npol*npol);
 
-                mult2x2d(&(vm->D[j_idx]), &(vm->pb.B[pb_idx]), Ji); // the gain in the desired look direction
+                mult2x2d(&(vm->D[d_idx]), &(vm->pb.B[pb_idx]), Ji); // the gain in the desired look direction
 
 #ifdef DEBUG
-if (ch == 50)
+if (ch == 50 && ant == 0)
 {
-    fprintf( stderr, "ant = %d:\n", ant );
-    fprintf( stderr, "\tD       = "); fprintf_complex_matrix( stderr, &(vm->D[j_idx]) );
+    fprintf( stderr, "pointing = %d:\n", p );
+    fprintf( stderr, "\tD       = "); fprintf_complex_matrix( stderr, &(vm->D[d_idx]) );
     fprintf( stderr, "\tBP      = "); fprintf_complex_matrix( stderr, &(vm->pb.B[pb_idx]) );
     fprintf( stderr, "\tJ = DBP = "); fprintf_complex_matrix( stderr, Ji );
 }
 #endif
+
                 // Now, calculate the inverse Jones matrix
                 Fnorm = norm2x2( Ji, Ji );
 
@@ -146,7 +148,7 @@ if (ch == 50)
                 else {
                     for (p1 = 0; p1 < npol;  p1++)
                     for (p2 = 0; p2 < npol;  p2++)
-                        vm->J[J_IDX(ant,ch,p1,p2,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
+                        vm->J[J_IDX(p,ant,ch,p1,p2,nant,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
                 }
 
             } // end loop through antenna/pol (rf_input)

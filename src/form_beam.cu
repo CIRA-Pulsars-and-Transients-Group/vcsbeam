@@ -101,6 +101,8 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
  *                  the antennas
  * @param polP_idxs And array of the indices \f$i\f$ for the P polarisations of
  *                  the antennas
+ * @param p         The pointing number
+ * @param soffset   An offset number of samples into `data`
  * @param npol      \f$N_p\f$
  * @param datatype Either `VM_INT4` (if `data` contain 4+4-bit complex integers)
  *                 or `VM_DBL` (if `data` contain complex doubles).
@@ -123,6 +125,7 @@ __global__ void vmApplyJ_kernel( void            *data,
                                  uint32_t      *polQ_idxs,
                                  uint32_t      *polP_idxs,
                                  int npol,
+                                 int p,
                                  vcsbeam_datatype datatype )
 /* Layout for input arrays:
 *   data [nsamples] [nchan] [ninputs]            -- see docs
@@ -137,6 +140,7 @@ __global__ void vmApplyJ_kernel( void            *data,
     int c    = blockIdx.x;  /* The (c)hannel number */
     int nc   = gridDim.x;   /* The (n)umber of (c)hannels */
     int s    = blockIdx.y;  /* The (s)ample number */
+    int ns   = gridDim.y;   /* The (n)umber of (s)amples (in a chunk) */
     int nant = blockDim.x;  /* The (n)umber of (a)ntennas */
 
     int ant  = threadIdx.x; /* The (ant)enna number */
@@ -165,27 +169,32 @@ __global__ void vmApplyJ_kernel( void            *data,
     // Calculate the first step (J*v) of the coherent beam
     // Jv_Q = Jqq*vq + Jqp*vp
     // Jv_P = Jpq*vq + Jpy*vp
-    Jv_Q[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,0,0,nc,npol)], vq ),
-                                           cuCmul( J[J_IDX(ant,c,0,1,nc,npol)], vp ) );
-    Jv_P[Jv_IDX(s,c,ant,nc,nant)] = cuCadd( cuCmul( J[J_IDX(ant,c,1,0,nc,npol)], vq ),
-                                           cuCmul( J[J_IDX(ant,c,1,1,nc,npol)], vp ) );
 
+    Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] = cuCadd( cuCmul( J[J_IDX(p,ant,c,0,0,nant,nc,npol)], vq ),
+                                                 cuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
+    Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] = cuCadd( cuCmul( J[J_IDX(p,ant,c,1,0,nant,nc,npol)], vq ),
+                                                 cuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
 #ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
-        for (int i = 0; i < nant; i++)
+        for (int i = 0; i < 1; i++)
         {
-            printf( "Jinv[%3d] = [%5.1lf,%5.1lf], [%5.1lf,%5.1lf]; [%5.1lf,%5.1lf], [%5.1lf,%5.1lf]   ",
+            printf( "Jinv[%3d]      = [%5.3lf,%5.3lf, %5.3lf,%5.3lf]\n"
+                    "                 [%5.3lf,%5.3lf, %5.3lf,%5.3lf]\n",
                     i,
-                    cuCreal(J[J_IDX(i,c,0,0,nc,npol)]), cuCimag(J[J_IDX(i,c,0,0,nc,npol)]),
-                    cuCreal(J[J_IDX(i,c,0,1,nc,npol)]), cuCimag(J[J_IDX(i,c,0,1,nc,npol)]),
-                    cuCreal(J[J_IDX(i,c,1,0,nc,npol)]), cuCimag(J[J_IDX(i,c,1,0,nc,npol)]),
-                    cuCreal(J[J_IDX(i,c,1,1,nc,npol)]), cuCimag(J[J_IDX(i,c,1,1,nc,npol)]) );
+                    cuCreal(J[J_IDX(p,i,c,0,0,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,0,0,nant,nc,npol)]),
+                    cuCreal(J[J_IDX(p,i,c,0,1,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,0,1,nant,nc,npol)]),
+                    cuCreal(J[J_IDX(p,i,c,1,0,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,1,0,nant,nc,npol)]),
+                    cuCreal(J[J_IDX(p,i,c,1,1,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,1,1,nant,nc,npol)]) );
             cuDoubleComplex *v = (cuDoubleComplex *)data;
-            printf( "v[Q=%3d,P=%3d] = [%5.1lf,%5.1lf]; [%5.1lf,%5.1lf]\n",
+            printf( "v[Q=%3d,P=%3d] = [%5.3lf,%5.3lf]; [%5.3lf,%5.3lf]\n",
                     polQ_idxs[i], polP_idxs[i],
                     cuCreal( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ),
                     cuCreal( v[v_IDX(s,c,polP_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polP_idxs[i],nc,ni)] )
+                  );
+            printf( "Jinv * v = [%5.3lf,%5.3lf]; [%5.3lf,%5.3lf]\n",
+                    cuCreal(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), cuCimag(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), 
+                    cuCreal(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)]), cuCimag(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)])
                   );
         }
     }
@@ -239,7 +248,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     int c    = blockIdx.x;  /* The (c)hannel number */
     int nc   = gridDim.x;   /* The (n)umber of (c)hannels (=128) */
     int s    = blockIdx.y;  /* The (s)ample number */
-    int ns   = gridDim.y*nchunk;   /* The (n)umber of (s)amples (=10000)*/
+    int ns   = gridDim.y;   /* The (n)umber of (s)amples (in a chunk)*/
 
     int ant  = threadIdx.x; /* The (ant)enna number */
     int nant = blockDim.x;  /* The (n)_umber of (ant)ennas */
@@ -276,8 +285,8 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
-    ex[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(s,c,ant,nc,nant)] );
-    ey[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(s,c,ant,nc,nant)] );
+    ex[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+    ey[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
 
     Nxx[ant] = cuCmul( ex[ant], cuConj(ex[ant]) );
     Nxy[ant] = cuCmul( ex[ant], cuConj(ey[ant]) );
@@ -310,14 +319,14 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                                     Nxy[0] );
 
         // Stokes I, Q, U, V:
-        S[C_IDX(p,s+soffset,0,c,ns,NSTOKES,nc)] = invw*(bnXX + bnYY);
-        S[C_IDX(p,s+soffset,1,c,ns,NSTOKES,nc)] = invw*(bnXX - bnYY);
-        S[C_IDX(p,s+soffset,2,c,ns,NSTOKES,nc)] =  2.0*invw*cuCreal( bnXY );
-        S[C_IDX(p,s+soffset,3,c,ns,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
+        S[C_IDX(p,s+soffset,0,c,ns*nchunk,NSTOKES,nc)] = invw*(bnXX + bnYY);
+        S[C_IDX(p,s+soffset,1,c,ns*nchunk,NSTOKES,nc)] = invw*(bnXX - bnYY);
+        S[C_IDX(p,s+soffset,2,c,ns*nchunk,NSTOKES,nc)] =  2.0*invw*cuCreal( bnXY );
+        S[C_IDX(p,s+soffset,3,c,ns*nchunk,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
 
         // The beamformed products
-        e[B_IDX(p,s+soffset,c,0,ns,nc,npol)] = ex[0];
-        e[B_IDX(p,s+soffset,c,1,ns,nc,npol)] = ey[0];
+        e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = ex[0];
+        e[B_IDX(p,s+soffset,c,1,ns*nchunk,nc,npol)] = ey[0];
     }
     __syncthreads();
 
@@ -325,13 +334,13 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     if (c==50 && s == 3 && ant==0)
     {
         printf( "Pre-add:\n" );
-        for (int i = 1; i < nant; i++)
+        for (int i = 0; i < 1; i++)
         {
             printf( "    "
-                    "ex[%3d];ey[%3d]=[%5.1lf,%5.1lf];[%5.1lf,%5.1lf]  "
-                    "ph[%3d]=[%5.1lf,%5.1lf]  "
-                    "JQ[%3d]=[%5.1lf,%5.1lf]  "
-                    "JP[%3d]=[%5.1lf,%5.1lf]  "
+                    "ex[%3d];ey[%3d]=[%5.3lf,%5.3lf];[%5.3lf,%5.3lf]  "
+                    "ph[%3d]=[%5.3lf,%5.3lf]  "
+                    "JQ[%3d]=[%5.3lf,%5.3lf]  "
+                    "JP[%3d]=[%5.3lf,%5.3lf]  "
                     "\n",
                     i, i,
                     cuCreal( ex[i] ), cuCimag( ex[i] ),
@@ -339,12 +348,12 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                     i,
                     cuCreal( phi[PHI_IDX(p,i,c,nant,nc)] ), cuCimag( phi[PHI_IDX(p,i,c,nant,nc)] ),
                     i,
-                    cuCreal( Jv_Q[Jv_IDX(s,c,i,nc,nant)] ), cuCimag( Jv_Q[Jv_IDX(s,c,i,nc,nant)] ),
+                    cuCreal( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ), cuCimag( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ),
                     i,
-                    cuCreal( Jv_P[Jv_IDX(s,c,i,nc,nant)] ), cuCimag( Jv_P[Jv_IDX(s,c,i,nc,nant)] )
+                    cuCreal( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] ), cuCimag( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] )
                     );
         }
-        printf( "Post-add: ex[0]; ey[0] = [%.1lf, %.1lf]; [%.1lf, %.1lf]\n",
+        printf( "Post-add: ex[0]; ey[0] = [%.3lf, %.3lf]; [%.3lf, %.3lf]\n",
                 cuCreal( ex[ant] ), cuCimag( ex[ant] ),
                 cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
     /*
@@ -500,16 +509,23 @@ void vmApplyJChunk( vcsbeam_context *vm )
     dim3 stat( vm->obs_metadata->num_ants );
 
     // J times v
-    vmApplyJ_kernel<<<chan_samples, stat>>>(
-            vm->d_v,
-            (cuDoubleComplex *)vm->d_J,
-            vm->d_Jv_Q,
-            vm->d_Jv_P,
-            vm->d_polQ_idxs,
-            vm->d_polP_idxs,
-            vm->obs_metadata->num_ant_pols,
-            vm->datatype );
-    cudaCheckErrors( "vmApplyJChunk: vmApplyJ_kernel failed" );
+    // Send off a parallel CUDA stream for each pointing
+    int p;
+    for (p = 0; p < vm->npointing; p++ )
+    {
+        vmApplyJ_kernel<<<chan_samples, stat, 0, vm->streams[p]>>>(
+                vm->d_v,
+                (cuDoubleComplex *)vm->d_J,
+                vm->d_Jv_Q,
+                vm->d_Jv_P,
+                vm->d_polQ_idxs,
+                vm->d_polP_idxs,
+                vm->obs_metadata->num_ant_pols,
+                p,
+                vm->datatype );
+        cudaCheckErrors( "vmApplyJChunk: vmApplyJ_kernel failed" );
+    }
+    gpuErrchk( cudaDeviceSynchronize() );
 }
 
 /**
