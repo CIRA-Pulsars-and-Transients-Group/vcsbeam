@@ -133,7 +133,7 @@ void vmCalcJ( vcsbeam_context *vm )
 #ifdef DEBUG
 if (ch == 50 && ant == 0)
 {
-    fprintf( stderr, "pointing = %d:\n", p );
+    fprintf( stderr, "pointing = %u:\n", p );
     fprintf( stderr, "\tD       = "); fprintf_complex_matrix( stderr, &(vm->D[d_idx]) );
     fprintf( stderr, "\tBP      = "); fprintf_complex_matrix( stderr, &(vm->pb.B[pb_idx]) );
     fprintf( stderr, "\tJ = DBP = "); fprintf_complex_matrix( stderr, Ji );
