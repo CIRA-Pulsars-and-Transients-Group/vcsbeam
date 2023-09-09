@@ -90,8 +90,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     cuDoubleComplex ***Db = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
 
     // The array for the final output product (D = Dd x Db)
-    // This will have the same dimensions as the final Jones matrix, so use
-    // J_IDX for indexing
+    // Use D_IDX for indexing
     cuDoubleComplex A[nvispol];
 
     for (ant = 0; ant < nant; ant++)
@@ -173,7 +172,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
             // A pointer to the (first element of) the Jones matrix for this
             // antenna and channel (d_idx) and the Jones matrix for the first
             // antenna (our reference antenna)
-            d_idx = J_IDX(obs_ant,ch,0,0,vcs_nchan,nantpol);
+            d_idx = D_IDX(obs_ant,ch,0,0,vcs_nchan,nantpol);
 
             // D = Dd x Db
             // SM: Daniel Mitchell confirmed in an email dated 23 Mar 2017 that the
@@ -544,7 +543,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
             for (vch = ch*interp_factor; vch < (ch + 1)*interp_factor; vch++)
             {
                 // Get the destination index
-                d_idx = J_IDX(ant,vch,0,0,vcs_nchan,nantpol);
+                d_idx = D_IDX(ant,vch,0,0,vcs_nchan,nantpol);
 
                 // Copy it across
                 cp2x2( Dread, &(vm->D[d_idx]) );
@@ -810,7 +809,7 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
         {
             // Make a copy of the reference Jones matrix for this channel
             // reference antenna and channel
-            dref_idx = J_IDX(Aref->ant,ch,0,0,nchan,nantpol);
+            dref_idx = D_IDX(Aref->ant,ch,0,0,nchan,nantpol);
             cp2x2( &(vm->D[dref_idx]), Dref );
         }
 
@@ -826,7 +825,7 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
         {
             // A pointer to the (first element of) the Jones matrix for this
             // antenna and channel
-            d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+            d_idx = D_IDX(ant,ch,0,0,nchan,nantpol);
 
             // Divide through a reference antenna...
             if (apply_ref_ant)
@@ -846,10 +845,10 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
             //      [ d10*z  d11 ]
             if (apply_phase_slope)
             {
-                d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+                d_idx = D_IDX(ant,ch,0,0,nchan,nantpol);
                 vm->D[d_idx] = cuCmul( vm->D[d_idx], z );
 
-                d_idx = J_IDX(ant,ch,1,0,nchan,nantpol);
+                d_idx = D_IDX(ant,ch,1,0,nchan,nantpol);
                 vm->D[d_idx] = cuCmul( vm->D[d_idx], z );
             }
         }
@@ -976,7 +975,7 @@ void vmSetCustomTileFlags( vcsbeam_context *vm )
         for (ch = 0; ch < nchan; ch++)
         {
             // Get the index into the D array
-            d_idx = J_IDX(ant,ch,0,0,nchan,nantpol);
+            d_idx = D_IDX(ant,ch,0,0,nchan,nantpol);
 
             // Set it to zero
             cp2x2( Zero, &(vm->D[d_idx]) );

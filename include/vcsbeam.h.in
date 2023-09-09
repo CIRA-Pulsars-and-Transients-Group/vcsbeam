@@ -240,14 +240,21 @@ void free_calibration( calibration *cal );
                          (i.e. the size of the TIME dimension in a voltage block */
 #define vMWAX_IDX(s,i,ni) (((s/VSPVB)*(ni) + (i))*VSPVB + (s%VSPVB))
 
-#define J_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol*npol*(nc))      + \
-                                    (c)  * (npol*npol)           + \
-                                    (p1) * (npol)                + \
+#define D_IDX(a,c,p1,p2,nc,npol)   ((a)  * (npol)*(npol)*(nc)        + \
+                                    (c)  * (npol)*(npol)             + \
+                                    (p1) * (npol)                    + \
                                     (p2))
 
-#define Jv_IDX(s,c,a,nc,na)  ((s) * (na)*(nc) + \
-                              (c) * (na)      + \
-                              (a))
+#define J_IDX(p,a,c,p1,p2,nant,nc,npol)   ((p)  * (nant)*(npol)*(npol)*(nc) + \
+                                           (a)  * (npol)*(npol)*(nc)        + \
+                                           (c)  * (npol)*(npol)             + \
+                                           (p1) * (npol)                    + \
+                                           (p2))
+
+#define Jv_IDX(p,s,c,a,ns,nc,na)  ((p) * (na)*(nc)*(ns) + \
+                                   (s) * (na)*(nc)      + \
+                                   (c) * (na)           + \
+                                   (a))
 
 #define B_IDX(p,s,c,pol,ns,nc,npol) ((p)  * (npol)*(nc)*(ns)   + \
                                      (s)  * (npol)*(nc)        + \
