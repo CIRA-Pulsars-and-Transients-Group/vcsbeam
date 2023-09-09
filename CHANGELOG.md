@@ -4,4 +4,4 @@
 
 ### Added
 
- - Multibeam functionality
+- Multibeam functionality
