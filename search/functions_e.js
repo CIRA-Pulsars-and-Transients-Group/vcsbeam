@@ -3,7 +3,7 @@ var searchData=
   ['vdif_5fwrite_5fdata_357',['vdif_write_data',['../beam__vdif_8c.html#acfd1064f0daa18ee687fa64b4b6aa3a0',1,'beam_vdif.c']]],
   ['vdif_5fwrite_5fsecond_358',['vdif_write_second',['../beam__vdif_8c.html#a560da2447ea3659ce1a145228b85ca93',1,'beam_vdif.c']]],
   ['vmapplycalibrationcorrections_359',['vmApplyCalibrationCorrections',['../calibration_8c.html#a1747181121fba13c88fdee4ce3de502d',1,'calibration.c']]],
-  ['vmapplyj_5fkernel_360',['vmApplyJ_kernel',['../form__beam_8cu.html#a934af01c60bf52f6985f34b360c2fb78',1,'form_beam.cu']]],
+  ['vmapplyj_5fkernel_360',['vmApplyJ_kernel',['../form__beam_8cu.html#a72ec9b11b7031b21033c939c39c3f0f1',1,'form_beam.cu']]],
   ['vmapplyjchunk_361',['vmApplyJChunk',['../form__beam_8cu.html#a215f77c938330e13916a9eedd6b675aa',1,'form_beam.cu']]],
   ['vmbeamform_5fkernel_362',['vmBeamform_kernel',['../form__beam_8cu.html#a14c72ad11c18eba09eb2cf14f1933638',1,'form_beam.cu']]],
   ['vmbeamformchunk_363',['vmBeamformChunk',['../form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd',1,'form_beam.cu']]],

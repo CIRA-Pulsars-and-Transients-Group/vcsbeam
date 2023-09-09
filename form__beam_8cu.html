@@ -107,9 +107,9 @@ Functions</h2></td></tr>
 <tr class="memitem:aa400133bd01d7bfad48022e525106583"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#aa400133bd01d7bfad48022e525106583">incoh_beam</a> (uint8_t *data, float *incoh)</td></tr>
 <tr class="memdesc:aa400133bd01d7bfad48022e525106583"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for computing an incoherent beam.  <a href="form__beam_8cu.html#aa400133bd01d7bfad48022e525106583">More...</a><br /></td></tr>
 <tr class="separator:aa400133bd01d7bfad48022e525106583"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a934af01c60bf52f6985f34b360c2fb78"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a934af01c60bf52f6985f34b360c2fb78">vmApplyJ_kernel</a> (void *data, cuDoubleComplex *J, cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, uint32_t *polQ_idxs, uint32_t *polP_idxs, int npol, vcsbeam_datatype datatype)</td></tr>
-<tr class="memdesc:a934af01c60bf52f6985f34b360c2fb78"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for multiplying Jones matrices to Jones vectors.  <a href="form__beam_8cu.html#a934af01c60bf52f6985f34b360c2fb78">More...</a><br /></td></tr>
-<tr class="separator:a934af01c60bf52f6985f34b360c2fb78"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a72ec9b11b7031b21033c939c39c3f0f1"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a72ec9b11b7031b21033c939c39c3f0f1">vmApplyJ_kernel</a> (void *data, cuDoubleComplex *J, cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, uint32_t *polQ_idxs, uint32_t *polP_idxs, int npol, int p, vcsbeam_datatype datatype)</td></tr>
+<tr class="memdesc:a72ec9b11b7031b21033c939c39c3f0f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for multiplying Jones matrices to Jones vectors.  <a href="form__beam_8cu.html#a72ec9b11b7031b21033c939c39c3f0f1">More...</a><br /></td></tr>
+<tr class="separator:a72ec9b11b7031b21033c939c39c3f0f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a14c72ad11c18eba09eb2cf14f1933638"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a14c72ad11c18eba09eb2cf14f1933638">vmBeamform_kernel</a> (cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, cuDoubleComplex *phi, double invw, int p, int soffset, int nchunk, cuDoubleComplex *e, float *S, int npol)</td></tr>
 <tr class="memdesc:a14c72ad11c18eba09eb2cf14f1933638"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for phasing up and summing the voltages over antenna.  <a href="form__beam_8cu.html#a14c72ad11c18eba09eb2cf14f1933638">More...</a><br /></td></tr>
 <tr class="separator:a14c72ad11c18eba09eb2cf14f1933638"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -654,8 +654,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a934af01c60bf52f6985f34b360c2fb78"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a934af01c60bf52f6985f34b360c2fb78">&#9670;&nbsp;</a></span>vmApplyJ_kernel()</h2>
+<a id="a72ec9b11b7031b21033c939c39c3f0f1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a72ec9b11b7031b21033c939c39c3f0f1">&#9670;&nbsp;</a></span>vmApplyJ_kernel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -705,6 +705,12 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>p</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">vcsbeam_datatype&#160;</td>
           <td class="paramname"><em>datatype</em>&#160;</td>
         </tr>
@@ -725,6 +731,8 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">Jv_P</td><td>The P polarisation of the product \({\bf J}^{-1}{\bf v}\), with layout \(N_t \times N_f \times N_a\) </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">polQ_idxs</td><td>And array of the indices \(i\) for the Q polarisations of the antennas </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">polP_idxs</td><td>And array of the indices \(i\) for the P polarisations of the antennas </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">p</td><td>The pointing number </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">soffset</td><td>An offset number of samples into <code>data</code> </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">npol</td><td>\(N_p\) </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">datatype</td><td>Either <code>VM_INT4</code> (if <code>data</code> contain 4+4-bit complex integers) or <code>VM_DBL</code> (if <code>data</code> contain complex doubles).</td></tr>
   </table>
