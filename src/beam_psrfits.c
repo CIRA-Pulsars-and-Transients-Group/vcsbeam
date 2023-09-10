@@ -145,7 +145,13 @@ void populate_spliced_psrfits_header(
 
     int i; // idx into dat_freqs
     int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
-    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[0].chan_start_hz;
+    // In the case of non-contiguous coarse channel separations (i.e., "picket fence")
+    // the first coarse channel listed in the metafits data is not actually
+    // appropriate to use as the base since there can be >1 channel differences
+    // between "adjacent" channels. The `first_coarse_chan_idx` variable stores the
+    // actual first coarse channel of the current data context. For contiguous data,
+    // this will be equivalent to the zeroth entry in the metafits data.
+    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz;
     for (i = 0 ; i < pf->hdr.nchan; i++)
     {
         iC = i / vm->nfine_chan + first_coarse_chan_idx;
@@ -290,6 +296,15 @@ void populate_psrfits_header(
 
     snprintf( pf->hdr.source, 24, "%u", vm->obs_metadata->obs_id );
     snprintf( pf->hdr.backend, 24, "%s", VCSBEAM_VERSION );
+    // TODO: We should change the backend to one of the following,
+    // to match what is included in PRESTO for MWA SIGPROC-style data:
+    //      MWA-VCS (Legacy system, retired Aug 2021)
+    //      MWAX-VCS (Current system, began Oct 2021)
+    // Is this information available from within the metafits data?
+    // In which case, it should be a simple query and case statement.
+    // Since PSRFITS does not appear to naturally support a HISTORY
+    // table in its header, we may also have to have the VCSBEAM_VERSION
+    // appended to the end of the backend label?
 
     pf->hdr.scanlen = 1.0; // in sec
 
