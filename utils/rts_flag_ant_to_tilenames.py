@@ -17,7 +17,7 @@ def parse_args():
         help='The calibration metafits file [default: %(default)s]')
     parser.add_argument('-i', '--input_flag_file',
         action='store', type=str, dest='input_flag_file', default=None,
-        help='Input file containing RTS tile indices [default: %(default)s]')
+        help='Input file containing a space-separated list of tile indices [default: %(default)s]')
     parser.add_argument('-o', '--output_flag_file',
         action='store', type=str, dest='output_flag_file', default=None,
         help='Where to write TileNames [default: stdout]')
