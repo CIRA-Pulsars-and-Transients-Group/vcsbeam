@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument('-o', '--output_flag_file',
         action='store', type=str, dest='output_flag_file', default=None,
         help='Where to write TileNames [default: stdout]')
-    
+
     args = parser.parse_args()
 
     if args.metafits_file is None or args.input_flag_file is None:
@@ -32,7 +32,7 @@ def parse_args():
         parser.error(f'cannot locate {args.metafits_file}')
     if not os.path.exists(args.input_flag_file):
         parser.error(f'cannot locate {args.input_flag_file}')
-    
+
     # Check read access
     if not os.access(args.metafits_file, os.R_OK):
         parser.error(f'cannot open {args.input_flag_file}')
