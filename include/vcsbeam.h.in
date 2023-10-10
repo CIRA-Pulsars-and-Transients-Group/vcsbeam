@@ -228,7 +228,7 @@ void free_calibration( calibration *cal );
  *                *
  ******************/
 
-#define NSTOKES  4
+#define NSTOKES  1
 
 /* Calculating array indices for various flavours of Jones matrix arrays */
 
