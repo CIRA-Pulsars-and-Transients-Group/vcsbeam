@@ -244,7 +244,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                                  cuDoubleComplex *e,
                                  float *S,
                                  int npol,
-                                 int nstokes)
+                                 int nstokes )
 {
     // Translate GPU block/thread numbers into meaningful names
     int c    = blockIdx.x;  /* The (c)hannel number */
@@ -564,7 +564,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 vm->chunks_per_second,
                 vm->d_e,
                 (float *)vm->d_S,
-                vm->obs_metadata->num_ant_pols
+                vm->obs_metadata->num_ant_pols,
                 vm->out_nstokes );
 
         cudaCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
