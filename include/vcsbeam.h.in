@@ -630,6 +630,9 @@ typedef struct vcsbeam_context_t
     int nchan;                        // Number of channels
     int nfine_chan;                   // Number of fine channels
 
+    // Output number of stokes parameters needed
+    int out_nstokes;
+
     // VDIF output
     vdif_header      vhdr;
     struct vdifinfo *vf;

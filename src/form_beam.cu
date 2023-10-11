@@ -220,6 +220,7 @@ __global__ void vmApplyJ_kernel( void            *data,
  * @param[out] S   The recovered Stokes parameters,
  *                 with layout \f$N_t \times N_s \times N_f\f$
  * @param npol     \f$N_p\f$
+ * @param nstokes  The number of stokes parameters to output
  *
  * This kernel performs the phasing up and the summing over antennas part of
  * the beamforming operation (see [Beamforming](@ref beamforming)):
@@ -319,10 +320,13 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                                     Nxy[0] );
 
         // Stokes I, Q, U, V:
-        S[C_IDX(p,s+soffset,0,c,ns*nchunk,NSTOKES,nc)] = invw*(bnXX + bnYY);
-        S[C_IDX(p,s+soffset,1,c,ns*nchunk,NSTOKES,nc)] = invw*(bnXX - bnYY);
-        S[C_IDX(p,s+soffset,2,c,ns*nchunk,NSTOKES,nc)] =  2.0*invw*cuCreal( bnXY );
-        S[C_IDX(p,s+soffset,3,c,ns*nchunk,NSTOKES,nc)] = -2.0*invw*cuCimag( bnXY );
+        S[C_IDX(p,s+soffset,0,c,ns*nchunk,nstokes,nc)] = invw*(bnXX + bnYY);
+        if ( nstokes == 4 )
+        {
+            S[C_IDX(p,s+soffset,1,c,ns*nchunk,nstokes,nc)] = invw*(bnXX - bnYY);
+            S[C_IDX(p,s+soffset,2,c,ns*nchunk,nstokes,nc)] =  2.0*invw*cuCreal( bnXY );
+            S[C_IDX(p,s+soffset,3,c,ns*nchunk,nstokes,nc)] = -2.0*invw*cuCimag( bnXY );
+        }
 
         // The beamformed products
         e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = ex[0];
@@ -677,7 +681,7 @@ void prepare_detected_beam( cuDoubleComplex ****detected_beam,
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
 {
     // Flatten the bandpass
-    dim3 chan_stokes(vm->nfine_chan, NSTOKES);
+    dim3 chan_stokes(vm->nfine_chan, vm->out_nstokes);
     renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_S, vm->fine_sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
@@ -689,9 +693,9 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
     unsigned int p;
     for (p = 0; p < vm->npointing; p++)
     {
-        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(vm->offsets[p*vm->nfine_chan*NSTOKES]), vm->nfine_chan*NSTOKES*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(vm->scales[p*vm->nfine_chan*NSTOKES]), vm->nfine_chan*NSTOKES*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->fine_sample_rate*vm->nfine_chan*NSTOKES]), vm->fine_sample_rate*vm->nfine_chan*NSTOKES );
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(vm->offsets[p*vm->nfine_chan*vm->out_nstokes]), vm->nfine_chan*vm->out_nstokes*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(vm->scales[p*vm->nfine_chan*vm->out_nstokes]), vm->nfine_chan*vm->out_nstokes*sizeof(float) );
+        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->fine_sample_rate*vm->nfine_chan*vm->out_nstokes]), vm->fine_sample_rate*vm->nfine_chan*vm->out_nstokes );
     }
 
 }
