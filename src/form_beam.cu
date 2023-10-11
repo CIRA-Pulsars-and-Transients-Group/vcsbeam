@@ -565,7 +565,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 vm->d_e,
                 (float *)vm->d_S,
                 vm->obs_metadata->num_ant_pols
-                vm->out_nstokes);
+                vm->out_nstokes );
 
         cudaCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
     }
