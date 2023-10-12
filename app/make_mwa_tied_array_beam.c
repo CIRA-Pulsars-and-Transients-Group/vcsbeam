@@ -576,12 +576,12 @@ void make_tied_array_beam_parse_cmdline(
                     break;
                 case 'N':
                     opts->out_nstokes = atoi(optarg);
-                    //if ((opts->out_nstokes != 1) || (opts->out_nstokes != 4))
-                    //{
-                    //    fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
-                    //            "-%c argument must be either 1 or 4", c );
-                    //    exit(EXIT_FAILURE);
-                    //}
+                    if ((opts->out_nstokes != 1) && (opts->out_nstokes != 4))
+                    {
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "-%c argument must be either 1 or 4", c );
+                        exit(EXIT_FAILURE);
+                    }
                     break;
                 case 'O':
                     opts->cal_type = CAL_OFFRINGA;
