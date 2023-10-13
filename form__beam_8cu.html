@@ -110,9 +110,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a72ec9b11b7031b21033c939c39c3f0f1"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a72ec9b11b7031b21033c939c39c3f0f1">vmApplyJ_kernel</a> (void *data, cuDoubleComplex *J, cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, uint32_t *polQ_idxs, uint32_t *polP_idxs, int npol, int p, vcsbeam_datatype datatype)</td></tr>
 <tr class="memdesc:a72ec9b11b7031b21033c939c39c3f0f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for multiplying Jones matrices to Jones vectors.  <a href="form__beam_8cu.html#a72ec9b11b7031b21033c939c39c3f0f1">More...</a><br /></td></tr>
 <tr class="separator:a72ec9b11b7031b21033c939c39c3f0f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14c72ad11c18eba09eb2cf14f1933638"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a14c72ad11c18eba09eb2cf14f1933638">vmBeamform_kernel</a> (cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, cuDoubleComplex *phi, double invw, int p, int soffset, int nchunk, cuDoubleComplex *e, float *S, int npol)</td></tr>
-<tr class="memdesc:a14c72ad11c18eba09eb2cf14f1933638"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for phasing up and summing the voltages over antenna.  <a href="form__beam_8cu.html#a14c72ad11c18eba09eb2cf14f1933638">More...</a><br /></td></tr>
-<tr class="separator:a14c72ad11c18eba09eb2cf14f1933638"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e7f514db5ee2dafe8a622e01054007e"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a8e7f514db5ee2dafe8a622e01054007e">vmBeamform_kernel</a> (cuDoubleComplex *Jv_Q, cuDoubleComplex *Jv_P, cuDoubleComplex *phi, double invw, int p, int soffset, int nchunk, cuDoubleComplex *e, float *S, int npol, int nstokes)</td></tr>
+<tr class="memdesc:a8e7f514db5ee2dafe8a622e01054007e"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for phasing up and summing the voltages over antenna.  <a href="form__beam_8cu.html#a8e7f514db5ee2dafe8a622e01054007e">More...</a><br /></td></tr>
+<tr class="separator:a8e7f514db5ee2dafe8a622e01054007e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a418658321f739c188e3adee521b3c03b"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a418658321f739c188e3adee521b3c03b">renormalise_channels_kernel</a> (float *S, int nstep, float *offsets, float *scales, uint8_t *Sscaled)</td></tr>
 <tr class="memdesc:a418658321f739c188e3adee521b3c03b"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for normalising Stokes parameters.  <a href="form__beam_8cu.html#a418658321f739c188e3adee521b3c03b">More...</a><br /></td></tr>
 <tr class="separator:a418658321f739c188e3adee521b3c03b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -765,8 +765,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a14c72ad11c18eba09eb2cf14f1933638"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a14c72ad11c18eba09eb2cf14f1933638">&#9670;&nbsp;</a></span>vmBeamform_kernel()</h2>
+<a id="a8e7f514db5ee2dafe8a622e01054007e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8e7f514db5ee2dafe8a622e01054007e">&#9670;&nbsp;</a></span>vmBeamform_kernel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -829,7 +829,13 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>npol</em>&#160;</td>
+          <td class="paramname"><em>npol</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>nstokes</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -851,7 +857,8 @@ Functions</h2></td></tr>
     <tr><td class="paramdir"></td><td class="paramname">nchunk</td><td>The number of chunks (divisions of a second's worth of data) </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">e</td><td>The recovered electric field, \({\bf e}\), with layout \(N_t \times N_f \times N_p\) </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">S</td><td>The recovered Stokes parameters, with layout \(N_t \times N_s \times N_f\) </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">npol</td><td>\(N_p\)</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">npol</td><td>\(N_p\) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">nstokes</td><td>The number of stokes parameters to output</td></tr>
   </table>
   </dd>
 </dl>
