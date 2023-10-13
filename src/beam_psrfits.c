@@ -61,6 +61,19 @@ void populate_spliced_psrfits_header(
     int coarse_chan_idx = vm->vcs_metadata->provided_coarse_chan_indices[0];
     int first_coarse_chan_idx = coarse_chan_idx - vm->mpi_rank;
 
+    sprintf( vm->log_message, "DEBUG [beam_psrfits.c]: I think the coarse channel index (vcs_metadata) is: %d", coarse_chan_idx );
+    logger_timed_message( vm->log, vm->log_message );
+    sprintf( vm->log_message, "DEBUG [beam_psrfits.c]: I think the first coarse channel index (MPI) is: %d", first_coarse_chan_idx );
+    logger_timed_message( vm->log, vm->log_message );
+    fprintf(stderr, "listing coarse chan idxs\n");
+    unsigned int ci = 0;
+    int cci = 0;
+    for(ci; ci<vm->obs_metadata->num_metafits_coarse_chans; ci++)
+    {
+        cci = vm->vcs_metadata->provided_coarse_chan_indices[ci];
+        fprintf(stderr, "%d\n", cci);
+    }
+
     // Now set values for our hdrinfo structure
     strcpy( pf->hdr.project_id, vm->obs_metadata->project_id );
     strcpy( pf->hdr.obs_mode,  "SEARCH"    );
@@ -152,11 +165,14 @@ void populate_spliced_psrfits_header(
     // actual first coarse channel of the current data context. For contiguous data,
     // this will be equivalent to the zeroth entry in the metafits data.
     uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz;
+    fprintf( stderr, "DEBUG [%s, %d]: I think the start frequency in hz is: %u\n", __FILE__, __LINE__, start_hz );
+
     for (i = 0 ; i < pf->hdr.nchan; i++)
     {
         iC = i / vm->nfine_chan + first_coarse_chan_idx;
         iF = (iC * vm->nfine_chan) + (i % vm->nfine_chan);
-        pf->sub.dat_freqs[i] = (start_hz + iF*fine_chan_width)*1e-6;
+        pf->sub.dat_freqs[i] = (float) ((double) (start_hz + iF*fine_chan_width)*1e-6);
+        fprintf( stderr, "DEBUG [%s, %d]: added frequency to header: %f\n", __FILE__, __LINE__, pf->sub.dat_freqs[i] );
         pf->sub.dat_weights[i] = 1.0;
     }
 
