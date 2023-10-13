@@ -35,6 +35,7 @@ struct make_tied_array_beam_opts {
     // Output options
     bool               out_fine;         // Output fine channelised data (PSRFITS)
     bool               out_coarse;       // Output coarse channelised data (VDIF)
+    int                out_nstokes;      // Number of stokes parameters in PSRFITS output
 
     // Calibration options
     char              *cal_metafits;     // Filename of the metafits file
@@ -100,8 +101,10 @@ int main(int argc, char **argv)
         vmSetOutputChannelisation( vm, opts.out_fine, opts.out_coarse );
     }
 
-    // If we need to, set up the forward PFB
+    // Set up case for stokes output and number of chunks per second of data
+    vm->out_nstokes = opts.out_nstokes;
     vm->chunks_per_second = opts.nchunks;
+    // If we need to, set up the forward PFB
     if (vm->do_forward_pfb)
     {
         // Load the filter
@@ -200,7 +203,7 @@ int main(int argc, char **argv)
     {
         for (p = 0; p < vm->npointing; p++)
         {
-            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, NSTOKES,
+            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, opts.out_nstokes,
                     &(beam_geom_vals[p]), NULL, true );
         }
     }
@@ -411,6 +414,7 @@ void usage()
     printf( "\nOUTPUT OPTIONS\n\n"
             "\t-p, --out-fine             Output fine-channelised, full-Stokes data (PSRFITS)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
+            "\t-N, --out-nstokes          Number of stokes parameters to output. Either 1 (stokes I only) or 4 (stokes IQUV)\n"
             "\t-t, --max_t                Maximum number of seconds per output FITS file. [default: 200]\n"
             "\t-v, --out-coarse           Output coarse-channelised, 2-pol (XY) data (VDIF)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
@@ -465,6 +469,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->coarse_chan_str      = NULL;  // Absolute or relative coarse channel
     opts->out_fine             = false; // Output fine channelised data (PSRFITS)
     opts->out_coarse           = false; // Output coarse channelised data (VDIF)
+    opts->out_nstokes          = 4;     // Output stokes IQUV by default
     opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
@@ -493,6 +498,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"bandpass",        no_argument,       0, 'B'},
                 {"out-fine",        no_argument,       0, 'p'},
                 {"out-coarse",      no_argument,       0, 'v'},
+                {"out-nstokes",     no_argument,       0, 'N'},
                 {"max_t",           required_argument, 0, 't'},
                 {"analysis_filter", required_argument, 0, 'A'},
                 {"synth_filter",    required_argument, 0, 'S'},
@@ -517,7 +523,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:hm:n:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:hm:nN:OpP:R:sS:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -567,6 +573,15 @@ void make_tied_array_beam_parse_cmdline(
                     break;
                 case 'n':
                     opts->nchunks = atoi(optarg);
+                    break;
+                case 'N':
+                    opts->out_nstokes = atoi(optarg);
+                    if ((opts->out_nstokes != 1) && (opts->out_nstokes != 4))
+                    {
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "-%c argument must be either 1 or 4", c );
+                        exit(EXIT_FAILURE);
+                    }
                     break;
                 case 'O':
                     opts->cal_type = CAL_OFFRINGA;

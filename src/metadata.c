@@ -501,7 +501,7 @@ void vmMallocEHost( vcsbeam_context *vm )
  */
 void vmMallocSHost( vcsbeam_context *vm )
 {
-    vm->S_size_bytes = vm->npointing * vm->nfine_chan * NSTOKES * vm->fine_sample_rate * sizeof(float);
+    vm->S_size_bytes = vm->npointing * vm->nfine_chan * vm->out_nstokes * vm->fine_sample_rate * sizeof(float);
 
     // Allocate memory on host
     cudaMallocHost( (void **)&(vm->S), vm->S_size_bytes );
@@ -738,7 +738,7 @@ void vmMallocEDevice( vcsbeam_context *vm )
  */
 void vmMallocSDevice( vcsbeam_context *vm )
 {
-    vm->d_S_size_bytes = vm->npointing * vm->nfine_chan * NSTOKES * vm->fine_sample_rate * sizeof(float);
+    vm->d_S_size_bytes = vm->npointing * vm->nfine_chan * vm->out_nstokes * vm->fine_sample_rate * sizeof(float);
 
     // Allocate memory on device
     cudaMalloc( (void **)&(vm->d_S), vm->d_S_size_bytes );
@@ -1098,8 +1098,8 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
 {
     uintptr_t nchan  = vm->nfine_chan;
 
-    vm->offsets_size = vm->npointing*nchan*NSTOKES*sizeof(float);
-    vm->scales_size  = vm->npointing*nchan*NSTOKES*sizeof(float);
+    vm->offsets_size = vm->npointing*nchan*vm->out_nstokes*sizeof(float);
+    vm->scales_size  = vm->npointing*nchan*vm->out_nstokes*sizeof(float);
     vm->Cscaled_size = vm->npointing*mpfs[0].coarse_chan_pf.sub.bytes_per_subint;
 
     cudaMalloc( (void **)&vm->d_offsets, vm->offsets_size );
@@ -1154,7 +1154,7 @@ void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
 {
     uintptr_t npol      = vm->obs_metadata->num_ant_pols; // = 2
     vm->npointing       = npointings;
-    vm->S_size_bytes    = vm->npointing * vm->nchan * NSTOKES * vm->sample_rate * sizeof(float);
+    vm->S_size_bytes    = vm->npointing * vm->nchan * vm->out_nstokes * vm->sample_rate * sizeof(float);
     vm->d_S_size_bytes  = vm->S_size_bytes;
     vm->e_size_bytes    = vm->npointing * vm->sample_rate * vm->nchan * npol * sizeof(cuDoubleComplex);
     vm->d_e_size_bytes  = vm->e_size_bytes;
