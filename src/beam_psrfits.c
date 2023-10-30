@@ -65,14 +65,8 @@ void populate_spliced_psrfits_header(
     logger_timed_message( vm->log, vm->log_message );
     sprintf( vm->log_message, "DEBUG [beam_psrfits.c]: I think the first coarse channel index (MPI) is: %d", first_coarse_chan_idx );
     logger_timed_message( vm->log, vm->log_message );
-    fprintf(stderr, "listing coarse chan idxs\n");
-    unsigned int ci = 0;
-    int cci = 0;
-    for(ci; ci<vm->obs_metadata->num_metafits_coarse_chans; ci++)
-    {
-        cci = vm->vcs_metadata->provided_coarse_chan_indices[ci];
-        fprintf(stderr, "%d\n", cci);
-    }
+    sprintf( vm->log_message, "DEBUG [beam_psrfits.c]: Corresponds to centre freq. %d Hz", vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_centre_hz );
+    logger_timed_message( vm->log, vm->log_message );
 
     // Now set values for our hdrinfo structure
     strcpy( pf->hdr.project_id, vm->obs_metadata->project_id );
@@ -158,20 +152,32 @@ void populate_spliced_psrfits_header(
 
     int i; // idx into dat_freqs
     int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
-    // In the case of non-contiguous coarse channel separations (i.e., "picket fence")
-    // the first coarse channel listed in the metafits data is not actually
-    // appropriate to use as the base since there can be >1 channel differences
-    // between "adjacent" channels. The `first_coarse_chan_idx` variable stores the
-    // actual first coarse channel of the current data context. For contiguous data,
-    // this will be equivalent to the zeroth entry in the metafits data.
+
     uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz;
-    fprintf( stderr, "DEBUG [%s, %d]: I think the start frequency in hz is: %u\n", __FILE__, __LINE__, start_hz );
+    fprintf( stderr, "DEBUG [%s, %d]: I think the start frequency is: %u Hz\n", __FILE__, __LINE__, start_hz );
+    fprintf( stderr, "DEBUG [%s, %d]: nchans in header: %d\n", __FILE__, __LINE__, pf->hdr.nchan );
 
     for (i = 0 ; i < pf->hdr.nchan; i++)
     {
-        iC = i / vm->nfine_chan + first_coarse_chan_idx;
+        /* BWM comment, 20 Oct 2023:
+         * Previously, the addition of the first coarse channel index causes an offset
+         * proportional to that coarse channel number (multiplied by the fine channel width).
+         * This is fine when it is a contiguous band because that index is zero! But in picket
+         * fence mode, because the starting frequency is already defined via "first coarse channel"
+         * number, we are only ever concerned with the fine channel additions in this loop.
+         */
+        iC = i / vm->nfine_chan;
+        fprintf( stderr, "DEBUG [%s, %d]: iC = %d  vm->nfine_chan = %d  fine_chan_width = %d Hz\n", __FILE__, __LINE__, iC, vm->nfine_chan, fine_chan_width );
         iF = (iC * vm->nfine_chan) + (i % vm->nfine_chan);
-        pf->sub.dat_freqs[i] = (float) ((double) (start_hz + iF*fine_chan_width)*1e-6);
+        fprintf(
+                stderr,
+                "DEBUG [%s, %d]: iF = %d  (i %% vm->nfine_chan) * fine_chan_width = %f MHz  iF * fine_chan_width = %f MHz\n",
+                __FILE__, __LINE__,
+                iF,
+                (i % vm->nfine_chan) * fine_chan_width * 1e-6,
+                iF*fine_chan_width*1e-6
+        );
+        pf->sub.dat_freqs[i] = (start_hz + iF*fine_chan_width) * 1e-6;
         fprintf( stderr, "DEBUG [%s, %d]: added frequency to header: %f\n", __FILE__, __LINE__, pf->sub.dat_freqs[i] );
         pf->sub.dat_weights[i] = 1.0;
     }
@@ -186,11 +192,11 @@ void populate_spliced_psrfits_header(
     // Update values that depend on get_jones()
     if (beam_geom_vals != NULL)
     {
-        if (is_coherent) 
+        if (is_coherent)
         {
             pf->hdr.ra2000  = beam_geom_vals->mean_ra  * R2D;
             pf->hdr.dec2000 = beam_geom_vals->mean_dec * R2D;
-        } 
+        }
         else
         {
             // Use the tile pointing instead of the pencil beam pointing
@@ -243,7 +249,7 @@ void populate_spliced_psrfits_header(
             {
                 sprintf( pf->basefilename, "%s_%s_%s_%s_ch%s",
                         pf->hdr.project_id,
-                        pf->hdr.source, 
+                        pf->hdr.source,
                         pf->hdr.ra_str, pf->hdr.dec_str,
                         chan_str );
             }
@@ -409,11 +415,11 @@ void populate_psrfits_header(
     // Update values that depend on get_jones()
     if (beam_geom_vals != NULL)
     {
-        if (is_coherent) 
+        if (is_coherent)
         {
             pf->hdr.ra2000  = beam_geom_vals->mean_ra  * R2D;
             pf->hdr.dec2000 = beam_geom_vals->mean_dec * R2D;
-        } 
+        }
         else
         {
             // Use the tile pointing instead of the pencil beam pointing
@@ -448,7 +454,7 @@ void populate_psrfits_header(
         {
             sprintf( pf->basefilename, "%s_%s_%s_%s_ch%03ld",
                     pf->hdr.project_id,
-                    pf->hdr.source, 
+                    pf->hdr.source,
                     pf->hdr.ra_str, pf->hdr.dec_str,
                     vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
         }
@@ -539,9 +545,9 @@ void vmInitMPIPsrfits(
     //for scl and offs
     // Create MPI vector types designed to splice the coarse channels together
     // correctly during MPI_Gather
-    // Proccess can be replaced by storing scales and offsets into their final 
+    // Proccess can be replaced by storing scales and offsets into their final
     // position for each channel and using an MPI_Reduce with sum to collect data
-    
+
     MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan, MPI_FLOAT, &(mpf->coarse_chan_OFFS) );
     MPI_Type_commit( &(mpf->coarse_chan_OFFS) );
 
@@ -582,12 +588,12 @@ void free_mpi_psrfits( mpi_psrfits *mpf )
     MPI_Type_free( &(mpf->total_OFFS) );
     MPI_Type_free( &(mpf->coarse_chan_OFFS) );
 
-    
+
     MPI_Type_free( &(mpf->spliced_SCL) );
     MPI_Type_free( &(mpf->total_SCL) );
     MPI_Type_free( &(mpf->coarse_chan_SCL) );
 */
- 
+
     free_psrfits( &(mpf->coarse_chan_pf) );
 
     int mpi_proc_id;
