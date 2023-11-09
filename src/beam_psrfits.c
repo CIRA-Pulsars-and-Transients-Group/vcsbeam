@@ -79,6 +79,16 @@ void populate_spliced_psrfits_header(
     strcpy( pf->hdr.frontend,  "MWA-RECVR" );
     snprintf( pf->hdr.source, 24, "%u", vm->obs_metadata->obs_id );
     snprintf( pf->hdr.backend, 24, "%s", VCSBEAM_VERSION );
+    /* TODO: We should change the backend to one of the following,
+     * to match what is included in PRESTO for MWA SIGPROC-style data:
+     *    MWA-VCS (Legacy system, retired Aug 2021)
+     *    MWAX-VCS (Current system, began Oct 2021)
+     * Is this information available from within the metafits data?
+     * In which case, it should be a simple query and case statement.
+     * Since PSRFITS does not appear to naturally support a HISTORY
+     * table in its header, we may also have to have the VCSBEAM_VERSION
+     * appended to the end of the backend label?
+     */
 
     // Now let us finally get the time right
     strcpy(pf->hdr.date_obs,   time_utc);
@@ -300,15 +310,16 @@ void populate_psrfits_header(
 
     snprintf( pf->hdr.source, 24, "%u", vm->obs_metadata->obs_id );
     snprintf( pf->hdr.backend, 24, "%s", VCSBEAM_VERSION );
-    // TODO: We should change the backend to one of the following,
-    // to match what is included in PRESTO for MWA SIGPROC-style data:
-    //      MWA-VCS (Legacy system, retired Aug 2021)
-    //      MWAX-VCS (Current system, began Oct 2021)
-    // Is this information available from within the metafits data?
-    // In which case, it should be a simple query and case statement.
-    // Since PSRFITS does not appear to naturally support a HISTORY
-    // table in its header, we may also have to have the VCSBEAM_VERSION
-    // appended to the end of the backend label?
+    /* TODO: We should change the backend to one of the following,
+     * to match what is included in PRESTO for MWA SIGPROC-style data:
+     *    MWA-VCS (Legacy system, retired Aug 2021)
+     *    MWAX-VCS (Current system, began Oct 2021)
+     * Is this information available from within the metafits data?
+     * In which case, it should be a simple query and case statement.
+     * Since PSRFITS does not appear to naturally support a HISTORY
+     * table in its header, we may also have to have the VCSBEAM_VERSION
+     * appended to the end of the backend label?
+     */
 
     pf->hdr.scanlen = 1.0; // in sec
 
