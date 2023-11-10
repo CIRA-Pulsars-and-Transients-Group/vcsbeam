@@ -58,8 +58,18 @@ void populate_spliced_psrfits_header(
 
     // Get the sample rate
     unsigned int sample_rate = vm->fine_sample_rate;
+
+    // Get coarse channel information
     int coarse_chan_idx = vm->vcs_metadata->provided_coarse_chan_indices[0];
     int first_coarse_chan_idx = coarse_chan_idx - vm->mpi_rank;
+    int last_coarse_chan_idx = first_coarse_chan_idx + vm->ncoarse_chans - 1;
+
+    // Get fine channel width
+    uint32_t fine_chan_width = vm->obs_metadata->coarse_chan_width_hz / vm->nfine_chan;
+
+    // Initialise
+    pf->filenum = 0; // This is the crucial one to set to initialize things
+    pf->rows_per_file = max_sec_per_file; // I assume this is a max subint issue
 
     // Now set values for our hdrinfo structure
     strcpy( pf->hdr.project_id, vm->obs_metadata->project_id );
@@ -67,11 +77,18 @@ void populate_spliced_psrfits_header(
     strcpy( pf->hdr.observer,  "MWA User"  );
     strcpy( pf->hdr.telescope, "MWA"       );
     strcpy( pf->hdr.frontend,  "MWA-RECVR" );
-
     snprintf( pf->hdr.source, 24, "%u", vm->obs_metadata->obs_id );
     snprintf( pf->hdr.backend, 24, "%s", VCSBEAM_VERSION );
-
-    pf->hdr.scanlen = 1.0; // in sec
+    /* TODO: We should change the backend to one of the following,
+     * to match what is included in PRESTO for MWA SIGPROC-style data:
+     *    MWA-VCS (Legacy system, retired Aug 2021)
+     *    MWAX-VCS (Current system, began Oct 2021)
+     * Is this information available from within the metafits data?
+     * In which case, it should be a simple query and case statement.
+     * Since PSRFITS does not appear to naturally support a HISTORY
+     * table in its header, we may also have to have the VCSBEAM_VERSION
+     * appended to the end of the backend label?
+     */
 
     // Now let us finally get the time right
     strcpy(pf->hdr.date_obs,   time_utc);
@@ -80,20 +97,15 @@ void populate_spliced_psrfits_header(
     strcpy(pf->hdr.cal_mode,   "OFF");
     strcpy(pf->hdr.feed_mode,  "FA");
 
-    pf->hdr.dt   = 1.0/sample_rate; // (sec)
-    int last_coarse_chan_idx = first_coarse_chan_idx + vm->ncoarse_chans - 1;
-    pf->hdr.fctr = 0.5*(
-            vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_centre_hz +
-            vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_centre_hz) / 1e6; // (MHz)
-    pf->hdr.BW = (
-            vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_end_hz -
-            vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz
-            ) / 1e6; // MHz
+    // Set subint length, sampling and frequency references
+    pf->hdr.scanlen = 1.0; // in sec
+    pf->hdr.dt      = 1.0/sample_rate; // (sec)
+    pf->hdr.fctr    = 0.5*(vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_centre_hz +
+                        vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_centre_hz) / 1e6; // (MHz)
+    pf->hdr.BW      = (vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_end_hz -
+                        vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz) / 1e6; // (MHz)
 
     // npols + nbits and whether pols are added
-    pf->filenum       = 0;       // This is the crucial one to set to initialize things
-    pf->rows_per_file = max_sec_per_file;     // I assume this is a max subint issue
-
     pf->hdr.npol         = outpol;
     pf->hdr.nchan        = vm->nfine_chan * vm->ncoarse_chans;
     pf->hdr.onlyI        = 0;
@@ -107,7 +119,6 @@ void populate_spliced_psrfits_header(
     else
         pf->hdr.summed_polns = 1;
 
-    uint32_t fine_chan_width = vm->obs_metadata->coarse_chan_width_hz / vm->nfine_chan;
     pf->hdr.df         = fine_chan_width / 1e6; // (MHz)
     pf->hdr.orig_nchan = pf->hdr.nchan;
     pf->hdr.orig_df    = pf->hdr.df;
@@ -145,12 +156,21 @@ void populate_spliced_psrfits_header(
 
     int i; // idx into dat_freqs
     int iF, iC; // mwalib (i)dxs for (F)ine and (C)oarse channels
-    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[0].chan_start_hz;
+    uint32_t start_hz = vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_start_hz;
+
     for (i = 0 ; i < pf->hdr.nchan; i++)
     {
-        iC = i / vm->nfine_chan + first_coarse_chan_idx;
+        /* BWM comment, 20 Oct 2023:
+         * Previously, the addition of the `first_coarse_chan_index` to `iC` caused an offset
+         * proportional to that coarse channel number (multiplied by the fine channel width).
+         * This is fine when it is a contiguous band because that index is always zero! But in
+         * picket-fence mode, because the starting frequency is already defined via "first
+         * coarse channel" number, we are only ever concerned with the fine channel additions
+         * in this loop.
+         */
+        iC = i / vm->nfine_chan;
         iF = (iC * vm->nfine_chan) + (i % vm->nfine_chan);
-        pf->sub.dat_freqs[i] = (start_hz + iF*fine_chan_width)*1e-6;
+        pf->sub.dat_freqs[i] = (start_hz + iF*fine_chan_width) * 1e-6;
         pf->sub.dat_weights[i] = 1.0;
     }
 
@@ -164,11 +184,11 @@ void populate_spliced_psrfits_header(
     // Update values that depend on get_jones()
     if (beam_geom_vals != NULL)
     {
-        if (is_coherent) 
+        if (is_coherent)
         {
             pf->hdr.ra2000  = beam_geom_vals->mean_ra  * R2D;
             pf->hdr.dec2000 = beam_geom_vals->mean_dec * R2D;
-        } 
+        }
         else
         {
             // Use the tile pointing instead of the pencil beam pointing
@@ -221,7 +241,7 @@ void populate_spliced_psrfits_header(
             {
                 sprintf( pf->basefilename, "%s_%s_%s_%s_ch%s",
                         pf->hdr.project_id,
-                        pf->hdr.source, 
+                        pf->hdr.source,
                         pf->hdr.ra_str, pf->hdr.dec_str,
                         chan_str );
             }
@@ -290,6 +310,16 @@ void populate_psrfits_header(
 
     snprintf( pf->hdr.source, 24, "%u", vm->obs_metadata->obs_id );
     snprintf( pf->hdr.backend, 24, "%s", VCSBEAM_VERSION );
+    /* TODO: We should change the backend to one of the following,
+     * to match what is included in PRESTO for MWA SIGPROC-style data:
+     *    MWA-VCS (Legacy system, retired Aug 2021)
+     *    MWAX-VCS (Current system, began Oct 2021)
+     * Is this information available from within the metafits data?
+     * In which case, it should be a simple query and case statement.
+     * Since PSRFITS does not appear to naturally support a HISTORY
+     * table in its header, we may also have to have the VCSBEAM_VERSION
+     * appended to the end of the backend label?
+     */
 
     pf->hdr.scanlen = 1.0; // in sec
 
@@ -378,11 +408,11 @@ void populate_psrfits_header(
     // Update values that depend on get_jones()
     if (beam_geom_vals != NULL)
     {
-        if (is_coherent) 
+        if (is_coherent)
         {
             pf->hdr.ra2000  = beam_geom_vals->mean_ra  * R2D;
             pf->hdr.dec2000 = beam_geom_vals->mean_dec * R2D;
-        } 
+        }
         else
         {
             // Use the tile pointing instead of the pencil beam pointing
@@ -417,7 +447,7 @@ void populate_psrfits_header(
         {
             sprintf( pf->basefilename, "%s_%s_%s_%s_ch%03ld",
                     pf->hdr.project_id,
-                    pf->hdr.source, 
+                    pf->hdr.source,
                     pf->hdr.ra_str, pf->hdr.dec_str,
                     vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
         }
@@ -508,9 +538,9 @@ void vmInitMPIPsrfits(
     //for scl and offs
     // Create MPI vector types designed to splice the coarse channels together
     // correctly during MPI_Gather
-    // Proccess can be replaced by storing scales and offsets into their final 
+    // Proccess can be replaced by storing scales and offsets into their final
     // position for each channel and using an MPI_Reduce with sum to collect data
-    
+
     MPI_Type_contiguous( mpf->coarse_chan_pf.hdr.nchan, MPI_FLOAT, &(mpf->coarse_chan_OFFS) );
     MPI_Type_commit( &(mpf->coarse_chan_OFFS) );
 
@@ -551,12 +581,12 @@ void free_mpi_psrfits( mpi_psrfits *mpf )
     MPI_Type_free( &(mpf->total_OFFS) );
     MPI_Type_free( &(mpf->coarse_chan_OFFS) );
 
-    
+
     MPI_Type_free( &(mpf->spliced_SCL) );
     MPI_Type_free( &(mpf->total_SCL) );
     MPI_Type_free( &(mpf->coarse_chan_SCL) );
 */
- 
+
     free_psrfits( &(mpf->coarse_chan_pf) );
 
     int mpi_proc_id;
