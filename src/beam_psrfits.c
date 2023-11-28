@@ -123,6 +123,7 @@ void populate_spliced_psrfits_header(
     pf->hdr.orig_nchan = pf->hdr.nchan;
     pf->hdr.orig_df    = pf->hdr.df;
     pf->hdr.nbits      = 8;
+    pf->hdr.orig_nbits = 8;  // in Scott's version of psrfits_utils this is an entry need to figure out the original nbits of the data
     pf->hdr.nsblk      = sample_rate;  // block is always 1 second of data
 
     pf->hdr.ds_freq_fact = 1;
