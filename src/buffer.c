@@ -11,6 +11,7 @@
 #include <mwalib.h>
 
 #include "vcsbeam.h"
+#include "gpu_macros.h"
 
 /**
  * Initialise a buffer for reading in voltage data.
@@ -59,8 +60,8 @@ host_buffer *vmInitReadBuffer( size_t read_size, size_t copy_size )
 
     // Set the size and allocate the host memory
     rb->buffer_size = read_size + copy_size;
-    cudaMallocHost( (void **)&(rb->buffer), rb->buffer_size );
-    cudaCheckErrors( "vmInitReadBuffer: cudaMallocHost failed" );
+    gpuMallocHost( (void **)&(rb->buffer), rb->buffer_size );
+    gpuCheckErrors( "vmInitReadBuffer: gpuMallocHost failed" );
 
     // Set up the "read" and "copy" pointers
     rb->read_size     = read_size;
@@ -85,8 +86,8 @@ host_buffer *vmInitReadBuffer( size_t read_size, size_t copy_size )
  */
 void vmFreeReadBuffer( host_buffer *rb )
 {
-    cudaFreeHost( rb->buffer );
-    cudaCheckErrors( "vmFreeReadBuffer: cudaFreeHost failed" );
+    gpuFreeHost( rb->buffer );
+    gpuCheckErrors( "vmFreeReadBuffer: gpuFreeHost failed" );
 
     free( rb );
 }
