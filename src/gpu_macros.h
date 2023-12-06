@@ -3,7 +3,9 @@
 
 #include <stdio.h>
 
+#ifndef __NVCC__
 #define __NVCC__ // should be set by compiler !!!
+#endif
 
 
 #if defined (__NVCC__) || defined (__HIPCC__)
@@ -66,6 +68,15 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuFreeHost(...) GPU_CHECK_ERROR( cudaFreeHost(__VA_ARGS__) )
 #define gpuGetDeviceProperties(...) cudaGetDeviceProperties(__VA_ARGS__)
 #define gpuDeviceProp cudaDeviceProp
+#define gpuPeekAtLastError cudaPeekAtLastError
+
+// Complex number operations:
+#define gpuCreal cuCreal
+#define gpuCimag cuCimag
+#define gpuCadd  cuCadd
+#define gpuCmul  cuCmul
+#define gpuConj  cuConj
+#define gpuCsub  cuCsub
 
 /*inline int num_available_gpus()
 {
@@ -101,6 +112,16 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuFreeHost(...)  GPU_CHECK_ERROR( hipFreeHost(__VA_ARGS__) )
 #define gpuGetDeviceProperties(...) GPU_CHECK_ERROR( hipGetDeviceProperties(__VA_ARGS__) )
 #define gpuDeviceProp hipDeviceProp
+#define gpuPeekAtLastError hipPeekAtLastError
+
+
+// Complex number operations:
+#define gpuCreal hipCreal
+#define gpuCimag hipCimag
+#define gpuCadd  hipCadd
+#define gpuCmul  hipCmul
+#define gpuConj  hipConj
+#define gpuCsub  hipCsub
 
 #endif
 #define gpuCheckLastError(...) GPU_CHECK_ERROR(gpuGetLastError())

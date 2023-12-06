@@ -10,8 +10,6 @@
 #include <string.h>
 #include <time.h>
 
-// #include <cuComplex.h>
-// #include <cuda_runtime.h>
 #include "gpu_fft.hpp"
 #include "gpu_macros.h"
 
@@ -173,10 +171,10 @@ __global__ void vmApplyJ_kernel( void            *data,
     // Jv_Q = Jqq*vq + Jqp*vp
     // Jv_P = Jpq*vq + Jpy*vp
 
-    Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] = cuCadd( cuCmul( J[J_IDX(p,ant,c,0,0,nant,nc,npol)], vq ),
-                                                 cuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
-    Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] = cuCadd( cuCmul( J[J_IDX(p,ant,c,1,0,nant,nc,npol)], vq ),
-                                                 cuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
+    Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] = gpuCadd( gpuCmul( J[J_IDX(p,ant,c,0,0,nant,nc,npol)], vq ),
+                                                 gpuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
+    Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] = gpuCadd( gpuCmul( J[J_IDX(p,ant,c,1,0,nant,nc,npol)], vq ),
+                                                 gpuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
 #ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
@@ -185,19 +183,19 @@ __global__ void vmApplyJ_kernel( void            *data,
             printf( "Jinv[%3d]      = [%5.3lf,%5.3lf, %5.3lf,%5.3lf]\n"
                     "                 [%5.3lf,%5.3lf, %5.3lf,%5.3lf]\n",
                     i,
-                    cuCreal(J[J_IDX(p,i,c,0,0,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,0,0,nant,nc,npol)]),
-                    cuCreal(J[J_IDX(p,i,c,0,1,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,0,1,nant,nc,npol)]),
-                    cuCreal(J[J_IDX(p,i,c,1,0,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,1,0,nant,nc,npol)]),
-                    cuCreal(J[J_IDX(p,i,c,1,1,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,1,1,nant,nc,npol)]) );
+                    gpuCreal(J[J_IDX(p,i,c,0,0,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,0,0,nant,nc,npol)]),
+                    gpuCreal(J[J_IDX(p,i,c,0,1,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,0,1,nant,nc,npol)]),
+                    gpuCreal(J[J_IDX(p,i,c,1,0,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,1,0,nant,nc,npol)]),
+                    gpuCreal(J[J_IDX(p,i,c,1,1,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,1,1,nant,nc,npol)]) );
             cuDoubleComplex *v = (cuDoubleComplex *)data;
             printf( "v[Q=%3d,P=%3d] = [%5.3lf,%5.3lf]; [%5.3lf,%5.3lf]\n",
                     polQ_idxs[i], polP_idxs[i],
-                    cuCreal( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ),
-                    cuCreal( v[v_IDX(s,c,polP_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polP_idxs[i],nc,ni)] )
+                    gpuCreal( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ), gpuCimag( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ),
+                    gpuCreal( v[v_IDX(s,c,polP_idxs[i],nc,ni)] ), gpuCimag( v[v_IDX(s,c,polP_idxs[i],nc,ni)] )
                   );
             printf( "Jinv * v = [%5.3lf,%5.3lf]; [%5.3lf,%5.3lf]\n",
-                    cuCreal(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), cuCimag(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), 
-                    cuCreal(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)]), cuCimag(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)])
+                    gpuCreal(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), gpuCimag(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), 
+                    gpuCreal(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)]), gpuCimag(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)])
                   );
         }
     }
@@ -290,12 +288,12 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
-    ex[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-    ey[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+    ex[ant] = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+    ey[ant] = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
 
-    Nxx[ant] = cuCmul( ex[ant], cuConj(ex[ant]) );
-    Nxy[ant] = cuCmul( ex[ant], cuConj(ey[ant]) );
-    Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
+    Nxx[ant] = gpuCmul( ex[ant], gpuConj(ex[ant]) );
+    Nxy[ant] = gpuCmul( ex[ant], gpuConj(ey[ant]) );
+    Nyy[ant] = gpuCmul( ey[ant], gpuConj(ey[ant]) );
 
     // Detect the coherent beam
     // The safest, slowest option: Just get one thread to do it
@@ -304,12 +302,12 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     {
         for (int i = 1; i < nant; i++)
         {
-            ex[0]  = cuCadd( ex[0],  ex[i] );
-            ey[0]  = cuCadd( ey[0],  ey[i] );
-            Nxx[0] = cuCadd( Nxx[0], Nxx[i] );
-            Nxy[0] = cuCadd( Nxy[0], Nxy[i] );
-            //Nyx[0]=cuCadd( Nyx[0], Nyx[i] );
-            Nyy[0] = cuCadd( Nyy[0], Nyy[i] );
+            ex[0]  = gpuCadd( ex[0],  ex[i] );
+            ey[0]  = gpuCadd( ey[0],  ey[i] );
+            Nxx[0] = gpuCadd( Nxx[0], Nxx[i] );
+            Nxy[0] = gpuCadd( Nxy[0], Nxy[i] );
+            //Nyx[0]=gpuCadd( Nyx[0], Nyx[i] );
+            Nyy[0] = gpuCadd( Nyy[0], Nyy[i] );
         }
     }
     __syncthreads();
@@ -318,9 +316,9 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     // Only doing it for ant 0 so that it only prints once
     if ( ant == 0 )
     {
-        float bnXX = DETECT(ex[0]) - cuCreal(Nxx[0]);
-        float bnYY = DETECT(ey[0]) - cuCreal(Nyy[0]);
-        cuDoubleComplex bnXY = cuCsub( cuCmul( ex[0], cuConj( ey[0] ) ),
+        float bnXX = DETECT(ex[0]) - gpuCreal(Nxx[0]);
+        float bnYY = DETECT(ey[0]) - gpuCreal(Nyy[0]);
+        cuDoubleComplex bnXY = gpuCsub( gpuCmul( ex[0], gpuConj( ey[0] ) ),
                                     Nxy[0] );
 
         // Stokes I, Q, U, V:
@@ -328,8 +326,8 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
         if ( nstokes == 4 )
         {
             S[C_IDX(p,s+soffset,1,c,ns*nchunk,nstokes,nc)] = invw*(bnXX - bnYY);
-            S[C_IDX(p,s+soffset,2,c,ns*nchunk,nstokes,nc)] =  2.0*invw*cuCreal( bnXY );
-            S[C_IDX(p,s+soffset,3,c,ns*nchunk,nstokes,nc)] = -2.0*invw*cuCimag( bnXY );
+            S[C_IDX(p,s+soffset,2,c,ns*nchunk,nstokes,nc)] =  2.0*invw*gpuCreal( bnXY );
+            S[C_IDX(p,s+soffset,3,c,ns*nchunk,nstokes,nc)] = -2.0*invw*gpuCimag( bnXY );
         }
 
         // The beamformed products
@@ -351,23 +349,23 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
                     "JP[%3d]=[%5.3lf,%5.3lf]  "
                     "\n",
                     i, i,
-                    cuCreal( ex[i] ), cuCimag( ex[i] ),
-                    cuCreal( ey[i] ), cuCimag( ey[i] ),
+                    gpuCreal( ex[i] ), gpuCimag( ex[i] ),
+                    gpuCreal( ey[i] ), gpuCimag( ey[i] ),
                     i,
-                    cuCreal( phi[PHI_IDX(p,i,c,nant,nc)] ), cuCimag( phi[PHI_IDX(p,i,c,nant,nc)] ),
+                    gpuCreal( phi[PHI_IDX(p,i,c,nant,nc)] ), gpuCimag( phi[PHI_IDX(p,i,c,nant,nc)] ),
                     i,
-                    cuCreal( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ), cuCimag( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ),
+                    gpuCreal( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ), gpuCimag( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ),
                     i,
-                    cuCreal( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] ), cuCimag( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] )
+                    gpuCreal( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] ), gpuCimag( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] )
                     );
         }
         printf( "Post-add: ex[0]; ey[0] = [%.3lf, %.3lf]; [%.3lf, %.3lf]\n",
-                cuCreal( ex[ant] ), cuCimag( ex[ant] ),
-                cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
+                gpuCreal( ex[ant] ), gpuCimag( ex[ant] ),
+                gpuCreal( ey[ant] ), gpuCimag( ey[ant] ) );
     /*
         printf( "phi[3]  = [%lf, %lf]\n",
-                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
-                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
+                gpuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
+                gpuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
     */
     }
 #endif

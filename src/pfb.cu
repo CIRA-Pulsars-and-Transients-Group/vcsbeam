@@ -9,9 +9,6 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-//#include <cuda_runtime.h>
-//#include <cuComplex.h>
-//#include <cufft.h>
 #include "gpu_fft.hpp"
 #include "gpu_macros.h"
 
@@ -969,8 +966,8 @@ void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
                 }
                 else
                 {
-                    g->in_real[i] = cuCreal( detected_beam[p][s][ch][pol] );
-                    g->in_imag[i] = cuCimag( detected_beam[p][s][ch][pol] );
+                    g->in_real[i] = gpuCreal( detected_beam[p][s][ch][pol] );
+                    g->in_imag[i] = gpuCimag( detected_beam[p][s][ch][pol] );
                 }
             }
         }
@@ -1028,9 +1025,9 @@ void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
         for (ch = 0; ch < filter->nchans; ch++)
         {
             i = filter->ncoeffs*ch + f;
-            ft = cuCmul( filter->twiddles[ch], cf );
-            g->ft_real[i] = cuCreal( ft );
-            g->ft_imag[i] = cuCimag( ft );
+            ft = gpuCmul( filter->twiddles[ch], cf );
+            g->ft_real[i] = gpuCreal( ft );
+            g->ft_imag[i] = gpuCimag( ft );
         }
     }
 
