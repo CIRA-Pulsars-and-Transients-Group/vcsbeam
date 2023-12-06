@@ -10,8 +10,11 @@
 #include <string.h>
 #include <time.h>
 
-#include <cuComplex.h>
-#include <cuda_runtime.h>
+// #include <cuComplex.h>
+// #include <cuda_runtime.h>
+#include "gpu_fft.hpp"
+#include "gpu_macros.h"
+
 
 #include "vcsbeam.h"
 
@@ -20,7 +23,7 @@
  * @todo Remove this function and replace all calls to it with calls to CUDA
  *       error functions.
  */
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+/*inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
     if (code != 0)
     {
@@ -30,10 +33,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
             exit(code);
         }
     }
-}
+}*/
 
 // define a macro for accessing gpuAssert
-#define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
+// #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
 
 /**
@@ -482,7 +485,7 @@ void cu_form_incoh_beam(
 */
 {
     // Copy the data to the device
-    gpuErrchk(cudaMemcpyAsync( d_data, data, data_size, cudaMemcpyHostToDevice ));
+    (gpuMemcpyAsync( d_data, data, data_size, gpuMemcpyHostToDevice ));
 
     // Call the kernels
     dim3 chan_samples( nchan, nsample );
@@ -490,19 +493,19 @@ void cu_form_incoh_beam(
     // Call the incoherent beam kernel
     incoh_beam<<<chan_samples, ninput>>>( d_data, d_incoh );
 
-    gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuPeekAtLastError() );
+    ( gpuDeviceSynchronize() );
 
     dim3 chan_stokes(nchan, 1);
     int npointing = 1;
     renormalise_channels_kernel<<<npointing, chan_stokes>>>( d_incoh, nsample, d_offsets, d_scales, d_Iscaled );
-    gpuErrchk( cudaPeekAtLastError() );
+    ( gpuPeekAtLastError() );
 
     // Copy the results back into host memory
     // (NB: Asynchronous copy here breaks the output)
-    gpuErrchk(cudaMemcpy( offsets, d_offsets, nchan*sizeof(float), cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( scales,  d_scales,  nchan*sizeof(float), cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( Iscaled, d_Iscaled, Iscaled_size,        cudaMemcpyDeviceToHost ));
+    (gpuMemcpy( offsets, d_offsets, nchan*sizeof(float), gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( scales,  d_scales,  nchan*sizeof(float), gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( Iscaled, d_Iscaled, Iscaled_size,        gpuMemcpyDeviceToHost ));
 }
 
 /**
@@ -528,9 +531,9 @@ void vmApplyJChunk( vcsbeam_context *vm )
                 vm->obs_metadata->num_ant_pols,
                 p,
                 vm->datatype );
-        cudaCheckErrors( "vmApplyJChunk: vmApplyJ_kernel failed" );
+        gpuCheckErrors( "vmApplyJChunk: vmApplyJ_kernel failed" );
     }
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuDeviceSynchronize() );
 }
 
 /**
@@ -567,9 +570,9 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 vm->obs_metadata->num_ant_pols,
                 vm->out_nstokes );
 
-        cudaCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
+        gpuCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
     }
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuDeviceSynchronize() );
 
 }
 
@@ -610,7 +613,7 @@ void vmBeamformSecond( vcsbeam_context *vm )
 
         vm->chunk_to_load++;
     }
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuDeviceSynchronize() );
 
     // Unlock the buffer for reading
     // TODO: generalise this for arbitrary pipelines
@@ -624,8 +627,8 @@ void vmBeamformSecond( vcsbeam_context *vm )
 void vmPullE( vcsbeam_context *vm )
 {
     // Copy the results back into host memory
-    cudaMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, cudaMemcpyDeviceToHost );
-    cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
+    gpuMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, gpuMemcpyDeviceToHost );
+    gpuCheckErrors( "vmPullE: gpuMemcpyAsync failed" );
 }
 
 /**
@@ -633,8 +636,8 @@ void vmPullE( vcsbeam_context *vm )
  */
 void vmPullS( vcsbeam_context *vm )
 {
-    cudaMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, cudaMemcpyDeviceToHost );
-    cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
+    gpuMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, gpuMemcpyDeviceToHost );
+    gpuCheckErrors( "vmPullE: gpuMemcpyAsync failed" );
 }
 
 /**
@@ -685,12 +688,12 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
     // Flatten the bandpass
     dim3 chan_stokes(vm->nfine_chan, vm->out_nstokes);
     renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_S, vm->fine_sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
-    gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuPeekAtLastError() );
+    ( gpuDeviceSynchronize() );
 
-    gpuErrchk(cudaMemcpy( vm->offsets, vm->d_offsets, vm->offsets_size, cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( vm->scales,  vm->d_scales,  vm->scales_size,  cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( vm->Cscaled, vm->d_Cscaled, vm->Cscaled_size, cudaMemcpyDeviceToHost ));
+    (gpuMemcpy( vm->offsets, vm->d_offsets, vm->offsets_size, gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( vm->scales,  vm->d_scales,  vm->scales_size,  gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( vm->Cscaled, vm->d_Cscaled, vm->Cscaled_size, gpuMemcpyDeviceToHost ));
 
     unsigned int p;
     for (p = 0; p < vm->npointing; p++)
@@ -708,10 +711,10 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
  */
 void vmPushPolIdxLists( vcsbeam_context *vm )
 {
-    cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
-    cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polQ_idxs) failed" );
-    cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
-    cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polP_idxs) failed" );
+    gpuMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, gpuMemcpyHostToDevice );
+    gpuCheckErrors( "vmMemcpyPolIdxLists: gpuMemcpy(polQ_idxs) failed" );
+    gpuMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, gpuMemcpyHostToDevice );
+    gpuCheckErrors( "vmMemcpyPolIdxLists: gpuMemcpy(polP_idxs) failed" );
 }
 
 /**
@@ -722,8 +725,8 @@ void vmPushPolIdxLists( vcsbeam_context *vm )
 float *create_pinned_data_buffer( size_t size )
 {
     float *ptr;
-    cudaMallocHost( &ptr, size );
-    cudaCheckErrors("cudaMallocHost data_buffer fail");
+    gpuMallocHost( &ptr, size );
+    gpuCheckErrors("gpuMallocHost data_buffer fail");
 
     // Initialise to zeros
     memset( ptr, 0, size );
@@ -791,11 +794,11 @@ void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsampl
  */
 void allocate_input_output_arrays( void **data, void **d_data, size_t size )
 {
-    cudaMallocHost( data, size );
-    cudaCheckErrors( "cudaMallocHost() failed" );
+    gpuMallocHost( data, size );
+    gpuCheckErrors( "gpuMallocHost() failed" );
 
-    cudaMalloc( d_data, size );
-    cudaCheckErrors( "cudaMalloc() failed" );
+    gpuMalloc( d_data, size );
+    gpuCheckErrors( "gpuMalloc() failed" );
 }
 
 /**
@@ -805,9 +808,9 @@ void allocate_input_output_arrays( void **data, void **d_data, size_t size )
  */
 void free_input_output_arrays( void *data, void *d_data )
 {
-    cudaFreeHost( data );
-    cudaCheckErrors( "cudaFreeHost() failed" );
+    gpuFreeHost( data );
+    gpuCheckErrors( "gpuFreeHost() failed" );
 
-    cudaFree( d_data );
-    cudaCheckErrors( "cudaFree() failed" );
+    gpuFree( d_data );
+    gpuCheckErrors( "gpuFree() failed" );
 }
