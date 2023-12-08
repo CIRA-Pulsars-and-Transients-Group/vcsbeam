@@ -21,7 +21,7 @@
  * @todo Remove this function and replace all calls to it with calls to CUDA
  *       error functions.
  */
-/*inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+/*inline void gpuAssert(gpuError_t code, const char *file, int line, bool abort=true)
 {
     if (code != 0)
     {
@@ -76,7 +76,7 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
     __syncthreads();
 
     // Convert input data to complex double
-    cuDoubleComplex v; // Complex voltage
+    gpuDoubleComplex v; // Complex voltage
     uint8_t sample = data[v_IDX(s,c,i,nc,ni)];
     v = UCMPLX4_TO_CMPLX_FLT(sample);
 
@@ -120,9 +120,9 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
  * \f$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\f$
  */
 __global__ void vmApplyJ_kernel( void            *data,
-                                 cuDoubleComplex *J,
-                                 cuDoubleComplex *Jv_Q,
-                                 cuDoubleComplex *Jv_P,
+                                 gpuDoubleComplex *J,
+                                 gpuDoubleComplex *Jv_Q,
+                                 gpuDoubleComplex *Jv_P,
                                  uint32_t      *polQ_idxs,
                                  uint32_t      *polP_idxs,
                                  int npol,
@@ -151,7 +151,7 @@ __global__ void vmApplyJ_kernel( void            *data,
     int iQ   = polQ_idxs[ant]; /* The input index for the Q pol for this antenna */
     int iP   = polP_idxs[ant]; /* The input index for the P pol for this antenna */
 
-    cuDoubleComplex vq, vp;
+    gpuDoubleComplex vq, vp;
     // Convert input data to complex float
     if (datatype == VM_INT4)
     {
@@ -161,7 +161,7 @@ __global__ void vmApplyJ_kernel( void            *data,
     }
     else if (datatype == VM_DBL)
     {
-        cuDoubleComplex *v = (cuDoubleComplex *)data;
+        gpuDoubleComplex *v = (gpuDoubleComplex *)data;
         vq = v[v_IDX(s,c,iQ,nc,ni)];
         vp = v[v_IDX(s,c,iP,nc,ni)];
     }
@@ -187,7 +187,7 @@ __global__ void vmApplyJ_kernel( void            *data,
                     gpuCreal(J[J_IDX(p,i,c,0,1,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,0,1,nant,nc,npol)]),
                     gpuCreal(J[J_IDX(p,i,c,1,0,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,1,0,nant,nc,npol)]),
                     gpuCreal(J[J_IDX(p,i,c,1,1,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,1,1,nant,nc,npol)]) );
-            cuDoubleComplex *v = (cuDoubleComplex *)data;
+            gpuDoubleComplex *v = (gpuDoubleComplex *)data;
             printf( "v[Q=%3d,P=%3d] = [%5.3lf,%5.3lf]; [%5.3lf,%5.3lf]\n",
                     polQ_idxs[i], polP_idxs[i],
                     gpuCreal( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ), gpuCimag( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ),
@@ -235,14 +235,14 @@ __global__ void vmApplyJ_kernel( void            *data,
  * The expected thread configuration is
  * \f$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\f$
  */
-__global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
-                                 cuDoubleComplex *Jv_P,
-                                 cuDoubleComplex *phi,
+__global__ void vmBeamform_kernel( gpuDoubleComplex *Jv_Q,
+                                 gpuDoubleComplex *Jv_P,
+                                 gpuDoubleComplex *phi,
                                  double invw,
                                  int p,
                                  int soffset,
                                  int nchunk,
-                                 cuDoubleComplex *e,
+                                 gpuDoubleComplex *e,
                                  float *S,
                                  int npol,
                                  int nstokes )
@@ -264,11 +264,11 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     // Organise dynamically allocated shared arrays (see tag 11NSTATION for kernel call)
     extern __shared__ double arrays[];
 
-    cuDoubleComplex *ex  = (cuDoubleComplex *)(&arrays[1*nant]);
-    cuDoubleComplex *ey  = (cuDoubleComplex *)(&arrays[3*nant]);
-    cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[5*nant]);
-    cuDoubleComplex *Nxy = (cuDoubleComplex *)(&arrays[7*nant]);
-    cuDoubleComplex *Nyy = (cuDoubleComplex *)(&arrays[9*nant]);
+    gpuDoubleComplex *ex  = (gpuDoubleComplex *)(&arrays[1*nant]);
+    gpuDoubleComplex *ey  = (gpuDoubleComplex *)(&arrays[3*nant]);
+    gpuDoubleComplex *Nxx = (gpuDoubleComplex *)(&arrays[5*nant]);
+    gpuDoubleComplex *Nxy = (gpuDoubleComplex *)(&arrays[7*nant]);
+    gpuDoubleComplex *Nyy = (gpuDoubleComplex *)(&arrays[9*nant]);
     // (Nyx is not needed as it's degenerate with Nxy)
 
     // Calculate the beam and the noise floor
@@ -277,13 +277,13 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     Apparently the different compilers and architectures are treating what were
     unintialised variables very differently */
 
-    ex[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
-    ey[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
+    ex[ant]  = make_gpuDoubleComplex( 0.0, 0.0 );
+    ey[ant]  = make_gpuDoubleComplex( 0.0, 0.0 );
 
-    Nxx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
-    Nxy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
-    //Nyx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
-    Nyy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
+    Nxx[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
+    Nxy[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
+    //Nyx[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
+    Nyy[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
     __syncthreads();
 
     // Calculate beamform products for each antenna, and then add them together
@@ -318,7 +318,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     {
         float bnXX = DETECT(ex[0]) - gpuCreal(Nxx[0]);
         float bnYY = DETECT(ey[0]) - gpuCreal(Nyy[0]);
-        cuDoubleComplex bnXY = gpuCsub( gpuCmul( ex[0], gpuConj( ey[0] ) ),
+        gpuDoubleComplex bnXY = gpuCsub( gpuCmul( ex[0], gpuConj( ey[0] ) ),
                                     Nxy[0] );
 
         // Stokes I, Q, U, V:
@@ -521,7 +521,7 @@ void vmApplyJChunk( vcsbeam_context *vm )
     {
         vmApplyJ_kernel<<<chan_samples, stat, 0, vm->streams[p]>>>(
                 vm->d_v,
-                (cuDoubleComplex *)vm->d_J,
+                (gpuDoubleComplex *)vm->d_J,
                 vm->d_Jv_Q,
                 vm->d_Jv_P,
                 vm->d_polQ_idxs,
@@ -644,7 +644,7 @@ void vmPullS( vcsbeam_context *vm )
  *
  * @todo Remove prepare_detected_beam() and use a "host buffer" instead.
  */
-void prepare_detected_beam( cuDoubleComplex ****detected_beam,
+void prepare_detected_beam( gpuDoubleComplex ****detected_beam,
                    mpi_psrfits *mpfs, vcsbeam_context *vm )
 {
     // Get shortcut variables
@@ -738,23 +738,23 @@ float *create_pinned_data_buffer( size_t size )
  *
  * @todo Remove the function create_detected_beam().
  */
-cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
+gpuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
 // Allocate memory for complex weights matrices
 {
     int p, s, ch; // Loop variables
-    cuDoubleComplex ****array;
+    gpuDoubleComplex ****array;
 
-    array = (cuDoubleComplex ****)malloc( npointing * sizeof(cuDoubleComplex ***) );
+    array = (gpuDoubleComplex ****)malloc( npointing * sizeof(gpuDoubleComplex ***) );
     for (p = 0; p < npointing; p++)
     {
-        array[p] = (cuDoubleComplex ***)malloc( nsamples * sizeof(cuDoubleComplex **) );
+        array[p] = (gpuDoubleComplex ***)malloc( nsamples * sizeof(gpuDoubleComplex **) );
 
         for (s = 0; s < nsamples; s++)
         {
-            array[p][s] = (cuDoubleComplex **)malloc( nchan * sizeof(cuDoubleComplex *) );
+            array[p][s] = (gpuDoubleComplex **)malloc( nchan * sizeof(gpuDoubleComplex *) );
 
             for (ch = 0; ch < nchan; ch++)
-                array[p][s][ch] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
+                array[p][s][ch] = (gpuDoubleComplex *)malloc( npol * sizeof(gpuDoubleComplex) );
         }
     }
     return array;
@@ -766,7 +766,7 @@ cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan
  *
  * @todo Remove the function destroy_detected_beam().
  */
-void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsamples, int nchan )
+void destroy_detected_beam( gpuDoubleComplex ****array, int npointing, int nsamples, int nchan )
 {
     int p, s, ch;
     for (p = 0; p < npointing; p++)

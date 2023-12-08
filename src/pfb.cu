@@ -291,7 +291,7 @@ __global__ void int2float( void *data, double scale )
  * The expected thread configuration is
  * \f$\langle\langle\langle(\text{nspectra},K),I\rangle\rangle\rangle\f$.
  */
-__global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdata, int *i_idx, pfb_flags flags )
+__global__ void pack_into_recombined_format( gpuFloatComplex *ffted, void *outdata, int *i_idx, pfb_flags flags )
 {
     // Parse the kernel signature, using the same mathematical notation
     // described above
@@ -306,7 +306,7 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
 
     int kprime   = (k + K/2) % K; // Puts the DC bin in the "middle"
 
-    cuFloatComplex  *b = ffted;
+    gpuFloatComplex  *b = ffted;
 
     // Calculate the idxs into b and X
     unsigned int b_idx = m*(K*I) + i*(K) + k;
@@ -327,13 +327,13 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
         else
             X[X_idx] = PACK_NIBBLES(im, re);
     }
-    else // Currently, default is cuDoubleComplex
+    else // Currently, default is gpuDoubleComplex
     {
-        cuDoubleComplex *X = (cuDoubleComplex *)outdata;
+        gpuDoubleComplex *X = (gpuDoubleComplex *)outdata;
         if (flags & PFB_IMAG_PART_FIRST)
-            X[X_idx] = make_cuDoubleComplex( re, im );
+            X[X_idx] = make_gpuDoubleComplex( re, im );
         else
-            X[X_idx] = make_cuDoubleComplex( im, re );
+            X[X_idx] = make_gpuDoubleComplex( im, re );
     }
 
     __syncthreads();
@@ -430,9 +430,9 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
         fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
         vm->datatype = VM_INT4;
     }
-    else // i.e., default is cuDoubleComplex
+    else // i.e., default is gpuDoubleComplex
     {
-        fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(cuDoubleComplex);
+        fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(gpuDoubleComplex);
         vm->datatype = VM_DBL;
     }
 
@@ -446,7 +446,7 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
          vm->vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
     fpfb->bytes_per_block = vm->vcs_metadata->voltage_block_size_bytes;
 
-    fpfb->weighted_overlap_add_size = vm->v->buffer_size * (sizeof(cuFloatComplex) / sizeof(char2)) / vm->chunks_per_second;
+    fpfb->weighted_overlap_add_size = vm->v->buffer_size * (sizeof(gpuFloatComplex) / sizeof(char2)) / vm->chunks_per_second;
     size_t filter_size = vm->analysis_filter->ncoeffs * sizeof(int);
 
     // Allocate memory for filter and copy across the filter coefficients,
@@ -481,12 +481,12 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
     fpfb->ninputs_per_cufft_batch = 32; // This seems to work, so I'll have to call cuFFT 256/32 = 8 times
     fpfb->cufft_batch_size = fpfb->nspectra_per_chunk * fpfb->ninputs_per_cufft_batch;
 
-    cufftResult res = cufftPlanMany( &(fpfb->plan), rank, &n,
+    gpufftResult res = gpufftPlanMany( &(fpfb->plan), rank, &n,
             inembed, 0, 0, NULL, 0, 0,  // <-- Here are all the ignored data layout parameters
-            CUFFT_C2C, fpfb->cufft_batch_size );
-    if (res != CUFFT_SUCCESS)
+            GPUFFT_C2C, fpfb->cufft_batch_size );
+    if (res != GPUFFT_SUCCESS)
     {
-        fprintf( stderr, "CUFFT error: Plan creation failed with error code %d\n", res );
+        fprintf( stderr, "GPUFFT error: Plan creation failed with error code %d\n", res );
         exit(EXIT_FAILURE);
     }
 
@@ -503,7 +503,7 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
  */
 void vmFreeForwardPFB( forward_pfb *fpfb )
 {
-    cufftDestroy( fpfb->plan );
+    gpufftDestroy( fpfb->plan );
     (gpuFreeHost( fpfb->filter_coeffs ));
     (gpuFreeHost( fpfb->vcs_data ));
     (gpuFreeHost( fpfb->i_output_idx ));
@@ -607,7 +607,7 @@ void vmFPGARoundingChunk( vcsbeam_context *vm )
     }
     else
     {
-        // Otherwise, just convert the ints to floats in preparation for the cuFFT
+        // Otherwise, just convert the ints to floats in preparation for the gpuFFT
         dim3 blocks( (2 * fpfb->nspectra_per_chunk * fpfb->I * fpfb->K) / 1024 ); // The factor of 2 is because each thread will deal with a single int, not a single int2
         dim3 threads( 1024 );
         double scale = 1.0/16384.0; // equivalent to the ">> 14" operation applied in fpga_rounding_and_demotion()
@@ -635,11 +635,11 @@ void vmFFTChunk( vcsbeam_context *vm )
     int batch;
     for (batch = 0; batch < fpfb->I / fpfb->ninputs_per_cufft_batch; batch++)
     {
-        cufftExecC2C(
+        gpufftExecC2C(
                 fpfb->plan,
                 fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
                 fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
-                CUFFT_FORWARD );
+                GPUFFT_FORWARD );
     }
     gpuDeviceSynchronize();
     ( gpuPeekAtLastError() );
@@ -930,7 +930,7 @@ __global__ void ipfb_kernel(
  * It is assumed that the inverse filter coefficients have already been loaded
  * to the GPU.
  */
-void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
+void cu_invert_pfb( gpuDoubleComplex ****detected_beam, int file_no,
                         int npointing, int nsamples, int nchan, int npol,
                         int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_vdif )
@@ -1017,11 +1017,11 @@ void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
     int ch, f, i;
 
     // Setup filter values:
-    cuDoubleComplex ft; // pre-calculated filter coeffs times twiddle factor
-    cuDoubleComplex cf; // temp variable for complex version of filter coeffs
+    gpuDoubleComplex ft; // pre-calculated filter coeffs times twiddle factor
+    gpuDoubleComplex cf; // temp variable for complex version of filter coeffs
     for (f = 0; f < filter->ncoeffs; f++)
     {
-        cf = make_cuDoubleComplex( filter->coeffs[f], 0.0 );
+        cf = make_gpuDoubleComplex( filter->coeffs[f], 0.0 );
         for (ch = 0; ch < filter->nchans; ch++)
         {
             i = filter->ncoeffs*ch + f;
