@@ -438,11 +438,12 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     }
 
     // Read in the necessary information from the header
-
+    // NOTE: assumes that the number of channels in the calibration solution
+    //       matches the number of channels being requested for processing
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
     uint32_t nant   = vm->cal_metadata->num_ants;
     uint32_t nchan  = vm->cal_metadata->num_corr_fine_chans_per_coarse;
-    uint32_t nChan  = nchan * vm->cal_metadata->num_metafits_coarse_chans;
+    uint32_t nChan  = nchan * vm->mpi_size; // = total number of fine channels REQUESTED to process
     uint32_t ninput = vm->cal_metadata->num_rf_inputs;
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
     uintptr_t vcs_nchan = vm->nfine_chan;
@@ -476,9 +477,9 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     {
         fprintf( stdout, "Warning: Calibration solution (%s) ", vm->cal.caldir );
         fprintf( stdout, "contains a different number (%d) ", channelCount );
-        fprintf( stdout, "than the expected (%d) channels.\n", nChan );
+        fprintf( stdout, "than the requested (%d) channels.\n", nChan );
         nChan = channelCount;
-        nchan = nChan / vm->cal_metadata->num_metafits_coarse_chans;
+        nchan = nChan / vm->mpi_size;
         interp_factor = vcs_nchan / nchan;
         fprintf( stdout, "Assuming calibration channels are "
                 "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
