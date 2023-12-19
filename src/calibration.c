@@ -459,6 +459,25 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     fread(&channelCount,      sizeof(uint32_t), 1, fp);
     fread(&polarizationCount, sizeof(uint32_t), 1, fp);
 
+#ifdef DEBUG
+    fprintf( stderr, "*** Reading Offringa-style solution, DEBUG ***\n" );
+    fprintf( stderr, "Quantities determined via vcsbeam context struct, DEBUG\n" );
+    fprintf( stderr, "nant = vm->cal_metadata->num_ants = %d\n", nant );
+    fprintf( stderr, "nchan = vm->cal_metadata->num_corr_fine_chans_per_coarse = %d\n", nchan );
+    fprintf( stderr, "nChan = nchan * vm->mpi_size = %d\n", nChan );
+    fprintf( stderr, "ninput = vm->cal_metadata->num_rf_inputs = %d\n", ninput );
+    fprintf( stderr, "nantpol = vm->cal_metadata->num_ant_pols = %d (should be 2)\n", nantpol );
+    fprintf( stderr, "vcs_nchan = vm->nfine_chan = %d\n", vcs_nchan );
+    fprintf( stderr, "interp_factor = vcs_nchan / nchan = %d\n", interp_factor );
+    fprintf( stderr, "nvispol = vm->cal_metadata->num_visibility_pols = %d (should be 4)\n", nvispol );
+
+    fprintf( stderr, "Quantities read from binary file, DEBUG\n" );
+    fprintf( stderr, "intervalCount = %d\n", intervalCount );
+    fprintf( stderr, "antennaCount = %d\n", antennaCount );
+    fprintf( stderr, "channelCount = %d\n", channelCount );
+    fprintf( stderr, "polarisationCount = %d\n", polarisationCount );
+#endif
+
     // Error-checking the info extracted from the header,
     // making sure it matches the metadata
     if (intervalCount > 1)
@@ -483,6 +502,11 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         interp_factor = vcs_nchan / nchan;
         fprintf( stdout, "Assuming calibration channels are "
                 "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
+#ifdef DEBUG
+    fprintf( stderr, "New nChan = %d\n", nChan );
+    fprintf( stderr, "New nchan = %d\n", nchan );
+    fprintf( stderr, "New interp_factor = %d\n", interp_factor );
+#endif
     }
     if (coarse_chan_idx >= (int)vm->cal_metadata->num_metafits_coarse_chans)
     {
@@ -491,6 +515,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stderr, "available in the calibration solution (%s)\n", vm->cal.caldir );
         exit(EXIT_FAILURE);
     }
+
 
     // Iterate through antennas and channels
     uint32_t ant; // The antenna number (as defined in metafits "Antenna")
