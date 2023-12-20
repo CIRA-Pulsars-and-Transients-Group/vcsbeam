@@ -1036,7 +1036,8 @@ void vmPushJ( vcsbeam_context *vm )
 #ifdef DEBUG
     printf("J_size_bytes = %lu\n", vm->J_size_bytes);
     uint8_t *dummy = (uint8_t *)(vm->J);
-    for (uintptr_t byte = 0; byte < vm->J_size_bytes; byte++)
+    uintptr_t byte;
+    for (byte = 0; byte < vm->J_size_bytes; byte++)
     {
         if (byte % 16 == 0)  printf("\n");
         if (byte % 8 == 0)  printf(" ");
