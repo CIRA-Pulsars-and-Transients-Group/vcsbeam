@@ -11,8 +11,276 @@
 
 #include <mwalib.h>
 #include <cuComplex.h>
+#include <fitsio.h>
 
 #include "vcsbeam.h"
+
+/**
+ * Loads a mwa_hyperdrive calibration solution.
+ *
+ * @return An array of Jones matrices (`vm&rarr;D`)
+ *
+ * Reads in the mwa_hyperdrive solution from the FITS file in the
+ * `vm&rarr;cal.caldir` directory. It only reads the solution for the coarse
+ * channel specified in `vm&rarr;coarse_chan_idxs_to_process[0]`. Flagged
+ * channels and flagged antennas are set to zero.
+ *
+ * The Jones matrices, \f$D\f$, are output in the \f$(Q,P)\f$ basis:
+ * \f[\begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}.\f]
+ *
+ * This function assumes that a buffer for `vm&rarr;D` has already been
+ * allocated.
+ */
+void vmLoadHyperdriveSolution( vcsbeam_context *vm )
+{
+    // Shorthand variables
+    const char *caldir       = vm->cal.caldir;
+    const char *solution_path = vm->cal.calfile;
+    int coarse_chan_idx = vm->coarse_chan_idx;
+
+    uintptr_t nant    = vm->cal_metadata->num_ants;
+    uintptr_t ninputs = vm->cal_metadata->num_rf_inputs;
+    uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+    uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
+    uintptr_t nchan   = vm->cal_metadata->num_corr_fine_chans_per_coarse;
+    uintptr_t vcs_nchan = vm->nfine_chan;
+    uintptr_t interp_factor = vcs_nchan / nchan;
+
+    // Write out the channel number
+    if (vm->log)
+    {
+        sprintf( vm->log_message, "Receiver channel #%lu",
+                vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number );
+        logger_timed_message( vm->log, vm->log_message );
+        sprintf( vm->log_message, "Interpolation factor: %lu", interp_factor );
+        logger_timed_message( vm->log, vm->log_message );
+    }
+
+    // Temporary arrays for DI Jones matrices ('Dd')
+    cuDoubleComplex ***Dd = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
+
+    // Allocate memory for the Jones arrays
+    uintptr_t ant, ch;
+    for (ant = 0; ant < nant; ant++)
+    {
+        Dd[ant] = (cuDoubleComplex **)calloc( nchan, sizeof(cuDoubleComplex *) );
+        for (ch = 0; ch < nchan; ch++)
+            // In a hyperdrive solution, each Jones matrix (for given ant,ch pair)
+            // is expressed as 8x doubles which is equivalent to 4x cuDoubleComplex
+            Dd[ant][ch] = (cuDoubleComplex *)calloc( nvispol, sizeof(cuDoubleComplex) );
+    }
+
+    // Read in the DI Jones file
+    read_hyperdrive_file(Dd, nant, nchan, solution_path);
+
+    // Make the master MPI thread print out the antenna names of both
+    // obs and cal metafits. "Header" printed here, actual numbers
+    // printed inside antenna for loop below
+    if (vm->log)
+    {
+        if (vm->log->world_rank == 0)
+        {
+            logger_message( vm->log, "" );
+            logger_timed_message( vm->log, "Calibration metafits info:" );
+            logger_timed_message( vm->log, "--------------------------" );
+            logger_timed_message( vm->log, "|Input| Ant |Tile ID| TileName |Pol|VCS order|" );
+
+            uintptr_t i;
+            for (i = 0; i < ninputs; i++)
+            {
+                sprintf( vm->log_message, "| %3u | %3u | %5u | %8s | %c |  %3u   |",
+                        vm->cal_metadata->rf_inputs[i].input,
+                        vm->cal_metadata->rf_inputs[i].ant,
+                        vm->cal_metadata->rf_inputs[i].tile_id,
+                        vm->cal_metadata->rf_inputs[i].tile_name,
+                        *(vm->cal_metadata->rf_inputs[i].pol),
+                        vm->cal_metadata->rf_inputs[i].vcs_order
+                       );
+                logger_timed_message( vm->log, vm->log_message );
+            }
+
+            logger_message( vm->log, "" );
+        }
+    }
+
+    // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
+    // Do this for each of the _voltage_ observation's fine channels (use
+    // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
+    uintptr_t cal_ch, obs_ant, dd_idx;
+    uintptr_t d_idx;
+    uintptr_t i; // (i)dx into rf_inputs
+    Rfinput *obs_rfinput, *cal_rfinput;
+    for (i = 0; i < ninputs; i++)
+    {
+        // Order the Jones matrices by the TARGET OBSERVATION metadata
+        // (not the calibration metadata)
+        obs_rfinput = &(vm->obs_metadata->rf_inputs[i]);
+
+        // Only have to loop once per tile, so skip the 'Y's
+        if (*(obs_rfinput->pol) == 'Y')
+            continue;
+
+        // Match up antenna indices between the cal and obs metadata
+        cal_rfinput = find_matching_rf_input( vm->cal_metadata, obs_rfinput );
+        obs_ant = obs_rfinput->ant;
+        dd_idx  = cal_rfinput->input/2;
+
+        for (ch = 0; ch < vcs_nchan; ch++)
+        {
+            // Determine which calibration channel (chanblock) are we using
+            // for this particular VCS fine channel
+            cal_ch = ch / interp_factor;
+#ifdef DEBUG
+            if (i == 0)
+            {
+                fprintf( stderr, "Will use solution for chanblk=%d for vcs_chan=%d\n", cal_ch, ch );
+            }
+#endif
+            // A pointer to the (first element of) the Jones matrix for this
+            // antenna and channel (d_idx)
+            d_idx = D_IDX(obs_ant, cal_ch, 0, 0, vcs_nchan, nantpol);
+
+            cp2x2( Dd[dd_idx], &(vm->D[d_idx]) );
+        }
+    }
+
+    // Free memory for temporary arrays
+    for (ant = 0; ant < nant; ant++)
+    {
+        free( Dd[ant] );
+    }
+    free( Dd );
+}
+
+/**
+ * Reads in an mwa_hyperdrive solutions file.
+ *
+ * @param[out] Dd    The buffer to store the read-in matrices
+ * @param[in]  nant  The number of antennas to read in
+ * @param      fname The name of the file to read
+ *
+ * Read in a mwa_hyperdrive file and return the direction independent Jones matrix
+ * for each antenna. This implements Eq. (29) in Ord et al. (2019).
+ *
+ */
+void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch, char *fname )
+{
+    fitsfile *fptr;
+    int status; // FITSIO status record
+    int i; // loop counter
+
+    // Open the FITS file for reading
+    status = 0;
+    if ( fits_open_file( &fptr, fname, READONLY, &status ) )
+    {
+        if (vm->log)
+        {
+            sprintf( vm->log_message, "Failed to open hyperdrive solution FITS file: %s", fname );
+            logger_timed_message( vm->log, vm->log_message );
+        }
+        fits_report_error( stderr, status );
+        exit( status );
+    }
+
+    // The solutions are in a HDU with EXTNAME = 'SOLUTIONS'
+    if ( fits_movnam_hdu(fptr, NULL, "SOLUTIONS", 0, &status) )
+    {
+        if (vm->log)
+        {
+            sprintf( vm->log_message, "Unable to move to solution HDU!", fname );
+            logger_timed_message( vm->log, vm->log_message );
+        }
+        fits_report_error( stderr, status );
+        exit( status );
+    }
+
+    /* The SOLUTIONS HDU is an ImageHDU with 4 dimensions: ntimblk, nant, nchanblk, Jelem
+     * where Jelem is actually 8 doubles corresponding to the real/imag parts of
+     * [Dpp, Dpq, Dqp, Dqq] respectively.
+     *
+     * We only ever care about the first timeblk, but need to map from the chanblk since
+     * there will almost always be some kind of downsampling in frequency done during
+     * calibration.
+     */
+    const int EXPECTED_NAXIS = 4;
+    int nfound;
+    long int naxes[EXPECTED_NAXIS];
+    if ( fits_read_keys_lng(fptr, "NAXIS", 1, EXPECTED_NAXIS, naxes, &nfound, &status) )
+    {
+        if (vm->log)
+        {
+            sprintf( vm->log_message, "Could not read NAXIS keywords in solution HDU!", fname );
+            logger_timed_message( vm->log, vm->log_message );
+        }
+        fits_report_error( stderr, status );
+        exit( status );
+    }
+    if ( nfound != EXPECTED_NAXIS )
+    {
+        if (vm->log)
+        {
+            sprintf( vm->log_message, "Did not recover expected number of axes: expected=%d found=%d\n", EXPECTED_NAXIS, nfound );
+            logger_timed_message( vm->log, vm->log_message );
+        }
+        exit( 1 );
+    }
+
+#ifdef DEBUG
+    fprintf( stderr, "There are %d axes found in solutions HDU\n", nfound );
+    for (i = 0; i < nfound; i++)
+    {
+        fprintf( stderr, "    NAXIS%d size = %ld\n", ii, naxes[ii] );
+    }
+#endif
+
+    // Set up some variables for reading in
+    double J[NDBL_PER_JONES]; // "Raw" Jones matrix, allow space to read in 8 doubles
+    uintptr_t ant, ch;
+    long int fpixel[EXPECTED_NAXIS];
+
+    // Set starting position to 0th cube coordinate
+    for (i = 0; i < EXPECTED_NAXIS; i++)
+    {
+        fpixel[i] = 0;
+    }
+
+    // Loop through antennas and chanblks to populate the Jones matrices
+    for (ant = 0; ant < nant; ant++)
+    {
+        for (ch = 0; i < nchan; ch++)
+        {
+            fpixel[1] = ch;
+            fpixel[2] = ant;
+            // For the first timeblk (fpixel[3] = 0), for antenna (fpixel[2] = ant),
+            // for channel (fpixel[1] = ch), read 8 doubles worth of data from
+            // the first element (fpixel[0] = 0)
+            if ( fits_read_pix(fptr, TDOUBLE, fpixel, 8, NULL, &J, NULL, &status) )
+            {
+                if (vm->log)
+                {
+                    sprintf( vm->log_message, "Unable to read DI Jones elements for ant=%d chanblk=%d\n", ant, ch );
+                    logger_timed_message( vm->log, vm->log_message );
+                }
+                exit( status );
+            }
+            // Copy the individual Jones matrix elements
+            // (after type-casting the 8 doubles as 4 complex-doubles)
+            cp2x2( (cuDoubleComplex *)J, Dd[ant][ch] );
+        }
+    }
+
+    // Close the solution file
+    if ( fits_close_file(fptr, &status) )
+    {
+        if (vm->log)
+        {
+            sprintf( vm->log_message, "Failed to close hyperdrive solution FITS file", fname );
+            logger_timed_message( vm->log, vm->log_message );
+        }
+        fits_report_error( stderr, status );
+        exit( status );
+    }
+}
 
 /**
  * Loads a Real Time System (RTS) calibration solution.
