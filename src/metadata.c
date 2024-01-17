@@ -233,8 +233,8 @@ void vmBindObsData(
  *
  * @param vm The VCSBeam context struct
  * @param caldir The directory containing RTS solution files, OR the path of
- *        an Offringa-style calibration solution file
- * @param cal_type Either `CAL_RTS` or `CAL_OFFRINGA`
+ *        an Offringa-style/Hyperdrive calibration solution file
+ * @param cal_type Either `CAL_HYPERDRIVE`, `CAL_RTS` or `CAL_OFFRINGA`
  * @param use_bandpass Whether to include the Bandpass information (relevant
  *        for RTS solutions only)
  * @param flags_file A file containing names of (extra) tiles to be flagged,
@@ -278,6 +278,8 @@ void vmReadCalibration( vcsbeam_context *vm )
         vmLoadRTSSolution( vm );
     else if (vm->cal.cal_type == CAL_OFFRINGA)
         vmLoadOffringaSolution( vm );
+    else if (vm->cal.cal_type == CAL_HYPERDRIVE)
+        vmLoadHyperdriveSolution( vm );
 
     // Flag extra tiles that need flagging
     vmSetCustomTileFlags( vm );
