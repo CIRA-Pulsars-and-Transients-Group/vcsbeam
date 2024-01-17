@@ -19,6 +19,8 @@
 
 #include <mpi.h>
 
+#include <fitsio.h>
+
 #include <mwalib.h>
 #include <star/pal.h>
 #include <star/palmac.h>
@@ -202,7 +204,7 @@ typedef struct calibration_t
 extern "C" {
 #endif
 
-
+void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch, char *fname );
 void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
         MetafitsMetadata *cal_metadata, char *filename );
@@ -795,6 +797,7 @@ void vmParseFlaggedTilenamesFile( char *filename, calibration *cal ); // (define
 void vmSetCustomTileFlags( vcsbeam_context *vm ); // (defined in calibration.c);
 
 // (defined in calibration.c:)
+void vmLoadHyperdriveSolution( vcsbeam_context *vm );
 void vmLoadRTSSolution( vcsbeam_context *vm );
 void vmLoadOffringaSolution( vcsbeam_context *vm );
 
