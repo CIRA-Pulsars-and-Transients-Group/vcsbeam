@@ -169,9 +169,10 @@ void logger_report_all_stats( logger *log );
  *******************/
 
 // Calibration solution types
-#define CAL_NONE      0
-#define CAL_RTS       1
-#define CAL_OFFRINGA  2
+#define CAL_NONE        0
+#define CAL_RTS         1
+#define CAL_OFFRINGA    2
+#define CAL_HYPERDRIVE  3
 
 #define OFFRINGA_HEADER_SIZE_BYTES 48
 #define JONES_SIZE_BYTES           64  /* (4 elements) * (2 re/im) * (8 bytes per double) */
@@ -186,7 +187,7 @@ typedef struct calibration_t
 {
     char  *metafits;           // Filename of the metafits file
     char  *caldir;             // Location of calibration data
-    int    cal_type;           // Either RTS or OFFRINGA
+    int    cal_type;           // Either HYPERDRIVE, RTS or OFFRINGA
     char  *ref_ant;            // Reference antenna for calibration phases
     bool   keep_cross_terms;   // Include PQ and QP of calibration Jones matrices
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where
