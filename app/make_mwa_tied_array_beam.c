@@ -138,7 +138,17 @@ int main(int argc, char **argv)
 
     unsigned int p;
     double mjd, sec_offset;
-    mjd = vm->obs_metadata->sched_start_mjd;
+    sprintf( vm->log_message, "first gps second is (%i)", 
+            vm->gps_seconds_to_process[0]);
+    logger_timed_message( vm->log, vm->log_message );
+    sec_offset = vm->gps_seconds_to_process[0] - (vm->obs_metadata->sched_start_gps_time_ms / 1000.0);
+    sprintf( vm->log_message, "time offset is (%f)",
+            sec_offset);
+    logger_timed_message( vm->log, vm->log_message );
+    mjd = vm->obs_metadata->sched_start_mjd + (sec_offset / 86400.0);
+    sprintf( vm->log_message, "Obs start mjd is (%f) and obs data start mjd is (%f)",
+            vm->obs_metadata->sched_start_mjd, mjd);
+    logger_timed_message( vm->log, vm->log_message );
     for (p = 0; p < vm->npointing; p++)
         calc_beam_geom( vm->ras_hours[p], vm->decs_degs[p], mjd, &beam_geom_vals[p] );
 

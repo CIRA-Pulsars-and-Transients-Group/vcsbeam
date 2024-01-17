@@ -178,6 +178,7 @@ void vmBindObsData(
     // Construct the gps second and coarse chan idx arrays
     vm->gps_seconds_to_process = (uint32_t *)malloc( vm->num_gps_seconds_to_process * sizeof(uint32_t) );
     vm->coarse_chan_idxs_to_process = (int *)malloc( vm->num_coarse_chans_to_process * sizeof(int) );
+    vm->cal_coarse_chan_idxs_to_process = (int *)malloc( vm->num_coarse_chans_to_process * sizeof(int) );
 
     int g;
     for (g = 0; g < vm->num_gps_seconds_to_process; g++)
@@ -189,6 +190,7 @@ void vmBindObsData(
     for (c = 0; c < num_coarse_chans_to_process; c++)
     {
         vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
+	vm->cal_coarse_chan_idxs_to_process[c] = c;
     }
 
     // Copy across the data directory
@@ -321,6 +323,7 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     // Free manually created arrays
     free( vm->gps_seconds_to_process );
     free( vm->coarse_chan_idxs_to_process );
+    free( vm->cal_coarse_chan_idxs_to_process );
 
     // Free mwalib structs
     mwalib_metafits_metadata_free( vm->obs_metadata );
