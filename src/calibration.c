@@ -147,6 +147,10 @@ void vmLoadHyperdriveSolution( vcsbeam_context *vm )
     // Free memory for temporary arrays
     for (ant = 0; ant < nant; ant++)
     {
+        for (ch = 0; ch < nchan; ch++)
+        {
+            free( Dd[ant][ch] );
+        }
         free( Dd[ant] );
     }
     free( Dd );
