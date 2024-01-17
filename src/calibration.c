@@ -34,8 +34,7 @@
 void vmLoadHyperdriveSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    const char *caldir       = vm->cal.caldir;
-    const char *solution_path = vm->cal.calfile;
+    const char *solution_path = vm->cal.caldir;
     int coarse_chan_idx = vm->coarse_chan_idx;
 
     uintptr_t nant    = vm->cal_metadata->num_ants;
