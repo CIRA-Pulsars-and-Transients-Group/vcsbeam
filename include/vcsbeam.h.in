@@ -206,6 +206,7 @@ extern "C" {
 #endif
 
 void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch, char *fname );
+void get_hyperdrive_nchanblk( char *fname, uintptr_t *nchanblk );
 void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname );
 void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
         MetafitsMetadata *cal_metadata, char *filename );

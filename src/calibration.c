@@ -34,17 +34,21 @@
 void vmLoadHyperdriveSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    const char *solution_path = vm->cal.caldir;
     int coarse_chan_idx = vm->coarse_chan_idx;
-
     uintptr_t nant    = vm->cal_metadata->num_ants;
     uintptr_t ninputs = vm->cal_metadata->num_rf_inputs;
     uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t nchan   = vm->cal_metadata->num_corr_fine_chans_per_coarse;
-    uintptr_t vcs_nchan = vm->nfine_chan;
-    uintptr_t interp_factor = vcs_nchan / nchan;
+    //uintptr_t nchan   = vm->cal_metadata->num_corr_fine_chans_per_coarse; // TODO: actually, we should grab this directly from the solution file itself, since averaging may have happened during calibration that would not be represented in the metafits file
+    uintptr_t vcs_nchan = vm->nfine_chan; // normally = 128
+    uintptr_t nchan;
+    uintptr_t interp_factor;
 
+    // Get the number of "channels" from the actual solution file itself,
+    // rather than the metafits file, since averaging may have occurred
+    get_hyperdrive_nchanblk( vm->cal.caldir, &nchan );
+    interp_factor = vcs_nchan / nchan;
+    
     // Write out the channel number
     if (vm->log)
     {
@@ -70,7 +74,7 @@ void vmLoadHyperdriveSolution( vcsbeam_context *vm )
     }
 
     // Read in the DI Jones file
-    read_hyperdrive_file(Dd, nant, nchan, solution_path);
+    read_hyperdrive_file(Dd, nant, nchan, vm->cal.caldir);
 
     // Make the master MPI thread print out the antenna names of both
     // obs and cal metafits. "Header" printed here, actual numbers
@@ -132,14 +136,14 @@ void vmLoadHyperdriveSolution( vcsbeam_context *vm )
 #ifdef DEBUG
             if (i == 0)
             {
-                fprintf( stderr, "Will use solution for chanblk=%d for vcs_chan=%d\n", cal_ch, ch );
+                fprintf( stderr, "Will use solution for chanblk=%lu for vcs_chan=%lu\n", cal_ch, ch );
             }
 #endif
             // A pointer to the (first element of) the Jones matrix for this
             // antenna and channel (d_idx)
             d_idx = D_IDX(obs_ant, cal_ch, 0, 0, vcs_nchan, nantpol);
 
-            cp2x2( Dd[dd_idx], &(vm->D[d_idx]) );
+            cp2x2( Dd[dd_idx][ch], &(vm->D[d_idx]) );
         }
     }
 
@@ -153,6 +157,46 @@ void vmLoadHyperdriveSolution( vcsbeam_context *vm )
         free( Dd[ant] );
     }
     free( Dd );
+}
+
+void get_hyperdrive_nchanblk( char *fname, uintptr_t *nchanblk )
+{
+    fitsfile *fptr;
+    int status; // FITSIO status record
+
+    // Open the FITS file for reading
+    status = 0;
+    if ( fits_open_file( &fptr, fname, READONLY, &status ) )
+    {
+        fprintf( stderr, "Failed to open hyperdrive solution FITS file: %s", fname );
+        fits_report_error( stderr, status );
+        exit( status );
+    }
+
+    // The solutions are in a HDU with EXTNAME = 'SOLUTIONS'
+    if ( fits_movnam_hdu(fptr, IMAGE_HDU, "SOLUTIONS", 0, &status) )
+    {
+        fprintf( stderr, "Unable to move to solution HDU!" );
+        fits_report_error( stderr, status );
+        exit( status );
+    }
+    
+    // By the hyperdrive solutions format definition, the number of channel blocks
+    // is in NAXIS2 of the SOLUTIONS HDU
+    if ( fits_read_key(fptr, TLONG, "NAXIS2", &nchanblk, NULL, &status) )
+    {
+        fprintf( stderr, "Could not read NAXIS2 key in solution HDU!" );
+        fits_report_error( stderr, status );
+        exit( status );
+    }
+
+    // Close the solution file
+    if ( fits_close_file(fptr, &status) )
+    {
+        fprintf( stderr, "Failed to close hyperdrive solution FITS file!");
+        fits_report_error( stderr, status );
+        exit( status );
+    }
 }
 
 /**
@@ -176,23 +220,15 @@ void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch,
     status = 0;
     if ( fits_open_file( &fptr, fname, READONLY, &status ) )
     {
-        if (vm->log)
-        {
-            sprintf( vm->log_message, "Failed to open hyperdrive solution FITS file: %s", fname );
-            logger_timed_message( vm->log, vm->log_message );
-        }
+        fprintf( stderr, "Failed to open hyperdrive solution FITS file: %s", fname );
         fits_report_error( stderr, status );
         exit( status );
     }
 
     // The solutions are in a HDU with EXTNAME = 'SOLUTIONS'
-    if ( fits_movnam_hdu(fptr, NULL, "SOLUTIONS", 0, &status) )
+    if ( fits_movnam_hdu(fptr, IMAGE_HDU, "SOLUTIONS", 0, &status) )
     {
-        if (vm->log)
-        {
-            sprintf( vm->log_message, "Unable to move to solution HDU!", fname );
-            logger_timed_message( vm->log, vm->log_message );
-        }
+        fprintf( stderr, "Unable to move to solution HDU!" );
         fits_report_error( stderr, status );
         exit( status );
     }
@@ -210,21 +246,13 @@ void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch,
     long int naxes[EXPECTED_NAXIS];
     if ( fits_read_keys_lng(fptr, "NAXIS", 1, EXPECTED_NAXIS, naxes, &nfound, &status) )
     {
-        if (vm->log)
-        {
-            sprintf( vm->log_message, "Could not read NAXIS keywords in solution HDU!", fname );
-            logger_timed_message( vm->log, vm->log_message );
-        }
+        fprintf( stderr, "Could not read NAXIS keywords in solution HDU!" );
         fits_report_error( stderr, status );
         exit( status );
     }
     if ( nfound != EXPECTED_NAXIS )
     {
-        if (vm->log)
-        {
-            sprintf( vm->log_message, "Did not recover expected number of axes: expected=%d found=%d\n", EXPECTED_NAXIS, nfound );
-            logger_timed_message( vm->log, vm->log_message );
-        }
+        fprintf( stderr, "Did not recover expected number of axes: expected=%d found=%d\n", EXPECTED_NAXIS, nfound );
         exit( 1 );
     }
 
@@ -232,7 +260,7 @@ void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch,
     fprintf( stderr, "There are %d axes found in solutions HDU\n", nfound );
     for (i = 0; i < nfound; i++)
     {
-        fprintf( stderr, "    NAXIS%d size = %ld\n", ii, naxes[ii] );
+        fprintf( stderr, "    NAXIS%d size = %ld\n", i, naxes[i] );
     }
 #endif
 
@@ -250,7 +278,7 @@ void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch,
     // Loop through antennas and chanblks to populate the Jones matrices
     for (ant = 0; ant < nant; ant++)
     {
-        for (ch = 0; i < nchan; ch++)
+        for (ch = 0; ch < nch; ch++)
         {
             fpixel[1] = ch;
             fpixel[2] = ant;
@@ -259,11 +287,7 @@ void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch,
             // the first element (fpixel[0] = 0)
             if ( fits_read_pix(fptr, TDOUBLE, fpixel, 8, NULL, &J, NULL, &status) )
             {
-                if (vm->log)
-                {
-                    sprintf( vm->log_message, "Unable to read DI Jones elements for ant=%d chanblk=%d\n", ant, ch );
-                    logger_timed_message( vm->log, vm->log_message );
-                }
+                fprintf( stderr, "Unable to read DI Jones elements for ant=%lu chanblk=%lu\n", ant, ch );
                 exit( status );
             }
             // Copy the individual Jones matrix elements
@@ -275,11 +299,7 @@ void read_hyperdrive_file( cuDoubleComplex ***Dd, uintptr_t nant, uintptr_t nch,
     // Close the solution file
     if ( fits_close_file(fptr, &status) )
     {
-        if (vm->log)
-        {
-            sprintf( vm->log_message, "Failed to close hyperdrive solution FITS file", fname );
-            logger_timed_message( vm->log, vm->log_message );
-        }
+        fprintf( stderr, "Failed to close hyperdrive solution FITS file");
         fits_report_error( stderr, status );
         exit( status );
     }
