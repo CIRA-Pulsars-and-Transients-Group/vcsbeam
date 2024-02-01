@@ -608,6 +608,7 @@ typedef struct vcsbeam_context_t
 
     int num_coarse_chans_to_process;  // The number of coarse channels to be processed
     int *coarse_chan_idxs_to_process; // A list of the coarse chan idxs to be processed
+    int *cal_coarse_chan_idxs_to_process; // A list of the calibration coarse chan idxs to be processed
 
     int num_gps_seconds_to_process;   // The number of gps seconds to be processed
     uint32_t *gps_seconds_to_process; // A list of the gps seconds to be processed
