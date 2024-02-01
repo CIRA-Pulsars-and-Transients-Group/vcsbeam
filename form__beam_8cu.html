@@ -867,6 +867,7 @@ Functions</h2></td></tr>
 </p>
 <p>It also computes the Stokes parameters, \(S = [I, Q, U, V]\) (with the autocorrelations removed).</p>
 <p>The expected thread configuration is \(\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\) </p>
+<p>#ifdef DEBUG if (c==50 &amp;&amp; s == 3 &amp;&amp; ant==0) { printf( "Pre-add:\n" ); for (int i = 0; i &lt; 1; i++) { printf( "    " "ex[%3d];ey[%3d]=[%5.3lf,%5.3lf];[%5.3lf,%5.3lf]  " "ph[%3d]=[%5.3lf,%5.3lf]  " "JQ[%3d]=[%5.3lf,%5.3lf]  " "JP[%3d]=[%5.3lf,%5.3lf]  " "\n", i, i, cuCreal( ex[i] ), cuCimag( ex[i] ), cuCreal( ey[i] ), cuCimag( ey[i] ), i, cuCreal( phi[PHI_IDX(p,i,c,nant,nc)] ), cuCimag( phi[PHI_IDX(p,i,c,nant,nc)] ), i, cuCreal( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ), cuCimag( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ), i, cuCreal( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] ), cuCimag( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] ) ); } printf( "Post-add: ex[0]; ey[0] = [%.3lf, %.3lf]; [%.3lf, %.3lf]\n", cuCreal( ex[ant] ), cuCimag( ex[ant] ), cuCreal( ey[ant] ), cuCimag( ey[ant] ) ); } #endif</p>
 
 </div>
 </div>
