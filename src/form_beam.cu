@@ -174,7 +174,8 @@ __global__ void vmApplyJ_kernel( void            *data,
                                                  cuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
     Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] = cuCadd( cuCmul( J[J_IDX(p,ant,c,1,0,nant,nc,npol)], vq ),
                                                  cuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
-#ifdef DEBUG
+
+/*#ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
         for (int i = 0; i < 1; i++)
@@ -198,7 +199,7 @@ __global__ void vmApplyJ_kernel( void            *data,
                   );
         }
     }
-#endif
+#endif */
 }
 
 /**
@@ -255,19 +256,25 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     int ant  = threadIdx.x; /* The (ant)enna number */
     int nant = blockDim.x;  /* The (n)_umber of (ant)ennas */
 
-    /*// GPU profiling
-    clock_t start, stop;
-    double setup_t, detect_t, sum_t, stokes_t;
-    if ((p == 0) && (ant == 0) && (c == 0) && (s == 0)) start = clock();*/
-
     // Organise dynamically allocated shared arrays (see tag 11NSTATION for kernel call)
     extern __shared__ double arrays[];
+    // These SHOULD be *aligned* on integer numbers of 4-byte blocks.
 
-    cuDoubleComplex *ex  = (cuDoubleComplex *)(&arrays[1*nant]);
-    cuDoubleComplex *ey  = (cuDoubleComplex *)(&arrays[3*nant]);
-    cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[5*nant]);
-    cuDoubleComplex *Nxy = (cuDoubleComplex *)(&arrays[7*nant]);
-    cuDoubleComplex *Nyy = (cuDoubleComplex *)(&arrays[9*nant]);
+    // NOTE: Because these are complex-doubles, each takes up 2*sizeof(double), hence the stride of 2 here.
+    /* Given that we need to ensure access alignment on the 4-byte boundaries (CUDA requirement), we have
+       to make sure that the array access corresponds to an integer number of sizeof(double), which
+       means we need to use even indexes to access memory. This ensures for all `nant` that we access
+       within the memory boundaries. This StackOverflow post helped us figure this out:
+         
+            https://stackoverflow.com/questions/70765553/cuda-shared-memory-alignement-in-documentation
+
+       (Previously, the indexes were: 1*nant, 3*nant, etc.)
+     */
+    cuDoubleComplex *ex  = (cuDoubleComplex *)(&arrays[0*nant]);
+    cuDoubleComplex *ey  = (cuDoubleComplex *)(&arrays[2*nant]);
+    cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[4*nant]);
+    cuDoubleComplex *Nxy = (cuDoubleComplex *)(&arrays[6*nant]);
+    cuDoubleComplex *Nyy = (cuDoubleComplex *)(&arrays[8*nant]);
     // (Nyx is not needed as it's degenerate with Nxy)
 
     // Calculate the beam and the noise floor
@@ -278,25 +285,22 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
 
     ex[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
     ey[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
-
     Nxx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     Nxy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
-    //Nyx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     Nyy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
     __syncthreads();
 
     // Calculate beamform products for each antenna, and then add them together
     // Calculate the coherent beam (B = J*phi*D)
-    ex[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-    ey[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-
+    ex[ant]  = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+    ey[ant]  = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
     Nxx[ant] = cuCmul( ex[ant], cuConj(ex[ant]) );
     Nxy[ant] = cuCmul( ex[ant], cuConj(ey[ant]) );
     Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
+    __syncthreads();
 
     // Detect the coherent beam
     // The safest, slowest option: Just get one thread to do it
-    __syncthreads();
     if ( ant == 0 )
     {
         for (int i = 1; i < nant; i++)
@@ -305,7 +309,6 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
             ey[0]  = cuCadd( ey[0],  ey[i] );
             Nxx[0] = cuCadd( Nxx[0], Nxx[i] );
             Nxy[0] = cuCadd( Nxy[0], Nxy[i] );
-            //Nyx[0]=cuCadd( Nyx[0], Nyx[i] );
             Nyy[0] = cuCadd( Nyy[0], Nyy[i] );
         }
     }
@@ -335,7 +338,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     }
     __syncthreads();
 
-#ifdef DEBUG
+/** #ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
         printf( "Pre-add:\n" );
@@ -361,13 +364,8 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
         printf( "Post-add: ex[0]; ey[0] = [%.3lf, %.3lf]; [%.3lf, %.3lf]\n",
                 cuCreal( ex[ant] ), cuCimag( ex[ant] ),
                 cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
-    /*
-        printf( "phi[3]  = [%lf, %lf]\n",
-                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
-                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
-    */
-    }
-#endif
+       }
+#endif **/
 
 }
 
@@ -543,16 +541,27 @@ void vmBeamformChunk( vcsbeam_context *vm )
 {
     uintptr_t shared_array_size = 11 * vm->obs_metadata->num_ants * sizeof(double);
     // (To see how the 11*STATION double arrays are used, go to this code tag: 11NSTATION)
+#ifdef DEBUG
+    fprintf( stderr, "shared_array_size=%d bytes\n", 11 * vm->obs_metadata->num_ants * sizeof(double));
+#endif
 
+    // Define GPU compute frame sizes
     dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
     dim3 stat( vm->obs_metadata->num_ants );
 
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
+    gpuErrchk( cudaDeviceSynchronize() );
+
     // Send off a parallel CUDA stream for each pointing
     int p;
     for (p = 0; p < vm->npointing; p++ )
     {
+#ifdef DEBUG
+        fprintf(stderr, "vm->npointing=%d  pointing=%d\n", vm->npointing, p);
+        fprintf(stderr, "chan_samples=(%d,%d,%d) stat=(%d,%d,%d)\n", chan_samples.x, chan_samples.y, chan_samples.z, stat.x, stat.y, stat.z);
+        fprintf(stderr, "I think the coarse channel numbers is: %d\n", vm->coarse_chan_idx);
+#endif
         // Call the beamformer kernel
         vmBeamform_kernel<<<chan_samples, stat, shared_array_size, vm->streams[p]>>>(
                 vm->d_Jv_Q,
@@ -570,7 +579,6 @@ void vmBeamformChunk( vcsbeam_context *vm )
         cudaCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
     }
     gpuErrchk( cudaDeviceSynchronize() );
-
 }
 
 /**
