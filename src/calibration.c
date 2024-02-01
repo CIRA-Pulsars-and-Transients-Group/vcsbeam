@@ -426,7 +426,7 @@ void read_bandpass_file(
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    int coarse_chan_idx = vm->cal_coarse_chan_idxs_to_process[0];
 
     // Open the calibration file for reading
     FILE *fp = NULL;
