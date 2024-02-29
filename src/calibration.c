@@ -543,11 +543,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         {
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
-            Ch = ch + coarse_chan_idx*nchan;
-	    if (ch == i)
-	    {
-	        fprintf( stdout, "Fine channel no is (%d) ", Ch );
-            }
+            Ch = ch + coarse_chan_idx * nchan;
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
