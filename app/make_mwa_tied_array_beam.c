@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     // Calculate the actual start time of the dataset to be processed
     unsigned int p;
     double mjd, sec_offset;
-    sprintf( vm->log_message, "first gps second is (%i)", 
+    sprintf( vm->log_message, "first gps second is (%d)", 
             vm->gps_seconds_to_process[0]);
     logger_timed_message( vm->log, vm->log_message );
     sec_offset = vm->gps_seconds_to_process[0] - (vm->obs_metadata->sched_start_gps_time_ms / 1000.0);
@@ -147,9 +147,7 @@ int main(int argc, char **argv)
             sec_offset);
     logger_timed_message( vm->log, vm->log_message );
     mjd = vm->obs_metadata->sched_start_mjd + (sec_offset / 86400.0);
-    sprintf( vm->log_message, "Obs start mjd is (%f) and obs data start mjd is (%f)",
-            vm->obs_metadata->sched_start_mjd, mjd);
-    logger_timed_message( vm->log, vm->log_message );
+    
     for (p = 0; p < vm->npointing; p++)
         calc_beam_geom( vm->ras_hours[p], vm->decs_degs[p], mjd, &beam_geom_vals[p] );
 
