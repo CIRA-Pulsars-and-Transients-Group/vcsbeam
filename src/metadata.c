@@ -190,7 +190,7 @@ void vmBindObsData(
     for (c = 0; c < num_coarse_chans_to_process; c++)
     {
         vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
-	vm->cal_coarse_chan_idxs_to_process[c] = c;
+        vm->cal_coarse_chan_idxs_to_process[c] = c;
     }
 
     // Copy across the data directory
@@ -1036,16 +1036,17 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
  */
 void vmPushJ( vcsbeam_context *vm )
 {
-#ifdef DEBUG
+/*#ifdef DEBUG
     printf("J_size_bytes = %lu\n", vm->J_size_bytes);
     uint8_t *dummy = (uint8_t *)(vm->J);
-    for (uintptr_t byte = 0; byte < vm->J_size_bytes; byte++)
+    uintptr_t byte;
+    for (byte = 0; byte < vm->J_size_bytes; byte++)
     {
         if (byte % 16 == 0)  printf("\n");
         if (byte % 8 == 0)  printf(" ");
         printf ("%02x ", dummy[byte]);
     }
-#endif
+#endif */
     cudaMemcpy( vm->d_J, vm->J, vm->J_size_bytes, cudaMemcpyHostToDevice );
     cudaCheckErrors( "vmMemcpyJ: cudaMemcpy failed" );
 }

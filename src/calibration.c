@@ -488,8 +488,8 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     if (antennaCount != nant)
     {
         fprintf( stderr, "Error: Calibration solution (%s) ", vm->cal.caldir );
-        fprintf( stderr, "contains a different number of antennas (%d) ", antennaCount );
-        fprintf( stderr, "than specified (%d)\n", nant );
+        fprintf( stderr, "contains a different number of antennas (%u) ", antennaCount );
+        fprintf( stderr, "than specified (%u)\n", nant );
         exit(EXIT_FAILURE);
     }
     if (channelCount != nChan)

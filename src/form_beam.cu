@@ -174,7 +174,8 @@ __global__ void vmApplyJ_kernel( void            *data,
                                                  cuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
     Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] = cuCadd( cuCmul( J[J_IDX(p,ant,c,1,0,nant,nc,npol)], vq ),
                                                  cuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
-#ifdef DEBUG
+
+/*#ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
         for (int i = 0; i < 1; i++)
@@ -198,7 +199,7 @@ __global__ void vmApplyJ_kernel( void            *data,
                   );
         }
     }
-#endif
+#endif */
 }
 
 /**
@@ -337,7 +338,7 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
     }
     __syncthreads();
 
-#ifdef DEBUG
+/** #ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
         printf( "Pre-add:\n" );
@@ -363,13 +364,8 @@ __global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
         printf( "Post-add: ex[0]; ey[0] = [%.3lf, %.3lf]; [%.3lf, %.3lf]\n",
                 cuCreal( ex[ant] ), cuCimag( ex[ant] ),
                 cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
-    /*
-        printf( "phi[3]  = [%lf, %lf]\n",
-                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
-                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
-    */
-    }
-#endif
+       }
+#endif **/
 
 }
 
@@ -564,6 +560,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
 #ifdef DEBUG
         fprintf(stderr, "vm->npointing=%d  pointing=%d\n", vm->npointing, p);
         fprintf(stderr, "chan_samples=(%d,%d,%d) stat=(%d,%d,%d)\n", chan_samples.x, chan_samples.y, chan_samples.z, stat.x, stat.y, stat.z);
+        fprintf(stderr, "I think the coarse channel numbers is: %d\n", vm->coarse_chan_idx);
 #endif
         // Call the beamformer kernel
         vmBeamform_kernel<<<chan_samples, stat, shared_array_size, vm->streams[p]>>>(

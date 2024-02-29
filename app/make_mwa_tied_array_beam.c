@@ -136,6 +136,7 @@ int main(int argc, char **argv)
     // Get pointing geometry information
     beam_geom beam_geom_vals[vm->npointing];
 
+    // Calculate the actual start time of the dataset to be processed
     unsigned int p;
     double mjd, sec_offset;
     sprintf( vm->log_message, "first gps second is (%i)", 
