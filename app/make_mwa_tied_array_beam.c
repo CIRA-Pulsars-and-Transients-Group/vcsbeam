@@ -139,13 +139,7 @@ int main(int argc, char **argv)
     // Calculate the actual start time of the dataset to be processed
     unsigned int p;
     double mjd, sec_offset;
-    sprintf( vm->log_message, "first gps second is (%d)", 
-            vm->gps_seconds_to_process[0]);
-    logger_timed_message( vm->log, vm->log_message );
     sec_offset = vm->gps_seconds_to_process[0] - (vm->obs_metadata->sched_start_gps_time_ms / 1000.0);
-    sprintf( vm->log_message, "time offset is (%f)",
-            sec_offset);
-    logger_timed_message( vm->log, vm->log_message );
     mjd = vm->obs_metadata->sched_start_mjd + (sec_offset / 86400.0);
     
     for (p = 0; p < vm->npointing; p++)
