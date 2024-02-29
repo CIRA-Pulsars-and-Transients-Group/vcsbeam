@@ -443,7 +443,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
     uint32_t nant   = vm->cal_metadata->num_ants;
     uint32_t nchan  = vm->cal_metadata->num_corr_fine_chans_per_coarse;
-    uint32_t nChan  = nchan * vm->cal_metadata->num_metafits_coarse_chans; // = total number of fine channels REQUESTED to process
+    uint32_t nChan  = nchan * vm->mpi_size; // = total number of fine channels REQUESTED to process
     uint32_t ninput = vm->cal_metadata->num_rf_inputs;
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
     uintptr_t vcs_nchan = vm->nfine_chan;
@@ -462,10 +462,9 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
 #ifdef DEBUG
     fprintf( stderr, "*** Reading Offringa-style solution, DEBUG ***\n" );
     fprintf( stderr, "Quantities determined via vcsbeam context struct, DEBUG\n" );
-    fprintf( stderr, "coarse_chan_idx = vm->coarse_chan_idxs_to_process[0] = %d\n", coarse_chan_idx );
     fprintf( stderr, "nant = vm->cal_metadata->num_ants = %u\n", nant );
     fprintf( stderr, "nchan = vm->cal_metadata->num_corr_fine_chans_per_coarse = %u\n", nchan );
-    fprintf( stderr, "nChan = nchan * vm->cal_metadata->num_metafits_coarse_chans = %u\n", nChan );
+    fprintf( stderr, "nChan = nchan * vm->mpi_size = %u\n", nChan );
     fprintf( stderr, "ninput = vm->cal_metadata->num_rf_inputs = %u\n", ninput );
     fprintf( stderr, "nantpol = vm->cal_metadata->num_ant_pols = %lu (should be 2)\n", nantpol );
     fprintf( stderr, "vcs_nchan = vm->nfine_chan = %lu\n", vcs_nchan );
@@ -476,7 +475,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     fprintf( stderr, "intervalCount = %u\n", intervalCount );
     fprintf( stderr, "antennaCount = %u\n", antennaCount );
     fprintf( stderr, "channelCount = %u\n", channelCount );
-    fprintf( stderr, "polarizationCount = %u\n", polarizationCount );
+    fprintf( stderr, "polarisationCount = %u\n", polarisationCount );
 #endif
 
     // Error-checking the info extracted from the header,
@@ -496,10 +495,10 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     if (channelCount != nChan)
     {
         fprintf( stdout, "Warning: Calibration solution (%s) ", vm->cal.caldir );
-        fprintf( stdout, "contains a different number (%d) ", channelCount );
+        fprintf( stdout, "contains a different number (%u) ", channelCount );
         fprintf( stdout, "than the requested (%u) channels.\n", nChan );
         nChan = channelCount;
-        nchan = nChan / vm->cal_metadata->num_metafits_coarse_chans;
+        nchan = nChan / vm->mpi_size;
         interp_factor = vcs_nchan / nchan;
         fprintf( stdout, "Assuming calibration channels are "
                 "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
@@ -544,7 +543,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         {
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
-            Ch = ch + coarse_chan_idx*nchan;
+            Ch = ch + coarse_chan_idx * nchan;
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
