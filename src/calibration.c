@@ -475,7 +475,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     fprintf( stderr, "intervalCount = %u\n", intervalCount );
     fprintf( stderr, "antennaCount = %u\n", antennaCount );
     fprintf( stderr, "channelCount = %u\n", channelCount );
-    fprintf( stderr, "polarisationCount = %u\n", polarisationCount );
+    fprintf( stderr, "polarizationCount = %u\n", polarizationCount );
 #endif
 
     // Error-checking the info extracted from the header,
