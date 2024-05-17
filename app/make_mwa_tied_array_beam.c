@@ -275,7 +275,7 @@ int main(int argc, char **argv)
 
             vmPullE( vm );
 
-            prepare_detected_beam( detected_beam, mpfs, vm );
+            prepare_detected_beam( detected_beam, mpfs, vm, timestep_idx );
             cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vm->vf->sizeof_buffer,
                     &gi, data_buffer_vdif );

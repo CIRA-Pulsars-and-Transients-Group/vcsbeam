@@ -652,12 +652,13 @@ void vmPullS( vcsbeam_context *vm )
  * @todo Remove prepare_detected_beam() and use a "host buffer" instead.
  */
 void prepare_detected_beam( cuDoubleComplex ****detected_beam,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm )
+                   mpi_psrfits *mpfs, vcsbeam_context *vm,
+                   uintptr_t timestep_idx )
 {
     // Get shortcut variables
     uintptr_t nchan  = vm->nfine_chan;
     uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
-    int file_no = vm->chunk_to_load / vm->chunks_per_second;
+    int file_no = timestep_idx % 2;
 
     // Copy the data back from e back into the detected_beam array
     // Make sure we put it back into the correct half of the array, depending
