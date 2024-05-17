@@ -54,7 +54,6 @@ struct make_tied_array_beam_opts {
     char              *synth_filter;     // Which synthesis filter to use
     bool               smart;            // Use legacy settings for PFB
     int                max_sec_per_file; // Number of seconds per fits files
-    //float              gpu_mem_GB;       // Default = 0.0. If 0.0 use all GPU mem
     int                nchunks;          // Split each second into this many processing chunks
 };
 
@@ -117,7 +116,7 @@ int main(int argc, char **argv)
     }
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
-    vm->cal.ref_ant      = strdup( opts.ref_ant );
+    vm->cal.ref_ant      = opts.ref_ant ? strdup( opts.ref_ant ) : NULL;
     vm->cal.phase_offset = opts.phase_offset;
     vm->cal.phase_slope  = opts.phase_slope;
     vm->cal.custom_pq_correction = opts.custom_pq_correction;
@@ -171,6 +170,8 @@ int main(int argc, char **argv)
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
+    vmSetMaxGPUMem( vm, opts.nchunks );
+
     vmMallocVDevice( vm );
     vmMallocJVDevice( vm );
     vmMallocEHost( vm );
@@ -454,8 +455,6 @@ void usage()
             "\t-h, --help                 Print this help and exit\n"
             "\t-V, --version              Print version number and exit\n\n"
           );
-// This option is currently too problematic to deal with:
-//            "\t-g, --gpu-mem=N            The maximum amount of GPU memory you want make_beam to use in GB [default: -1]\n"
 }
 
 
@@ -476,7 +475,6 @@ void make_tied_array_beam_parse_cmdline(
     opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
-    //opts->gpu_mem_GB           = 0.0;
     opts->custom_flags         = NULL;
     opts->nchunks              = 1;
     opts->smart                = false;
@@ -517,7 +515,6 @@ void make_tied_array_beam_parse_cmdline(
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"PQ-phase",        required_argument, 0, 'U'},
                 {"offringa",        no_argument      , 0, 'O'},
-                //{"gpu-mem",         required_argument, 0, 'g'},
                 {"nchunks",         required_argument, 0, 'n'},
                 {"smart",           no_argument,       0, 's'},
                 {"help",            required_argument, 0, 'h'},
@@ -526,7 +523,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:hm:nN:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:hm:n:N:OpP:R:sS:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -564,9 +561,6 @@ void make_tied_array_beam_parse_cmdline(
                     opts->custom_flags = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->custom_flags, optarg );
                     break;
-                //case 'g':
-                //    opts->gpu_mem_GB = atof(optarg);
-                //    break;
                 case 'h':
                     usage();
                     exit(EXIT_SUCCESS);

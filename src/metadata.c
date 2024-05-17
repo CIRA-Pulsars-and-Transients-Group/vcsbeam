@@ -705,8 +705,14 @@ void vmMallocJVDevice( vcsbeam_context *vm )
         sizeof(cuDoubleComplex) /
         vm->chunks_per_second;
 
+    printf("%lu\n", vm->d_Jv_size_bytes);
+    size_t mf, ma;
+    cudaMemGetInfo(&mf, &ma);
+    printf("free: %lu ... total: %lu\n", mf, ma);
     cudaMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
     cudaCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_P) failed" );
+    cudaMemGetInfo(&mf, &ma);
+    printf("free: %lu ... total: %lu\n", mf, ma);
     cudaMalloc( (void **)&vm->d_Jv_Q,  vm->d_Jv_size_bytes );
     cudaCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_Q) failed" );
 }
@@ -908,33 +914,16 @@ void vmFreePQIdxsDevice( vcsbeam_context *vm )
  *
  * LOGIC IS CURRENTLY FAULTY AND INCOMPLETE. DO NOT USE!
  */
-void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
+void vmSetMaxGPUMem( vcsbeam_context *vm, int nchunks )
 {
-    vm->max_gpu_mem_bytes = max_gpu_mem_bytes;
-
-    // Requested maximum can't be more that available memory
-    struct cudaDeviceProp gpu_properties;
-    cudaGetDeviceProperties( &gpu_properties, 0 );
-
-    if (max_gpu_mem_bytes == 0) // Default behaviour: "0" = just use maximum available
-    {
-        vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
-    }
-    else if (max_gpu_mem_bytes > gpu_properties.totalGlobalMem )
-    {
-        fprintf( stderr, "warning: vmSetMaxGPUMem(): requested maximum (%lu) "
-                "exceeds available memory (%lu). Setting to max available.\n",
-                vm->max_gpu_mem_bytes, gpu_properties.totalGlobalMem );
-        vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
-    }
-
-    // (This currently only accounts for some of the memory needed)
-    vm->chunks_per_second = (vm->bytes_per_second + vm->Jv_size_bytes) /
-        vm->max_gpu_mem_bytes + 1;
+    vm->chunks_per_second = nchunks;
 
     // Make sure the number of chunks is divisible by the number of samples (per second)
-    while ( vm->sample_rate % vm->chunks_per_second != 0 )
-        vm->chunks_per_second++;
+    if ( vm->sample_rate % vm->chunks_per_second != 0 )
+    {
+        logger_timed_message( vm->log, "Bad number of chunks requested: must divide number of samples per second of data." );
+        exit(EXIT_FAILURE);
+    }
 
     // Calculate the amount of gpu memory needed
     vm->d_v_size_bytes = vm->bytes_per_second / vm->chunks_per_second;

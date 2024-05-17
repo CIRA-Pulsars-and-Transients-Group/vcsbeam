@@ -121,6 +121,7 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
     ascii_header_set( ascii_header, "TELESCOPE",  "%s", vf->telescope );
     ascii_header_set( ascii_header, "MODE",       "%s", vf->obs_mode  );
     ascii_header_set( ascii_header, "FREQ",       "%f", vf->fctr      );
+    ascii_header_set( ascii_header, "NPOL",       "%d", vf->npol      );
 
     ascii_header_set( ascii_header, "BW",         "%f", vf->BW        );
     ascii_header_set( ascii_header, "RA",         "%s", vf->ra_str    );
@@ -217,6 +218,7 @@ void vmPopulateVDIFHeader(
 
         vm->vf[p].MJD_epoch = beam_geom_vals->intmjd + beam_geom_vals->fracmjd;
         vm->vf[p].fctr      = vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz / 1e6; // (MHz)
+        vm->vf[p].npol      = 2;
         strncpy( vm->vf[p].source, "unset", 24 );
 
         // The output file basename
