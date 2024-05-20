@@ -708,11 +708,11 @@ void vmMallocJVDevice( vcsbeam_context *vm )
     printf("%lu\n", vm->d_Jv_size_bytes);
     size_t mf, ma;
     cudaMemGetInfo(&mf, &ma);
-    printf("free: %lu ... total: %lu\n", mf, ma);
+    printf("free: %zu ... total: %zu\n", mf, ma);
     cudaMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
     cudaCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_P) failed" );
     cudaMemGetInfo(&mf, &ma);
-    printf("free: %lu ... total: %lu\n", mf, ma);
+    printf("free: %zu ... total: %zu\n", mf, ma);
     cudaMalloc( (void **)&vm->d_Jv_Q,  vm->d_Jv_size_bytes );
     cudaCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_Q) failed" );
 }
