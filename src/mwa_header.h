@@ -49,11 +49,9 @@
 "INSTRUMENT unset           # instrument name\n" \
 "DATAFILE   unset           # raw data file name\n" \
 "\n" \
-"UTC_START  unset           # yyyy-mm-dd-hh:mm:ss\n" \
-"MJD_START  unset           # MJD equivalent to the start UTC\n" \
-"\n" \
-"SEC_OFFSET unset           # seconds offset from the start MJD/UTC\n" \
+"MJD_START  unset           # MJD of the start of the observation\n" \
 "MJD_EPOCH  unset           # MJD of the data epoch\n" \
+"SEC_OFFSET unset           # seconds offset from the start of the observation\n" \
 "\n" \
 "SOURCE     unset           # name of the astronomical source\n" \
 "RA         unset           # Right Ascension of the source\n" \
@@ -66,6 +64,7 @@
 "NBIT       unset           # number of bits per sample\n" \
 "NDIM       unset           # dimension of samples (2=complex, 1=real)\n" \
 "NPOL       unset           # number of polarisations observed\n" \
+"\n"
 
 /*
   

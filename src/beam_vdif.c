@@ -121,11 +121,9 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
     ascii_header_set( ascii_header, "INSTRUMENT", "%s", "VDIF"          );
     ascii_header_set( ascii_header, "DATAFILE",   "%s", filename        );
 
-    ascii_header_set( ascii_header, "UTC_START",  "%s", vf->date_obs    );
     ascii_header_set( ascii_header, "MJD_START",  "%f", vf->MJD_start   );
-
-    ascii_header_set( ascii_header, "SEC_OFFSET", "%f", vf->sec_offset  );
     ascii_header_set( ascii_header, "MJD_EPOCH",  "%f", vf->MJD_epoch   );
+    ascii_header_set( ascii_header, "SEC_OFFSET", "%f", vf->sec_offset  );    
 
     ascii_header_set( ascii_header, "SOURCE",     "%s", vf->source      );
     ascii_header_set( ascii_header, "RA",         "%s", vf->ra_str      );
