@@ -645,42 +645,6 @@ void vmPullS( vcsbeam_context *vm )
     cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
 }
 
-/**
- * Copies the beamformed voltages into a different array to prepare for
- * inverting the PFB.
- *
- * @todo Remove prepare_detected_beam() and use a "host buffer" instead.
- */
-void prepare_detected_beam( cuDoubleComplex ****detected_beam,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm,
-                   uintptr_t timestep_idx )
-{
-    // Get shortcut variables
-    uintptr_t nchan  = vm->nfine_chan;
-    uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
-    int file_no = timestep_idx % 2;
-
-    // Copy the data back from e back into the detected_beam array
-    // Make sure we put it back into the correct half of the array, depending
-    // on whether this is an even or odd second.
-    int offset, i;
-    offset = file_no % 2 * vm->fine_sample_rate;
-
-    // TODO: turn detected_beam into a 1D array
-    int p, ch, s, pol;
-    for (p   = 0; p   < vm->npointing  ; p++  )
-    for (s   = 0; s   < vm->fine_sample_rate; s++  )
-    for (ch  = 0; ch  < nchan      ; ch++ )
-    for (pol = 0; pol < npol       ; pol++)
-    {
-        i = p  * (npol*nchan*vm->fine_sample_rate) +
-            s  * (npol*nchan)                   +
-            ch * (npol)                         +
-            pol;
-
-        detected_beam[p][s+offset][ch][pol] = vm->e[i];
-    }
-}
 
 /**
  * Renormalises the detected Stokes parameters and copies them into PSRFITS
@@ -769,28 +733,56 @@ cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan
 }
 
 
-/**
- * (Deprecated) Frees memory on the CPU.
- *
- * @todo Remove the function destroy_detected_beam().
- */
-void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsamples, int nchan )
+/*
+* Create a 1-D host buffer containing the fine-channelised complex voltage samples which
+* will be given to the IPFB.
+*/
+cuDoubleComplex *create_data_buffer_fine( int npointing, int nsamples, int nchan, int npol )
 {
-    int p, s, ch;
-    for (p = 0; p < npointing; p++)
+    int buffer_size = npointing * nsamples * nchan * npol * sizeof(cuDoubleComplex);
+    
+    // Allocate host memory for buffer
+    cuDoubleComplex *data_buffer_fine;
+    data_buffer_fine = (cuDoubleComplex *)malloc( buffer_size );
+
+    // Initialise buffer to zeros
+    memset( data_buffer_fine, 0, buffer_size );
+
+    return data_buffer_fine;
+}
+
+
+/*
+* Copy the fine-channelised beamformed voltages into a data buffer so that it can
+* be given to the IPFB.
+*/
+void prepare_data_buffer_fine( cuDoubleComplex *data_buffer_fine, vcsbeam_context *vm,
+                    uintptr_t timestep_idx )
+{
+    // Get shortcut variables
+    uintptr_t nchan = vm->nfine_chan;
+    uintptr_t npol  = vm->obs_metadata->num_ant_pols; // = 2
+    int file_no = timestep_idx % 2;
+
+    // Copy the beamformed data from e into the data buffer
+    // Make sure we put it back into the correct half of the array, depending
+    // on whether this is an even or odd second.
+    int offset = file_no % 2 * vm->fine_sample_rate;
+
+    int p,s,ch,pol,i,j;
+    for (p   = 0; p   < vm->npointing;        p++   )
+    for (s   = 0; s   < vm->fine_sample_rate; s++   )
+    for (ch  = 0; ch  < nchan;                ch++  )
+    for (pol = 0; pol < npol;                 pol++ )
     {
-        for (s = 0; s < nsamples; s++)
-        {
-            for (ch = 0; ch < nchan; ch++)
-                free( array[p][s][ch] );
+        // Calculate index for e
+        i = B_IDX(p,s,ch,pol,vm->fine_sample_rate,nchan,npol);
 
-            free( array[p][s] );
-        }
+        // Calculate index for data_buffer_fine
+        j = B_IDX(p,s+offset,ch,pol,vm->fine_sample_rate,nchan,npol);
 
-        free( array[p] );
+        data_buffer_fine[j] = vm->e[i];
     }
-
-    free( array );
 }
 
 /**

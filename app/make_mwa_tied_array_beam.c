@@ -150,7 +150,7 @@ int main(int argc, char **argv)
     uintptr_t npols          = vm->obs_metadata->num_ant_pols;
     unsigned int nsamples    = vm->fine_sample_rate;
 
-    cuDoubleComplex  ****detected_beam;
+    cuDoubleComplex  *data_buffer_fine;
 
     if (vm->do_inverse_pfb)
     {
@@ -161,8 +161,10 @@ int main(int argc, char **argv)
         vmLoadFilter( vm, opts.synth_filter, SYNTHESIS_FILTER, nchans );
         vmScaleFilterCoeffs( vm, SYNTHESIS_FILTER, 15.0/7.2 ); // (1/7.2) = 16384/117964.8
 
-        // Allocate memory for various data products
-        detected_beam = create_detected_beam( vm->npointing, 2*nsamples, nchans, npols );
+        // Allocate memory for voltage buffer that will be used to perform the IPFB
+        // The buffer is 2 seconds long to allow the synthesis filter to operate over
+        // the transition between seconds
+        data_buffer_fine = create_data_buffer_fine( vm->npointing, 2*nsamples, nchans, npols );
     }
 
     /*********************
@@ -276,8 +278,11 @@ int main(int argc, char **argv)
 
             vmPullE( vm );
 
-            prepare_detected_beam( detected_beam, mpfs, vm, timestep_idx );
-            cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
+            // Load the voltage data into the buffer
+            prepare_data_buffer_fine( data_buffer_fine, vm, timestep_idx );
+
+            // Run the iPFB kernel
+            cu_invert_pfb( data_buffer_fine, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vm->vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
 
@@ -329,7 +334,7 @@ int main(int argc, char **argv)
 
     if (vm->do_inverse_pfb)
     {
-        destroy_detected_beam( detected_beam, vm->npointing, 2*nsamples, nchans );
+        free( data_buffer_fine );
     }
 
     if (vm->do_inverse_pfb)
