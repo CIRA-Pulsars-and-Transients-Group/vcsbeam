@@ -1116,7 +1116,7 @@ struct vdifinfo
     size_t samples_per_frame; // Number of time samples per vdif frame
     int dataarraylength;      // The frame length minus the header
     int bits;                 // Bits per sample
-    int nchan;                // Channels per framme
+    int nchan;                // Channels per frame
     int chan_width;           // Channel width in hertz
     int sample_rate;          // Sample rate in hertz
     int npol;                 // Number of polarisations
@@ -1142,7 +1142,9 @@ struct vdifinfo
 
     double BW;
 
-    long double MJD_epoch;
+    double MJD_start;
+    double sec_offset;
+    double MJD_epoch;
 
     char date_obs[24];
     char basefilename[1024];
@@ -1161,7 +1163,9 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
 
 void vmPopulateVDIFHeader(
         vcsbeam_context  *vm,
-        beam_geom        *beam_geom_vals );
+        beam_geom        *beam_geom_vals,
+        double           mjd_start,
+        double           sec_offset );
 
 void to_offset_binary( int8_t *i, int n );
 

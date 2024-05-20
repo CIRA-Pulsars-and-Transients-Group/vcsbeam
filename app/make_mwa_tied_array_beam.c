@@ -137,9 +137,10 @@ int main(int argc, char **argv)
 
     // Calculate the actual start time of the dataset to be processed
     unsigned int p;
-    double mjd, sec_offset;
+    double mjd, mjd_start, sec_offset;
     sec_offset = vm->gps_seconds_to_process[0] - (vm->obs_metadata->sched_start_gps_time_ms / 1000.0);
-    mjd = vm->obs_metadata->sched_start_mjd + (sec_offset / 86400.0);
+    mjd_start = vm->obs_metadata->sched_start_mjd;
+    mjd = mjd_start + (sec_offset / 86400.0);
     
     for (p = 0; p < vm->npointing; p++)
         calc_beam_geom( vm->ras_hours[p], vm->decs_degs[p], mjd, &beam_geom_vals[p] );
@@ -233,7 +234,7 @@ int main(int argc, char **argv)
     // ------------------
 
     // Populate the relevant header structs
-    vmPopulateVDIFHeader( vm, beam_geom_vals );
+    vmPopulateVDIFHeader( vm, beam_geom_vals, mjd_start, sec_offset );
 
     // Begin the main loop: go through data one second at a time
 

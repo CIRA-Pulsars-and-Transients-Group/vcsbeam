@@ -9,7 +9,7 @@
 #define __MWA_HEADER_h
 
 #define MWA_HEADER_SIZE 4096
-#define MWA_HEADER_VERSION 0.1
+#define MWA_HEADER_VERSION 0.2
 
 /* ************************************************************************
 
@@ -39,20 +39,34 @@
 */
 
 #define MWA_HEADER_INIT \
-"HDR_VERSION 0.1	# Version of this ASCII header\n" \
-"MWA_CAPTURE_VERSION 0.1	# Version of the Data Acquisition Software\n" \
-"MWA_SAMPLE_VERSION 0.1	# Version of the FFD FPGA Software\n" \
+"HDR_VERSION 0.2            # Version of this ASCII header\n" \
+"MWA_CAPTURE_VERSION 0.1    # Version of the Data Acquisition Software\n" \
+"MWA_SAMPLE_VERSION 0.1     # Version of the FFD FPGA Software\n" \
+"VCSBEAM_VERSION " VCSBEAM_VERSION "\n" \
 "\n" \
-"VCSTOOL_VERSION " VCSBEAM_VERSION "\n" \
+"TELESCOPE  MWA             # telescope name\n" \
+"MODE       unset           # observing mode\n" \
+"INSTRUMENT unset           # instrument name\n" \
+"DATAFILE   unset           # raw data file name\n" \
 "\n" \
-"TELESCOPE	mwa		# telescope name\n" \
+"UTC_START  unset           # yyyy-mm-dd-hh:mm:ss\n" \
+"MJD_START  unset           # MJD equivalent to the start UTC\n" \
 "\n" \
-"SOURCE		unset		# name of the astronomical source\n" \
-"RA		unset		# Right Ascension of the source\n" \
-"DEC		unset		# Declination of the source\n" \
+"SEC_OFFSET unset           # seconds offset from the start MJD/UTC\n" \
+"MJD_EPOCH  unset           # MJD of the data epoch\n" \
 "\n" \
-"FREQ		unset		# centre frequency on sky in MHz\n" \
-"BW		unset		# bandwidth of in MHz (-ve lower sb)\n" \
+"SOURCE     unset           # name of the astronomical source\n" \
+"RA         unset           # Right Ascension of the source\n" \
+"DEC        unset           # Declination of the source\n" \
+"\n" \
+"FREQ       unset           # centre frequency on sky in MHz\n" \
+"BW         unset           # bandwidth in MHz (-ve lower sb)\n" \
+"TSAMP      unset           # sampling interval in microseconds\n" \
+"\n" \
+"NBIT       unset           # number of bits per sample\n" \
+"NDIM       unset           # dimension of samples (2=complex, 1=real)\n" \
+"NPOL       unset           # number of polarisations observed\n" \
+
 /*
   
 
