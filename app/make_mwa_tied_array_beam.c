@@ -136,7 +136,8 @@ int main(int argc, char **argv)
     struct beam_geom beam_geom_vals[npointing];
 
     double mjd, sec_offset;
-    mjd = vm->obs_metadata->sched_start_mjd;
+    sec_offset = vm->gps_seconds_to_process[0] - (vm->obs_metadata->sched_start_gps_time_ms / 1000.0);
+    mjd = vm->obs_metadata->sched_start_mjd + (sec_offset / 86400.0);
     for (p = 0; p < npointing; p++)
         calc_beam_geom( ras_hours[p], decs_degs[p], mjd, &beam_geom_vals[p] );
 
