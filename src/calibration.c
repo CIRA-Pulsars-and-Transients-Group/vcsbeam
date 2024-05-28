@@ -429,11 +429,13 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
     }
 
     // Read in the necessary information from the header
+    int mpi_size;
+    MPI_Comm_size( MPI_COMM_WORLD, &mpi_size );
 
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
     uint32_t nant   = cal_metadata->num_ants;
     uint32_t nchan  = cal_metadata->num_corr_fine_chans_per_coarse;
-    uint32_t nChan  = nchan * cal_metadata->num_metafits_coarse_chans;
+    uint32_t nChan  = nchan * mpi_size;
     uint32_t ninput = cal_metadata->num_rf_inputs;
     uintptr_t nantpol = cal_metadata->num_ant_pols; // = 2 (P, Q)
     uintptr_t vcs_nchan = obs_metadata->num_volt_fine_chans_per_coarse;
@@ -473,7 +475,7 @@ cuDoubleComplex *read_offringa_gains_file( MetafitsMetadata *obs_metadata,
         fprintf( stderr, "contains a different number (%d) ", channelCount );
         fprintf( stderr, "than the expected (%d) channels.\n", nChan );
         nChan = channelCount;
-        nchan = nChan / cal_metadata->num_metafits_coarse_chans;
+        nchan = nChan / mpi_size;
         interp_factor = vcs_nchan / nchan;
         fprintf( stderr, "Assuming calibration channels are "
                 "%d kHz\n", cal_metadata->coarse_chan_width_hz / nchan / 1000 );
