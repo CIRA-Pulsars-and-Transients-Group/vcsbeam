@@ -43,7 +43,7 @@ struct mwa_track_primary_beam_response_opts {
 void usage();
 void mwa_track_primary_beam_response_parse_cmdline(
         int argc, char **argv, struct mwa_track_primary_beam_response_opts *opts );
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV );
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex *J );
 
 int main(int argc, char **argv)
 {
@@ -72,6 +72,7 @@ int main(int argc, char **argv)
     double array_factor;
 
     primary_beam pb;
+    cuDoubleComplex *J = malloc( 4*sizeof(cuDoubleComplex) );
     uintptr_t coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
     uintptr_t npointings = 1;
     create_primary_beam( &pb, obs_metadata, coarse_chan_idx, npointings );
@@ -130,7 +131,7 @@ int main(int argc, char **argv)
                 array_factor = calc_array_factor( obs_metadata, freq_hz, &bg, &arrf_bg );
             }
 
-            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV );
+            calc_normalised_beam_response( pb.beam, az, za, freq_hz, delays, amps, IQUV, J );
 
             // Print out the results
             fprintf( opts.fout, "%lu %f %f %f %f %f %f %f %f %f\n",
@@ -148,6 +149,8 @@ int main(int argc, char **argv)
         // Insert a blank line in the output, to delimit different frequencies
         fprintf( opts.fout, "\n" );
     }
+
+    free( J );
 
     // Close output file, if necessary
     if (opts.fout != stderr)
@@ -267,9 +270,16 @@ void mwa_track_primary_beam_response_parse_cmdline(
     }
 }
 
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV )
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex *J )
 {
-    cuDoubleComplex *J; // This must be unallocated because Hyperbeam's calc_jones() does the allocation
+    uint8_t iauOrder = 0; //Boolean 0= don't set Jones matrix to be iau order but instead mwa order in CalcJones
+
+    uint32_t numAmps = 16; //number of dipole gains used (16 or 32)
+
+    int32_t errInt = 0; //exit code integer for calcJones
+
+    double *arrayLatitudeRad = NULL;
+
     cuDoubleComplex JH[NCOMPLEXELEMENTS];
     cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
     cuDoubleComplex coherency[NCOMPLEXELEMENTS];
@@ -280,7 +290,14 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
 
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
-    J = (cuDoubleComplex *)calc_jones( beam, az, za, freq_hz, delays, amps, zenith_norm );
+    errInt = calc_jones(beam, az, za, freq_hz, delays, amps, numAmps, zenith_norm, arrayLatitudeRad, iauOrder, (double *)J);
+
+    if (errInt !=0)
+    {             
+        printf("Hyperbeam failed with exit code %d\n", EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+    }
+
     mult2x2d_RxC( P, J, J );
 
     // Convert this jones matrix to Stokes parameters for I, Q, U, V skies

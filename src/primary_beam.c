@@ -39,6 +39,9 @@ void calc_primary_beam(
     for (config_idx = 0; config_idx < NCONFIGS; config_idx++)
         configs[config_idx] = NULL;
 
+    double * tempJones;
+    tempJones = malloc(8*sizeof(double));
+
     // Normalise to zenith
     int zenith_norm = 1;
 
@@ -51,6 +54,14 @@ void calc_primary_beam(
     uintptr_t rf_input;
 
     double az, za; // (az)imuth and (z)enith (a)ngle in radians
+
+    uint8_t iauOrder = 0; //Boolean 0= don't set Jones matrix to be iau order but instead mwa order in CalcJones
+
+    uint32_t numAmps=16; //number of dipole gains used (16 or 32)
+
+    int32_t errInt; //exit code integer for calcJones
+
+    double *arrayLatitudeRad = NULL;
 
     // Loop through the pointings and calculate the primary beam matrices
     for (p = 0; p < pb->npointings; p++)
@@ -79,17 +90,23 @@ void calc_primary_beam(
             {
                 // Use the 'dead' configuration temporarily
                 config_idx = DEAD_CONFIG;
-                configs[config_idx] = (cuDoubleComplex *)calc_jones(
-                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
+                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], numAmps, zenith_norm, arrayLatitudeRad, iauOrder, tempJones);
+                configs[config_idx] = (cuDoubleComplex *)(tempJones);
             }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
-                configs[config_idx] = (cuDoubleComplex *)calc_jones(
-                        pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], zenith_norm );
+                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], numAmps, zenith_norm, arrayLatitudeRad, iauOrder, tempJones);
+                configs[config_idx] = (cuDoubleComplex *)(tempJones);
 
                 // Apply the parallactic angle correction
                 mult2x2d_RxC( P, configs[config_idx], configs[config_idx] );
+            }
+
+            if (errInt !=0)
+            {             
+                printf("Hyperbeam failed with exit code %d\n", EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
 
             // Copy the answer into the B matrix (for this antenna)
@@ -107,6 +124,8 @@ void create_primary_beam(
  * (see Eq. (30) in Ord et al. (2019))
  */
 {
+    int32_t  errInt; //new_fee_beam Error integer
+
     // Calculate some array sizes
     pb->npointings = npointings;
     pb->nant = obs_metadata->num_ants;
@@ -118,7 +137,13 @@ void create_primary_beam(
     pb->B = (cuDoubleComplex *)malloc( size );
 
     pb->beam = NULL;
-    pb->beam = new_fee_beam( HYPERBEAM_HDF5 );
+    errInt = new_fee_beam( HYPERBEAM_HDF5, &pb->beam );
+
+    if (errInt !=0)
+    {             
+        printf("Hyperbeam failed with exit code %d\n", EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+    }
 
     create_delays_amps_from_metafits( obs_metadata, &(pb->delays), &(pb->amps) );
 
