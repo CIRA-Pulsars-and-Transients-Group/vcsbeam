@@ -67,6 +67,7 @@ target_link_libraries(vcsbeam
     ${GPU_LIBS}
     /scratch/mwavcs/msok/install/mwalib/target/release/libmwalib.so # TODO : temporary
     /opt/cray/pe/mpich/8.1.25/ucx/cray/10.0/lib/libmpi_cray.so      # TODO : temporary
+    /scratch/mwavcs/msok/install/mwa_hyperbeam/target/release/libmwa_hyperbeam.so # TODO : temporary
 )
 
 install(TARGETS vcsbeam
