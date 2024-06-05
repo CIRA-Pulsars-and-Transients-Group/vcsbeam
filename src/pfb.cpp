@@ -231,8 +231,11 @@ __global__ void fpga_rounding_and_demotion( void *data )
     Y >>= 14;
 
     // Put the result back into global memory as (32-bit) floats
-    float *fx = (float *)&(b[b_idx].x);
-    float *fy = (float *)&(b[b_idx].y);
+    void* ptr = &(b[b_idx].x);
+    float *fx = (float *)ptr;
+    
+    ptr = &(b[b_idx].y);
+    float *fy = (float *)ptr;
 
     *fx = (float)X;
     *fy = (float)Y;
@@ -398,7 +401,7 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
 
     // Set up the idxs for the "rf input" output order,
     // and copy to device
-    (gpuMallocHost( (void **)&(fpfb->i_output_idx),   fpfb->I*sizeof(int) ));
+    (gpuHostMalloc( (void **)&(fpfb->i_output_idx),   fpfb->I*sizeof(int) ));
     (gpuMalloc(     (void **)&(fpfb->d_i_output_idx), fpfb->I*sizeof(int) ));
 
     int i, mwax_idx, legacy_idx;
