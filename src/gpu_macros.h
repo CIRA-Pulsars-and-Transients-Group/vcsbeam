@@ -46,6 +46,19 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 
 #ifdef __NVCC__
 
+#define cudaCheckErrors(msg) \
+    do { \
+        cudaError_t __err = cudaGetLastError(); \
+        if (__err != cudaSuccess) { \
+            fprintf(stderr, "Fatal error: %s (%s at %s:%d)\n", \
+                msg, cudaGetErrorString(__err), \
+                __FILE__, __LINE__); \
+            fprintf(stderr, "*** FAILED - ABORTING\n"); \
+            exit(1); \
+        } \
+    } while (0)
+
+
 #include <cuComplex.h>
 
 #define gpuMalloc(...) GPU_CHECK_ERROR(cudaMalloc(__VA_ARGS__))
@@ -100,6 +113,19 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 
 // no need in HIP
 // #include <hipComplex.h>
+
+#define cudaCheckErrors(msg) \
+    do { \
+        hipError_t __err = hipGetLastError(); \
+        if (__err != hipSuccess) { \
+            fprintf(stderr, "Fatal error: %s (%s at %s:%d)\n", \
+                msg, hipGetErrorString(__err), \
+                __FILE__, __LINE__); \
+            fprintf(stderr, "*** FAILED - ABORTING\n"); \
+            exit(1); \
+        } \
+    } while (0)
+
 
 #define gpuMalloc(...) GPU_CHECK_ERROR(hipMalloc(__VA_ARGS__))
 #define gpuHostAlloc(...) GPU_CHECK_ERROR(hipHostMalloc(__VA_ARGS__, 0))
