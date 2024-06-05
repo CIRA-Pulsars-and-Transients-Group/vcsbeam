@@ -8,7 +8,7 @@ add_library(vcsbeam STATIC
     form_beam.cu
     jones.c
     buffer.c
-    pfb.cu
+    pfb.cpp
     calibration.c
     metadata.c)
 
