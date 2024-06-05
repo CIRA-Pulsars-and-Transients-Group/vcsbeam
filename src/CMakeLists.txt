@@ -59,7 +59,7 @@ target_link_libraries(vcsbeam
     ${PSRFITS_UTILS_LIBRARY}
     ${VDIFIO_LIBRARY}
     ${CFITSIO_LIBRARY}
-    ${PAL_LIBRARY}
+    ${LIBPAL_LIB}
     ${M_LIBRARY}
     ${HYPERBEAM_LIB}
     ${MWALIB_LIB}
