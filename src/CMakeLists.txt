@@ -62,7 +62,9 @@ target_link_libraries(vcsbeam
     ${HYPERBEAM_LIB}
     ${MWALIB_LIB}
     ${MPI_C_LIBRARIES}
-    ${GPU_LIBS})
+    ${GPU_LIBS}
+    /scratch/mwavcs/msok/install/mwalib/target/release/libmwalib.so # temporary
+)
 
 install(TARGETS vcsbeam
     LIBRARY DESTINATION lib
