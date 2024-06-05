@@ -24,6 +24,7 @@
 #define gpuError_t cudaError_t
 #define gpuSuccess cudaSuccess
 #define gpuGetErrorString cudaGetErrorString
+#include <cuda_runtime.h>
 #else
 #include <hip/hip_runtime.h>
 #define gpuError_t hipError_t
