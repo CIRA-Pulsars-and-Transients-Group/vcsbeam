@@ -15,7 +15,7 @@
 
 #include "gpu_includes.h"
 #include "gpu_macros.h"
-#include "gpu_fft.h"
+#include "gpu_fft.hpp"
 #include <mpi.h>
 
 #include <mwalib.h>
