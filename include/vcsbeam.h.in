@@ -1000,7 +1000,7 @@ void free_ipfb( struct gpu_ipfb_arrays *g );
 #define IM_UCMPLX4_TO_FLT(X)  ((float)(UINT8_TO_INT(IMAG_NIBBLE_TO_UINT8(X))))
 #define UCMPLX4_TO_CMPLX_FLT(X)  (make_gpuDoubleComplex((float)(UINT8_TO_INT(REAL_NIBBLE_TO_UINT8(X))), \
                                          (float)(UINT8_TO_INT(IMAG_NIBBLE_TO_UINT8(X)))))
-#define DETECT(X)                (cuCreal(cuCmul(X,cuConj(X))))
+#define DETECT(X)                (gpuCreal(gpuCmul(X,gpuConj(X))))
 
 
 #ifdef __cplusplus
