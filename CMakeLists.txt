@@ -24,7 +24,7 @@ else()
    project (vcsbeam LANGUAGES C CUDA)
 endif()
 
-include_directories( /scratch/mwavcs/msok/install/mwalib/include /scratch/mwavcs/msok/install/mwa_hyperbeam/include /scratch/mwavcs/msok/install/psrfits_utils /scratch/mwavcs/msok/install/include/ )
+include_directories( /scratch/mwavcs/msok/install/mwalib/include /scratch/mwavcs/msok/install/mwa_hyperbeam/include /scratch/mwavcs/msok/install/psrfits_utils /scratch/mwavcs/msok/install/include/ /opt/cray/pe/mpich/8.1.25/ucx/cray/10.0/include/ )
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 include_directories("src/")
