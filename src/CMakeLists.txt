@@ -43,6 +43,16 @@ target_include_directories(vcsbeam PUBLIC
     ${MPI_INCLUDE_PATH}
     ${CMAKE_BINARY_DIR})
 
+# TODO add here code to find cufft or rocfft
+if(USE_CUDA)
+   set(GPU_LIBS "-lcufft")
+elseif(USE_HIP)
+   set(GPU_LIBS "-lhipfft")
+else()
+   set(GPU_LIBS "")
+endif()
+
+
 target_link_libraries(vcsbeam
     ${PSRFITS_UTILS_LIBRARY}
     ${VDIFIO_LIBRARY}
@@ -52,7 +62,7 @@ target_link_libraries(vcsbeam
     ${HYPERBEAM_LIB}
     ${MWALIB_LIB}
     ${MPI_C_LIBRARIES}
-    cufft)
+    ${GPU_LIBS})
 
 install(TARGETS vcsbeam
     LIBRARY DESTINATION lib
