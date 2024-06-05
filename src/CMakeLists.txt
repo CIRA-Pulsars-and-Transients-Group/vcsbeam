@@ -18,6 +18,8 @@ endif ()
 
 if (PAL_FOUND)
     target_sources(vcsbeam PRIVATE geometry.c)
+else()
+    message(FATAL_ERROR "libpal not found.")
 endif ()
 
 if (VDIFIO_FOUND)
