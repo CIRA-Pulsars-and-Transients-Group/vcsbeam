@@ -14,8 +14,6 @@
 
 #define __GPU__
 
-#include <cuComplex.h>
-
 // bool gpu_support() { return true;}
 
 // I first define the error handling macro and related definitions. I will
@@ -47,6 +45,8 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 
 
 #ifdef __NVCC__
+
+#include <cuComplex.h>
 
 #define gpuMalloc(...) GPU_CHECK_ERROR(cudaMalloc(__VA_ARGS__))
 #define gpuHostAlloc(...) GPU_CHECK_ERROR(cudaHostAlloc(__VA_ARGS__, 0))
