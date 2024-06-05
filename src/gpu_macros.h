@@ -32,16 +32,24 @@
 #define gpuGetErrorString hipGetErrorString
 #endif
 
-inline void __gpu_check_error(gpuError_t x, const char *file, int line){
+// void __gpu_check_error(gpuError_t x, const char *file, int line);
+/*inline void __gpu_check_error(gpuError_t x, const char *file, int line){
     if(x != gpuSuccess){
         fprintf(stderr, "GPU error (%s:%d): %s\n", file, line, gpuGetErrorString(x));
         exit(1);
     }
-}
+}*/
 
+
+/*#define GPU_CHECK_ERROR(X)({\
+    __gpu_check_error((X), __FILE__, __LINE__);\
+})*/
 
 #define GPU_CHECK_ERROR(X)({\
-    __gpu_check_error((X), __FILE__, __LINE__);\
+    if(X != gpuSuccess){\
+        fprintf(stderr, "GPU error (%s:%d): %s\n", __FILE__ , __LINE__ , gpuGetErrorString(X));\
+        exit(1);\
+    }\
 })
 
 

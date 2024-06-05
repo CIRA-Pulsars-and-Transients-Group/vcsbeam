@@ -19,7 +19,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/fine_pfb_offline DESTINATION bin)
 
 # if (PSRFITS_UTILS_FOUND)
     add_executable(make_mwa_incoh_beam make_mwa_incoh_beam.c)
-    target_link_libraries(make_mwa_incoh_beam vcsbeam)
+    target_link_libraries(make_mwa_incoh_beam vcsbeam /scratch/mwavcs/msok/install/lib/libpsrfits_utils.so) # TODO : fix temporary
     target_include_directories(make_mwa_incoh_beam PUBLIC ${CMAKE_BINARY_DIR})
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/make_mwa_incoh_beam DESTINATION bin)
 # endif ()
@@ -36,7 +36,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/fine_pfb_offline DESTINATION bin)
 # Tied-array beam PSF
 # if (PAL_FOUND AND HYPERBEAM_FOUND)
     add_executable(mwa_tied_array_beam_psf mwa_tied_array_beam_psf.c)
-    target_link_libraries(mwa_tied_array_beam_psf vcsbeam)
+    target_link_libraries(mwa_tied_array_beam_psf vcsbeam /scratch/mwavcs/msok/install/lib/libpsrfits_utils.so) # TODO : fix temporary
     target_include_directories(mwa_tied_array_beam_psf PUBLIC ${CMAKE_BINARY_DIR})
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/mwa_tied_array_beam_psf DESTINATION bin)
 # endif ()

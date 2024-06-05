@@ -18,6 +18,7 @@
 
 // Local includes
 #include "vcsbeam.h"
+#include "gpu_macros.h"
 
 #define MAX_COMMAND_LENGTH 1024
 
@@ -147,7 +148,7 @@ int main(int argc, char **argv)
     uintptr_t npols          = vm->obs_metadata->num_ant_pols;
     unsigned int nsamples    = vm->fine_sample_rate;
 
-    cuDoubleComplex  ****detected_beam;
+    gpuDoubleComplex  ****detected_beam;
 
     if (vm->do_inverse_pfb)
     {
@@ -329,8 +330,8 @@ int main(int argc, char **argv)
 
     if (vm->do_inverse_pfb)
     {
-        cudaFreeHost( data_buffer_vdif  );
-        cudaCheckErrors( "cudaFreeHost(data_buffer_vdif) failed" );
+        gpuFreeHost( data_buffer_vdif  );
+        gpuCheckErrors( "gpuFreeHost(data_buffer_vdif) failed" );
     }
 
     vmDestroyStatistics( vm );
