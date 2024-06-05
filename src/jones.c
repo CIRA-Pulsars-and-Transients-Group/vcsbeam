@@ -148,7 +148,7 @@ if (ch == 50 && ant == 0)
                 else {
                     for (p1 = 0; p1 < npol;  p1++)
                     for (p2 = 0; p2 < npol;  p2++)
-                        vm->J[J_IDX(p,ant,ch,p1,p2,nant,nchan,npol)] = make_cuDoubleComplex( 0.0, 0.0 );
+                        vm->J[J_IDX(p,ant,ch,p1,p2,nant,nchan,npol)] = make_gpuDoubleComplex( 0.0, 0.0 );
                 }
 
             } // end loop through antenna/pol (rf_input)
