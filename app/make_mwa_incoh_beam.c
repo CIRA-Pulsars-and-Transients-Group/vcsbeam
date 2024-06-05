@@ -13,8 +13,8 @@
 
 // Non-standard dependencies
 #include <mwalib.h>
-#include <cuda_runtime.h>
 #include <mpi.h>
+#include "gpu_macros.h"
 
 // Local includes
 #include "vcsbeam.h"
@@ -90,14 +90,14 @@ int main(int argc, char **argv)
 
     allocate_input_output_arrays( (void **)&data, (void **)&d_data, data_size );
 
-    cudaMalloc( (void **)&d_incoh, incoh_size );
-    cudaCheckErrors( "cudaMalloc(d_incoh) failed" );
-    cudaMalloc( (void **)&d_offsets, nchans*sizeof(float) );
-    cudaCheckErrors( "cudaMalloc(d_offsets) failed" );
-    cudaMalloc( (void **)&d_scales,  nchans*sizeof(float) );
-    cudaCheckErrors( "cudaMalloc(d_scales) failed" );
-    cudaMalloc( (void **)&d_Iscaled, Iscaled_size );
-    cudaCheckErrors( "cudaMalloc(Iscaled) failed" );
+    gpuMalloc( (void **)&d_incoh, incoh_size );
+    gpuCheckErrors( "gpuMalloc(d_incoh) failed" );
+    gpuMalloc( (void **)&d_offsets, nchans*sizeof(float) );
+    gpuCheckErrors( "gpuMalloc(d_offsets) failed" );
+    gpuMalloc( (void **)&d_scales,  nchans*sizeof(float) );
+    gpuCheckErrors( "gpuMalloc(d_scales) failed" );
+    gpuMalloc( (void **)&d_Iscaled, Iscaled_size );
+    gpuCheckErrors( "gpuMalloc(Iscaled) failed" );
 
     // Get pointing geometry information
     beam_geom beam_geom_vals;
@@ -179,14 +179,14 @@ int main(int argc, char **argv)
 
     free_input_output_arrays( data, d_data );
 
-    cudaFree( d_incoh );
-    cudaCheckErrors( "cudaFree(d_incoh) failed" );
-    cudaFree( d_offsets );
-    cudaCheckErrors( "cudaFree(d_offsets) failed" );
-    cudaFree( d_scales );
-    cudaCheckErrors( "cudaFree(d_scales) failed" );
-    cudaFree( d_Iscaled );
-    cudaCheckErrors( "cudaFree(d_Iscaled) failed" );
+    gpuFree( d_incoh );
+    gpuCheckErrors( "gpuFree(d_incoh) failed" );
+    gpuFree( d_offsets );
+    gpuCheckErrors( "gpuFree(d_offsets) failed" );
+    gpuFree( d_scales );
+    gpuCheckErrors( "gpuFree(d_scales) failed" );
+    gpuFree( d_Iscaled );
+    gpuCheckErrors( "gpuFree(d_Iscaled) failed" );
 
     // Clean up memory associated with mwalib
     destroy_vcsbeam_context( vm );
