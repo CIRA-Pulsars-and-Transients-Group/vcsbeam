@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-#include <cuComplex.h>
 
 #include "vcsbeam.h"
+#include "gpu_macros.h"
 
 /**
  * Calculates complex roots of unity.
