@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         sprintf( coord2, "ϕ" );
     }
 
-    cuDoubleComplex *J = malloc( 4*sizeof(cuDoubleComplex) ); // For the FEE beam
+    gpuDoubleComplex *J = malloc( 4*sizeof(gpuDoubleComplex) ); // For the FEE beam
     vm.npointing = 1;
     vm.coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
     vmCreatePrimaryBeam( &vm );
@@ -174,10 +174,10 @@ int main(int argc, char **argv)
                     IQUV[2],
                     IQUV[3],
                     array_factor,
-                    cuCreal( J[0] ), cuCimag( J[0] ),
-                    cuCreal( J[1] ), cuCimag( J[1] ),
-                    cuCreal( J[2] ), cuCimag( J[2] ),
-                    cuCreal( J[3] ), cuCimag( J[3] )
+                    gpuCreal( J[0] ), gpuCimag( J[0] ),
+                    gpuCreal( J[1] ), gpuCimag( J[1] ),
+                    gpuCreal( J[2] ), gpuCimag( J[2] ),
+                    gpuCreal( J[3] ), gpuCimag( J[3] )
                    );
 
         }
