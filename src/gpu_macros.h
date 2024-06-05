@@ -114,7 +114,7 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 // no need in HIP
 // #include <hipComplex.h>
 
-#define cudaCheckErrors(msg) \
+#define hipCheckErrors(msg) \
     do { \
         hipError_t __err = hipGetLastError(); \
         if (__err != hipSuccess) { \
