@@ -17,7 +17,7 @@ if(NOT RUNTIME_DIR)
 endif(NOT RUNTIME_DIR)
 
 if(USE_HIP)
-   project(vcsbeam VERSION 0.1 LANGUAGES C)
+   project(vcsbeam VERSION 0.1 LANGUAGES C CXX)
    set(CMAKE_CXX_COMPILER hipcc)
    add_definitions("-D__HIP_PLATFORM_AMD__")
 else()
