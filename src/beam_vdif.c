@@ -16,7 +16,6 @@
 
 #include "mwa_header.h"
 #include "ascii_header.h"
-#include "gpu_macros.h"
 
 /**
  * Converts floats to 8-bit integers.
