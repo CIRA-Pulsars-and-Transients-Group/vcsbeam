@@ -124,7 +124,7 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuCheckErrors(...) hipCheckErrors(__VA_ARGS__)
 #define gpuFreeHost(...)  GPU_CHECK_ERROR( hipFreeHost(__VA_ARGS__) )
 #define gpuGetDeviceProperties(...) GPU_CHECK_ERROR( hipGetDeviceProperties(__VA_ARGS__) )
-#define gpuDeviceProp hipDeviceProp
+#define gpuDeviceProp hipDeviceProp_t
 #define gpuPeekAtLastError hipPeekAtLastError
 
 
