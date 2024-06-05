@@ -5,7 +5,7 @@ add_library(vcsbeam STATIC
     ascii_header.c
     performance.c
     filter.c
-    form_beam.cu
+    form_beam.cpp
     jones.c
     buffer.c
     pfb.cpp
