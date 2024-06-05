@@ -1,59 +1,61 @@
-cmake_minimum_required (VERSION 3.15)
-#cmake_policy(SET CMP0012 NEW)
-#cmake_policy(SET CMP0048 NEW)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fPIC -Wall -Wextra")
+#set(COMPILE_FLAGS "${COMPILE_FLAGS} -DDEBUG")
 
-# Set up version number
-execute_process(
-  COMMAND bash -c "git describe --tags --long | sed 's/-/./' | sed 's/-g/_/'"
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE VCSBEAM_VERSION
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+add_library(vcsbeam STATIC
+    ascii_header.c
+    performance.c
+    filter.c
+    form_beam.cu
+    jones.c
+    buffer.c
+    pfb.cu
+    calibration.c
+    metadata.c)
 
-message("VCSBeam ${VCSBEAM_VERSION}")
-
-if(NOT RUNTIME_DIR)
-    set(RUNTIME_DIR ${CMAKE_INSTALL_PREFIX}/bin/vcsbeam_runtime)
-endif(NOT RUNTIME_DIR)
-
-if(USE_HIP)
-   project(vcsbeam VERSION 0.1 LANGUAGES C)
-   set(CMAKE_CXX_COMPILER hipcc)
-   add_definitions("-D__HIP_PLATFORM_AMD__")
-else()
-   project (vcsbeam LANGUAGES C CUDA)
-endif()
-
-include_directories( /scratch/mwavcs/msok/install/mwalib/include /scratch/mwavcs/msok/install/mwa_hyperbeam/include /scratch/mwavcs/msok/install/psrfits_utils )
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-include_directories("src/")
-
-# find_package(CUDA REQUIRED)
-# find_package(MWALIB REQUIRED)
-# find_package(MPI)
-# find_package(PAL)
-# set(PAL_FOUND TRUE)
-# find_package(CFITSIO)
-# find_package(PSRFITS_UTILS)
-# find_package(HYPERBEAM)
-# find_package(VDIFIO)
-# find_package(XGPU)
-
-configure_file(include/vcsbeam.h.in vcsbeam.h)
-
-add_subdirectory(src)
-add_subdirectory(app)
-add_subdirectory(utils)
-
-if(XGPU_FOUND AND CFITSIO_FOUND)
-    add_subdirectory(offline_correlator)
+if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
+    target_sources(vcsbeam PRIVATE beam_psrfits.c)
 endif ()
 
-message("Runtime files will be installed in ${RUNTIME_DIR}")
+if (PAL_FOUND)
+    target_sources(vcsbeam PRIVATE geometry.c)
+endif ()
 
-install(FILES pq_phase_correction.txt
-    pfb_filter/MIRROR.dat
-    pfb_filter/LSQ12.dat
-    pfb_filter/FINEPFB.dat
-    DESTINATION ${RUNTIME_DIR})
+if (VDIFIO_FOUND)
+    target_sources(vcsbeam PRIVATE beam_vdif.c)
+endif ()
+
+if (HYPERBEAM_FOUND)
+    target_sources(vcsbeam PRIVATE primary_beam.c)
+endif ()
+
+set_target_properties(vcsbeam
+    PROPERTIES PUBLIC_HEADER ${CMAKE_BINARY_DIR}/vcsbeam.h
+    COMPILE_FLAGS "${COMPILE_FLAGS}")
+
+target_include_directories(vcsbeam PUBLIC
+    ${PSRFITS_UTILS_INCLUDE_DIR}
+    ${VDIFIO_INCLUDE_DIR}
+    ${CFITSIO_INCLUDE_DIR}
+    ${PAL_INCLUDE_DIR}
+    ${CUDA_INCLUDE_DIRS}
+    ${HYPERBEAM_INCLUDE_DIR}
+    ${MWALIB_INCLUDE_DIR}
+    ${MPI_INCLUDE_PATH}
+    ${CMAKE_BINARY_DIR})
+
+target_link_libraries(vcsbeam
+    ${PSRFITS_UTILS_LIBRARY}
+    ${VDIFIO_LIBRARY}
+    ${CFITSIO_LIBRARY}
+    ${PAL_LIBRARY}
+    ${M_LIBRARY}
+    ${HYPERBEAM_LIB}
+    ${MWALIB_LIB}
+    ${MPI_C_LIBRARIES}
+    cufft)
+
+install(TARGETS vcsbeam
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION include)
+
+
