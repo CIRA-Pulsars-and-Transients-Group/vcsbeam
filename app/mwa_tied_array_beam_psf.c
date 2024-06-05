@@ -115,7 +115,7 @@ int main(int argc, char **argv)
     // Loop over RA
     int X_idx, Y_idx;
     double X, Y;
-    cuDoubleComplex *J = malloc( 4*sizeof(cuDoubleComplex) );
+    gpuDoubleComplex *J = malloc( 4*sizeof(gpuDoubleComplex) );
     for (X_idx = 0; X_idx < opts.width_pixels; X_idx++)
     {
         X = X0 + X_idx*dX;
