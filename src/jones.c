@@ -10,11 +10,11 @@
 #include <time.h>
 #include <math.h>
 #include <string.h>
-#include <cuComplex.h>
 
 #include <mwalib.h>
 
 #include "vcsbeam.h"
+#include "gpu_macros.h"
 
 /**
  * Creates arrays of indexes for antennas and polarisation according to the
@@ -109,7 +109,7 @@ void vmCalcJ( vcsbeam_context *vm )
 
     /* easy -- now the positions from the database */
 
-    cuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
+    gpuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
 
     double Fnorm;
 
@@ -198,7 +198,7 @@ void vmCalcJonesAndDelays( vcsbeam_context *vm, double *ras_hours, double *decs_
  * @param Min The source matrix, \f${\bf M}_\text{in}\f$.
  * @param[out] Mout The destination matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}\f$.
  */
-void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
+void cp2x2(gpuDoubleComplex *Min, gpuDoubleComplex *Mout)
 {
     Mout[0] = Min[0];
     Mout[1] = Min[1];
@@ -212,10 +212,10 @@ void cp2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
  * @param z A complex number
  * @return \f$\dfrac{1}{z}\f$
  */
-cuDoubleComplex reciprocal_complex( cuDoubleComplex z )
+gpuDoubleComplex reciprocal_complex( gpuDoubleComplex z )
 {
     double scale = 1.0/(z.x*z.x + z.y*z.y);
-    return make_cuDoubleComplex( scale*z.x, -scale*z.y );
+    return make_gpuDoubleComplex( scale*z.x, -scale*z.y );
 }
 
 /**
@@ -224,9 +224,9 @@ cuDoubleComplex reciprocal_complex( cuDoubleComplex z )
  * @param z A complex number
  * @return \f$-z\f$
  */
-cuDoubleComplex negate_complex( cuDoubleComplex z )
+gpuDoubleComplex negate_complex( gpuDoubleComplex z )
 {
-    return make_cuDoubleComplex( -z.x, -z.y );
+    return make_gpuDoubleComplex( -z.x, -z.y );
 }
 
 /**
@@ -235,18 +235,18 @@ cuDoubleComplex negate_complex( cuDoubleComplex z )
  * @param Min The input matrix, \f${\bf M}_\text{in}\f$.
  * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_\text{in}^{-1}\f$
  */
-void inv2x2(cuDoubleComplex *Min, cuDoubleComplex *Mout)
+void inv2x2(gpuDoubleComplex *Min, gpuDoubleComplex *Mout)
 {
-    cuDoubleComplex m00 = Min[0];
-    cuDoubleComplex m01 = Min[1];
-    cuDoubleComplex m10 = Min[2];
-    cuDoubleComplex m11 = Min[3];
+    gpuDoubleComplex m00 = Min[0];
+    gpuDoubleComplex m01 = Min[1];
+    gpuDoubleComplex m10 = Min[2];
+    gpuDoubleComplex m11 = Min[3];
 
-    cuDoubleComplex m1 = cuCmul( m00, m11 );
-    cuDoubleComplex m2 = cuCmul( m01, m10 );
+    gpuDoubleComplex m1 = cuCmul( m00, m11 );
+    gpuDoubleComplex m2 = cuCmul( m01, m10 );
 
-    cuDoubleComplex det = cuCsub( m1, m2 );
-    cuDoubleComplex inv_det = reciprocal_complex( det );
+    gpuDoubleComplex det = cuCsub( m1, m2 );
+    gpuDoubleComplex inv_det = reciprocal_complex( det );
 
     Mout[0] = cuCmul(       inv_det,  m11 );
     Mout[1] = cuCmul( negate_complex(inv_det), m01 );
@@ -291,14 +291,14 @@ void inv2x2d(double *Min, double *Mout)
  * @todo Does this do the same thing as inv2x2()? Check the code, and delete
  *       if not needed.
  */
-void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex *Mout)
+void inv2x2S(gpuDoubleComplex *Min, gpuDoubleComplex *Mout)
 // Same as inv2x2(), but the output is a 2x2 2D array, instead of a 4-element
 // 1D array
 {
-    cuDoubleComplex m1 = cuCmul( Min[0], Min[3] );
-    cuDoubleComplex m2 = cuCmul( Min[1], Min[2] );
-    cuDoubleComplex det = cuCsub( m1, m2 );
-    cuDoubleComplex inv_det = reciprocal_complex( det );
+    gpuDoubleComplex m1 = cuCmul( Min[0], Min[3] );
+    gpuDoubleComplex m2 = cuCmul( Min[1], Min[2] );
+    gpuDoubleComplex det = cuCsub( m1, m2 );
+    gpuDoubleComplex inv_det = reciprocal_complex( det );
     Mout[0] = cuCmul(       inv_det,  Min[3] );
     Mout[1] = cuCmul( negate_complex(inv_det), Min[1] );
     Mout[2] = cuCmul( negate_complex(inv_det), Min[2] );
@@ -313,16 +313,16 @@ void inv2x2S(cuDoubleComplex *Min, cuDoubleComplex *Mout)
  * @param M2 The second input matrix, \f${\bf M}_2\f$
  * @param[out] Mout The output matrix, \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
  */
-void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
+void mult2x2d(gpuDoubleComplex *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout)
 {
-    cuDoubleComplex m00 = cuCmul( M1[0], M2[0] );
-    cuDoubleComplex m12 = cuCmul( M1[1], M2[2] );
-    cuDoubleComplex m01 = cuCmul( M1[0], M2[1] );
-    cuDoubleComplex m13 = cuCmul( M1[1], M2[3] );
-    cuDoubleComplex m20 = cuCmul( M1[2], M2[0] );
-    cuDoubleComplex m32 = cuCmul( M1[3], M2[2] );
-    cuDoubleComplex m21 = cuCmul( M1[2], M2[1] );
-    cuDoubleComplex m33 = cuCmul( M1[3], M2[3] );
+    gpuDoubleComplex m00 = cuCmul( M1[0], M2[0] );
+    gpuDoubleComplex m12 = cuCmul( M1[1], M2[2] );
+    gpuDoubleComplex m01 = cuCmul( M1[0], M2[1] );
+    gpuDoubleComplex m13 = cuCmul( M1[1], M2[3] );
+    gpuDoubleComplex m20 = cuCmul( M1[2], M2[0] );
+    gpuDoubleComplex m32 = cuCmul( M1[3], M2[2] );
+    gpuDoubleComplex m21 = cuCmul( M1[2], M2[1] );
+    gpuDoubleComplex m33 = cuCmul( M1[3], M2[3] );
     Mout[0] = cuCadd( m00, m12 );
     Mout[1] = cuCadd( m01, m13 );
     Mout[2] = cuCadd( m20, m32 );
@@ -337,16 +337,16 @@ void mult2x2d(cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
  * @param M2 The second input matrix (complex-valued), \f${\bf M}_2\f$
  * @param[out] Mout The output matrix (complex-valued), \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
  */
-void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
+void mult2x2d_RxC(double *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout)
 {
-    cuDoubleComplex m00 = make_cuDoubleComplex( M1[0]*cuCreal(M2[0]), M1[0]*cuCimag(M2[0]) );
-    cuDoubleComplex m12 = make_cuDoubleComplex( M1[1]*cuCreal(M2[2]), M1[1]*cuCimag(M2[2]) );
-    cuDoubleComplex m01 = make_cuDoubleComplex( M1[0]*cuCreal(M2[1]), M1[0]*cuCimag(M2[1]) );
-    cuDoubleComplex m13 = make_cuDoubleComplex( M1[1]*cuCreal(M2[3]), M1[1]*cuCimag(M2[3]) );
-    cuDoubleComplex m20 = make_cuDoubleComplex( M1[2]*cuCreal(M2[0]), M1[2]*cuCimag(M2[0]) );
-    cuDoubleComplex m32 = make_cuDoubleComplex( M1[3]*cuCreal(M2[2]), M1[3]*cuCimag(M2[2]) );
-    cuDoubleComplex m21 = make_cuDoubleComplex( M1[2]*cuCreal(M2[1]), M1[2]*cuCimag(M2[1]) );
-    cuDoubleComplex m33 = make_cuDoubleComplex( M1[3]*cuCreal(M2[3]), M1[3]*cuCimag(M2[3]) );
+    gpuDoubleComplex m00 = make_gpuDoubleComplex( M1[0]*cuCreal(M2[0]), M1[0]*cuCimag(M2[0]) );
+    gpuDoubleComplex m12 = make_gpuDoubleComplex( M1[1]*cuCreal(M2[2]), M1[1]*cuCimag(M2[2]) );
+    gpuDoubleComplex m01 = make_gpuDoubleComplex( M1[0]*cuCreal(M2[1]), M1[0]*cuCimag(M2[1]) );
+    gpuDoubleComplex m13 = make_gpuDoubleComplex( M1[1]*cuCreal(M2[3]), M1[1]*cuCimag(M2[3]) );
+    gpuDoubleComplex m20 = make_gpuDoubleComplex( M1[2]*cuCreal(M2[0]), M1[2]*cuCimag(M2[0]) );
+    gpuDoubleComplex m32 = make_gpuDoubleComplex( M1[3]*cuCreal(M2[2]), M1[3]*cuCimag(M2[2]) );
+    gpuDoubleComplex m21 = make_gpuDoubleComplex( M1[2]*cuCreal(M2[1]), M1[2]*cuCimag(M2[1]) );
+    gpuDoubleComplex m33 = make_gpuDoubleComplex( M1[3]*cuCreal(M2[3]), M1[3]*cuCimag(M2[3]) );
     Mout[0] = cuCadd( m00, m12 );
     Mout[1] = cuCadd( m01, m13 );
     Mout[2] = cuCadd( m20, m32 );
@@ -361,16 +361,16 @@ void mult2x2d_RxC(double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)
  * @param M2 The second input matrix (real-valued), \f${\bf M}_2\f$
  * @param[out] Mout The output matrix (complex-valued), \f${\bf M}_\text{out} = {\bf M}_1 \times {\bf M}_2\f$.
  */
-void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout )
+void mult2x2d_CxR( gpuDoubleComplex *M1, double *M2, gpuDoubleComplex *Mout )
 {
-    cuDoubleComplex m00 = make_cuDoubleComplex( cuCreal(M1[0])*M2[0], cuCimag(M1[0])*M2[0] );
-    cuDoubleComplex m12 = make_cuDoubleComplex( cuCreal(M1[1])*M2[2], cuCimag(M1[1])*M2[2] );
-    cuDoubleComplex m01 = make_cuDoubleComplex( cuCreal(M1[0])*M2[1], cuCimag(M1[0])*M2[1] );
-    cuDoubleComplex m13 = make_cuDoubleComplex( cuCreal(M1[1])*M2[3], cuCimag(M1[1])*M2[3] );
-    cuDoubleComplex m20 = make_cuDoubleComplex( cuCreal(M1[2])*M2[0], cuCimag(M1[2])*M2[0] );
-    cuDoubleComplex m32 = make_cuDoubleComplex( cuCreal(M1[3])*M2[2], cuCimag(M1[3])*M2[2] );
-    cuDoubleComplex m21 = make_cuDoubleComplex( cuCreal(M1[2])*M2[1], cuCimag(M1[2])*M2[1] );
-    cuDoubleComplex m33 = make_cuDoubleComplex( cuCreal(M1[3])*M2[3], cuCimag(M1[3])*M2[3] );
+    gpuDoubleComplex m00 = make_gpuDoubleComplex( cuCreal(M1[0])*M2[0], cuCimag(M1[0])*M2[0] );
+    gpuDoubleComplex m12 = make_gpuDoubleComplex( cuCreal(M1[1])*M2[2], cuCimag(M1[1])*M2[2] );
+    gpuDoubleComplex m01 = make_gpuDoubleComplex( cuCreal(M1[0])*M2[1], cuCimag(M1[0])*M2[1] );
+    gpuDoubleComplex m13 = make_gpuDoubleComplex( cuCreal(M1[1])*M2[3], cuCimag(M1[1])*M2[3] );
+    gpuDoubleComplex m20 = make_gpuDoubleComplex( cuCreal(M1[2])*M2[0], cuCimag(M1[2])*M2[0] );
+    gpuDoubleComplex m32 = make_gpuDoubleComplex( cuCreal(M1[3])*M2[2], cuCimag(M1[3])*M2[2] );
+    gpuDoubleComplex m21 = make_gpuDoubleComplex( cuCreal(M1[2])*M2[1], cuCimag(M1[2])*M2[1] );
+    gpuDoubleComplex m33 = make_gpuDoubleComplex( cuCreal(M1[3])*M2[3], cuCimag(M1[3])*M2[3] );
     Mout[0] = cuCadd( m00, m12 );
     Mout[1] = cuCadd( m01, m13 );
     Mout[2] = cuCadd( m20, m32 );
@@ -385,7 +385,7 @@ void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout )
  *
  * It is safe for `M` and `Mout` to point to the same matrix.
  */
-void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
+void conj2x2(gpuDoubleComplex *M, gpuDoubleComplex *Mout)
 {
     int i;
     for (i = 0; i < 4; i++)
@@ -401,7 +401,7 @@ void conj2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
  *
  * It is safe for `M` and `Mout` to point to the same matrix.
  */
-double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
+double norm2x2(gpuDoubleComplex *M, gpuDoubleComplex *Mout)
 {
     // Calculate the normalising factor
     double Fnorm = 0.0;
@@ -415,9 +415,9 @@ double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
     // If norm is 0, then output zeros everywhere
     for (i = 0; i < 4; i++) {
         if (Fnorm == 0.0)
-            Mout[i] = make_cuDoubleComplex( 0.0, 0.0 );
+            Mout[i] = make_gpuDoubleComplex( 0.0, 0.0 );
         else
-            Mout[i] = make_cuDoubleComplex( cuCreal(M[i])/Fnorm, cuCimag(M[i])/Fnorm );
+            Mout[i] = make_gpuDoubleComplex( cuCreal(M[i])/Fnorm, cuCimag(M[i])/Fnorm );
     }
 
     return Fnorm;
@@ -436,12 +436,12 @@ double norm2x2(cuDoubleComplex *M, cuDoubleComplex *Mout)
  *
  * It is safe for `M` and `Mout` to point to the same matrix.
  */
-void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
+void reverse2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout )
 {
-    cuDoubleComplex m0 = M[0];
-    cuDoubleComplex m1 = M[1];
-    cuDoubleComplex m2 = M[2];
-    cuDoubleComplex m3 = M[3];
+    gpuDoubleComplex m0 = M[0];
+    gpuDoubleComplex m1 = M[1];
+    gpuDoubleComplex m2 = M[2];
+    gpuDoubleComplex m3 = M[3];
 
     Mout[0] = m3;
     Mout[1] = m2;
@@ -461,12 +461,12 @@ void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
  *
  * It is safe for `M` and `Mout` to point to the same matrix.
  */
-void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
+void swaprows2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout )
 {
-    cuDoubleComplex m0 = M[0];
-    cuDoubleComplex m1 = M[1];
-    cuDoubleComplex m2 = M[2];
-    cuDoubleComplex m3 = M[3];
+    gpuDoubleComplex m0 = M[0];
+    gpuDoubleComplex m1 = M[1];
+    gpuDoubleComplex m2 = M[2];
+    gpuDoubleComplex m3 = M[3];
 
     Mout[0] = m2;
     Mout[1] = m3;
@@ -486,12 +486,12 @@ void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
  *
  * It is safe for `M` and `Mout` to point to the same matrix.
  */
-void swapcols2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
+void swapcols2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout )
 {
-    cuDoubleComplex m0 = M[0];
-    cuDoubleComplex m1 = M[1];
-    cuDoubleComplex m2 = M[2];
-    cuDoubleComplex m3 = M[3];
+    gpuDoubleComplex m0 = M[0];
+    gpuDoubleComplex m1 = M[1];
+    gpuDoubleComplex m2 = M[2];
+    gpuDoubleComplex m3 = M[3];
 
     Mout[0] = m1;
     Mout[1] = m0;
@@ -504,7 +504,7 @@ void swapcols2x2( cuDoubleComplex *M, cuDoubleComplex *Mout )
  *
  * @param M The matrix to be tested, \f${\bf M}\f$.
  */
-bool is2x2zero( cuDoubleComplex *M )
+bool is2x2zero( gpuDoubleComplex *M )
 {
     return (cuCreal(M[0]) == 0.0 &&
             cuCimag(M[0]) == 0.0 &&
@@ -524,11 +524,11 @@ bool is2x2zero( cuDoubleComplex *M )
  *
  * It is safe for `M` and `H` to point to the same matrix.
  */
-void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
+void calc_hermitian( gpuDoubleComplex *M, gpuDoubleComplex *H )
 {
     // Put in temporary matrix, so that H may point to the same memory
     // address as M
-    cuDoubleComplex tmp[4];
+    gpuDoubleComplex tmp[4];
     tmp[0] = cuConj( M[0] );
     tmp[1] = cuConj( M[2] );
     tmp[2] = cuConj( M[1] );
@@ -545,11 +545,11 @@ void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H )
  *
  * It is safe for `M` and `C` to point to the same matrix.
  */
-void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *C )
+void calc_coherency_matrix( gpuDoubleComplex *M, gpuDoubleComplex *C )
 /* Compute C = M x M^H, where "^H" is the hermitian operation
  */
 {
-    cuDoubleComplex MH[4];
+    gpuDoubleComplex MH[4];
     calc_hermitian( M, MH );
     mult2x2d( M, MH, C );
 }
@@ -567,7 +567,7 @@ void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *C )
  *
  * and a newline is printed at the end.
  */
-void fprintf_complex_matrix( FILE *fout, cuDoubleComplex *M )
+void fprintf_complex_matrix( FILE *fout, gpuDoubleComplex *M )
 {
     fprintf( fout, "[ %lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i ]\n",
                    cuCreal(M[0]), cuCimag(M[0]),
