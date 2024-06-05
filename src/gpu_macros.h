@@ -146,7 +146,7 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuGetDeviceCount(...) GPU_CHECK_ERROR(hipGetDeviceCount(__VA_ARGS__))
 #define gpuGetLastError hipGetLastError
 #define gpuMemGetInfo(...) GPU_CHECK_ERROR(hipMemGetInfo(__VA_ARGS__))
-#define gpuMallocHost(...) GPU_CHECK_ERROR(hipHostMalloc(__VA_ARGS__)) // TODO : double check this may be temporary only
+#define gpuMallocHost(...) GPU_CHECK_ERROR(hipHostMalloc(__VA_ARGS__, 0)) // TODO : double check this may be temporary only
 #define gpuCheckErrors(...) hipCheckErrors(__VA_ARGS__)
 #define gpuFreeHost(...)  GPU_CHECK_ERROR( hipFreeHost(__VA_ARGS__) )
 #define gpuGetDeviceProperties(...) GPU_CHECK_ERROR( hipGetDeviceProperties(__VA_ARGS__) )
