@@ -14,6 +14,7 @@
 #include <inttypes.h>
 
 #include "gpu_includes.h"
+#include "gpu_macros.h"
 
 #include <mpi.h>
 
