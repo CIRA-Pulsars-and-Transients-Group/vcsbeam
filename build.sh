@@ -11,6 +11,6 @@ export LD_LIBRARY_PATH=/scratch/mwavcs/msok/install/mwa_hyperbeam/target/release
 
 mkdir build
 cd build
-cmake .. -DUSE_HIP=ON
+cmake .. -DUSE_HIP=ON -DHYPERBEAM_HDF5=/scratch/mwavcs/msok/install/mwa_hyperbeam/mwa_full_embedded_element_pattern.h5
 
 make VERBOSE=1
