@@ -96,7 +96,8 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 
 #else
 
-#include <hipComplex.h>
+// no need in HIP
+// #include <hipComplex.h>
 
 #define gpuMalloc(...) GPU_CHECK_ERROR(hipMalloc(__VA_ARGS__))
 #define gpuHostAlloc(...) GPU_CHECK_ERROR(hipHostMalloc(__VA_ARGS__, 0))
