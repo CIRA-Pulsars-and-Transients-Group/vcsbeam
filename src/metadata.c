@@ -465,7 +465,7 @@ void vmMallocJVHost( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->fine_sample_rate *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     gpuMallocHost( (void **)&(vm->Jv_P), vm->Jv_size_bytes );
     gpuCheckErrors( "vmMallocJVHost: gpuMallocHost(Jv_P) failed" );
@@ -487,7 +487,7 @@ void vmMallocEHost( vcsbeam_context *vm )
         vm->fine_sample_rate *
         vm->nfine_chan *
         vm->obs_metadata->num_ant_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on host
     gpuMallocHost( (void **)&(vm->e), vm->e_size_bytes );
@@ -524,7 +524,7 @@ void vmMallocJHost( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
     gpuMallocHost( (void **)&(vm->J), vm->J_size_bytes );
@@ -544,7 +544,7 @@ void vmMallocDHost( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
     gpuMallocHost( (void **)&(vm->D), vm->D_size_bytes );
@@ -701,7 +701,7 @@ void vmMallocJVDevice( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->fine_sample_rate *
-        sizeof(cuDoubleComplex) /
+        sizeof(gpuDoubleComplex) /
         vm->chunks_per_second;
 
     gpuMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
@@ -724,7 +724,7 @@ void vmMallocEDevice( vcsbeam_context *vm )
         vm->fine_sample_rate *
         vm->nfine_chan *
         vm->obs_metadata->num_ant_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
     gpuMalloc( (void **)&(vm->d_e), vm->d_e_size_bytes );
@@ -761,7 +761,7 @@ void vmMallocJDevice( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
     gpuMalloc( (void **)&(vm->d_J), vm->d_J_size_bytes );
@@ -781,7 +781,7 @@ void vmMallocDDevice( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
     gpuMalloc( (void **)&(vm->d_D), vm->d_D_size_bytes );
@@ -1158,7 +1158,7 @@ void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
     vm->npointing       = npointings;
     vm->S_size_bytes    = vm->npointing * vm->nchan * vm->out_nstokes * vm->sample_rate * sizeof(float);
     vm->d_S_size_bytes  = vm->S_size_bytes;
-    vm->e_size_bytes    = vm->npointing * vm->sample_rate * vm->nchan * npol * sizeof(cuDoubleComplex);
+    vm->e_size_bytes    = vm->npointing * vm->sample_rate * vm->nchan * npol * sizeof(gpuDoubleComplex);
     vm->d_e_size_bytes  = vm->e_size_bytes;
 }
 
