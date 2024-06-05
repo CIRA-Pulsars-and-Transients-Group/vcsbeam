@@ -242,16 +242,16 @@ void inv2x2(gpuDoubleComplex *Min, gpuDoubleComplex *Mout)
     gpuDoubleComplex m10 = Min[2];
     gpuDoubleComplex m11 = Min[3];
 
-    gpuDoubleComplex m1 = cuCmul( m00, m11 );
-    gpuDoubleComplex m2 = cuCmul( m01, m10 );
+    gpuDoubleComplex m1 = gpuCmul( m00, m11 );
+    gpuDoubleComplex m2 = gpuCmul( m01, m10 );
 
-    gpuDoubleComplex det = cuCsub( m1, m2 );
+    gpuDoubleComplex det = gpuCsub( m1, m2 );
     gpuDoubleComplex inv_det = reciprocal_complex( det );
 
-    Mout[0] = cuCmul(       inv_det,  m11 );
-    Mout[1] = cuCmul( negate_complex(inv_det), m01 );
-    Mout[2] = cuCmul( negate_complex(inv_det), m10 );
-    Mout[3] = cuCmul(       inv_det,  m00 );
+    Mout[0] = gpuCmul(       inv_det,  m11 );
+    Mout[1] = gpuCmul( negate_complex(inv_det), m01 );
+    Mout[2] = gpuCmul( negate_complex(inv_det), m10 );
+    Mout[3] = gpuCmul(       inv_det,  m00 );
 }
 
 /**
@@ -295,14 +295,14 @@ void inv2x2S(gpuDoubleComplex *Min, gpuDoubleComplex *Mout)
 // Same as inv2x2(), but the output is a 2x2 2D array, instead of a 4-element
 // 1D array
 {
-    gpuDoubleComplex m1 = cuCmul( Min[0], Min[3] );
-    gpuDoubleComplex m2 = cuCmul( Min[1], Min[2] );
-    gpuDoubleComplex det = cuCsub( m1, m2 );
+    gpuDoubleComplex m1 = gpuCmul( Min[0], Min[3] );
+    gpuDoubleComplex m2 = gpuCmul( Min[1], Min[2] );
+    gpuDoubleComplex det = gpuCsub( m1, m2 );
     gpuDoubleComplex inv_det = reciprocal_complex( det );
-    Mout[0] = cuCmul(       inv_det,  Min[3] );
-    Mout[1] = cuCmul( negate_complex(inv_det), Min[1] );
-    Mout[2] = cuCmul( negate_complex(inv_det), Min[2] );
-    Mout[3] = cuCmul(       inv_det,  Min[0] );
+    Mout[0] = gpuCmul(       inv_det,  Min[3] );
+    Mout[1] = gpuCmul( negate_complex(inv_det), Min[1] );
+    Mout[2] = gpuCmul( negate_complex(inv_det), Min[2] );
+    Mout[3] = gpuCmul(       inv_det,  Min[0] );
 }
 
 
@@ -315,18 +315,18 @@ void inv2x2S(gpuDoubleComplex *Min, gpuDoubleComplex *Mout)
  */
 void mult2x2d(gpuDoubleComplex *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout)
 {
-    gpuDoubleComplex m00 = cuCmul( M1[0], M2[0] );
-    gpuDoubleComplex m12 = cuCmul( M1[1], M2[2] );
-    gpuDoubleComplex m01 = cuCmul( M1[0], M2[1] );
-    gpuDoubleComplex m13 = cuCmul( M1[1], M2[3] );
-    gpuDoubleComplex m20 = cuCmul( M1[2], M2[0] );
-    gpuDoubleComplex m32 = cuCmul( M1[3], M2[2] );
-    gpuDoubleComplex m21 = cuCmul( M1[2], M2[1] );
-    gpuDoubleComplex m33 = cuCmul( M1[3], M2[3] );
-    Mout[0] = cuCadd( m00, m12 );
-    Mout[1] = cuCadd( m01, m13 );
-    Mout[2] = cuCadd( m20, m32 );
-    Mout[3] = cuCadd( m21, m33 );
+    gpuDoubleComplex m00 = gpuCmul( M1[0], M2[0] );
+    gpuDoubleComplex m12 = gpuCmul( M1[1], M2[2] );
+    gpuDoubleComplex m01 = gpuCmul( M1[0], M2[1] );
+    gpuDoubleComplex m13 = gpuCmul( M1[1], M2[3] );
+    gpuDoubleComplex m20 = gpuCmul( M1[2], M2[0] );
+    gpuDoubleComplex m32 = gpuCmul( M1[3], M2[2] );
+    gpuDoubleComplex m21 = gpuCmul( M1[2], M2[1] );
+    gpuDoubleComplex m33 = gpuCmul( M1[3], M2[3] );
+    Mout[0] = gpuCadd( m00, m12 );
+    Mout[1] = gpuCadd( m01, m13 );
+    Mout[2] = gpuCadd( m20, m32 );
+    Mout[3] = gpuCadd( m21, m33 );
 }
 
 /**
@@ -339,18 +339,18 @@ void mult2x2d(gpuDoubleComplex *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout
  */
 void mult2x2d_RxC(double *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout)
 {
-    gpuDoubleComplex m00 = make_gpuDoubleComplex( M1[0]*cuCreal(M2[0]), M1[0]*cuCimag(M2[0]) );
-    gpuDoubleComplex m12 = make_gpuDoubleComplex( M1[1]*cuCreal(M2[2]), M1[1]*cuCimag(M2[2]) );
-    gpuDoubleComplex m01 = make_gpuDoubleComplex( M1[0]*cuCreal(M2[1]), M1[0]*cuCimag(M2[1]) );
-    gpuDoubleComplex m13 = make_gpuDoubleComplex( M1[1]*cuCreal(M2[3]), M1[1]*cuCimag(M2[3]) );
-    gpuDoubleComplex m20 = make_gpuDoubleComplex( M1[2]*cuCreal(M2[0]), M1[2]*cuCimag(M2[0]) );
-    gpuDoubleComplex m32 = make_gpuDoubleComplex( M1[3]*cuCreal(M2[2]), M1[3]*cuCimag(M2[2]) );
-    gpuDoubleComplex m21 = make_gpuDoubleComplex( M1[2]*cuCreal(M2[1]), M1[2]*cuCimag(M2[1]) );
-    gpuDoubleComplex m33 = make_gpuDoubleComplex( M1[3]*cuCreal(M2[3]), M1[3]*cuCimag(M2[3]) );
-    Mout[0] = cuCadd( m00, m12 );
-    Mout[1] = cuCadd( m01, m13 );
-    Mout[2] = cuCadd( m20, m32 );
-    Mout[3] = cuCadd( m21, m33 );
+    gpuDoubleComplex m00 = make_gpuDoubleComplex( M1[0]*gpuCreal(M2[0]), M1[0]*gpuCimag(M2[0]) );
+    gpuDoubleComplex m12 = make_gpuDoubleComplex( M1[1]*gpuCreal(M2[2]), M1[1]*gpuCimag(M2[2]) );
+    gpuDoubleComplex m01 = make_gpuDoubleComplex( M1[0]*gpuCreal(M2[1]), M1[0]*gpuCimag(M2[1]) );
+    gpuDoubleComplex m13 = make_gpuDoubleComplex( M1[1]*gpuCreal(M2[3]), M1[1]*gpuCimag(M2[3]) );
+    gpuDoubleComplex m20 = make_gpuDoubleComplex( M1[2]*gpuCreal(M2[0]), M1[2]*gpuCimag(M2[0]) );
+    gpuDoubleComplex m32 = make_gpuDoubleComplex( M1[3]*gpuCreal(M2[2]), M1[3]*gpuCimag(M2[2]) );
+    gpuDoubleComplex m21 = make_gpuDoubleComplex( M1[2]*gpuCreal(M2[1]), M1[2]*gpuCimag(M2[1]) );
+    gpuDoubleComplex m33 = make_gpuDoubleComplex( M1[3]*gpuCreal(M2[3]), M1[3]*gpuCimag(M2[3]) );
+    Mout[0] = gpuCadd( m00, m12 );
+    Mout[1] = gpuCadd( m01, m13 );
+    Mout[2] = gpuCadd( m20, m32 );
+    Mout[3] = gpuCadd( m21, m33 );
 }
 
 /**
@@ -363,18 +363,18 @@ void mult2x2d_RxC(double *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout)
  */
 void mult2x2d_CxR( gpuDoubleComplex *M1, double *M2, gpuDoubleComplex *Mout )
 {
-    gpuDoubleComplex m00 = make_gpuDoubleComplex( cuCreal(M1[0])*M2[0], cuCimag(M1[0])*M2[0] );
-    gpuDoubleComplex m12 = make_gpuDoubleComplex( cuCreal(M1[1])*M2[2], cuCimag(M1[1])*M2[2] );
-    gpuDoubleComplex m01 = make_gpuDoubleComplex( cuCreal(M1[0])*M2[1], cuCimag(M1[0])*M2[1] );
-    gpuDoubleComplex m13 = make_gpuDoubleComplex( cuCreal(M1[1])*M2[3], cuCimag(M1[1])*M2[3] );
-    gpuDoubleComplex m20 = make_gpuDoubleComplex( cuCreal(M1[2])*M2[0], cuCimag(M1[2])*M2[0] );
-    gpuDoubleComplex m32 = make_gpuDoubleComplex( cuCreal(M1[3])*M2[2], cuCimag(M1[3])*M2[2] );
-    gpuDoubleComplex m21 = make_gpuDoubleComplex( cuCreal(M1[2])*M2[1], cuCimag(M1[2])*M2[1] );
-    gpuDoubleComplex m33 = make_gpuDoubleComplex( cuCreal(M1[3])*M2[3], cuCimag(M1[3])*M2[3] );
-    Mout[0] = cuCadd( m00, m12 );
-    Mout[1] = cuCadd( m01, m13 );
-    Mout[2] = cuCadd( m20, m32 );
-    Mout[3] = cuCadd( m21, m33 );
+    gpuDoubleComplex m00 = make_gpuDoubleComplex( gpuCreal(M1[0])*M2[0], gpuCimag(M1[0])*M2[0] );
+    gpuDoubleComplex m12 = make_gpuDoubleComplex( gpuCreal(M1[1])*M2[2], gpuCimag(M1[1])*M2[2] );
+    gpuDoubleComplex m01 = make_gpuDoubleComplex( gpuCreal(M1[0])*M2[1], gpuCimag(M1[0])*M2[1] );
+    gpuDoubleComplex m13 = make_gpuDoubleComplex( gpuCreal(M1[1])*M2[3], gpuCimag(M1[1])*M2[3] );
+    gpuDoubleComplex m20 = make_gpuDoubleComplex( gpuCreal(M1[2])*M2[0], gpuCimag(M1[2])*M2[0] );
+    gpuDoubleComplex m32 = make_gpuDoubleComplex( gpuCreal(M1[3])*M2[2], gpuCimag(M1[3])*M2[2] );
+    gpuDoubleComplex m21 = make_gpuDoubleComplex( gpuCreal(M1[2])*M2[1], gpuCimag(M1[2])*M2[1] );
+    gpuDoubleComplex m33 = make_gpuDoubleComplex( gpuCreal(M1[3])*M2[3], gpuCimag(M1[3])*M2[3] );
+    Mout[0] = gpuCadd( m00, m12 );
+    Mout[1] = gpuCadd( m01, m13 );
+    Mout[2] = gpuCadd( m20, m32 );
+    Mout[3] = gpuCadd( m21, m33 );
 }
 
 /**
@@ -389,7 +389,7 @@ void conj2x2(gpuDoubleComplex *M, gpuDoubleComplex *Mout)
 {
     int i;
     for (i = 0; i < 4; i++)
-        Mout[i] = cuConj(M[i]);
+        Mout[i] = gpuConj(M[i]);
 }
 
 
@@ -407,7 +407,7 @@ double norm2x2(gpuDoubleComplex *M, gpuDoubleComplex *Mout)
     double Fnorm = 0.0;
     int i;
     for (i = 0; i < 4; i++)
-        Fnorm += cuCreal( cuCmul( M[i], cuConj(M[i]) ) );
+        Fnorm += gpuCreal( gpuCmul( M[i], gpuConj(M[i]) ) );
 
     Fnorm = sqrt(Fnorm);
 
@@ -417,7 +417,7 @@ double norm2x2(gpuDoubleComplex *M, gpuDoubleComplex *Mout)
         if (Fnorm == 0.0)
             Mout[i] = make_gpuDoubleComplex( 0.0, 0.0 );
         else
-            Mout[i] = make_gpuDoubleComplex( cuCreal(M[i])/Fnorm, cuCimag(M[i])/Fnorm );
+            Mout[i] = make_gpuDoubleComplex( gpuCreal(M[i])/Fnorm, gpuCimag(M[i])/Fnorm );
     }
 
     return Fnorm;
@@ -506,14 +506,14 @@ void swapcols2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout )
  */
 bool is2x2zero( gpuDoubleComplex *M )
 {
-    return (cuCreal(M[0]) == 0.0 &&
-            cuCimag(M[0]) == 0.0 &&
-            cuCreal(M[1]) == 0.0 &&
-            cuCimag(M[1]) == 0.0 &&
-            cuCreal(M[2]) == 0.0 &&
-            cuCimag(M[2]) == 0.0 &&
-            cuCreal(M[3]) == 0.0 &&
-            cuCimag(M[3]) == 0.0);
+    return (gpuCreal(M[0]) == 0.0 &&
+            gpuCimag(M[0]) == 0.0 &&
+            gpuCreal(M[1]) == 0.0 &&
+            gpuCimag(M[1]) == 0.0 &&
+            gpuCreal(M[2]) == 0.0 &&
+            gpuCimag(M[2]) == 0.0 &&
+            gpuCreal(M[3]) == 0.0 &&
+            gpuCimag(M[3]) == 0.0);
 }
 
 /**
@@ -529,10 +529,10 @@ void calc_hermitian( gpuDoubleComplex *M, gpuDoubleComplex *H )
     // Put in temporary matrix, so that H may point to the same memory
     // address as M
     gpuDoubleComplex tmp[4];
-    tmp[0] = cuConj( M[0] );
-    tmp[1] = cuConj( M[2] );
-    tmp[2] = cuConj( M[1] );
-    tmp[3] = cuConj( M[3] );
+    tmp[0] = gpuConj( M[0] );
+    tmp[1] = gpuConj( M[2] );
+    tmp[2] = gpuConj( M[1] );
+    tmp[3] = gpuConj( M[3] );
 
     cp2x2( tmp, H );
 }
@@ -570,9 +570,9 @@ void calc_coherency_matrix( gpuDoubleComplex *M, gpuDoubleComplex *C )
 void fprintf_complex_matrix( FILE *fout, gpuDoubleComplex *M )
 {
     fprintf( fout, "[ %lf%+lf*i, %lf%+lf*i; %lf%+lf*i, %lf%+lf*i ]\n",
-                   cuCreal(M[0]), cuCimag(M[0]),
-                   cuCreal(M[1]), cuCimag(M[1]),
-                   cuCreal(M[2]), cuCimag(M[2]),
-                   cuCreal(M[3]), cuCimag(M[3])
+                   gpuCreal(M[0]), gpuCimag(M[0]),
+                   gpuCreal(M[1]), gpuCimag(M[1]),
+                   gpuCreal(M[2]), gpuCimag(M[2]),
+                   gpuCreal(M[3]), gpuCimag(M[3])
            );
 }
