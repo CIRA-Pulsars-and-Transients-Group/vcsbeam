@@ -401,7 +401,7 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
 
     // Set up the idxs for the "rf input" output order,
     // and copy to device
-    (gpuHostMalloc( (void **)&(fpfb->i_output_idx),   fpfb->I*sizeof(int) ));
+    (gpuMallocHost( (void **)&(fpfb->i_output_idx),   fpfb->I*sizeof(int) ));
     (gpuMalloc(     (void **)&(fpfb->d_i_output_idx), fpfb->I*sizeof(int) ));
 
     int i, mwax_idx, legacy_idx;
