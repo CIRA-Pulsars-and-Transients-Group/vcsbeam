@@ -3,10 +3,12 @@
 
 #include <stdio.h>
 
-#ifndef __NVCC__
-#define __NVCC__ // should be set by compiler !!!
-#endif
+// #ifndef __NVCC__
+// #define __NVCC__ // should be set by compiler !!!
+// #endif
 
+// TODO: Cristian should know how to avoid being explicit here:
+#define __HIPCC__
 
 #if defined (__NVCC__) || defined (__HIPCC__)
 
@@ -77,6 +79,10 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuCmul  cuCmul
 #define gpuConj  cuConj
 #define gpuCsub  cuCsub
+#define gpuDoubleComplex cuDoubleComplex
+#define gpuFloatComplex cuFloatComplex
+#define make_gpuDoubleComplex make_cuDoubleComplex
+#define make_gpuFloatComplex make_cuFloatComplex
 
 /*inline int num_available_gpus()
 {
@@ -122,6 +128,10 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuCmul  hipCmul
 #define gpuConj  hipConj
 #define gpuCsub  hipCsub
+#define gpuDoubleComplex hipDoubleComplex
+#define gpuFloatComplex  hipFloatComplex
+#define make_gpuDoubleComplex make_hipDoubleComplex
+#define make_gpuFloatComplex make_hipFloatComplex
 
 #endif
 #define gpuCheckLastError(...) GPU_CHECK_ERROR(gpuGetLastError())
