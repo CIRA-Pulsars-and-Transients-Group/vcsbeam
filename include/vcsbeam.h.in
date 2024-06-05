@@ -15,7 +15,7 @@
 
 #include "gpu_includes.h"
 #include "gpu_macros.h"
-
+#include "gpu_fft.h"
 #include <mpi.h>
 
 #include <mwalib.h>
@@ -518,7 +518,7 @@ typedef struct forward_pfb_t
                                               // VCS files are ordered in their own special order)
 
     pfb_flags         flags;                  // See pfb_flags enum above for options
-    cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
+    gpufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
 } forward_pfb;
 
 
@@ -649,7 +649,7 @@ typedef struct vcsbeam_context_t
     int chunk_to_load;                // Which chunk number to load to gpu next
     vcsbeam_datatype datatype;        // What format the input data samples are in
 
-    cudaStream_t *streams;            // CUDA streams used for forming multiple tied-array beams
+    gpuStream_t *streams;            // CUDA streams used for forming multiple tied-array beams
 
     logger *log;                      // Used for log messages
     char log_message[MAX_COMMAND_LENGTH];
