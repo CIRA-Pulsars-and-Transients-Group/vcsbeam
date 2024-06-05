@@ -79,6 +79,7 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuCimag cuCimag
 #define gpuCadd  cuCadd
 #define gpuCmul  cuCmul
+#define gpuCdiv  cuCdiv
 #define gpuConj  cuConj
 #define gpuCsub  cuCsub
 #define gpuCabs  cuCabs
@@ -132,6 +133,7 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuCimag hipCimag
 #define gpuCadd  hipCadd
 #define gpuCmul  hipCmul
+#define gpuCdiv  hipCdiv
 #define gpuConj  hipConj
 #define gpuCsub  hipCsub
 #define gpuCabs  hipCabs
