@@ -12,9 +12,9 @@ add_library(vcsbeam STATIC
     calibration.c
     metadata.c)
 
-if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
+# if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
     target_sources(vcsbeam PRIVATE beam_psrfits.c)
-endif ()
+# endif ()
 
 if (PAL_FOUND)
     target_sources(vcsbeam PRIVATE geometry.c)
@@ -22,13 +22,13 @@ else()
     message(FATAL_ERROR "libpal not found.")
 endif ()
 
-if (VDIFIO_FOUND)
+# if (VDIFIO_FOUND)
     target_sources(vcsbeam PRIVATE beam_vdif.c)
-endif ()
+# endif ()
 
-if (HYPERBEAM_FOUND)
+# if (HYPERBEAM_FOUND)
     target_sources(vcsbeam PRIVATE primary_beam.c)
-endif ()
+# endif ()
 
 set_target_properties(vcsbeam
     PROPERTIES PUBLIC_HEADER ${CMAKE_BINARY_DIR}/vcsbeam.h
