@@ -134,9 +134,6 @@ Functions</h2></td></tr>
 <tr class="memitem:a28a2fb5a5b33087e894b34e8fbe83a35"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a28a2fb5a5b33087e894b34e8fbe83a35">vmPullS</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:a28a2fb5a5b33087e894b34e8fbe83a35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies the detected Stokes parameters from GPU memory to CPU memory.  <a href="form__beam_8cu.html#a28a2fb5a5b33087e894b34e8fbe83a35">More...</a><br /></td></tr>
 <tr class="separator:a28a2fb5a5b33087e894b34e8fbe83a35"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4e2778cd4e010763af76bd3d820133f1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1">prepare_detected_beam</a> (cuDoubleComplex ****detected_beam, mpi_psrfits *mpfs, vcsbeam_context *vm)</td></tr>
-<tr class="memdesc:a4e2778cd4e010763af76bd3d820133f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies the beamformed voltages into a different array to prepare for inverting the PFB.  <a href="form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1">More...</a><br /></td></tr>
-<tr class="separator:a4e2778cd4e010763af76bd3d820133f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a35a259c82a7809d57d0c9d16dcf3be92"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a35a259c82a7809d57d0c9d16dcf3be92">vmSendSToFits</a> (vcsbeam_context *vm, mpi_psrfits *mpfs)</td></tr>
 <tr class="memdesc:a35a259c82a7809d57d0c9d16dcf3be92"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renormalises the detected Stokes parameters and copies them into PSRFITS structs, ready for frequency splicing.  <a href="form__beam_8cu.html#a35a259c82a7809d57d0c9d16dcf3be92">More...</a><br /></td></tr>
 <tr class="separator:a35a259c82a7809d57d0c9d16dcf3be92"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -149,9 +146,10 @@ Functions</h2></td></tr>
 <tr class="memitem:ad2e6ebf2fafcce02526b94cb8f01366f"><td class="memItemLeft" align="right" valign="top">cuDoubleComplex ****&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f">create_detected_beam</a> (int npointing, int nsamples, int nchan, int npol)</td></tr>
 <tr class="memdesc:ad2e6ebf2fafcce02526b94cb8f01366f"><td class="mdescLeft">&#160;</td><td class="mdescRight">(Deprecated) Allocate memory on the CPU.  <a href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f">More...</a><br /></td></tr>
 <tr class="separator:ad2e6ebf2fafcce02526b94cb8f01366f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae97c305b54fb67d57a8fd9c0af5be03a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#ae97c305b54fb67d57a8fd9c0af5be03a">destroy_detected_beam</a> (cuDoubleComplex ****array, int npointing, int nsamples, int nchan)</td></tr>
-<tr class="memdesc:ae97c305b54fb67d57a8fd9c0af5be03a"><td class="mdescLeft">&#160;</td><td class="mdescRight">(Deprecated) Frees memory on the CPU.  <a href="form__beam_8cu.html#ae97c305b54fb67d57a8fd9c0af5be03a">More...</a><br /></td></tr>
-<tr class="separator:ae97c305b54fb67d57a8fd9c0af5be03a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaac095ac565879c9a4b72fbeb340eafd"><td class="memItemLeft" align="right" valign="top">cuDoubleComplex *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#aaac095ac565879c9a4b72fbeb340eafd">create_data_buffer_fine</a> (int npointing, int nsamples, int nchan, int npol)</td></tr>
+<tr class="separator:aaac095ac565879c9a4b72fbeb340eafd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5369255e7582c676b7c26198f7cb2aef"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a5369255e7582c676b7c26198f7cb2aef">prepare_data_buffer_fine</a> (cuDoubleComplex *data_buffer_fine, vcsbeam_context *vm, uintptr_t timestep_idx)</td></tr>
+<tr class="separator:a5369255e7582c676b7c26198f7cb2aef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a42a8b688f3ed69468b056044bb26461e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e">allocate_input_output_arrays</a> (void **data, void **d_data, size_t size)</td></tr>
 <tr class="memdesc:a42a8b688f3ed69468b056044bb26461e"><td class="mdescLeft">&#160;</td><td class="mdescRight">(Deprecated) Allocates memory on the CPU and GPU simultaneously.  <a href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e">More...</a><br /></td></tr>
 <tr class="separator:a42a8b688f3ed69468b056044bb26461e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -212,7 +210,47 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>(Deprecated) Allocates memory on the CPU and GPU simultaneously. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000016">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e" title="(Deprecated) Allocates memory on the CPU and GPU simultaneously.">allocate_input_output_arrays()</a>. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000014">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e" title="(Deprecated) Allocates memory on the CPU and GPU simultaneously.">allocate_input_output_arrays()</a>. </dd></dl>
+
+</div>
+</div>
+<a id="aaac095ac565879c9a4b72fbeb340eafd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaac095ac565879c9a4b72fbeb340eafd">&#9670;&nbsp;</a></span>create_data_buffer_fine()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">cuDoubleComplex* create_data_buffer_fine </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>npointing</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>nsamples</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>nchan</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>npol</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -255,7 +293,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>(Deprecated) Allocate memory on the CPU. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000014">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f" title="(Deprecated) Allocate memory on the CPU.">create_detected_beam()</a>. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000013">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f" title="(Deprecated) Allocate memory on the CPU.">create_detected_beam()</a>. </dd></dl>
 
 </div>
 </div>
@@ -276,7 +314,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>(Deprecated) Allocate memory on the GPU. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000013">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a433ddbce6c91b6c67daddb48bbcd5aea" title="(Deprecated) Allocate memory on the GPU.">create_pinned_data_buffer()</a>. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000012">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a433ddbce6c91b6c67daddb48bbcd5aea" title="(Deprecated) Allocate memory on the GPU.">create_pinned_data_buffer()</a>. </dd></dl>
 
 </div>
 </div>
@@ -384,49 +422,6 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ae97c305b54fb67d57a8fd9c0af5be03a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae97c305b54fb67d57a8fd9c0af5be03a">&#9670;&nbsp;</a></span>destroy_detected_beam()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void destroy_detected_beam </td>
-          <td>(</td>
-          <td class="paramtype">cuDoubleComplex ****&#160;</td>
-          <td class="paramname"><em>array</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>npointing</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>nsamples</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>nchan</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>(Deprecated) Frees memory on the CPU. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000015">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#ae97c305b54fb67d57a8fd9c0af5be03a" title="(Deprecated) Frees memory on the CPU.">destroy_detected_beam()</a>. </dd></dl>
-
-</div>
-</div>
 <a id="a91c2e34710672b16c62eaf94e46b7ba0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a91c2e34710672b16c62eaf94e46b7ba0">&#9670;&nbsp;</a></span>free_input_output_arrays()</h2>
 
@@ -454,7 +449,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>(Deprecated) Frees memory on the CPU and GPU simultaneously. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000017">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a91c2e34710672b16c62eaf94e46b7ba0" title="(Deprecated) Frees memory on the CPU and GPU simultaneously.">free_input_output_arrays()</a>. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000015">Todo:</a></b></dt><dd>Remove the function <a class="el" href="form__beam_8cu.html#a91c2e34710672b16c62eaf94e46b7ba0" title="(Deprecated) Frees memory on the CPU and GPU simultaneously.">free_input_output_arrays()</a>. </dd></dl>
 
 </div>
 </div>
@@ -550,29 +545,29 @@ Functions</h2></td></tr>
  
 </div>
 </div>
-<a id="a4e2778cd4e010763af76bd3d820133f1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4e2778cd4e010763af76bd3d820133f1">&#9670;&nbsp;</a></span>prepare_detected_beam()</h2>
+<a id="a5369255e7582c676b7c26198f7cb2aef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5369255e7582c676b7c26198f7cb2aef">&#9670;&nbsp;</a></span>prepare_data_buffer_fine()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void prepare_detected_beam </td>
+          <td class="memname">void prepare_data_buffer_fine </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex ****&#160;</td>
-          <td class="paramname"><em>detected_beam</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">mpi_psrfits *&#160;</td>
-          <td class="paramname"><em>mpfs</em>, </td>
+          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramname"><em>data_buffer_fine</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">vcsbeam_context *&#160;</td>
-          <td class="paramname"><em>vm</em>&#160;</td>
+          <td class="paramname"><em>vm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uintptr_t&#160;</td>
+          <td class="paramname"><em>timestep_idx</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -581,9 +576,6 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-
-<p>Copies the beamformed voltages into a different array to prepare for inverting the PFB. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000012">Todo:</a></b></dt><dd>Remove <a class="el" href="form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1" title="Copies the beamformed voltages into a different array to prepare for inverting the PFB.">prepare_detected_beam()</a> and use a "host buffer" instead. </dd></dl>
 
 </div>
 </div>

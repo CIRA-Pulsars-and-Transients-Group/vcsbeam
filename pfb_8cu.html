@@ -151,9 +151,9 @@ Functions</h2></td></tr>
 <tr class="memitem:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#aa6eb2332a6371d8a576e6422d7bc9d79">ipfb_kernel</a> (float *in_real, float *in_imag, float *ft_real, float *ft_imag, int ntaps, int npol, float *out)</td></tr>
 <tr class="memdesc:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel implementing the synthesis PFB.  <a href="pfb_8cu.html#aa6eb2332a6371d8a576e6422d7bc9d79">More...</a><br /></td></tr>
 <tr class="separator:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa7a1d89887301752b3023ccc4cf36a9f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#aa7a1d89887301752b3023ccc4cf36a9f">cu_invert_pfb</a> (cuDoubleComplex ****detected_beam, int file_no, int npointing, int nsamples, int nchan, int npol, int sizeof_buffer, struct gpu_ipfb_arrays *g, float *data_buffer_vdif)</td></tr>
-<tr class="memdesc:aa7a1d89887301752b3023ccc4cf36a9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Invert the PFB by applying a resynthesis filter, using GPU acceleration.  <a href="pfb_8cu.html#aa7a1d89887301752b3023ccc4cf36a9f">More...</a><br /></td></tr>
-<tr class="separator:aa7a1d89887301752b3023ccc4cf36a9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad6d0a711bf79a0a6a5ff6d2f509c455e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#ad6d0a711bf79a0a6a5ff6d2f509c455e">cu_invert_pfb</a> (cuDoubleComplex *data_buffer_fine, int file_no, int npointing, int nsamples, int nchan, int npol, int sizeof_buffer, struct gpu_ipfb_arrays *g, float *data_buffer_vdif)</td></tr>
+<tr class="memdesc:ad6d0a711bf79a0a6a5ff6d2f509c455e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Invert the PFB by applying a resynthesis filter, using GPU acceleration.  <a href="pfb_8cu.html#ad6d0a711bf79a0a6a5ff6d2f509c455e">More...</a><br /></td></tr>
+<tr class="separator:ad6d0a711bf79a0a6a5ff6d2f509c455e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45995dfe13bebd70b6d7806078fa6211"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cu.html#a45995dfe13bebd70b6d7806078fa6211">cu_load_ipfb_filter</a> (pfb_filter *filter, struct gpu_ipfb_arrays *g)</td></tr>
 <tr class="memdesc:a45995dfe13bebd70b6d7806078fa6211"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the inverse PFB filter coefficients to the GPU.  <a href="pfb_8cu.html#a45995dfe13bebd70b6d7806078fa6211">More...</a><br /></td></tr>
 <tr class="separator:a45995dfe13bebd70b6d7806078fa6211"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -232,8 +232,8 @@ Backwards (synthesis) fine PFB</h1>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="aa7a1d89887301752b3023ccc4cf36a9f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa7a1d89887301752b3023ccc4cf36a9f">&#9670;&nbsp;</a></span>cu_invert_pfb()</h2>
+<a id="ad6d0a711bf79a0a6a5ff6d2f509c455e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad6d0a711bf79a0a6a5ff6d2f509c455e">&#9670;&nbsp;</a></span>cu_invert_pfb()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -241,8 +241,8 @@ Backwards (synthesis) fine PFB</h1>
         <tr>
           <td class="memname">void cu_invert_pfb </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex ****&#160;</td>
-          <td class="paramname"><em>detected_beam</em>, </td>
+          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramname"><em>data_buffer_fine</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -301,9 +301,10 @@ Backwards (synthesis) fine PFB</h1>
 </div><div class="memdoc">
 
 <p>Invert the PFB by applying a resynthesis filter, using GPU acceleration. </p>
-<p>This function expects <code>detected_beam</code> to be structured as follows:</p>
-<div class="fragment"><div class="line">detected_beam[2*nsamples][nchan][npol]</div>
-</div><!-- fragment --><p>Although detected_samples potentially contains 2 seconds' worth of data, this function only inverts 1 second. The appropriate second is worked out using <code>file_no</code>: if it is even, the first half of detected_beam is used, if odd, the second half.</p>
+<p>This function expects <code>data_buffer_fine</code> to be a 1D array of complex voltages with indices following the ordering:</p>
+<div class="fragment"><div class="line">pointing, samp, chan, pol</div>
+</div><!-- fragment --><p>Although <code>data_buffer_fine</code> potentially contains 2 seconds' worth of data, this function only inverts 1 second. The appropriate second is worked out using <code>file_no</code>: if it is even, the first half of <code>data_buffer_fine</code> is used; if odd, the second half.</p>
+<p>The IPFB is also given ntaps samples from the end of the previous second, so in total the IPFB is given nsamp+ntaps samples worth of data.</p>
 <p>The output of the inversion is packed back into <code>data_buffer_vdif</code>, a 1D array whose ordering is as follows:</p>
 <div class="fragment"><div class="line">time, pol, complexity</div>
 </div><!-- fragment --><p>This ordering is suited for immediate output to the VDIF format.</p>
@@ -561,7 +562,7 @@ Backwards (synthesis) fine PFB</h1>
 <p><code>K</code> is the number of channels, and because this is a critically sampled PFB, \(M = K\). We will also use <code>P</code> to mean the number of taps in the synthesis filter, and \(N = KP\) to mean the size of the filter.</p>
 <p>The polarisations are computed completely independently.</p>
 <p>\(\hat{x}[n]\) is represented by the <code>out</code> array.</p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000033">Todo:</a></b></dt><dd>Revamp this function to use cuComplex. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000031">Todo:</a></b></dt><dd>Revamp this function to use cuComplex. </dd></dl>
 
 </div>
 </div>
@@ -757,7 +758,7 @@ Backwards (synthesis) fine PFB</h1>
 </div><div class="memdoc">
 
 <p>Executes the (CUDA) FFT on the forward PFB data. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000031">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000029">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
 
 </div>
 </div>
@@ -778,7 +779,7 @@ Backwards (synthesis) fine PFB</h1>
 </div><div class="memdoc">
 
 <p>Calls the <a class="el" href="pfb_8cu.html#aa5d1c9b40a2932b8d4f48f76877207aa" title="CUDA kernel for performing the rounding and demotion step of the forward PFB.">fpga_rounding_and_demotion()</a> kernel for the forward PFB data. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000030">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000028">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
 
 </div>
 </div>
@@ -899,7 +900,7 @@ Backwards (synthesis) fine PFB</h1>
 </div><div class="memdoc">
 
 <p>Calls the <a class="el" href="pfb_8cu.html#ae589c23753dd32af43d9293e4d53aa9a" title="CUDA kernel for packing the PFB&#39;ed data into legacy recombined layout/format.">pack_into_recombined_format()</a> kernel for the forward PFB data. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000032">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000030">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
 
 </div>
 </div>
@@ -985,7 +986,7 @@ Backwards (synthesis) fine PFB</h1>
 </p>
 <p> See above for the meaning of the terms in this equation.</p>
 <p>The expected thread configuration is \( \langle\langle\langle (\text{nspectra},I,P), K \rangle\rangle\rangle \)</p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000028">Todo:</a></b></dt><dd>Add data layout information to this docstring. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000026">Todo:</a></b></dt><dd>Add data layout information to this docstring. </dd></dl>
 
 </div>
 </div>
@@ -1006,7 +1007,7 @@ Backwards (synthesis) fine PFB</h1>
 </div><div class="memdoc">
 
 <p>Calls the <a class="el" href="pfb_8cu.html#a7374f0e61cc4b19318b0aca79c8f40df" title="Performs the weighted overlap-add part of the PFB algorithm.">vmWOLA_kernel()</a> kernel for the forward PFB data. </p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000029">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000027">Todo:</a></b></dt><dd>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd></dl>
 
 </div>
 </div>

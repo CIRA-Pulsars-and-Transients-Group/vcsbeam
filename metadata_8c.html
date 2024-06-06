@@ -199,9 +199,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ad283d5d365c73152b2a748e84a7dc6bc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#ad283d5d365c73152b2a748e84a7dc6bc">vmFreePQIdxsDevice</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:ad283d5d365c73152b2a748e84a7dc6bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees memory allocated with <a class="el" href="metadata_8c.html#a69e06ca450bcb8b3e922093a4c0b34c0" title="Allocates memory for the polarisation indexes on the GPU.">vmMallocPQIdxsDevice()</a>.  <a href="metadata_8c.html#ad283d5d365c73152b2a748e84a7dc6bc">More...</a><br /></td></tr>
 <tr class="separator:ad283d5d365c73152b2a748e84a7dc6bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a64484b56ded28eedc6615f980d4039a2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a64484b56ded28eedc6615f980d4039a2">vmSetMaxGPUMem</a> (vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes)</td></tr>
-<tr class="memdesc:a64484b56ded28eedc6615f980d4039a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tries to cleverly figure out how many chunks are needed to fit everything on the GPU.  <a href="metadata_8c.html#a64484b56ded28eedc6615f980d4039a2">More...</a><br /></td></tr>
-<tr class="separator:a64484b56ded28eedc6615f980d4039a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af753db9b7286ca851767ab75a5995026"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#af753db9b7286ca851767ab75a5995026">vmSetMaxGPUMem</a> (vcsbeam_context *vm, int nchunks)</td></tr>
+<tr class="memdesc:af753db9b7286ca851767ab75a5995026"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tries to cleverly figure out how many chunks are needed to fit everything on the GPU.  <a href="metadata_8c.html#af753db9b7286ca851767ab75a5995026">More...</a><br /></td></tr>
+<tr class="separator:af753db9b7286ca851767ab75a5995026"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6e140f229ab6d67dd32a403dd6f1521e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a6e140f229ab6d67dd32a403dd6f1521e">vmPushChunk</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:a6e140f229ab6d67dd32a403dd6f1521e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads a "chunk" of input data onto the GPU.  <a href="metadata_8c.html#a6e140f229ab6d67dd32a403dd6f1521e">More...</a><br /></td></tr>
 <tr class="separator:a6e140f229ab6d67dd32a403dd6f1521e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -305,7 +305,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <p>After freeing the memory associated with the VCSBeam context's member variables, this function frees the VCSBeam context itself.</p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000025">Todo:</a></b></dt><dd>Rename this function to a <code>vm...</code> name </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000023">Todo:</a></b></dt><dd>Rename this function to a <code>vm...</code> name </dd></dl>
 
 </div>
 </div>
@@ -2118,8 +2118,8 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
 
 </div>
 </div>
-<a id="a64484b56ded28eedc6615f980d4039a2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a64484b56ded28eedc6615f980d4039a2">&#9670;&nbsp;</a></span>vmSetMaxGPUMem()</h2>
+<a id="af753db9b7286ca851767ab75a5995026"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af753db9b7286ca851767ab75a5995026">&#9670;&nbsp;</a></span>vmSetMaxGPUMem()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2133,8 +2133,8 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uintptr_t&#160;</td>
-          <td class="paramname"><em>max_gpu_mem_bytes</em>&#160;</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>nchunks</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -2217,7 +2217,7 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
   </table>
   </dd>
 </dl>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000026">Todo:</a></b></dt><dd>Investigate whether this function is really needed </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000024">Todo:</a></b></dt><dd>Investigate whether this function is really needed </dd></dl>
 
 </div>
 </div>

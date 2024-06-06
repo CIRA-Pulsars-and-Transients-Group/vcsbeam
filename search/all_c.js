@@ -11,6 +11,6 @@ var searchData=
   ['pfb_2ecu_111',['pfb.cu',['../pfb_8cu.html',1,'']]],
   ['populate_5fpsrfits_5fheader_112',['populate_psrfits_header',['../beam__psrfits_8c.html#aa17b6021a54d95cbbdcf1993a3f9c401',1,'beam_psrfits.c']]],
   ['populate_5fspliced_5fpsrfits_5fheader_113',['populate_spliced_psrfits_header',['../beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98',1,'beam_psrfits.c']]],
-  ['prepare_5fdetected_5fbeam_114',['prepare_detected_beam',['../form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1',1,'form_beam.cu']]],
+  ['prepare_5fdata_5fbuffer_5ffine_114',['prepare_data_buffer_fine',['../form__beam_8cu.html#a5369255e7582c676b7c26198f7cb2aef',1,'form_beam.cu']]],
   ['primary_5fbeam_2ec_115',['primary_beam.c',['../primary__beam_8c.html',1,'']]]
 ];

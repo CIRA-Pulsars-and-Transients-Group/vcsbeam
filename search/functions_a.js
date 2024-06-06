@@ -9,5 +9,5 @@ var searchData=
   ['parse_5fra_342',['parse_ra',['../geometry_8c.html#afe7d4548fa61ca4aaea6a98f5aa7be24',1,'geometry.c']]],
   ['populate_5fpsrfits_5fheader_343',['populate_psrfits_header',['../beam__psrfits_8c.html#aa17b6021a54d95cbbdcf1993a3f9c401',1,'beam_psrfits.c']]],
   ['populate_5fspliced_5fpsrfits_5fheader_344',['populate_spliced_psrfits_header',['../beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98',1,'beam_psrfits.c']]],
-  ['prepare_5fdetected_5fbeam_345',['prepare_detected_beam',['../form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1',1,'form_beam.cu']]]
+  ['prepare_5fdata_5fbuffer_5ffine_345',['prepare_data_buffer_fine',['../form__beam_8cu.html#a5369255e7582c676b7c26198f7cb2aef',1,'form_beam.cu']]]
 ];

@@ -107,9 +107,9 @@ Functions</h2></td></tr>
 <tr class="memitem:acfd1064f0daa18ee687fa64b4b6aa3a0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__vdif_8c.html#acfd1064f0daa18ee687fa64b4b6aa3a0">vdif_write_data</a> (struct vdifinfo *vf, int8_t *output)</td></tr>
 <tr class="memdesc:acfd1064f0daa18ee687fa64b4b6aa3a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write VDIF data to file.  <a href="beam__vdif_8c.html#acfd1064f0daa18ee687fa64b4b6aa3a0">More...</a><br /></td></tr>
 <tr class="separator:acfd1064f0daa18ee687fa64b4b6aa3a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a675448bda5bd59b0e58674a7d22cb2b7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__vdif_8c.html#a675448bda5bd59b0e58674a7d22cb2b7">vmPopulateVDIFHeader</a> (vcsbeam_context *vm, beam_geom *beam_geom_vals)</td></tr>
-<tr class="memdesc:a675448bda5bd59b0e58674a7d22cb2b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a VDIF header with data derived from the observation.  <a href="beam__vdif_8c.html#a675448bda5bd59b0e58674a7d22cb2b7">More...</a><br /></td></tr>
-<tr class="separator:a675448bda5bd59b0e58674a7d22cb2b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab7d3f5e03df7bf225ea1c3314f7d0bee"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__vdif_8c.html#ab7d3f5e03df7bf225ea1c3314f7d0bee">vmPopulateVDIFHeader</a> (vcsbeam_context *vm, beam_geom *beam_geom_vals, double mjd_start, double sec_offset)</td></tr>
+<tr class="memdesc:ab7d3f5e03df7bf225ea1c3314f7d0bee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a VDIF header with data derived from the observation.  <a href="beam__vdif_8c.html#ab7d3f5e03df7bf225ea1c3314f7d0bee">More...</a><br /></td></tr>
+<tr class="separator:ab7d3f5e03df7bf225ea1c3314f7d0bee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5ca68e02518d1d793deb622af35b2ada"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__vdif_8c.html#a5ca68e02518d1d793deb622af35b2ada">to_offset_binary</a> (int8_t *i, int n)</td></tr>
 <tr class="memdesc:a5ca68e02518d1d793deb622af35b2ada"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert from two's complement to "offset binary" (??)  <a href="beam__vdif_8c.html#a5ca68e02518d1d793deb622af35b2ada">More...</a><br /></td></tr>
 <tr class="separator:a5ca68e02518d1d793deb622af35b2ada"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -293,8 +293,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a675448bda5bd59b0e58674a7d22cb2b7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a675448bda5bd59b0e58674a7d22cb2b7">&#9670;&nbsp;</a></span>vmPopulateVDIFHeader()</h2>
+<a id="ab7d3f5e03df7bf225ea1c3314f7d0bee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab7d3f5e03df7bf225ea1c3314f7d0bee">&#9670;&nbsp;</a></span>vmPopulateVDIFHeader()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -309,7 +309,19 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">beam_geom *&#160;</td>
-          <td class="paramname"><em>beam_geom_vals</em>&#160;</td>
+          <td class="paramname"><em>beam_geom_vals</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>mjd_start</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>sec_offset</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -324,6 +336,8 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
     <tr><td class="paramname">beam_geom_vals</td><td>A <code>beam_geom</code> struct containing pointing information </td></tr>
+    <tr><td class="paramname">mjd_start</td><td>The start MJD of the observation </td></tr>
+    <tr><td class="paramname">sec_offset</td><td>The offset from the start of the observation in seconds </td></tr>
   </table>
   </dd>
 </dl>

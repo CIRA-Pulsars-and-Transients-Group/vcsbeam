@@ -75,43 +75,39 @@ $(function() {
 <div class="contents">
 <div class="textblock"><dl class="reflist">
 <dt>Member <a class="el" href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e">allocate_input_output_arrays</a>  (void **data, void **d_data, size_t size)</dt>
-<dd><a class="anchor" id="_todo000016"></a>Remove the function <a class="el" href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e" title="(Deprecated) Allocates memory on the CPU and GPU simultaneously.">allocate_input_output_arrays()</a>.  </dd>
+<dd><a class="anchor" id="_todo000014"></a>Remove the function <a class="el" href="form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e" title="(Deprecated) Allocates memory on the CPU and GPU simultaneously.">allocate_input_output_arrays()</a>.  </dd>
 <dt>Member <a class="el" href="geometry_8c.html#a02b83016499e45a0f970c349bc866dcc">calc_beam_geom</a>  (double ras_hours, double decs_degs, double mjd, beam_geom *bg)</dt>
-<dd><a class="anchor" id="_todo000020"></a>Put the table describing the beam_geom struct where it belongs: with the documentation for the beam_geom struct!  </dd>
+<dd><a class="anchor" id="_todo000018"></a>Put the table describing the beam_geom struct where it belongs: with the documentation for the beam_geom struct!  </dd>
 <dt>Member <a class="el" href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f">create_detected_beam</a>  (int npointing, int nsamples, int nchan, int npol)</dt>
-<dd><a class="anchor" id="_todo000014"></a>Remove the function <a class="el" href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f" title="(Deprecated) Allocate memory on the CPU.">create_detected_beam()</a>.  </dd>
+<dd><a class="anchor" id="_todo000013"></a>Remove the function <a class="el" href="form__beam_8cu.html#ad2e6ebf2fafcce02526b94cb8f01366f" title="(Deprecated) Allocate memory on the CPU.">create_detected_beam()</a>.  </dd>
 <dt>Member <a class="el" href="form__beam_8cu.html#a433ddbce6c91b6c67daddb48bbcd5aea">create_pinned_data_buffer</a>  (size_t size)</dt>
-<dd><a class="anchor" id="_todo000013"></a>Remove the function <a class="el" href="form__beam_8cu.html#a433ddbce6c91b6c67daddb48bbcd5aea" title="(Deprecated) Allocate memory on the GPU.">create_pinned_data_buffer()</a>.  </dd>
+<dd><a class="anchor" id="_todo000012"></a>Remove the function <a class="el" href="form__beam_8cu.html#a433ddbce6c91b6c67daddb48bbcd5aea" title="(Deprecated) Allocate memory on the GPU.">create_pinned_data_buffer()</a>.  </dd>
 <dt>Member <a class="el" href="form__beam_8cu.html#aefd0c7b588cf2413c51863dcb4d25521">cu_form_incoh_beam</a>  (uint8_t *data, uint8_t *d_data, size_t data_size, float *d_incoh, unsigned int nsample, int nchan, int ninput, float *offsets, float *d_offsets, float *scales, float *d_scales, uint8_t *Iscaled, uint8_t *d_Iscaled, size_t Iscaled_size)</dt>
 <dd><a class="anchor" id="_todo000010"></a>Either generalise the <a class="el" href="form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd" title="Performs the phasing up, averaging over antennas, and detection operations on calibrated data.">vmBeamformChunk()</a> so that it can also produce incoherent beams (and therefore do away with <a class="el" href="form__beam_8cu.html#aefd0c7b588cf2413c51863dcb4d25521" title="Form an incoherent beam.">cu_form_incoh_beam()</a>, or keep <a class="el" href="form__beam_8cu.html#aefd0c7b588cf2413c51863dcb4d25521" title="Form an incoherent beam.">cu_form_incoh_beam()</a> and convert it into a bona fide "vm" style fuction.  </dd>
 <dt>Member <a class="el" href="geometry_8c.html#aaa2984696defc033c512894674aac97b">dec2hms</a>  (char *out, double in, int sflag)</dt>
-<dd><a class="anchor" id="_todo000021"></a>Figure out whether <a class="el" href="geometry_8c.html#aaa2984696defc033c512894674aac97b" title="Converts a decimal RA to the format &quot;HH:MM:SS.S&quot;.">dec2hms()</a> is <em>actually</em> just for RAs, or whether it is more general than that (and, if so, change the name to reflect this).  </dd>
-<dt>Member <a class="el" href="form__beam_8cu.html#ae97c305b54fb67d57a8fd9c0af5be03a">destroy_detected_beam</a>  (cuDoubleComplex ****array, int npointing, int nsamples, int nchan)</dt>
-<dd><a class="anchor" id="_todo000015"></a>Remove the function <a class="el" href="form__beam_8cu.html#ae97c305b54fb67d57a8fd9c0af5be03a" title="(Deprecated) Frees memory on the CPU.">destroy_detected_beam()</a>.  </dd>
+<dd><a class="anchor" id="_todo000019"></a>Figure out whether <a class="el" href="geometry_8c.html#aaa2984696defc033c512894674aac97b" title="Converts a decimal RA to the format &quot;HH:MM:SS.S&quot;.">dec2hms()</a> is <em>actually</em> just for RAs, or whether it is more general than that (and, if so, change the name to reflect this).  </dd>
 <dt>Member <a class="el" href="metadata_8c.html#aac8b4c5ae6f35a9e2992867e6ba2cbfe">destroy_vcsbeam_context</a>  (vcsbeam_context *vm)</dt>
-<dd><a class="anchor" id="_todo000025"></a>Rename this function to a <code>vm...</code> name  </dd>
+<dd><a class="anchor" id="_todo000023"></a>Rename this function to a <code>vm...</code> name  </dd>
 <dt>Page <a class="el" href="fileformats.html">File Formats</a>  </dt>
 <dd><a class="anchor" id="_todo000001"></a>Write description of the legacy recombined file format </dd>
 <dt>Member <a class="el" href="geometry_8c.html#a3f703cfe4e3fee512ce3731a3f618df7">free_geometric_delays</a>  (geometric_delays *gdelays)</dt>
-<dd><a class="anchor" id="_todo000019"></a>Convert <a class="el" href="geometry_8c.html#a3f703cfe4e3fee512ce3731a3f618df7" title="Frees memory for the delay phase arrays on both host and device.">free_geometric_delays()</a> into a "vm" function.  </dd>
+<dd><a class="anchor" id="_todo000017"></a>Convert <a class="el" href="geometry_8c.html#a3f703cfe4e3fee512ce3731a3f618df7" title="Frees memory for the delay phase arrays on both host and device.">free_geometric_delays()</a> into a "vm" function.  </dd>
 <dt>Member <a class="el" href="form__beam_8cu.html#a91c2e34710672b16c62eaf94e46b7ba0">free_input_output_arrays</a>  (void *data, void *d_data)</dt>
-<dd><a class="anchor" id="_todo000017"></a>Remove the function <a class="el" href="form__beam_8cu.html#a91c2e34710672b16c62eaf94e46b7ba0" title="(Deprecated) Frees memory on the CPU and GPU simultaneously.">free_input_output_arrays()</a>.  </dd>
+<dd><a class="anchor" id="_todo000015"></a>Remove the function <a class="el" href="form__beam_8cu.html#a91c2e34710672b16c62eaf94e46b7ba0" title="(Deprecated) Frees memory on the CPU and GPU simultaneously.">free_input_output_arrays()</a>.  </dd>
 <dt>Member <a class="el" href="primary__beam_8c.html#a66bac3aed1ef85141bf50bb9bca118f3">free_primary_beam</a>  (primary_beam *pb)</dt>
-<dd><a class="anchor" id="_todo000034"></a>Change name to vm...  </dd>
+<dd><a class="anchor" id="_todo000032"></a>Change name to vm...  </dd>
 <dt>Member <a class="el" href="jones_8c.html#ac0a655af3a288ee5ecabb91f095e93d6">inv2x2S</a>  (cuDoubleComplex *Min, cuDoubleComplex *Mout)</dt>
-<dd><a class="anchor" id="_todo000024"></a>Does this do the same thing as <a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a>? Check the code, and delete if not needed.  </dd>
+<dd><a class="anchor" id="_todo000022"></a>Does this do the same thing as <a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a>? Check the code, and delete if not needed.  </dd>
 <dt>Member <a class="el" href="pfb_8cu.html#aa6eb2332a6371d8a576e6422d7bc9d79">ipfb_kernel</a>  (float *in_real, float *in_imag, float *ft_real, float *ft_imag, int ntaps, int npol, float *out)</dt>
-<dd><a class="anchor" id="_todo000033"></a>Revamp this function to use cuComplex.  </dd>
+<dd><a class="anchor" id="_todo000031"></a>Revamp this function to use cuComplex.  </dd>
 <dt>Member <a class="el" href="performance_8c.html#aca6f9a8ac2a6d748e0b1405b81aab84d">logger_report_all_stats</a>  (logger *log)</dt>
-<dd><a class="anchor" id="_todo000027"></a>Fill in an example of stats output for <a class="el" href="performance_8c.html#aca6f9a8ac2a6d748e0b1405b81aab84d" title="Prints all stopwatches&#39; statistics.">logger_report_all_stats()</a>.  </dd>
+<dd><a class="anchor" id="_todo000025"></a>Fill in an example of stats output for <a class="el" href="performance_8c.html#aca6f9a8ac2a6d748e0b1405b81aab84d" title="Prints all stopwatches&#39; statistics.">logger_report_all_stats()</a>.  </dd>
 <dt>Member <a class="el" href="geometry_8c.html#aa953d4605eeee44e39f62dbc4e3beca6">mjd2lst</a>  (double mjd, double *lst)</dt>
-<dd><a class="anchor" id="_todo000022"></a>Consider removing <a class="el" href="geometry_8c.html#aa953d4605eeee44e39f62dbc4e3beca6" title="Convert MJD to LST.">mjd2lst()</a>, since it consists only of a single call to a <code>pal</code> function.  </dd>
+<dd><a class="anchor" id="_todo000020"></a>Consider removing <a class="el" href="geometry_8c.html#aa953d4605eeee44e39f62dbc4e3beca6" title="Convert MJD to LST.">mjd2lst()</a>, since it consists only of a single call to a <code>pal</code> function.  </dd>
 <dt>Member <a class="el" href="beam__psrfits_8c.html#aa17b6021a54d95cbbdcf1993a3f9c401">populate_psrfits_header</a>  (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, beam_geom *beam_geom_vals, char *incoh_basename, bool is_coherent)</dt>
 <dd><a class="anchor" id="_todo000006"></a>Merge with <a class="el" href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98" title="Populates a PSRFITS struct with data derived from the observation.">populate_spliced_psrfits_header()</a> to avoid code duplication.  </dd>
 <dt>Member <a class="el" href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98">populate_spliced_psrfits_header</a>  (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, beam_geom *beam_geom_vals, char *basename, bool is_coherent)</dt>
 <dd><a class="anchor" id="_todo000005"></a>Change the name to conform to standard.  </dd>
-<dt>Member <a class="el" href="form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1">prepare_detected_beam</a>  (cuDoubleComplex ****detected_beam, mpi_psrfits *mpfs, vcsbeam_context *vm)</dt>
-<dd><a class="anchor" id="_todo000012"></a>Remove <a class="el" href="form__beam_8cu.html#a4e2778cd4e010763af76bd3d820133f1" title="Copies the beamformed voltages into a different array to prepare for inverting the PFB.">prepare_detected_beam()</a> and use a "host buffer" instead.  </dd>
 <dt>Member <a class="el" href="form__beam_8cu.html#a418658321f739c188e3adee521b3c03b">renormalise_channels_kernel</a>  (float *S, int nstep, float *offsets, float *scales, uint8_t *Sscaled)</dt>
 <dd><a class="anchor" id="_todo000009"></a>Optimise the renormalisation kernel (e.g. by removing the for loop over timesteps.  </dd>
 <dt>Page <a class="el" href="usersguidebeamforming.html">User's Guide &ndash; Beamforming</a>  </dt>
@@ -125,23 +121,23 @@ $(function() {
 <dt>Member <a class="el" href="form__beam_8cu.html#a0cf45d9edacf3bf40f3eabcfd58094cd">vmBeamformChunk</a>  (vcsbeam_context *vm)</dt>
 <dd><a class="anchor" id="_todo000011"></a>Split the beamforming operations into separate steps/kernels.  </dd>
 <dt>Member <a class="el" href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00">vmCalcJ</a>  (vcsbeam_context *vm)</dt>
-<dd><a class="anchor" id="_todo000023"></a><a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/issues/9">Issue #9</a>  </dd>
+<dd><a class="anchor" id="_todo000021"></a><a href="https://github.com/CIRA-Pulsars-and-Transients-Group/vcsbeam/issues/9">Issue #9</a>  </dd>
 <dt>Member <a class="el" href="geometry_8c.html#a810de847675584bc9974936afa489292">vmCalcPhi</a>  (vcsbeam_context *vm, beam_geom *beam_geom_vals)</dt>
-<dd><a class="anchor" id="_todo000018"></a>Incorporate the <code>beam_geom</code> struct into the <code>vm</code> struct.  </dd>
+<dd><a class="anchor" id="_todo000016"></a>Incorporate the <code>beam_geom</code> struct into the <code>vm</code> struct.  </dd>
 <dt>Member <a class="el" href="pfb_8cu.html#a25d6f48661b1ee20194a9cdbb1370244">vmFFTChunk</a>  (vcsbeam_context *vm)</dt>
-<dd><a class="anchor" id="_todo000031"></a>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed.  </dd>
+<dd><a class="anchor" id="_todo000029"></a>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed.  </dd>
 <dt>Member <a class="el" href="pfb_8cu.html#a51d546028e05c56e5bd4e53570054366">vmFPGARoundingChunk</a>  (vcsbeam_context *vm)</dt>
-<dd><a class="anchor" id="_todo000030"></a>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed.  </dd>
+<dd><a class="anchor" id="_todo000028"></a>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed.  </dd>
 <dt>Member <a class="el" href="filter_8c.html#a2fac816547ca5054dea3e1a501d4408c">vmLoadFilter</a>  (vcsbeam_context *vm, char *filtername, filter_type type, int nchans)</dt>
 <dd><a class="anchor" id="_todo000008"></a>Change nchans so that it uses <code>vm&rarr;nfine_chans</code>  </dd>
 <dt>Member <a class="el" href="pfb_8cu.html#aa6ff9eb0026fbdcf87817dbeb746fad6">vmPackChunk</a>  (vcsbeam_context *vm)</dt>
-<dd><a class="anchor" id="_todo000032"></a>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed.  </dd>
+<dd><a class="anchor" id="_todo000030"></a>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed.  </dd>
 <dt>Member <a class="el" href="metadata_8c.html#afc3c45f755775cff7916efc2d9bc421a">vmSetNumPointings</a>  (vcsbeam_context *vm, unsigned int npointings)</dt>
-<dd><a class="anchor" id="_todo000026"></a>Investigate whether this function is really needed  </dd>
+<dd><a class="anchor" id="_todo000024"></a>Investigate whether this function is really needed  </dd>
 <dt>Member <a class="el" href="pfb_8cu.html#a7374f0e61cc4b19318b0aca79c8f40df">vmWOLA_kernel</a>  (char2 *indata, int *filter_coeffs, void *weighted_overlap_array)</dt>
-<dd><a class="anchor" id="_todo000028"></a>Add data layout information to this docstring.  </dd>
+<dd><a class="anchor" id="_todo000026"></a>Add data layout information to this docstring.  </dd>
 <dt>Member <a class="el" href="pfb_8cu.html#a353ec3d21419ab0192de2ea4771a77b3">vmWOLAChunk</a>  (vcsbeam_context *vm)</dt>
-<dd><a class="anchor" id="_todo000029"></a>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd>
+<dd><a class="anchor" id="_todo000027"></a>Keep this as a "pure" forward_pfb function, and make a separate "vm" function that's exposed. </dd>
 </dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
