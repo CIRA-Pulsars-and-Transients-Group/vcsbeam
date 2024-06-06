@@ -969,7 +969,7 @@ extern "C" {
 #endif
 
 void cu_invert_pfb( cuDoubleComplex *data_buffer_fine, int file_no,
-                        int npointing, int nsamples, int nchan, int npol, int sizeof_buffer,
+                        int npointing, int nsamples, int nchan, int npol,
                         struct gpu_ipfb_arrays *g, float *data_buffer_uvdif );
 
 void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g );
