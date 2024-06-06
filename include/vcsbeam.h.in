@@ -757,7 +757,7 @@ void vmFreePQIdxsHost( vcsbeam_context *vm );
 void vmFreePQIdxsDevice( vcsbeam_context *vm );
 
 
-void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes );
+void vmSetMaxGPUMem( vcsbeam_context *vm, int nchunks );
 void vmPushChunk( vcsbeam_context *vm );
 void vmPushJ( vcsbeam_context *vm );
 
@@ -968,7 +968,7 @@ struct gpu_ipfb_arrays
 extern "C" {
 #endif
 
-void cu_invert_pfb( cuDoubleComplex ****detected_beam, int file_no,
+void cu_invert_pfb( cuDoubleComplex *data_buffer_fine, int file_no,
                         int npointing, int nsamples, int nchan, int npol, int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_uvdif );
 
@@ -1026,8 +1026,8 @@ void vmBeamformSecond( vcsbeam_context *vm );
 void vmPullE( vcsbeam_context *vm );
 void vmPullS( vcsbeam_context *vm );
 
-void prepare_detected_beam( cuDoubleComplex ****detected_beam,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm );
+void prepare_data_buffer_fine( cuDoubleComplex *data_buffer_fine, vcsbeam_context *vm,
+                    uintptr_t timestep_idx );
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs );
 
 float *create_pinned_data_buffer( size_t size );
@@ -1039,9 +1039,7 @@ vm_error vmReadNextSecond( vcsbeam_context *vm );
 cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
 void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );
 
-cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol );
-void              destroy_detected_beam( cuDoubleComplex ****array, int npointing,
-                                         int nsamples, int nchan );
+cuDoubleComplex *create_data_buffer_fine( int npointing, int nsamples, int nchan, int npol );
 
 void allocate_input_output_arrays( void **data, void **d_data, size_t size );
 void free_input_output_arrays( void *data, void *d_data );
@@ -1115,9 +1113,10 @@ struct vdifinfo
     size_t samples_per_frame; // Number of time samples per vdif frame
     int dataarraylength;      // The frame length minus the header
     int bits;                 // Bits per sample
-    int nchan;                // Channels per framme
+    int nchan;                // Channels per frame
     int chan_width;           // Channel width in hertz
     int sample_rate;          // Sample rate in hertz
+    int npol;                 // Number of polarisations
     int iscomplex;            // Complex sample flag
     int threadid;             // Which thread are we
     char stationid[3];        // Which station are we
@@ -1140,7 +1139,9 @@ struct vdifinfo
 
     double BW;
 
-    long double MJD_epoch;
+    double MJD_start;
+    double sec_offset;
+    double MJD_epoch;
 
     char date_obs[24];
     char basefilename[1024];
@@ -1159,7 +1160,9 @@ void vdif_write_second( struct vdifinfo *vf, vdif_header *vhdr,
 
 void vmPopulateVDIFHeader(
         vcsbeam_context  *vm,
-        beam_geom        *beam_geom_vals );
+        beam_geom        *beam_geom_vals,
+        double           mjd_start,
+        double           sec_offset );
 
 void to_offset_binary( int8_t *i, int n );
 
