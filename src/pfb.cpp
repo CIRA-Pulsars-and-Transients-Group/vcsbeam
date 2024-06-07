@@ -861,8 +861,7 @@ __global__ void ipfb_kernel(
     int P = ntaps;
     int F = P*K;
 
-    // Because we must have 0 <= n-mM < F, the smallest allowed value of m
-    // is:
+    // Because we must have 0 <= n-mM < F, the smallest allowed value of m is:
     int m0 = (n - F)/M + 1;
 
     // Initialise the output sample to zero
@@ -890,7 +889,9 @@ __global__ void ipfb_kernel(
             // were packed)
             // The fine channel time index, m, must be adjusted to ensure that
             // n=0 corresponds to the first full filter's worth of input samples
-            i = npol*K*(m+P) + npol*k + pol;
+            i = (m+P) * npol * K + \
+                k     * npol     + \
+                pol;
 
             // Complex multiplication
             out_real += in_real[i] * ft_real[ft] -
@@ -907,19 +908,24 @@ __global__ void ipfb_kernel(
     __syncthreads();
 }
 
+
 /**
  * Invert the PFB by applying a resynthesis filter, using GPU acceleration.
  *
- * This function expects `detected_beam` to be structured as follows:
+ * This function expects `data_buffer_fine` to be a 1D array of complex
+ * voltages with indices following the ordering:
  *
  * ```
- *   detected_beam[2*nsamples][nchan][npol]
+ *   pointing, samp, chan, pol
  * ```
  *
- * Although detected_samples potentially contains 2 seconds' worth of data,
+ * Although `data_buffer_fine` potentially contains 2 seconds' worth of data,
  * this function only inverts 1 second. The appropriate second is worked out
- * using `file_no`: if it is even, the first half of detected_beam is used,
- * if odd, the second half.
+ * using `file_no`: if it is even, the first half of `data_buffer_fine` is
+ * used; if odd, the second half.
+ *
+ * The IPFB is also given ntaps samples from the end of the previous second,
+ * so in total the IPFB is given nsamp+ntaps samples worth of data.
  *
  * The output of the inversion is packed back into `data_buffer_vdif`, a 1D
  * array whose ordering is as follows:
@@ -933,7 +939,7 @@ __global__ void ipfb_kernel(
  * It is assumed that the inverse filter coefficients have already been loaded
  * to the GPU.
  */
-void cu_invert_pfb( gpuDoubleComplex ****detected_beam, int file_no,
+void cu_invert_pfb( gpuDoubleComplex *data_buffer_fine, int file_no,
                         int npointing, int nsamples, int nchan, int npol,
                         int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_vdif )
@@ -943,42 +949,45 @@ void cu_invert_pfb( gpuDoubleComplex ****detected_beam, int file_no,
     // half of detected_beam if the file number is even, and "ntaps" places
     // from the end of the first half of detected_beam if the file number is
     // odd.
-    
     int start_s = (file_no % 2 == 0 ? 2*nsamples - g->ntaps : nsamples - g->ntaps);
 
-    int p, s_in, s, ch, pol, i;
+    int p,s_in,s,ch,pol,i,j;
     for (p = 0; p < npointing; p++)
     for (s_in = 0; s_in < nsamples + g->ntaps; s_in++)
     {
+        // s_in is the sample index in the IPFB buffers, in_real and in_imag
+        // s    is the sample index in data_buffer_fine
         s = (start_s + s_in) % (2*nsamples);
         for (ch = 0; ch < nchan; ch++)
         {
             for (pol = 0; pol < npol; pol++)
             {
-                // Calculate the index for in_real and in_imag;
-                i = p    * npol * nchan * (nsamples + g->ntaps) +
-                    s_in * npol * nchan +
-                    ch   * npol +
-                    pol;
-                // Copy the data across - taking care of the file_no = 0 case
-                // The s_in%(npol*nchan*nsamples) does this for each pointing
-                if (file_no == 0 && (s_in%(npol*nchan*nsamples)) < g->ntaps)
+                // Calculate the index for the IPFB bufffers, in_real and in_imag;
+                i = B_IDX(p,s_in,ch,pol,nsamples+g->ntaps,nchan,npol);
+
+                // Calculate the index for data_buffer_fine
+                j = B_IDX(p,s,ch,pol,nsamples,nchan,npol);
+                
+                // Copy the data into the IPFB buffers
+                // For the first chunk of data, there is no overlap from the previous
+                // second so the first ntaps samples will be set to zero
+                if (file_no == 0 && s_in < g->ntaps)
                 {
                     g->in_real[i] = 0.0;
                     g->in_imag[i] = 0.0;
                 }
                 else
                 {
-                    g->in_real[i] = gpuCreal( detected_beam[p][s][ch][pol] );
-                    g->in_imag[i] = gpuCimag( detected_beam[p][s][ch][pol] );
+                    g->in_real[i] = gpuCreal( data_buffer_fine[j] );
+                    g->in_imag[i] = gpuCimag( data_buffer_fine[j] );
                 }
             }
         }
     }
     
     // Copy the data to the device
-    (gpuMemcpy( g->d_in_real, g->in_real, g->in_size, gpuMemcpyHostToDevice ));
-    (gpuMemcpy( g->d_in_imag, g->in_imag, g->in_size, gpuMemcpyHostToDevice ));
+    gpuErrchk(gpuMemcpy( g->d_in_real, g->in_real, g->in_size, gpuMemcpyHostToDevice ));
+    gpuErrchk(gpuMemcpy( g->d_in_imag, g->in_imag, g->in_size, gpuMemcpyHostToDevice ));
     
     // Call the kernel
     if (npointing > 1)
@@ -989,10 +998,10 @@ void cu_invert_pfb( gpuDoubleComplex ****detected_beam, int file_no,
     ipfb_kernel<<<nsamples, nchan*npol>>>( g->d_in_real, g->d_in_imag,
                                              g->d_ft_real, g->d_ft_imag,
                                              g->ntaps, npol, g->d_out );
-    ( gpuPeekAtLastError() );
+    gpuErrchk( gpuPeekAtLastError() );
 
     // Copy the result back into host memory
-    (gpuMemcpy( data_buffer_vdif, g->d_out, g->out_size, gpuMemcpyDeviceToHost ));
+    gpuErrchk(gpuMemcpy( data_buffer_vdif, g->d_out, g->out_size, gpuMemcpyDeviceToHost ));
 }
 
 
@@ -1034,8 +1043,8 @@ void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
         }
     }
 
-    (gpuMemcpy( g->d_ft_real, g->ft_real, g->ft_size, gpuMemcpyHostToDevice ));
-    (gpuMemcpy( g->d_ft_imag, g->ft_imag, g->ft_size, gpuMemcpyHostToDevice ));
+    gpuErrchk(gpuMemcpy( g->d_ft_real, g->ft_real, g->ft_size, gpuMemcpyHostToDevice ));
+    gpuErrchk(gpuMemcpy( g->d_ft_imag, g->ft_imag, g->ft_size, gpuMemcpyHostToDevice ));
 }
 
 
@@ -1062,12 +1071,12 @@ void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
     g->out_size  = npointing * nsamples * filter->nchans * npol * 2 * sizeof(float);
 
     // Allocate memory on the device
-    (gpuMalloc( (void **)&g->d_in_real, g->in_size ));
-    (gpuMalloc( (void **)&g->d_in_imag, g->in_size ));
-    (gpuMalloc( (void **)&g->d_ft_real, g->ft_size ));
-    (gpuMalloc( (void **)&g->d_ft_imag, g->ft_size ));
+    gpuErrchk(gpuMalloc( (void **)&g->d_in_real, g->in_size ));
+    gpuErrchk(gpuMalloc( (void **)&g->d_in_imag, g->in_size ));
+    gpuErrchk(gpuMalloc( (void **)&g->d_ft_real, g->ft_size ));
+    gpuErrchk(gpuMalloc( (void **)&g->d_ft_imag, g->ft_size ));
 
-    (gpuMalloc( (void **)&g->d_out, g->out_size ));
+    gpuErrchk(gpuMalloc( (void **)&g->d_out, g->out_size ));
 
     // Allocate memory for host copies of the same
     g->in_real = (float *)malloc( g->in_size );

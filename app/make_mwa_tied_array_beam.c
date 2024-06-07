@@ -55,7 +55,6 @@ struct make_tied_array_beam_opts {
     char              *synth_filter;     // Which synthesis filter to use
     bool               smart;            // Use legacy settings for PFB
     int                max_sec_per_file; // Number of seconds per fits files
-    //float              gpu_mem_GB;       // Default = 0.0. If 0.0 use all GPU mem
     int                nchunks;          // Split each second into this many processing chunks
 };
 
@@ -118,7 +117,7 @@ int main(int argc, char **argv)
     }
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
-    vm->cal.ref_ant      = strdup( opts.ref_ant );
+    vm->cal.ref_ant      = opts.ref_ant ? strdup( opts.ref_ant ) : NULL;
     vm->cal.phase_offset = opts.phase_offset;
     vm->cal.phase_slope  = opts.phase_slope;
     vm->cal.custom_pq_correction = opts.custom_pq_correction;
@@ -137,9 +136,13 @@ int main(int argc, char **argv)
     // Get pointing geometry information
     beam_geom beam_geom_vals[vm->npointing];
 
+    // Calculate the actual start time of the dataset to be processed
     unsigned int p;
-    double mjd, sec_offset;
-    mjd = vm->obs_metadata->sched_start_mjd;
+    double mjd, mjd_start, sec_offset;
+    sec_offset = vm->gps_seconds_to_process[0] - (vm->obs_metadata->sched_start_gps_time_ms / 1000.0);
+    mjd_start = vm->obs_metadata->sched_start_mjd;
+    mjd = mjd_start + (sec_offset / 86400.0);
+    
     for (p = 0; p < vm->npointing; p++)
         calc_beam_geom( vm->ras_hours[p], vm->decs_degs[p], mjd, &beam_geom_vals[p] );
 
@@ -148,7 +151,7 @@ int main(int argc, char **argv)
     uintptr_t npols          = vm->obs_metadata->num_ant_pols;
     unsigned int nsamples    = vm->fine_sample_rate;
 
-    gpuDoubleComplex  ****detected_beam;
+    cuDoubleComplex  *data_buffer_fine;
 
     if (vm->do_inverse_pfb)
     {
@@ -159,8 +162,10 @@ int main(int argc, char **argv)
         vmLoadFilter( vm, opts.synth_filter, SYNTHESIS_FILTER, nchans );
         vmScaleFilterCoeffs( vm, SYNTHESIS_FILTER, 15.0/7.2 ); // (1/7.2) = 16384/117964.8
 
-        // Allocate memory for various data products
-        detected_beam = create_detected_beam( vm->npointing, 2*nsamples, nchans, npols );
+        // Allocate memory for voltage buffer that will be used to perform the IPFB
+        // The buffer is 2 seconds long to allow the synthesis filter to operate over
+        // the transition between seconds
+        data_buffer_fine = create_data_buffer_fine( vm->npointing, 2*nsamples, nchans, npols );
     }
 
     /*********************
@@ -169,6 +174,8 @@ int main(int argc, char **argv)
 
     /* Allocate host and device memory for the use of the cu_form_beam function */
     // Declaring pointers to the structs so the memory can be alternated
+    vmSetMaxGPUMem( vm, opts.nchunks );
+
     vmMallocVDevice( vm );
     vmMallocJVDevice( vm );
     vmMallocEHost( vm );
@@ -230,7 +237,7 @@ int main(int argc, char **argv)
     // ------------------
 
     // Populate the relevant header structs
-    vmPopulateVDIFHeader( vm, beam_geom_vals );
+    vmPopulateVDIFHeader( vm, beam_geom_vals, mjd_start, sec_offset );
 
     // Begin the main loop: go through data one second at a time
 
@@ -272,8 +279,11 @@ int main(int argc, char **argv)
 
             vmPullE( vm );
 
-            prepare_detected_beam( detected_beam, mpfs, vm );
-            cu_invert_pfb( detected_beam, timestep_idx, vm->npointing,
+            // Load the voltage data into the buffer
+            prepare_data_buffer_fine( data_buffer_fine, vm, timestep_idx );
+
+            // Run the iPFB kernel
+            cu_invert_pfb( data_buffer_fine, timestep_idx, vm->npointing,
                     nsamples, nchans, npols, vm->vf->sizeof_buffer,
                     &gi, data_buffer_vdif );
 
@@ -325,7 +335,7 @@ int main(int argc, char **argv)
 
     if (vm->do_inverse_pfb)
     {
-        destroy_detected_beam( detected_beam, vm->npointing, 2*nsamples, nchans );
+        free( data_buffer_fine );
     }
 
     if (vm->do_inverse_pfb)
@@ -452,8 +462,6 @@ void usage()
             "\t-h, --help                 Print this help and exit\n"
             "\t-V, --version              Print version number and exit\n\n"
           );
-// This option is currently too problematic to deal with:
-//            "\t-g, --gpu-mem=N            The maximum amount of GPU memory you want make_beam to use in GB [default: -1]\n"
 }
 
 
@@ -474,7 +482,6 @@ void make_tied_array_beam_parse_cmdline(
     opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
-    //opts->gpu_mem_GB           = 0.0;
     opts->custom_flags         = NULL;
     opts->nchunks              = 1;
     opts->smart                = false;
@@ -515,7 +522,6 @@ void make_tied_array_beam_parse_cmdline(
                 {"cross-terms",     no_argument,       0, 'X'},
                 {"PQ-phase",        required_argument, 0, 'U'},
                 {"offringa",        no_argument      , 0, 'O'},
-                //{"gpu-mem",         required_argument, 0, 'g'},
                 {"nchunks",         required_argument, 0, 'n'},
                 {"smart",           no_argument,       0, 's'},
                 {"help",            required_argument, 0, 'h'},
@@ -524,7 +530,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:hm:nN:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:hm:n:N:OpP:R:sS:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -562,9 +568,6 @@ void make_tied_array_beam_parse_cmdline(
                     opts->custom_flags = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->custom_flags, optarg );
                     break;
-                //case 'g':
-                //    opts->gpu_mem_GB = atof(optarg);
-                //    break;
                 case 'h':
                     usage();
                     exit(EXIT_SUCCESS);

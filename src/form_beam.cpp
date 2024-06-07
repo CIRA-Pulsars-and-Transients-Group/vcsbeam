@@ -172,10 +172,11 @@ __global__ void vmApplyJ_kernel( void            *data,
     // Jv_P = Jpq*vq + Jpy*vp
 
     Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] = gpuCadd( gpuCmul( J[J_IDX(p,ant,c,0,0,nant,nc,npol)], vq ),
-                                                 gpuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
+                                                  gpuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
     Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] = gpuCadd( gpuCmul( J[J_IDX(p,ant,c,1,0,nant,nc,npol)], vq ),
-                                                 gpuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
-#ifdef DEBUG
+                                                  gpuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
+
+/*#ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
         for (int i = 0; i < 1; i++)
@@ -199,7 +200,7 @@ __global__ void vmApplyJ_kernel( void            *data,
                   );
         }
     }
-#endif
+#endif */
 }
 
 /**
@@ -256,33 +257,36 @@ __global__ void vmBeamform_kernel( gpuDoubleComplex *Jv_Q,
     int ant  = threadIdx.x; /* The (ant)enna number */
     int nant = blockDim.x;  /* The (n)_umber of (ant)ennas */
 
-    /*// GPU profiling
-    clock_t start, stop;
-    double setup_t, detect_t, sum_t, stokes_t;
-    if ((p == 0) && (ant == 0) && (c == 0) && (s == 0)) start = clock();*/
-
     // Organise dynamically allocated shared arrays (see tag 11NSTATION for kernel call)
     extern __shared__ double arrays[];
+    // These SHOULD be *aligned* on integer numbers of 4-byte blocks.
 
-    gpuDoubleComplex *ex  = (gpuDoubleComplex *)(&arrays[1*nant]);
-    gpuDoubleComplex *ey  = (gpuDoubleComplex *)(&arrays[3*nant]);
-    gpuDoubleComplex *Nxx = (gpuDoubleComplex *)(&arrays[5*nant]);
-    gpuDoubleComplex *Nxy = (gpuDoubleComplex *)(&arrays[7*nant]);
-    gpuDoubleComplex *Nyy = (gpuDoubleComplex *)(&arrays[9*nant]);
+    // NOTE: Because these are complex-doubles, each takes up 2*sizeof(double), hence the stride of 2 here.
+    /* Given that we need to ensure access alignment on the 4-byte boundaries (CUDA requirement), we have
+       to make sure that the array access corresponds to an integer number of sizeof(double), which
+       means we need to use even indexes to access memory. This ensures for all `nant` that we access
+       within the memory boundaries. This StackOverflow post helped us figure this out:
+         
+            https://stackoverflow.com/questions/70765553/cuda-shared-memory-alignement-in-documentation
+
+       (Previously, the indexes were: 1*nant, 3*nant, etc.)
+     */
+    gpuDoubleComplex *ex  = (gpuDoubleComplex *)(&arrays[0*nant]);
+    gpuDoubleComplex *ey  = (gpuDoubleComplex *)(&arrays[2*nant]);
+    gpuDoubleComplex *Nxx = (gpuDoubleComplex *)(&arrays[4*nant]);
+    gpuDoubleComplex *Nxy = (gpuDoubleComplex *)(&arrays[6*nant]);
+    gpuDoubleComplex *Nyy = (gpuDoubleComplex *)(&arrays[8*nant]);
     // (Nyx is not needed as it's degenerate with Nxy)
 
     // Calculate the beam and the noise floor
-
     /* Fix from Maceij regarding NaNs in output when running on Athena, 13 April 2018.
     Apparently the different compilers and architectures are treating what were
     unintialised variables very differently */
-
     ex[ant]  = make_gpuDoubleComplex( 0.0, 0.0 );
     ey[ant]  = make_gpuDoubleComplex( 0.0, 0.0 );
 
     Nxx[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
     Nxy[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
-    //Nyx[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
     Nyy[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
     __syncthreads();
 
@@ -294,10 +298,10 @@ __global__ void vmBeamform_kernel( gpuDoubleComplex *Jv_Q,
     Nxx[ant] = gpuCmul( ex[ant], gpuConj(ex[ant]) );
     Nxy[ant] = gpuCmul( ex[ant], gpuConj(ey[ant]) );
     Nyy[ant] = gpuCmul( ey[ant], gpuConj(ey[ant]) );
+    __syncthreads();
 
     // Detect the coherent beam
     // The safest, slowest option: Just get one thread to do it
-    __syncthreads();
     if ( ant == 0 )
     {
         for (int i = 1; i < nant; i++)
@@ -306,9 +310,8 @@ __global__ void vmBeamform_kernel( gpuDoubleComplex *Jv_Q,
             ey[0]  = gpuCadd( ey[0],  ey[i] );
             Nxx[0] = gpuCadd( Nxx[0], Nxx[i] );
             Nxy[0] = gpuCadd( Nxy[0], Nxy[i] );
-            //Nyx[0]=gpuCadd( Nyx[0], Nyx[i] );
             Nyy[0] = gpuCadd( Nyy[0], Nyy[i] );
-        }
+       }
     }
     __syncthreads();
 
@@ -336,7 +339,7 @@ __global__ void vmBeamform_kernel( gpuDoubleComplex *Jv_Q,
     }
     __syncthreads();
 
-#ifdef DEBUG
+/** #ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
         printf( "Pre-add:\n" );
@@ -362,13 +365,8 @@ __global__ void vmBeamform_kernel( gpuDoubleComplex *Jv_Q,
         printf( "Post-add: ex[0]; ey[0] = [%.3lf, %.3lf]; [%.3lf, %.3lf]\n",
                 gpuCreal( ex[ant] ), gpuCimag( ex[ant] ),
                 gpuCreal( ey[ant] ), gpuCimag( ey[ant] ) );
-    /*
-        printf( "phi[3]  = [%lf, %lf]\n",
-                gpuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
-                gpuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
-    */
     }
-#endif
+#endif **/
 
 }
 
@@ -544,16 +542,27 @@ void vmBeamformChunk( vcsbeam_context *vm )
 {
     uintptr_t shared_array_size = 11 * vm->obs_metadata->num_ants * sizeof(double);
     // (To see how the 11*STATION double arrays are used, go to this code tag: 11NSTATION)
+#ifdef DEBUG
+    fprintf( stderr, "shared_array_size=%d bytes\n", 11 * vm->obs_metadata->num_ants * sizeof(double));
+#endif
 
+    // Define GPU compute frame sizes
     dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
     dim3 stat( vm->obs_metadata->num_ants );
 
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
+    gpuErrchk( cudaDeviceSynchronize() );
+
     // Send off a parallel CUDA stream for each pointing
     int p;
     for (p = 0; p < vm->npointing; p++ )
     {
+#ifdef DEBUG
+        fprintf(stderr, "vm->npointing=%d  pointing=%d\n", vm->npointing, p);
+        fprintf(stderr, "chan_samples=(%d,%d,%d) stat=(%d,%d,%d)\n", chan_samples.x, chan_samples.y, chan_samples.z, stat.x, stat.y, stat.z);
+        fprintf(stderr, "I think the coarse channel numbers is: %d\n", vm->coarse_chan_idx);
+#endif
         // Call the beamformer kernel
         vmBeamform_kernel<<<chan_samples, stat, shared_array_size, vm->streams[p]>>>(
                 vm->d_Jv_Q,
@@ -570,8 +579,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
 
         gpuCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
     }
-    ( gpuDeviceSynchronize() );
-
+    gpuErrchk( gpuDeviceSynchronize() );
 }
 
 /**
@@ -636,42 +644,6 @@ void vmPullS( vcsbeam_context *vm )
 {
     gpuMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, gpuMemcpyDeviceToHost );
     gpuCheckErrors( "vmPullE: gpuMemcpyAsync failed" );
-}
-
-/**
- * Copies the beamformed voltages into a different array to prepare for
- * inverting the PFB.
- *
- * @todo Remove prepare_detected_beam() and use a "host buffer" instead.
- */
-void prepare_detected_beam( gpuDoubleComplex ****detected_beam,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm )
-{
-    // Get shortcut variables
-    uintptr_t nchan  = vm->nfine_chan;
-    uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
-    int file_no = vm->chunk_to_load / vm->chunks_per_second;
-
-    // Copy the data back from e back into the detected_beam array
-    // Make sure we put it back into the correct half of the array, depending
-    // on whether this is an even or odd second.
-    int offset, i;
-    offset = file_no % 2 * vm->fine_sample_rate;
-
-    // TODO: turn detected_beam into a 1D array
-    int p, ch, s, pol;
-    for (p   = 0; p   < vm->npointing  ; p++  )
-    for (s   = 0; s   < vm->fine_sample_rate; s++  )
-    for (ch  = 0; ch  < nchan      ; ch++ )
-    for (pol = 0; pol < npol       ; pol++)
-    {
-        i = p  * (npol*nchan*vm->fine_sample_rate) +
-            s  * (npol*nchan)                   +
-            ch * (npol)                         +
-            pol;
-
-        detected_beam[p][s+offset][ch][pol] = vm->e[i];
-    }
 }
 
 /**
@@ -761,28 +733,56 @@ gpuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int ncha
 }
 
 
-/**
- * (Deprecated) Frees memory on the CPU.
- *
- * @todo Remove the function destroy_detected_beam().
- */
-void destroy_detected_beam( gpuDoubleComplex ****array, int npointing, int nsamples, int nchan )
+/*
+* Create a 1-D host buffer containing the fine-channelised complex voltage samples which
+* will be given to the IPFB.
+*/
+gpuDoubleComplex *create_data_buffer_fine( int npointing, int nsamples, int nchan, int npol )
 {
-    int p, s, ch;
-    for (p = 0; p < npointing; p++)
+    int buffer_size = npointing * nsamples * nchan * npol * sizeof(gpuDoubleComplex);
+    
+    // Allocate host memory for buffer
+    gpuDoubleComplex *data_buffer_fine;
+    data_buffer_fine = (gpuDoubleComplex *)malloc( buffer_size );
+
+    // Initialise buffer to zeros
+    memset( data_buffer_fine, 0, buffer_size );
+
+    return data_buffer_fine;
+}
+
+
+/*
+* Copy the fine-channelised beamformed voltages into a data buffer so that it can
+* be given to the IPFB.
+*/
+void prepare_data_buffer_fine( gpuDoubleComplex *data_buffer_fine, vcsbeam_context *vm,
+                    uintptr_t timestep_idx )
+{
+    // Get shortcut variables
+    uintptr_t nchan = vm->nfine_chan;
+    uintptr_t npol  = vm->obs_metadata->num_ant_pols; // = 2
+    int file_no = timestep_idx % 2;
+
+    // Copy the beamformed data from e into the data buffer
+    // Make sure we put it back into the correct half of the array, depending
+    // on whether this is an even or odd second.
+    int offset = file_no % 2 * vm->fine_sample_rate;
+
+    int p,s,ch,pol,i,j;
+    for (p   = 0; p   < vm->npointing;        p++   )
+    for (s   = 0; s   < vm->fine_sample_rate; s++   )
+    for (ch  = 0; ch  < nchan;                ch++  )
+    for (pol = 0; pol < npol;                 pol++ )
     {
-        for (s = 0; s < nsamples; s++)
-        {
-            for (ch = 0; ch < nchan; ch++)
-                free( array[p][s][ch] );
+        // Calculate index for e
+        i = B_IDX(p,s,ch,pol,vm->fine_sample_rate,nchan,npol);
 
-            free( array[p][s] );
-        }
+        // Calculate index for data_buffer_fine
+        j = B_IDX(p,s+offset,ch,pol,vm->fine_sample_rate,nchan,npol);
 
-        free( array[p] );
+        data_buffer_fine[j] = vm->e[i];
     }
-
-    free( array );
 }
 
 /**

@@ -180,6 +180,7 @@ void vmBindObsData(
     // Construct the gps second and coarse chan idx arrays
     vm->gps_seconds_to_process = (uint32_t *)malloc( vm->num_gps_seconds_to_process * sizeof(uint32_t) );
     vm->coarse_chan_idxs_to_process = (int *)malloc( vm->num_coarse_chans_to_process * sizeof(int) );
+    vm->cal_coarse_chan_idxs_to_process = (int *)malloc( vm->num_coarse_chans_to_process * sizeof(int) );
 
     int g;
     for (g = 0; g < vm->num_gps_seconds_to_process; g++)
@@ -191,6 +192,7 @@ void vmBindObsData(
     for (c = 0; c < num_coarse_chans_to_process; c++)
     {
         vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
+        vm->cal_coarse_chan_idxs_to_process[c] = c;
     }
 
     // Copy across the data directory
@@ -323,6 +325,7 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     // Free manually created arrays
     free( vm->gps_seconds_to_process );
     free( vm->coarse_chan_idxs_to_process );
+    free( vm->cal_coarse_chan_idxs_to_process );
 
     // Free mwalib structs
     mwalib_metafits_metadata_free( vm->obs_metadata );
@@ -704,10 +707,23 @@ void vmMallocJVDevice( vcsbeam_context *vm )
         sizeof(gpuDoubleComplex) /
         vm->chunks_per_second;
 
+#ifdef DEBUG
+    printf("%lu\n", vm->d_Jv_size_bytes);
+    size_t mf, ma;
+    cudaMemGetInfo(&mf, &ma); //TODO: This will break, need equiv. definitions
+    printf("free: %zu ... total: %zu\n", mf, ma);
+#endif
+
     gpuMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
-    gpuCheckErrors( "vmMallocJVDevice: gpuMalloc(d_Jv_P) failed" );
+    gpuCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_P) failed" );
+
+#ifdef DEBUG
+    cudaMemGetInfo(&mf, &ma); //TODO: This will break, need equiv. definitions
+    printf("free: %zu ... total: %zu\n", mf, ma);
+#endif
+
     gpuMalloc( (void **)&vm->d_Jv_Q,  vm->d_Jv_size_bytes );
-    gpuCheckErrors( "vmMallocJVDevice: gpuMalloc(d_Jv_Q) failed" );
+    gpuCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_Q) failed" );
 }
 
 /**
@@ -907,33 +923,16 @@ void vmFreePQIdxsDevice( vcsbeam_context *vm )
  *
  * LOGIC IS CURRENTLY FAULTY AND INCOMPLETE. DO NOT USE!
  */
-void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
+void vmSetMaxGPUMem( vcsbeam_context *vm, int nchunks )
 {
-    vm->max_gpu_mem_bytes = max_gpu_mem_bytes;
-
-    // Requested maximum can't be more that available memory
-    struct gpuDeviceProp gpu_properties;
-    gpuGetDeviceProperties( &gpu_properties, 0 );
-
-    if (max_gpu_mem_bytes == 0) // Default behaviour: "0" = just use maximum available
-    {
-        vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
-    }
-    else if (max_gpu_mem_bytes > gpu_properties.totalGlobalMem )
-    {
-        fprintf( stderr, "warning: vmSetMaxGPUMem(): requested maximum (%lu) "
-                "exceeds available memory (%lu). Setting to max available.\n",
-                vm->max_gpu_mem_bytes, gpu_properties.totalGlobalMem );
-        vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
-    }
-
-    // (This currently only accounts for some of the memory needed)
-    vm->chunks_per_second = (vm->bytes_per_second + vm->Jv_size_bytes) /
-        vm->max_gpu_mem_bytes + 1;
+    vm->chunks_per_second = nchunks;
 
     // Make sure the number of chunks is divisible by the number of samples (per second)
-    while ( vm->sample_rate % vm->chunks_per_second != 0 )
-        vm->chunks_per_second++;
+    if ( vm->sample_rate % vm->chunks_per_second != 0 )
+    {
+        logger_timed_message( vm->log, "Bad number of chunks requested: must divide number of samples per second of data." );
+        exit(EXIT_FAILURE);
+    }
 
     // Calculate the amount of gpu memory needed
     vm->d_v_size_bytes = vm->bytes_per_second / vm->chunks_per_second;
@@ -1035,16 +1034,17 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
  */
 void vmPushJ( vcsbeam_context *vm )
 {
-#ifdef DEBUG
+/*#ifdef DEBUG
     printf("J_size_bytes = %lu\n", vm->J_size_bytes);
     uint8_t *dummy = (uint8_t *)(vm->J);
-    for (uintptr_t byte = 0; byte < vm->J_size_bytes; byte++)
+    uintptr_t byte;
+    for (byte = 0; byte < vm->J_size_bytes; byte++)
     {
         if (byte % 16 == 0)  printf("\n");
         if (byte % 8 == 0)  printf(" ");
         printf ("%02x ", dummy[byte]);
     }
-#endif
+#endif */
     gpuMemcpy( vm->d_J, vm->J, vm->J_size_bytes, gpuMemcpyHostToDevice );
     gpuCheckErrors( "vmMemcpyJ: gpuMemcpy failed" );
 }
