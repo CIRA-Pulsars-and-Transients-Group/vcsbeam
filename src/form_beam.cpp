@@ -552,7 +552,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
 
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuDeviceSynchronize() );
 
     // Send off a parallel CUDA stream for each pointing
     int p;
@@ -579,7 +579,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
 
         gpuCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
     }
-    gpuErrchk( gpuDeviceSynchronize() );
+    ( gpuDeviceSynchronize() );
 }
 
 /**

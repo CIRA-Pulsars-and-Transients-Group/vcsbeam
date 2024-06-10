@@ -967,7 +967,7 @@ struct gpu_ipfb_arrays
 extern "C" {
 #endif
 
-void cu_invert_pfb( cuDoubleComplex *data_buffer_fine, int file_no,
+void cu_invert_pfb( gpuDoubleComplex *data_buffer_fine, int file_no,
                         int npointing, int nsamples, int nchan, int npol, int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_uvdif );
 
@@ -1025,7 +1025,7 @@ void vmBeamformSecond( vcsbeam_context *vm );
 void vmPullE( vcsbeam_context *vm );
 void vmPullS( vcsbeam_context *vm );
 
-void prepare_data_buffer_fine( cuDoubleComplex *data_buffer_fine, vcsbeam_context *vm,
+void prepare_data_buffer_fine( gpuDoubleComplex *data_buffer_fine, vcsbeam_context *vm,
                     uintptr_t timestep_idx );
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs );
 
@@ -1038,7 +1038,7 @@ vm_error vmReadNextSecond( vcsbeam_context *vm );
 gpuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
 void              destroy_invJi( gpuDoubleComplex ****array, int nstation, int nchan, int npol );
 
-cuDoubleComplex *create_data_buffer_fine( int npointing, int nsamples, int nchan, int npol );
+gpuDoubleComplex *create_data_buffer_fine( int npointing, int nsamples, int nchan, int npol );
 
 void allocate_input_output_arrays( void **data, void **d_data, size_t size );
 void free_input_output_arrays( void *data, void *d_data );

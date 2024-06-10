@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     uintptr_t npols          = vm->obs_metadata->num_ant_pols;
     unsigned int nsamples    = vm->fine_sample_rate;
 
-    cuDoubleComplex  *data_buffer_fine;
+    gpuDoubleComplex  *data_buffer_fine;
 
     if (vm->do_inverse_pfb)
     {

@@ -986,8 +986,8 @@ void cu_invert_pfb( gpuDoubleComplex *data_buffer_fine, int file_no,
     }
     
     // Copy the data to the device
-    gpuErrchk(gpuMemcpy( g->d_in_real, g->in_real, g->in_size, gpuMemcpyHostToDevice ));
-    gpuErrchk(gpuMemcpy( g->d_in_imag, g->in_imag, g->in_size, gpuMemcpyHostToDevice ));
+    (gpuMemcpy( g->d_in_real, g->in_real, g->in_size, gpuMemcpyHostToDevice ));
+    (gpuMemcpy( g->d_in_imag, g->in_imag, g->in_size, gpuMemcpyHostToDevice ));
     
     // Call the kernel
     if (npointing > 1)
@@ -998,10 +998,10 @@ void cu_invert_pfb( gpuDoubleComplex *data_buffer_fine, int file_no,
     ipfb_kernel<<<nsamples, nchan*npol>>>( g->d_in_real, g->d_in_imag,
                                              g->d_ft_real, g->d_ft_imag,
                                              g->ntaps, npol, g->d_out );
-    gpuErrchk( gpuPeekAtLastError() );
+    ( gpuPeekAtLastError() );
 
     // Copy the result back into host memory
-    gpuErrchk(gpuMemcpy( data_buffer_vdif, g->d_out, g->out_size, gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( data_buffer_vdif, g->d_out, g->out_size, gpuMemcpyDeviceToHost ));
 }
 
 
@@ -1043,8 +1043,8 @@ void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
         }
     }
 
-    gpuErrchk(gpuMemcpy( g->d_ft_real, g->ft_real, g->ft_size, gpuMemcpyHostToDevice ));
-    gpuErrchk(gpuMemcpy( g->d_ft_imag, g->ft_imag, g->ft_size, gpuMemcpyHostToDevice ));
+    (gpuMemcpy( g->d_ft_real, g->ft_real, g->ft_size, gpuMemcpyHostToDevice ));
+    (gpuMemcpy( g->d_ft_imag, g->ft_imag, g->ft_size, gpuMemcpyHostToDevice ));
 }
 
 
@@ -1071,12 +1071,12 @@ void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
     g->out_size  = npointing * nsamples * filter->nchans * npol * 2 * sizeof(float);
 
     // Allocate memory on the device
-    gpuErrchk(gpuMalloc( (void **)&g->d_in_real, g->in_size ));
-    gpuErrchk(gpuMalloc( (void **)&g->d_in_imag, g->in_size ));
-    gpuErrchk(gpuMalloc( (void **)&g->d_ft_real, g->ft_size ));
-    gpuErrchk(gpuMalloc( (void **)&g->d_ft_imag, g->ft_size ));
+    (gpuMalloc( (void **)&g->d_in_real, g->in_size ));
+    (gpuMalloc( (void **)&g->d_in_imag, g->in_size ));
+    (gpuMalloc( (void **)&g->d_ft_real, g->ft_size ));
+    (gpuMalloc( (void **)&g->d_ft_imag, g->ft_size ));
 
-    gpuErrchk(gpuMalloc( (void **)&g->d_out, g->out_size ));
+    (gpuMalloc( (void **)&g->d_out, g->out_size ));
 
     // Allocate memory for host copies of the same
     g->in_real = (float *)malloc( g->in_size );
