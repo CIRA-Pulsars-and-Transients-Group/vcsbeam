@@ -4,6 +4,7 @@ cd app
 mv make_mwa_incoh_beam.c make_mwa_incoh_beam.cu  
 mv mwa_tied_array_beam_psf.c mwa_tied_array_beam_psf.cu  
 mv mwa_track_primary_beam_response.c mwa_track_primary_beam_response.cu
+mv fine_pfb_offline.c fine_pfb_offline.cu
 cp CMakeLists.txt.NVIDIA CMakeLists.txt
 
 cd ../src/
