@@ -343,7 +343,7 @@ void read_step( VoltageContext *vcs_context, uint64_t gps_second,
                 gps_second,
                 1,
                 coarse_chan_idx,
-                data,
+                (char*)data,
                 data_size,
                 error_message,
                 ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
