@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         sprintf( coord2, "ϕ" );
     }
 
-    gpuDoubleComplex *J = malloc( 4*sizeof(gpuDoubleComplex) ); // For the FEE beam
+    gpuDoubleComplex *J = (gpuDoubleComplex*)malloc( 4*sizeof(gpuDoubleComplex) ); // For the FEE beam
     vm.npointing = 1;
     vm.coarse_chan_idx = 0; // <-- just a dummy for initially setting up the primary beam struct
     vmCreatePrimaryBeam( &vm );
