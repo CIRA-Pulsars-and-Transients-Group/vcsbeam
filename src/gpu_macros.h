@@ -8,7 +8,7 @@
 // #endif
 
 // TODO: Cristian should know how to avoid being explicit here:
-#define __HIPCC__
+// #define __HIPCC__
 
 #if defined (__NVCC__) || defined (__HIPCC__)
 
