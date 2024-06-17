@@ -65,8 +65,8 @@ target_link_libraries(vcsbeam
     ${MWALIB_LIB}
     ${MPI_C_LIBRARIES}
     ${GPU_LIBS}
-    /usr/local/lib/libmwalib.so # TODO : temporary
-    /home/msok/github/mwa_hyperbeam/target/release/libmwa_hyperbeam.so # TODO : temporary
+    #/usr/local/lib/libmwalib.so # TODO : temporary
+    #/home/msok/github/mwa_hyperbeam/target/release/libmwa_hyperbeam.so # TODO : temporary
 )
 
 install(TARGETS vcsbeam

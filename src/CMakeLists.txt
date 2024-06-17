@@ -5,30 +5,28 @@ add_library(vcsbeam STATIC
     ascii_header.c
     performance.c
     filter.c
-    form_beam.cpp
+    form_beam.cu
     jones.c
     buffer.c
-    pfb.cpp
+    pfb.cu
     calibration.c
     metadata.c)
 
-# if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
+if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
     target_sources(vcsbeam PRIVATE beam_psrfits.c)
-# endif ()
+endif ()
 
-#if (PAL_FOUND)
+if (PAL_FOUND)
     target_sources(vcsbeam PRIVATE geometry.c)
-#else()
-#    message(FATAL_ERROR "libpal not found.")
-#endif ()
+endif ()
 
-# if (VDIFIO_FOUND)
+if (VDIFIO_FOUND)
     target_sources(vcsbeam PRIVATE beam_vdif.c)
-# endif ()
+endif ()
 
-# if (HYPERBEAM_FOUND)
+if (HYPERBEAM_FOUND)
     target_sources(vcsbeam PRIVATE primary_beam.c)
-# endif ()
+endif ()
 
 set_target_properties(vcsbeam
     PROPERTIES PUBLIC_HEADER ${CMAKE_BINARY_DIR}/vcsbeam.h
@@ -45,33 +43,18 @@ target_include_directories(vcsbeam PUBLIC
     ${MPI_INCLUDE_PATH}
     ${CMAKE_BINARY_DIR})
 
-# TODO add here code to find cufft or rocfft
-if(USE_CUDA)
-   set(GPU_LIBS "-lcufft")
-elseif(USE_HIP)
-   set(GPU_LIBS "-lhipfft")
-else()
-   set(GPU_LIBS "")
-endif()
-
-
 target_link_libraries(vcsbeam
     ${PSRFITS_UTILS_LIBRARY}
     ${VDIFIO_LIBRARY}
     ${CFITSIO_LIBRARY}
-    ${LIBPAL_LIB}
+    ${PAL_LIBRARY}
     ${M_LIBRARY}
     ${HYPERBEAM_LIB}
     ${MWALIB_LIB}
     ${MPI_C_LIBRARIES}
-    ${GPU_LIBS}
-    /scratch/mwavcs/msok/install/mwalib/target/release/libmwalib.so # TODO : temporary
-    /opt/cray/pe/mpich/8.1.25/ucx/cray/10.0/lib/libmpi_cray.so      # TODO : temporary
-    /scratch/mwavcs/msok/install/mwa_hyperbeam/target/release/libmwa_hyperbeam.so # TODO : temporary
-)
+    cufft)
 
 install(TARGETS vcsbeam
     LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION include)
-
 

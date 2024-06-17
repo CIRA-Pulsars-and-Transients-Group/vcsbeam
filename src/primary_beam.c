@@ -151,13 +151,13 @@ void vmCalcB(
             {
                 // Use the 'dead' configuration temporarily
                 config_idx = DEAD_CONFIG;
-//                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
+                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
                 configs[config_idx]=(gpuDoubleComplex *)(tempJones);
             }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
-//                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
+                errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
                 configs[config_idx]=(gpuDoubleComplex *)(tempJones);
 
                 // Apply the parallactic angle correction
@@ -494,11 +494,11 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
 
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
-//    errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , (double *)J );
+    errInt = calc_jones( beam, az, za, freq_hz, delays, amps,numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , (double *)J );
 
     if (errInt !=0)
     {
-        handle_hyperbeam_error("primary beam",504 ,"calc_jones");
+        handle_hyperbeam_error("primary beam", __LINE__ ,"calc_jones");
         exit(EXIT_FAILURE);
     }
 
