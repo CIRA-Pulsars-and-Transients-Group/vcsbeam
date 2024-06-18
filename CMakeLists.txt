@@ -1,6 +1,35 @@
 cmake_minimum_required (VERSION 3.15)
+project(vcsbeam)
 #cmake_policy(SET CMP0012 NEW)
 #cmake_policy(SET CMP0048 NEW)
+
+# Define CMake options to choose the GPU flavour
+option(USE_CUDA "Compile the code with NVIDIA GPU support." OFF)
+option(USE_HIP "Compile the code with AMD GPU support." OFF)
+
+# Find packages needed
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+#find_package(CUDA REQUIRED)
+find_package(MWALIB REQUIRED)
+find_package(MPI REQUIRED)
+find_package(PAL REQUIRED)
+find_package(CFITSIO REQUIRED)
+find_package(PSRFITS_UTILS REQUIRED)
+find_package(HYPERBEAM REQUIRED)
+find_package(VDIFIO REQUIRED)
+find_package(XGPU)
+
+if(USE_CUDA)
+    enable_language(CUDA CXX)
+    set(CMAKE_CUDA_ARCHITECTURES "native") 
+    add_definitions("-D__NVCC__")
+elseif(USE_HIP)
+    #  only available from CMAKE 3.21. For versions less than 3.21, comment out the
+    # enable_language macro and simply specify the -DCMAKE_CXX_COMPILER=hipcc 
+    # command line option.
+    # enable_language(HIP CXX)
+    add_definitions("-D__HIP_PLATFORM_AMD__ -I ${MPI_CXX_INCLUDE_DIRS}")
+endif()
 
 # Set up version number from Git
 execute_process(
@@ -18,31 +47,40 @@ if(NOT RUNTIME_DIR)
 endif()
 message("Runtime files will be installed in ${RUNTIME_DIR}")
 
-# Define CMake options to choose the GPU flavour
-option(USE_CUDA "Compile the code with NVIDIA GPU support." OFF)
-option(USE_HIP "Compile the code with AMD GPU support." OFF)
+file(GLOB vcsbeam_c_sources 
+    "src/ascii_header.c"
+    "src/performance.c"
+    "src/filter.c"
+    "src/jones.c"
+    "src/buffer.c"
+    "src/calibration.c"
+    "src/metadata.c"
+)
 
+file(GLOB vcsbeam_gpu_sources 
+    "src/form_beam.cpp"
+    "src/pfb.cpp"
+)
 
 # Enable CMake support for target language
 if(USE_CUDA)
     message("Enabled CUDA (NVIDIA GPU) language support")
-    enable_language(CUDA C CXX)
-    set(CMAKE_CUDA_ARCHITECTURES "native") 
-    add_definitions("-D__NVCC__")
-    set_source_files_properties( ${sources} ${headers} ${apps} ${tests} PROPERTIES LANGUAGE CUDA)  # TODO: I don't know if this is correct, what is meant to be in $sources, etc.?
-    # this may be needed for older CUDA versions
+    set_source_files_properties(${vcsbeam_c_sources} ${vcsbeam_gpu_sources} PROPERTIES LANGUAGE CUDA)
     add_compile_options("--expt-relaxed-constexpr")
 endif()
 
-if(USE_HIP)
-    message("Enabled HIP (AMD GPU) language support")
-    enable_language(C CXX)
-    set(CMAKE_CXX_COMPILER hipcc)
-    add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
-endif()
+add_library(vcsbeam STATIC
+    ${vcsbeam_c_sources}
+    ${vcsbeam_gpu_sources}
+)
 
+# Add files/directories to build with
+configure_file(include/vcsbeam.h.in ${CMAKE_BINARY_DIR}/vcsbeam.h)
 
-project(vcsbeam)
+set_target_properties(vcsbeam
+    PROPERTIES PUBLIC_HEADER "${CMAKE_BINARY_DIR}/vcsbeam.h"
+    COMPILE_FLAGS "${COMPILE_FLAGS}"
+)
 
 #message("CUDA compute capability is ${SM}")
 #if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
@@ -56,23 +94,13 @@ project(vcsbeam)
 #set_source_files_properties( ${gpu_sources} PROPERTIES LANGUAGE CUDA)
 
 # Add path to hints for package finding
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 include_directories("src/")
 
-# Find packages needed
-#find_package(CUDA REQUIRED)
-find_package(MWALIB REQUIRED)
-find_package(MPI)
-find_package(PAL)
-find_package(CFITSIO)
-find_package(PSRFITS_UTILS)
-find_package(HYPERBEAM)
-find_package(VDIFIO)
-find_package(XGPU)
 
-# Add files/directories to build with
-configure_file(include/vcsbeam.h.in vcsbeam.h)
-add_subdirectory(src)
+
+
+# add_subdirectory(src)
 add_subdirectory(app)
 add_subdirectory(utils)
 
