@@ -23,12 +23,14 @@ if(USE_CUDA)
     enable_language(CUDA CXX)
     set(CMAKE_CUDA_ARCHITECTURES "native") 
     add_definitions("-D__NVCC__")
+    set(GPU_FFTLIB cufft)
 elseif(USE_HIP)
     #  only available from CMAKE 3.21. For versions less than 3.21, comment out the
     # enable_language macro and simply specify the -DCMAKE_CXX_COMPILER=hipcc 
     # command line option.
     # enable_language(HIP CXX)
-    add_definitions("-D__HIP_PLATFORM_AMD__ -I ${MPI_CXX_INCLUDE_DIRS}")
+    set(GPU_FFTLIB hipfft)
+    add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
 endif()
 
 # Set up version number from Git
@@ -74,12 +76,55 @@ add_library(vcsbeam STATIC
     ${vcsbeam_gpu_sources}
 )
 
+if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
+    target_sources(vcsbeam PRIVATE "src/beam_psrfits.c")
+endif ()
+
+if (PAL_FOUND)
+    target_sources(vcsbeam PRIVATE "src/geometry.c")
+endif ()
+
+if (VDIFIO_FOUND)
+    target_sources(vcsbeam PRIVATE "src/beam_vdif.c")
+endif ()
+
+if (HYPERBEAM_FOUND)
+    target_sources(vcsbeam PRIVATE "src/primary_beam.c")
+endif ()
+
+
+target_include_directories(vcsbeam PUBLIC
+    ${PSRFITS_UTILS_INCLUDE_DIR}
+    ${VDIFIO_INCLUDE_DIR}
+    ${CFITSIO_INCLUDE_DIR}
+    ${PAL_INCLUDE_DIR}
+    ${CUDA_INCLUDE_DIRS}
+    ${HYPERBEAM_INCLUDE_DIR}
+    ${MWALIB_INCLUDE_DIR}
+    ${MPI_INCLUDE_PATH}
+    ${CMAKE_BINARY_DIR})
+
+target_link_libraries(vcsbeam
+    ${PSRFITS_UTILS_LIBRARY}
+    ${VDIFIO_LIBRARY}
+    ${CFITSIO_LIBRARY}
+    ${PAL_LIBRARY}
+    ${M_LIBRARY}
+    ${HYPERBEAM_LIB}
+    ${MWALIB_LIB}
+    ${MPI_C_LIBRARIES}
+    ${GPU_FFTLIB})
+
+install(TARGETS vcsbeam
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION include)
+
+
 # Add files/directories to build with
 configure_file(include/vcsbeam.h.in ${CMAKE_BINARY_DIR}/vcsbeam.h)
 
 set_target_properties(vcsbeam
-    PROPERTIES PUBLIC_HEADER "${CMAKE_BINARY_DIR}/vcsbeam.h"
-    COMPILE_FLAGS "${COMPILE_FLAGS}"
+    PROPERTIES PUBLIC_HEADER "vcsbeam.h"
 )
 
 #message("CUDA compute capability is ${SM}")
