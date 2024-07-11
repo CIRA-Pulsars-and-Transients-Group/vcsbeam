@@ -20,7 +20,7 @@ find_package(VDIFIO REQUIRED)
 find_package(XGPU)
 
 if(USE_CUDA)
-    enable_language(CUDA CXX)
+    enable_language(CUDA C CXX)
     set(CMAKE_CUDA_ARCHITECTURES "native") 
     add_definitions("-D__NVCC__")
     set(GPU_FFTLIB cufft)
@@ -67,8 +67,7 @@ file(GLOB vcsbeam_gpu_sources
 # Enable CMake support for target language
 if(USE_CUDA)
     message("Enabled CUDA (NVIDIA GPU) language support")
-    set_source_files_properties(${vcsbeam_c_sources} ${vcsbeam_gpu_sources} PROPERTIES LANGUAGE CUDA)
-    add_compile_options("--expt-relaxed-constexpr")
+    set_source_files_properties(${vcsbeam_gpu_sources} PROPERTIES LANGUAGE CUDA)
 endif()
 
 add_library(vcsbeam STATIC
@@ -127,25 +126,11 @@ set_target_properties(vcsbeam
     PROPERTIES PUBLIC_HEADER "vcsbeam.h"
 )
 
-#message("CUDA compute capability is ${SM}")
-#if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-#    message("CUDA device compute capability not set -> using default: CMAKE_CUDA_ARCHITECTURES=native")
-#    set(CMAKE_CUDA_ARCHITECTURES "native")
-#endif()
-
-#set(GPU_LIBS "-lcufft")
-
-#file(GLOB gpu_sources "app/*.cu")
-#set_source_files_properties( ${gpu_sources} PROPERTIES LANGUAGE CUDA)
-
 # Add path to hints for package finding
 
 include_directories("src/")
 
 
-
-
-# add_subdirectory(src)
 add_subdirectory(app)
 add_subdirectory(utils)
 
