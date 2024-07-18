@@ -1,15 +1,13 @@
 cmake_minimum_required (VERSION 3.15)
 project(vcsbeam)
-#cmake_policy(SET CMP0012 NEW)
-#cmake_policy(SET CMP0048 NEW)
 
 # Define CMake options to choose the GPU flavour
+# TODO: Is there a way to make sure these are required and mutually exclusive?
 option(USE_CUDA "Compile the code with NVIDIA GPU support." OFF)
 option(USE_HIP "Compile the code with AMD GPU support." OFF)
 
 # Find packages needed
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-#find_package(CUDA REQUIRED)
 find_package(MWALIB REQUIRED)
 find_package(MPI REQUIRED)
 find_package(PAL REQUIRED)
@@ -19,18 +17,26 @@ find_package(HYPERBEAM REQUIRED)
 find_package(VDIFIO REQUIRED)
 find_package(XGPU)
 
+# Enable the support and relevant compiliation flags/config for the selected GPU language
 if(USE_CUDA)
-    enable_language(CUDA CXX)
+    enable_language(CUDA C CXX)
     set(CMAKE_CUDA_ARCHITECTURES "native") 
     add_definitions("-D__NVCC__")
     set(GPU_FFTLIB cufft)
+    message(STATUS "CUDA generation enabled.")
+    message(NOTICE "Using the available CUDA 'native' architecture.")
 elseif(USE_HIP)
-    #  only available from CMAKE 3.21. For versions less than 3.21, comment out the
-    # enable_language macro and simply specify the -DCMAKE_CXX_COMPILER=hipcc 
-    # command line option.
+    # NOTE: The enable_language(HIP ...) macro is only available from CMake 3.21.
+    # For versions < 3.21, comment out the enable_language macro and simply
+    # specify the 
+    #     -DCMAKE_CXX_COMPILER=hipcc
+    # as an option when executing cmake on the command line.
     # enable_language(HIP CXX)
     set(GPU_FFTLIB hipfft)
     add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
+    message(STATUS "HIP generation enabled.")
+else()
+    message(FATAL_ERROR "Either USE_CUDA=1 or USE_HIP=1 must be specified.")
 endif()
 
 # Set up version number from Git
@@ -40,14 +46,14 @@ execute_process(
   OUTPUT_VARIABLE VCSBEAM_VERSION
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-message("VCSBeam ${VCSBEAM_VERSION}")
+message(STATUS "VCSBeam ${VCSBEAM_VERSION}")
 
 
 # Ensure that runtime files have an installation path
 if(NOT RUNTIME_DIR)
     set(RUNTIME_DIR ${CMAKE_INSTALL_PREFIX}/bin/vcsbeam_runtime)
 endif()
-message("Runtime files will be installed in ${RUNTIME_DIR}")
+message(NOTICE "Runtime files will be installed in ${RUNTIME_DIR}")
 
 file(GLOB vcsbeam_c_sources 
     "src/ascii_header.c"
@@ -59,16 +65,16 @@ file(GLOB vcsbeam_c_sources
     "src/metadata.c"
 )
 
+# Collect the source files _with_ GPU kernels
 file(GLOB vcsbeam_gpu_sources 
     "src/form_beam.cpp"
     "src/pfb.cpp"
 )
 
-# Enable CMake support for target language
 if(USE_CUDA)
-    message("Enabled CUDA (NVIDIA GPU) language support")
-    set_source_files_properties(${vcsbeam_c_sources} ${vcsbeam_gpu_sources} PROPERTIES LANGUAGE CUDA)
-    add_compile_options("--expt-relaxed-constexpr")
+    # This sets the .cpp files, containing the kernels, as the targetted source files
+    # for the CUDA compiler (rather than the typical .cu extensions).
+    set_source_files_properties(${vcsbeam_gpu_sources} PROPERTIES LANGUAGE CUDA)
 endif()
 
 add_library(vcsbeam STATIC
@@ -92,7 +98,7 @@ if (HYPERBEAM_FOUND)
     target_sources(vcsbeam PRIVATE "src/primary_beam.c")
 endif ()
 
-
+# Define required components/places to look when compiling parts...
 target_include_directories(vcsbeam PUBLIC
     ${PSRFITS_UTILS_INCLUDE_DIR}
     ${VDIFIO_INCLUDE_DIR}
@@ -115,10 +121,14 @@ target_link_libraries(vcsbeam
     ${MPI_C_LIBRARIES}
     ${GPU_FFTLIB})
 
+include_directories("src/")
+
+
+
+# ... And where to install things at the end
 install(TARGETS vcsbeam
     LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION include)
-
 
 # Add files/directories to build with
 configure_file(include/vcsbeam.h.in ${CMAKE_BINARY_DIR}/vcsbeam.h)
@@ -127,31 +137,12 @@ set_target_properties(vcsbeam
     PROPERTIES PUBLIC_HEADER "vcsbeam.h"
 )
 
-#message("CUDA compute capability is ${SM}")
-#if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-#    message("CUDA device compute capability not set -> using default: CMAKE_CUDA_ARCHITECTURES=native")
-#    set(CMAKE_CUDA_ARCHITECTURES "native")
-#endif()
-
-#set(GPU_LIBS "-lcufft")
-
-#file(GLOB gpu_sources "app/*.cu")
-#set_source_files_properties( ${gpu_sources} PROPERTIES LANGUAGE CUDA)
-
-# Add path to hints for package finding
-
-include_directories("src/")
-
-
-
-
-# add_subdirectory(src)
 add_subdirectory(app)
 add_subdirectory(utils)
 
 if(XGPU_FOUND AND CFITSIO_FOUND)
     add_subdirectory(offline_correlator)
-endif ()
+endif()
 
 
 # Install any necessary data files in the required location
