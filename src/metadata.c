@@ -471,9 +471,7 @@ void vmMallocJVHost( vcsbeam_context *vm )
         sizeof(gpuDoubleComplex);
 
     gpuMallocHost( (void **)&(vm->Jv_P), vm->Jv_size_bytes );
-    gpuCheckErrors( "vmMallocJVHost: gpuMallocHost(Jv_P) failed" );
     gpuMallocHost( (void **)&(vm->Jv_Q), vm->Jv_size_bytes );
-    gpuCheckErrors( "vmMallocJVHost: gpuMallocHost(Jv_Q) failed" );
 }
 
 /**
@@ -494,7 +492,6 @@ void vmMallocEHost( vcsbeam_context *vm )
 
     // Allocate memory on host
     gpuMallocHost( (void **)&(vm->e), vm->e_size_bytes );
-    gpuCheckErrors( "vmMallocEHost: gpuMallocHost failed" );
 }
 
 /**
@@ -510,7 +507,6 @@ void vmMallocSHost( vcsbeam_context *vm )
 
     // Allocate memory on host
     gpuMallocHost( (void **)&(vm->S), vm->S_size_bytes );
-    gpuCheckErrors( "vmMallocSHost: gpuMallocHost failed" );
 }
 
 /**
@@ -531,7 +527,6 @@ void vmMallocJHost( vcsbeam_context *vm )
 
     // Allocate memory on device
     gpuMallocHost( (void **)&(vm->J), vm->J_size_bytes );
-    gpuCheckErrors( "vmMallocJHost: gpuMallocHost failed" );
 }
 
 /**
@@ -551,7 +546,6 @@ void vmMallocDHost( vcsbeam_context *vm )
 
     // Allocate memory on device
     gpuMallocHost( (void **)&(vm->D), vm->D_size_bytes );
-    gpuCheckErrors( "vmMallocDHost: gpuMallocHost failed" );
 }
 
 /**
@@ -568,9 +562,7 @@ void vmMallocPQIdxsHost( vcsbeam_context *vm )
 
     // Allocate memory on device
     gpuMallocHost( (void **)&(vm->polP_idxs), vm->pol_idxs_size_bytes );
-    gpuCheckErrors( "vmMallocPQIdxsHost: gpuMallocHost(polP_idxs) failed" );
     gpuMallocHost( (void **)&(vm->polQ_idxs), vm->pol_idxs_size_bytes );
-    gpuCheckErrors( "vmMallocPQIdxsHost: gpuMallocHost(polQ_idxs) failed" );
 }
 
 /**
@@ -590,10 +582,8 @@ void vmFreeVHost( vcsbeam_context *vm )
  */
 void vmFreeJVHost( vcsbeam_context *vm )
 {
-    gpuFreeHost( vm->Jv_P );
-    gpuCheckErrors( "vmFreeJVHost: gpuFreeHost(Jv_P) failed" );
-    gpuFreeHost( vm->Jv_Q );
-    gpuCheckErrors( "vmFreeJVHost: gpuFreeHost(Jv_Q) failed" );
+    gpuHostFree( vm->Jv_P );
+    gpuHostFree( vm->Jv_Q );
 }
 
 /**
@@ -603,8 +593,7 @@ void vmFreeJVHost( vcsbeam_context *vm )
  */
 void vmFreeEHost( vcsbeam_context *vm )
 {
-    gpuFreeHost( vm->e );
-    gpuCheckErrors( "vmFreeEHost: gpuFreeHost failed" );
+    gpuHostFree( vm->e );
 }
 
 /**
@@ -614,8 +603,7 @@ void vmFreeEHost( vcsbeam_context *vm )
  */
 void vmFreeSHost( vcsbeam_context *vm )
 {
-    gpuFreeHost( vm->S );
-    gpuCheckErrors( "vmFreeSHost: gpuFreeHost failed" );
+    gpuHostFree( vm->S );
 }
 
 /**
@@ -625,8 +613,7 @@ void vmFreeSHost( vcsbeam_context *vm )
  */
 void vmFreeJHost( vcsbeam_context *vm )
 {
-    gpuFreeHost( vm->J );
-    gpuCheckErrors( "vmFreeJHost: gpuFreeHost failed" );
+    gpuHostFree( vm->J );
 }
 
 /**
@@ -636,8 +623,7 @@ void vmFreeJHost( vcsbeam_context *vm )
  */
 void vmFreeDHost( vcsbeam_context *vm )
 {
-    gpuFreeHost( vm->D );
-    gpuCheckErrors( "vmFreeDHost: gpuFreeHost failed" );
+    gpuHostFree( vm->D );
 }
 
 /**
@@ -647,10 +633,8 @@ void vmFreeDHost( vcsbeam_context *vm )
  */
 void vmFreePQIdxsHost( vcsbeam_context *vm )
 {
-    gpuFreeHost( vm->polP_idxs );
-    gpuCheckErrors( "vmFreePQIdxsHost: gpuFreeHost(polP_idxs) failed" );
-    gpuFreeHost( vm->polQ_idxs );
-    gpuCheckErrors( "vmFreePQIdxsHost: gpuFreeHost(polQ_idxs) failed" );
+    gpuHostFree( vm->polP_idxs );
+    gpuHostFree( vm->polQ_idxs );
 }
 
 /**
@@ -675,7 +659,6 @@ void vmMallocVDevice( vcsbeam_context *vm )
     {
         vm->d_v_size_bytes = vm->bytes_per_second / vm->chunks_per_second;
         gpuMalloc( (void **)&vm->d_v,  vm->d_v_size_bytes );
-        gpuCheckErrors( "vmMallocVDevice: gpuMalloc failed" );
     }
     else // if (vm->obs_metadata->mwa_version == VCSMWAXv2)
     {
@@ -715,7 +698,6 @@ void vmMallocJVDevice( vcsbeam_context *vm )
 #endif
 
     gpuMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
-    gpuCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_P) failed" );
 
 #ifdef DEBUG
     cudaMemGetInfo(&mf, &ma); //TODO: This will break, need equiv. definitions
@@ -723,7 +705,6 @@ void vmMallocJVDevice( vcsbeam_context *vm )
 #endif
 
     gpuMalloc( (void **)&vm->d_Jv_Q,  vm->d_Jv_size_bytes );
-    gpuCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_Q) failed" );
 }
 
 /**
@@ -744,7 +725,6 @@ void vmMallocEDevice( vcsbeam_context *vm )
 
     // Allocate memory on device
     gpuMalloc( (void **)&(vm->d_e), vm->d_e_size_bytes );
-    gpuCheckErrors( "vmMallocEDevice: gpuMalloc failed" );
 }
 
 /**
@@ -760,7 +740,6 @@ void vmMallocSDevice( vcsbeam_context *vm )
 
     // Allocate memory on device
     gpuMalloc( (void **)&(vm->d_S), vm->d_S_size_bytes );
-    gpuCheckErrors( "vmMallocSDevice: gpuMalloc failed" );
 }
 
 /**
@@ -781,7 +760,6 @@ void vmMallocJDevice( vcsbeam_context *vm )
 
     // Allocate memory on device
     gpuMalloc( (void **)&(vm->d_J), vm->d_J_size_bytes );
-    gpuCheckErrors( "vmMallocJDevice: gpuMalloc failed" );
 }
 
 /**
@@ -801,7 +779,6 @@ void vmMallocDDevice( vcsbeam_context *vm )
 
     // Allocate memory on device
     gpuMalloc( (void **)&(vm->d_D), vm->d_D_size_bytes );
-    gpuCheckErrors( "vmMallocDDevice: gpuMalloc failed" );
 }
 
 /**
@@ -818,9 +795,7 @@ void vmMallocPQIdxsDevice( vcsbeam_context *vm )
 
     // Allocate memory on device
     gpuMalloc( (void **)&(vm->d_polP_idxs), vm->d_pol_idxs_size_bytes );
-    gpuCheckErrors( "vmMallocPQIdxsDevice: gpuMalloc(polP_idxs) failed" );
     gpuMalloc( (void **)&(vm->d_polQ_idxs), vm->d_pol_idxs_size_bytes );
-    gpuCheckErrors( "vmMallocPQIdxsDevice: gpuMalloc(polQ_idxs) failed" );
 }
 
 /**
@@ -838,7 +813,6 @@ void vmFreeVDevice( vcsbeam_context *vm )
     if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
     {
         gpuFree( vm->d_v );
-        gpuCheckErrors( "vmFreeVDevice: gpuFree failed" );
     }
 }
 
@@ -850,9 +824,7 @@ void vmFreeVDevice( vcsbeam_context *vm )
 void vmFreeJVDevice( vcsbeam_context *vm )
 {
     gpuFree( vm->d_Jv_P );
-    gpuCheckErrors( "vmFreeJVDevice: gpuFree(d_Jv_P) failed" );
     gpuFree( vm->d_Jv_Q );
-    gpuCheckErrors( "vmFreeJVDevice: gpuFree(d_Jv_Q) failed" );
 }
 
 /**
@@ -863,7 +835,6 @@ void vmFreeJVDevice( vcsbeam_context *vm )
 void vmFreeEDevice( vcsbeam_context *vm )
 {
     gpuFree( vm->d_e );
-    gpuCheckErrors( "vmFreeEDevice: gpuFree failed" );
 }
 
 /**
@@ -874,7 +845,6 @@ void vmFreeEDevice( vcsbeam_context *vm )
 void vmFreeSDevice( vcsbeam_context *vm )
 {
     gpuFree( vm->d_S );
-    gpuCheckErrors( "vmFreeSDevice: gpuFree failed" );
 }
 
 /**
@@ -885,7 +855,6 @@ void vmFreeSDevice( vcsbeam_context *vm )
 void vmFreeJDevice( vcsbeam_context *vm )
 {
     gpuFree( vm->d_J );
-    gpuCheckErrors( "vmFreeJDevice: gpuFree failed" );
 }
 
 
@@ -897,7 +866,6 @@ void vmFreeJDevice( vcsbeam_context *vm )
 void vmFreeDDevice( vcsbeam_context *vm )
 {
     gpuFree( vm->d_D );
-    gpuCheckErrors( "vmFreeDDevice: gpuFree failed" );
 }
 
 
@@ -909,9 +877,7 @@ void vmFreeDDevice( vcsbeam_context *vm )
 void vmFreePQIdxsDevice( vcsbeam_context *vm )
 {
     gpuFree( vm->d_polP_idxs );
-    gpuCheckErrors( "vmFreePQIdxsDevice: gpuFree(polP_idxs) failed" );
     gpuFree( vm->d_polQ_idxs );
-    gpuCheckErrors( "vmFreePQIdxsDevice: gpuFree(polQ_idxs) failed" );
 }
 
 /**
@@ -952,7 +918,6 @@ void vmPushChunk( vcsbeam_context *vm )
     char *ptrHost = (char *)vm->v->buffer + chunk*vm->d_v_size_bytes;
 
     gpuMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, gpuMemcpyHostToDevice );
-    gpuCheckErrors( "vmMemcpyNextChunk: gpuMemcpy failed" );
 
     logger_stop_stopwatch( vm->log, "upload" );
 }
@@ -1046,7 +1011,6 @@ void vmPushJ( vcsbeam_context *vm )
     }
 #endif */
     gpuMemcpy( vm->d_J, vm->J, vm->J_size_bytes, gpuMemcpyHostToDevice );
-    gpuCheckErrors( "vmMemcpyJ: gpuMemcpy failed" );
 }
 
 /**
@@ -1064,7 +1028,6 @@ void vmCreateCudaStreams( vcsbeam_context *vm )
     for (p = 0; p < vm->npointing; p++)
     {
         gpuStreamCreate( &(vm->streams[p]) );
-        gpuCheckErrors( "vmCreateCudaStreams: gpuStreamCreate failed" );
     }
 }
 
@@ -1081,7 +1044,6 @@ void vmDestroyCudaStreams( vcsbeam_context *vm )
     for (p = 0; p < vm->npointing; p++)
     {
         gpuStreamDestroy( vm->streams[p] );
-        gpuCheckErrors( "vmDestroyCudaStreams: gpuStreamDestroy failed" );
     }
 
     free( vm->streams );
@@ -1105,18 +1067,12 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
     vm->Cscaled_size = vm->npointing*mpfs[0].coarse_chan_pf.sub.bytes_per_subint;
 
     gpuMalloc( (void **)&vm->d_offsets, vm->offsets_size );
-    gpuCheckErrors( "vmCreateStatistics: gpuMalloc(offsets) failed" );
     gpuMalloc( (void **)&vm->d_scales,  vm->scales_size );
-    gpuCheckErrors( "vmCreateStatistics: gpuMalloc(scales) failed" );
     gpuMalloc( (void **)&vm->d_Cscaled, vm->Cscaled_size );
-    gpuCheckErrors( "vmCreateStatistics: gpuMalloc(Cscaled) failed" );
 
     gpuMallocHost( (void **)&vm->offsets, vm->offsets_size );
-    gpuCheckErrors( "vmCreateStatistics: gpuMallocHost(offsets) failed" );
     gpuMallocHost( (void **)&vm->scales,  vm->scales_size );
-    gpuCheckErrors( "vmCreateStatistics: gpuMallocHost(scales) failed" );
     gpuMallocHost( (void **)&vm->Cscaled, vm->Cscaled_size );
-    gpuCheckErrors( "vmCreateStatistics: gpuMallocHost(Cscaled) failed" );
 }
 
 /**
@@ -1129,19 +1085,13 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
  */
 void vmDestroyStatistics( vcsbeam_context *vm )
 {
-    gpuFreeHost( vm->offsets );
-    gpuCheckErrors( "vmDestroyStatistics: gpuFreeHost(offsets) failed" );
-    gpuFreeHost( vm->scales );
-    gpuCheckErrors( "vmDestroyStatistics: gpuFreeHost(scales) failed" );
-    gpuFreeHost( vm->Cscaled );
-    gpuCheckErrors( "vmDestroyStatistics: gpuFreeyHost(Cscaled) failed" );
+    gpuHostFree( vm->offsets );
+    gpuHostFree( vm->scales );
+    gpuHostFree( vm->Cscaled );
 
     gpuFree( vm->d_offsets );
-    gpuCheckErrors( "vmDestroyStatistics: gpuFree(offsets) failed" );
     gpuFree( vm->d_scales );
-    gpuCheckErrors( "vmDestroyStatistics: gpuFree(scales) failed" );
     gpuFree( vm->d_Cscaled );
-    gpuCheckErrors( "vmDestroyStatistics: gpuFree(Cscaled) failed" );
 }
 
 /**

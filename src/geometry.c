@@ -166,10 +166,8 @@ void vmCreateGeometricDelays( vcsbeam_context *vm )
     size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(gpuDoubleComplex);
 
     gpuMallocHost( (void **)&(vm->gdelays.phi), size );
-    gpuCheckErrors( "error: create_geometric_delays: gpuMallocHost failed" );
 
     gpuMalloc( (void **)&(vm->gdelays.d_phi), size );
-    gpuCheckErrors( "error: create_geometric_delays: gpuMalloc failed" );
 }
 
 /**
@@ -183,11 +181,9 @@ void free_geometric_delays( geometric_delays *gdelays )
 {
     free( gdelays->chan_freqs_hz );
 
-    gpuFreeHost( gdelays->phi );
-    gpuCheckErrors( "(free_geometric_delays) gpuFreeHost failed" );
+    gpuHostFree( gdelays->phi );
 
     gpuFree( gdelays->d_phi );
-    gpuCheckErrors( "(free_geometric_delays) gpuFree failed" );
 }
 
 /**
@@ -199,7 +195,6 @@ void vmPushPhi( vcsbeam_context *vm )
 {
     size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(gpuDoubleComplex);
     gpuMemcpyAsync( vm->gdelays.d_phi, vm->gdelays.phi, size, gpuMemcpyHostToDevice, 0 );
-    gpuCheckErrors( "error: vmPushPhi: gpuMemcpyAsync failed" );
 }
 
 /**

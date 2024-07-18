@@ -464,7 +464,6 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
     if (flags & PFB_MALLOC_HOST_OUTPUT)
     {
         gpuMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size );
-        gpuCheckErrors( "vmInitForwardPFB: gpuMallocHost(vcs_data) failed" );
     }
     else
         fpfb->vcs_data = NULL;
@@ -507,9 +506,9 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
 void vmFreeForwardPFB( forward_pfb *fpfb )
 {
     gpufftDestroy( fpfb->plan );
-    (gpuFreeHost( fpfb->filter_coeffs ));
-    (gpuFreeHost( fpfb->vcs_data ));
-    (gpuFreeHost( fpfb->i_output_idx ));
+    (gpuHostFree( fpfb->filter_coeffs ));
+    (gpuHostFree( fpfb->vcs_data ));
+    (gpuHostFree( fpfb->i_output_idx ));
     (gpuFree( fpfb->d_filter_coeffs ));
     (gpuFree( fpfb->d_htr_data ));
     (gpuFree( fpfb->d_vcs_data ));
@@ -553,7 +552,6 @@ void vmUploadForwardPFBChunk( vcsbeam_context *vm )
             (char *)vm->v->buffer + chunk*vm->fpfb->htr_stride,  // from
             vm->fpfb->d_htr_size,                                // how much
             gpuMemcpyHostToDevice );                            // which direction
-    gpuCheckErrors( "vmUploadForwardPFBChunk: gpuMemcpy failed" );
 
     logger_stop_stopwatch( vm->log, "upload" );
 
