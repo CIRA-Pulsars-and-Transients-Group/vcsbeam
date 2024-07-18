@@ -527,7 +527,7 @@ void vmApplyJChunk( vcsbeam_context *vm )
                 vm->obs_metadata->num_ant_pols,
                 p,
                 vm->datatype );
-        gpuCheckErrors( "vmApplyJChunk: vmApplyJ_kernel failed" );
+        gpuCheckLastError(); 
     }
     ( gpuDeviceSynchronize() );
 }
@@ -576,8 +576,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 (float *)vm->d_S,
                 vm->obs_metadata->num_ant_pols,
                 vm->out_nstokes );
-
-        gpuCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
+        gpuCheckLastError();
     }
     ( gpuDeviceSynchronize() );
 }
@@ -634,7 +633,6 @@ void vmPullE( vcsbeam_context *vm )
 {
     // Copy the results back into host memory
     gpuMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, gpuMemcpyDeviceToHost );
-    gpuCheckErrors( "vmPullE: gpuMemcpyAsync failed" );
 }
 
 /**
@@ -643,7 +641,6 @@ void vmPullE( vcsbeam_context *vm )
 void vmPullS( vcsbeam_context *vm )
 {
     gpuMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, gpuMemcpyDeviceToHost );
-    gpuCheckErrors( "vmPullE: gpuMemcpyAsync failed" );
 }
 
 /**
@@ -682,9 +679,7 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
 void vmPushPolIdxLists( vcsbeam_context *vm )
 {
     gpuMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, gpuMemcpyHostToDevice );
-    gpuCheckErrors( "vmMemcpyPolIdxLists: gpuMemcpy(polQ_idxs) failed" );
     gpuMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, gpuMemcpyHostToDevice );
-    gpuCheckErrors( "vmMemcpyPolIdxLists: gpuMemcpy(polP_idxs) failed" );
 }
 
 /**
@@ -696,7 +691,6 @@ float *create_pinned_data_buffer( size_t size )
 {
     float *ptr;
     gpuMallocHost( &ptr, size );
-    gpuCheckErrors("gpuMallocHost data_buffer fail");
 
     // Initialise to zeros
     memset( ptr, 0, size );
@@ -793,10 +787,8 @@ void prepare_data_buffer_fine( gpuDoubleComplex *data_buffer_fine, vcsbeam_conte
 void allocate_input_output_arrays( void **data, void **d_data, size_t size )
 {
     gpuMallocHost( data, size );
-    gpuCheckErrors( "gpuMallocHost() failed" );
 
     gpuMalloc( d_data, size );
-    gpuCheckErrors( "gpuMalloc() failed" );
 }
 
 /**
@@ -806,9 +798,7 @@ void allocate_input_output_arrays( void **data, void **d_data, size_t size )
  */
 void free_input_output_arrays( void *data, void *d_data )
 {
-    gpuFreeHost( data );
-    gpuCheckErrors( "gpuFreeHost() failed" );
+    gpuHostFree( data );
 
     gpuFree( d_data );
-    gpuCheckErrors( "gpuFree() failed" );
 }
