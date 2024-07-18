@@ -91,13 +91,9 @@ int main(int argc, char **argv)
     allocate_input_output_arrays( (void **)&data, (void **)&d_data, data_size );
 
     gpuMalloc( (void **)&d_incoh, incoh_size );
-    GPU_CHECK_ERROR( "gpuMalloc(d_incoh) failed" );
     gpuMalloc( (void **)&d_offsets, nchans*sizeof(float) );
-    GPU_CHECK_ERROR( "gpuMalloc(d_offsets) failed" );
     gpuMalloc( (void **)&d_scales,  nchans*sizeof(float) );
-    GPU_CHECK_ERROR( "gpuMalloc(d_scales) failed" );
     gpuMalloc( (void **)&d_Iscaled, Iscaled_size );
-    GPU_CHECK_ERROR( "gpuMalloc(Iscaled) failed" );
 
     // Get pointing geometry information
     beam_geom beam_geom_vals;
@@ -180,13 +176,9 @@ int main(int argc, char **argv)
     free_input_output_arrays( data, d_data );
 
     gpuFree( d_incoh );
-    GPU_CHECK_ERROR( "gpuFree(d_incoh) failed" );
     gpuFree( d_offsets );
-    GPU_CHECK_ERROR( "gpuFree(d_offsets) failed" );
     gpuFree( d_scales );
-    GPU_CHECK_ERROR( "gpuFree(d_scales) failed" );
     gpuFree( d_Iscaled );
-    GPU_CHECK_ERROR( "gpuFree(d_Iscaled) failed" );
 
     // Clean up memory associated with mwalib
     destroy_vcsbeam_context( vm );

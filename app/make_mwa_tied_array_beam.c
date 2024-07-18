@@ -341,7 +341,6 @@ int main(int argc, char **argv)
     if (vm->do_inverse_pfb)
     {
         gpuHostFree( data_buffer_vdif  );
-        GPU_CHECK_ERROR( "gpuHostFree(data_buffer_vdif) failed" );
     }
 
     vmDestroyStatistics( vm );
