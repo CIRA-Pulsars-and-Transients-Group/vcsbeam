@@ -55,6 +55,7 @@ if(NOT RUNTIME_DIR)
 endif()
 message(NOTICE "Runtime files will be installed in ${RUNTIME_DIR}")
 
+# Collect the source files without GPU kernels
 file(GLOB vcsbeam_c_sources 
     "src/ascii_header.c"
     "src/performance.c"
@@ -71,32 +72,36 @@ file(GLOB vcsbeam_gpu_sources
     "src/pfb.cpp"
 )
 
+
 if(USE_CUDA)
     # This sets the .cpp files, containing the kernels, as the targetted source files
     # for the CUDA compiler (rather than the typical .cu extensions).
     set_source_files_properties(${vcsbeam_gpu_sources} PROPERTIES LANGUAGE CUDA)
 endif()
 
+# Generate the core package library
 add_library(vcsbeam STATIC
     ${vcsbeam_c_sources}
     ${vcsbeam_gpu_sources}
 )
 
-if (MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
+# Various gates defining which source files should be available based on
+# which dependencies were found on the system.
+if(MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
     target_sources(vcsbeam PRIVATE "src/beam_psrfits.c")
-endif ()
+endif()
 
-if (PAL_FOUND)
+if(PAL_FOUND)
     target_sources(vcsbeam PRIVATE "src/geometry.c")
-endif ()
+endif()
 
-if (VDIFIO_FOUND)
+if(VDIFIO_FOUND)
     target_sources(vcsbeam PRIVATE "src/beam_vdif.c")
-endif ()
+endif()
 
-if (HYPERBEAM_FOUND)
+if(HYPERBEAM_FOUND)
     target_sources(vcsbeam PRIVATE "src/primary_beam.c")
-endif ()
+endif()
 
 # Define required components/places to look when compiling parts...
 target_include_directories(vcsbeam PUBLIC
@@ -121,10 +126,6 @@ target_link_libraries(vcsbeam
     ${MPI_C_LIBRARIES}
     ${GPU_FFTLIB})
 
-include_directories("src/")
-
-
-
 # ... And where to install things at the end
 install(TARGETS vcsbeam
     LIBRARY DESTINATION lib
@@ -136,6 +137,9 @@ configure_file(include/vcsbeam.h.in ${CMAKE_BINARY_DIR}/vcsbeam.h)
 set_target_properties(vcsbeam
     PROPERTIES PUBLIC_HEADER "vcsbeam.h"
 )
+
+# Add paths to hints for package finding and source compilation/linking
+include_directories("src/")
 
 add_subdirectory(app)
 add_subdirectory(utils)
