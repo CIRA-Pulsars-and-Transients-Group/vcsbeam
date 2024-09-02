@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.15)
+cmake_minimum_required(VERSION 3.15)
 project(vcsbeam)
 
 # Define CMake options to choose the GPU flavour
@@ -32,11 +32,12 @@ elseif(USE_HIP)
     #     -DCMAKE_CXX_COMPILER=hipcc
     # as an option when executing cmake on the command line.
     # enable_language(HIP CXX)
+    # TODO: Revisit this - does the enable_language option really do what we need?
     set(GPU_FFTLIB hipfft)
     add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
     message(STATUS "HIP generation enabled.")
 else()
-    message(FATAL_ERROR "Either USE_CUDA=1 or USE_HIP=1 must be specified.")
+    message(FATAL_ERROR "Either USE_CUDA=ON or USE_HIP=ON must be specified.")
 endif()
 
 # Set up version number from Git
@@ -71,7 +72,6 @@ file(GLOB vcsbeam_gpu_sources
     "src/form_beam.cpp"
     "src/pfb.cpp"
 )
-
 
 if(USE_CUDA)
     # This sets the .cpp files, containing the kernels, as the targetted source files
