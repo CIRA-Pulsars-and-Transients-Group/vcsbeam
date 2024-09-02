@@ -1,4 +1,6 @@
 #!/bin/bash
+# TO BUILD ON GARRAWARLA -
+
 module purge
 
 module load pawseytools/1.29
@@ -23,3 +25,4 @@ cd build_nvidia
 cmake -DUSE_CUDA=ON -DHYPERBEAM_HDF5=/pawsey/mwa/mwa_full_embedded_element_pattern.h5 -DPAL_ROOT_DIR=$PAL_ROOT .. 
 make VERBOSE=1
 
+# THE IMPORTANT FEATURE IS THAT THE -DUSE_CUDA=ON FLAG IS USED, THE REMAINING FLAGS ARE SYSTEM-DEPENDENT.
