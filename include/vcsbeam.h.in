@@ -13,10 +13,9 @@
 #include <time.h>
 #include <inttypes.h>
 
-#include <cuda_runtime.h>
-#include <cufft.h>
-#include <cuComplex.h>
-
+#include "gpu_includes.h"
+#include "gpu_macros.h"
+#include "gpu_fft.hpp"
 #include <mpi.h>
 
 #include <mwalib.h>
@@ -35,7 +34,7 @@
 
 /* Boilerplate CUDA code for error checking */
 
-#define cudaCheckErrors(msg) \
+/*#define cudaCheckErrors(msg) \
     do { \
         cudaError_t __err = cudaGetLastError(); \
         if (__err != cudaSuccess) { \
@@ -45,7 +44,7 @@
             fprintf(stderr, "*** FAILED - ABORTING\n"); \
             exit(1); \
         } \
-    } while (0)
+    } while (0)*/
 
 
 /*******************
@@ -203,12 +202,12 @@ extern "C" {
 #endif
 
 
-void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname );
-void read_bandpass_file( cuDoubleComplex ***Jm, cuDoubleComplex ***Jf,
+void read_dijones_file( gpuDoubleComplex **Dd, gpuDoubleComplex *A, double *amp, uintptr_t nant, char *fname );
+void read_bandpass_file( gpuDoubleComplex ***Jm, gpuDoubleComplex ***Jf,
         MetafitsMetadata *cal_metadata, char *filename );
 
-void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref );
-void zero_PQ_and_QP( cuDoubleComplex *J );
+void remove_reference_phase( gpuDoubleComplex *J, gpuDoubleComplex *Jref );
+void zero_PQ_and_QP( gpuDoubleComplex *J );
 
 void parse_calibration_correction_file( uint32_t gpstime, calibration *cal );
 
@@ -274,22 +273,22 @@ extern "C" {
 
 /**** MATRIX OPERATIONS ****/
 
-void cp2x2( cuDoubleComplex *Min, cuDoubleComplex *Mout );
-void inv2x2( cuDoubleComplex *Min, cuDoubleComplex *Mout );
+void cp2x2( gpuDoubleComplex *Min, gpuDoubleComplex *Mout );
+void inv2x2( gpuDoubleComplex *Min, gpuDoubleComplex *Mout );
 void inv2x2d( double *Min, double *Mout );
-void inv2x2S( cuDoubleComplex *Min, cuDoubleComplex *Mout );
-void mult2x2d( cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout );
-void mult2x2d_RxC( double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout );
-void mult2x2d_CxR( cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout );
-void conj2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
-double norm2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
-void reverse2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
-void swaprows2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
-void swapcols2x2( cuDoubleComplex *M, cuDoubleComplex *Mout );
-bool is2x2zero( cuDoubleComplex *M );
-void calc_hermitian( cuDoubleComplex *M, cuDoubleComplex *H );
-void calc_coherency_matrix( cuDoubleComplex *M, cuDoubleComplex *c );
-void fprintf_complex_matrix( FILE *fout, cuDoubleComplex *M );
+void inv2x2S( gpuDoubleComplex *Min, gpuDoubleComplex *Mout );
+void mult2x2d( gpuDoubleComplex *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout );
+void mult2x2d_RxC( double *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout );
+void mult2x2d_CxR( gpuDoubleComplex *M1, double *M2, gpuDoubleComplex *Mout );
+void conj2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout );
+double norm2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout );
+void reverse2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout );
+void swaprows2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout );
+void swapcols2x2( gpuDoubleComplex *M, gpuDoubleComplex *Mout );
+bool is2x2zero( gpuDoubleComplex *M );
+void calc_hermitian( gpuDoubleComplex *M, gpuDoubleComplex *H );
+void calc_coherency_matrix( gpuDoubleComplex *M, gpuDoubleComplex *c );
+void fprintf_complex_matrix( FILE *fout, gpuDoubleComplex *M );
 
 #ifdef __cplusplus
 }
@@ -313,7 +312,7 @@ typedef struct pfb_filter_t
     int              ncoeffs;
     int              ntaps;
     int              nchans; // = ncoeffs/ntaps
-    cuDoubleComplex *twiddles; // twiddle factors
+    gpuDoubleComplex *twiddles; // twiddle factors
     filter_type      type;
 } pfb_filter;
 
@@ -329,7 +328,7 @@ extern "C" {
  * Creates a complex-valued array containing the N roots of unity.
  * The caller should free this memory (via free()).
  */
-cuDoubleComplex *roots_of_unity( int N );
+gpuDoubleComplex *roots_of_unity( int N );
 
 
 
@@ -359,8 +358,8 @@ typedef enum vm_error_t
 } vm_error;
 
 typedef struct geometric_delays_t {
-    cuDoubleComplex   *phi;
-    cuDoubleComplex   *d_phi;
+    gpuDoubleComplex   *phi;
+    gpuDoubleComplex   *d_phi;
     uintptr_t          npointings;
     uintptr_t          nant;
     uintptr_t          nchan;
@@ -370,7 +369,7 @@ typedef struct geometric_delays_t {
 
 typedef struct primary_beam_t
 {
-    cuDoubleComplex  *B;
+    gpuDoubleComplex  *B;
     FEEBeam          *beam;
     uint32_t        **delays;
     double          **amps;
@@ -501,7 +500,7 @@ typedef struct forward_pfb_t
     int               ninputs_per_cufft_batch; // Necessary because one can't do 2560000 batches, apparently
     int               cufft_batch_size;
 
-    cuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
+    gpuFloatComplex   *d_weighted_overlap_add; // A "temporary" array on the device for mid-calculation product
     size_t            weighted_overlap_add_size; // The size (in bytes) of d_weighted_overlap_add
 
     int              *filter_coeffs;          // The filter to be applied **WARNING! Filter will be typecast to int!!**
@@ -519,7 +518,7 @@ typedef struct forward_pfb_t
                                               // VCS files are ordered in their own special order)
 
     pfb_flags         flags;                  // See pfb_flags enum above for options
-    cufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
+    gpufftHandle       plan;                   // The cuFFT plan for performing the FFT part of the forward PFB
 } forward_pfb;
 
 
@@ -575,20 +574,20 @@ typedef struct vcsbeam_context_t
     uintptr_t S_size_bytes;           // The size of S in bytes
     uintptr_t d_S_size_bytes;         // The size of d_S in bytes
 
-    cuDoubleComplex *e, *d_e;         // The buffers for the beamformed voltages on host/device
+    gpuDoubleComplex *e, *d_e;         // The buffers for the beamformed voltages on host/device
     uintptr_t e_size_bytes;           // The size of S in bytes
     uintptr_t d_e_size_bytes;         // The size of d_S in bytes
 
-    cuDoubleComplex *J, *d_J;         // The buffers for Jones matrices on host/device
+    gpuDoubleComplex *J, *d_J;         // The buffers for Jones matrices on host/device
     uintptr_t J_size_bytes;           // The size of J in bytes
     uintptr_t d_J_size_bytes;         // The size of d_J in bytes
 
-    cuDoubleComplex *Jv_P, *d_Jv_P;   // The buffers for Jones-corrected voltages on host/device
-    cuDoubleComplex *Jv_Q, *d_Jv_Q;   // The buffers for Jones-corrected voltages on host/device
+    gpuDoubleComplex *Jv_P, *d_Jv_P;   // The buffers for Jones-corrected voltages on host/device
+    gpuDoubleComplex *Jv_Q, *d_Jv_Q;   // The buffers for Jones-corrected voltages on host/device
     uintptr_t Jv_size_bytes;          // The size of Jv in bytes
     uintptr_t d_Jv_size_bytes;        // The size of d_Jv in bytes
 
-    cuDoubleComplex *D, *d_D;         // The buffers for calibration solutions on host/device
+    gpuDoubleComplex *D, *d_D;         // The buffers for calibration solutions on host/device
     uintptr_t D_size_bytes;           // The size of D in bytes
     uintptr_t d_D_size_bytes;         // The size of d_D in bytes
 
@@ -651,7 +650,7 @@ typedef struct vcsbeam_context_t
     int chunk_to_load;                // Which chunk number to load to gpu next
     vcsbeam_datatype datatype;        // What format the input data samples are in
 
-    cudaStream_t *streams;            // CUDA streams used for forming multiple tied-array beams
+    gpuStream_t *streams;            // CUDA streams used for forming multiple tied-array beams
 
     logger *log;                      // Used for log messages
     char log_message[MAX_COMMAND_LENGTH];
@@ -890,7 +889,7 @@ void calc_geometric_delays(
         beam_geom         *beam_geom_vals,
         uint32_t           freq_hz,
         MetafitsMetadata  *obs_metadata,
-        cuDoubleComplex   *phi );
+        gpuDoubleComplex   *phi );
 
 
 /* Free memory allocated with create_geometric_delays()
@@ -968,7 +967,7 @@ struct gpu_ipfb_arrays
 extern "C" {
 #endif
 
-void cu_invert_pfb( cuDoubleComplex *data_buffer_fine, int file_no,
+void cu_invert_pfb( gpuDoubleComplex *data_buffer_fine, int file_no,
                         int npointing, int nsamples, int nchan, int npol, int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_uvdif );
 
@@ -1000,9 +999,9 @@ void free_ipfb( struct gpu_ipfb_arrays *g );
 #define UINT8_TO_INT(X)          ((X) >= 0x8 ? (signed int)(X) - 0x10 : (signed int)(X))
 #define RE_UCMPLX4_TO_FLT(X)  ((float)(UINT8_TO_INT(REAL_NIBBLE_TO_UINT8(X))))
 #define IM_UCMPLX4_TO_FLT(X)  ((float)(UINT8_TO_INT(IMAG_NIBBLE_TO_UINT8(X))))
-#define UCMPLX4_TO_CMPLX_FLT(X)  (make_cuDoubleComplex((float)(UINT8_TO_INT(REAL_NIBBLE_TO_UINT8(X))), \
+#define UCMPLX4_TO_CMPLX_FLT(X)  (make_gpuDoubleComplex((float)(UINT8_TO_INT(REAL_NIBBLE_TO_UINT8(X))), \
                                          (float)(UINT8_TO_INT(IMAG_NIBBLE_TO_UINT8(X)))))
-#define DETECT(X)                (cuCreal(cuCmul(X,cuConj(X))))
+#define DETECT(X)                (gpuCreal(gpuCmul(X,gpuConj(X))))
 
 
 #ifdef __cplusplus
@@ -1026,7 +1025,7 @@ void vmBeamformSecond( vcsbeam_context *vm );
 void vmPullE( vcsbeam_context *vm );
 void vmPullS( vcsbeam_context *vm );
 
-void prepare_data_buffer_fine( cuDoubleComplex *data_buffer_fine, vcsbeam_context *vm,
+void prepare_data_buffer_fine( gpuDoubleComplex *data_buffer_fine, vcsbeam_context *vm,
                     uintptr_t timestep_idx );
 void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs );
 
@@ -1036,10 +1035,10 @@ void vmPushPolIdxLists( vcsbeam_context *vm );
 
 vm_error vmReadNextSecond( vcsbeam_context *vm );
 
-cuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
-void              destroy_invJi( cuDoubleComplex ****array, int nstation, int nchan, int npol );
+gpuDoubleComplex ****create_invJi( int nstation, int nchan, int pol );
+void              destroy_invJi( gpuDoubleComplex ****array, int nstation, int nchan, int npol );
 
-cuDoubleComplex *create_data_buffer_fine( int npointing, int nsamples, int nchan, int npol );
+gpuDoubleComplex *create_data_buffer_fine( int npointing, int nsamples, int nchan, int npol );
 
 void allocate_input_output_arrays( void **data, void **d_data, size_t size );
 void free_input_output_arrays( void *data, void *d_data );
@@ -1213,7 +1212,7 @@ void vmCalcB(
 
 void free_primary_beam( primary_beam *pb );
 
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex *J, bool apply_pa_correction );
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, gpuDoubleComplex *J, bool apply_pa_correction );
 
 #ifdef __cplusplus
 }

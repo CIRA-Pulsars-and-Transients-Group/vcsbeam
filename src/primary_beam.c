@@ -7,12 +7,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <cuComplex.h>
 
 #include <mwalib.h>
 #include <mwa_hyperbeam.h>
 
 #include "vcsbeam.h"
+#include "gpu_macros.h"
 
 #define NCOMPLEXELEMENTS 4
 
@@ -95,7 +95,7 @@ void vmCalcB(
     uintptr_t p, ant;
 
     // Make temporary array that will hold jones matrices for specific configurations
-    cuDoubleComplex *configs[NCONFIGS];
+    gpuDoubleComplex *configs[NCONFIGS];
     int config_idx;
     for (config_idx = 0; config_idx < NCONFIGS; config_idx++)
         configs[config_idx] = NULL;
@@ -152,13 +152,13 @@ void vmCalcB(
                 // Use the 'dead' configuration temporarily
                 config_idx = DEAD_CONFIG;
                 errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
-                configs[config_idx]=(cuDoubleComplex *)(tempJones);
+                configs[config_idx]=(gpuDoubleComplex *)(tempJones);
             }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
                 errInt = calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
-                configs[config_idx]=(cuDoubleComplex *)(tempJones);
+                configs[config_idx]=(gpuDoubleComplex *)(tempJones);
 
                 // Apply the parallactic angle correction
 #ifdef DEBUG
@@ -205,10 +205,10 @@ void vmCreatePrimaryBeam( vcsbeam_context *vm )
     vm->pb.nant = vm->obs_metadata->num_ants;
     vm->pb.npol = vm->obs_metadata->num_visibility_pols; // = 4 (XX, XY, YX, YY)
 
-    size_t size = vm->pb.npointings * vm->pb.nant * vm->pb.npol * sizeof(cuDoubleComplex);
+    size_t size = vm->pb.npointings * vm->pb.nant * vm->pb.npol * sizeof(gpuDoubleComplex);
 
     // Allocate memory
-    vm->pb.B = (cuDoubleComplex *)malloc( size );
+    vm->pb.B = (gpuDoubleComplex *)malloc( size );
 
     vm->pb.beam = NULL;
     errInt= new_fee_beam( HYPERBEAM_HDF5, &vm->pb.beam );
@@ -476,7 +476,7 @@ void parallactic_angle_correction(
  * This function will allocate memory for `J`, which must be freed by the
  * caller.
  */
-void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex *J, bool apply_pa_correction )
+void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, gpuDoubleComplex *J, bool apply_pa_correction )
 {
 
     uint8_t iauOrder=0; //Boolean 0= don't set Jones matrix to be iau order but instead mwa order in CalcJones
@@ -488,9 +488,9 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
     double * arrayLatitudeRad;             
     arrayLatitudeRad=NULL;
 
-    cuDoubleComplex JH[NCOMPLEXELEMENTS];
-    cuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
-    cuDoubleComplex coherency[NCOMPLEXELEMENTS];
+    gpuDoubleComplex JH[NCOMPLEXELEMENTS];
+    gpuDoubleComplex sky_x_JH[NCOMPLEXELEMENTS];
+    gpuDoubleComplex coherency[NCOMPLEXELEMENTS];
 
     // Calculate the primary beam for this channel, in this direction
     int zenith_norm = 1;
@@ -498,7 +498,7 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
 
     if (errInt !=0)
     {
-        handle_hyperbeam_error("primary beam",504 ,"calc_jones");
+        handle_hyperbeam_error("primary beam", __LINE__ ,"calc_jones");
         exit(EXIT_FAILURE);
     }
 
@@ -517,17 +517,17 @@ void calc_normalised_beam_response( FEEBeam *beam, double az, double za, double 
     for (stokes = 0; stokes < 4; stokes++)
     {
         calc_hermitian( J, JH );
-        mult2x2d( (cuDoubleComplex *)sky[stokes], JH, sky_x_JH );
+        mult2x2d( (gpuDoubleComplex *)sky[stokes], JH, sky_x_JH );
         mult2x2d( J, sky_x_JH, coherency );
 
         if (stokes == 0) // Stokes I
-            IQUV[0] = 0.5*cuCreal( cuCadd( coherency[0], coherency[3] ) );
+            IQUV[0] = 0.5*gpuCreal( gpuCadd( coherency[0], coherency[3] ) );
         else if (stokes == 1) // Stokes Q
-            IQUV[1] = 0.5*cuCreal( cuCsub( coherency[0], coherency[3] ) );
+            IQUV[1] = 0.5*gpuCreal( gpuCsub( coherency[0], coherency[3] ) );
         else if (stokes == 2) // Stokes U
-            IQUV[2] =  cuCreal( coherency[1] );
+            IQUV[2] =  gpuCreal( coherency[1] );
         else  // if (stokes == 3) // Stokes V
-            IQUV[3] = -cuCimag( coherency[1] );
+            IQUV[3] = -gpuCimag( coherency[1] );
     }
 }
 

@@ -9,15 +9,14 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-#include <cuda_runtime.h>
-#include <cuComplex.h>
-#include <cufft.h>
+#include "gpu_fft.hpp"
+#include "gpu_macros.h"
 
 #include <mwalib.h>
 
 #include "vcsbeam.h"
 
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+inline void gpuAssert(gpuError_t code, const char *file, int line, bool abort=true)
 {
     /* Wrapper function for GPU/CUDA error handling. Every CUDA call goes through
        this function. It will return a message giving your the error string,
@@ -25,7 +24,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 
     if (code != 0)
     {
-        fprintf(stderr, "GPUAssert:: %s - %s (%d)\n", cudaGetErrorString(code), file, line);
+        fprintf(stderr, "GPUAssert:: %s - %s (%d)\n", gpuGetErrorString(code), file, line);
         if (abort)
         {
             exit(code);
@@ -34,7 +33,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 }
 
 // define a macro for accessing gpuAssert
-#define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
+// #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
 
 /**
@@ -232,8 +231,11 @@ __global__ void fpga_rounding_and_demotion( void *data )
     Y >>= 14;
 
     // Put the result back into global memory as (32-bit) floats
-    float *fx = (float *)&(b[b_idx].x);
-    float *fy = (float *)&(b[b_idx].y);
+    void* ptr = &(b[b_idx].x);
+    float *fx = (float *)ptr;
+    
+    ptr = &(b[b_idx].y);
+    float *fy = (float *)ptr;
 
     *fx = (float)X;
     *fy = (float)Y;
@@ -292,7 +294,7 @@ __global__ void int2float( void *data, double scale )
  * The expected thread configuration is
  * \f$\langle\langle\langle(\text{nspectra},K),I\rangle\rangle\rangle\f$.
  */
-__global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdata, int *i_idx, pfb_flags flags )
+__global__ void pack_into_recombined_format( gpuFloatComplex *ffted, void *outdata, int *i_idx, pfb_flags flags )
 {
     // Parse the kernel signature, using the same mathematical notation
     // described above
@@ -307,7 +309,7 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
 
     int kprime   = (k + K/2) % K; // Puts the DC bin in the "middle"
 
-    cuFloatComplex  *b = ffted;
+    gpuFloatComplex  *b = ffted;
 
     // Calculate the idxs into b and X
     unsigned int b_idx = m*(K*I) + i*(K) + k;
@@ -328,13 +330,13 @@ __global__ void pack_into_recombined_format( cuFloatComplex *ffted, void *outdat
         else
             X[X_idx] = PACK_NIBBLES(im, re);
     }
-    else // Currently, default is cuDoubleComplex
+    else // Currently, default is gpuDoubleComplex
     {
-        cuDoubleComplex *X = (cuDoubleComplex *)outdata;
+        gpuDoubleComplex *X = (gpuDoubleComplex *)outdata;
         if (flags & PFB_IMAG_PART_FIRST)
-            X[X_idx] = make_cuDoubleComplex( re, im );
+            X[X_idx] = make_gpuDoubleComplex( re, im );
         else
-            X[X_idx] = make_cuDoubleComplex( im, re );
+            X[X_idx] = make_gpuDoubleComplex( im, re );
     }
 
     __syncthreads();
@@ -399,8 +401,8 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
 
     // Set up the idxs for the "rf input" output order,
     // and copy to device
-    gpuErrchk(cudaMallocHost( (void **)&(fpfb->i_output_idx),   fpfb->I*sizeof(int) ));
-    gpuErrchk(cudaMalloc(     (void **)&(fpfb->d_i_output_idx), fpfb->I*sizeof(int) ));
+    (gpuMallocHost( (void **)&(fpfb->i_output_idx),   fpfb->I*sizeof(int) ));
+    (gpuMalloc(     (void **)&(fpfb->d_i_output_idx), fpfb->I*sizeof(int) ));
 
     int i, mwax_idx, legacy_idx;
     uint32_t ant;
@@ -416,7 +418,7 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
         fpfb->i_output_idx[mwax_idx] = legacy_idx;
     }
 
-    gpuErrchk(cudaMemcpyAsync( fpfb->d_i_output_idx, fpfb->i_output_idx, fpfb->I*sizeof(int), cudaMemcpyHostToDevice ));
+    (gpuMemcpyAsync( fpfb->d_i_output_idx, fpfb->i_output_idx, fpfb->I*sizeof(int), gpuMemcpyHostToDevice ));
 
     // Work out the sizes of the various arrays
     while (fpfb->nspectra % vm->chunks_per_second != 0)
@@ -431,9 +433,9 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
         fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(uint8_t);
         vm->datatype = VM_INT4;
     }
-    else // i.e., default is cuDoubleComplex
+    else // i.e., default is gpuDoubleComplex
     {
-        fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(cuDoubleComplex);
+        fpfb->vcs_size = fpfb->nspectra * vm->obs_metadata->num_rf_inputs * fpfb->K * sizeof(gpuDoubleComplex);
         vm->datatype = VM_DBL;
     }
 
@@ -447,31 +449,30 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
          vm->vcs_metadata->voltage_block_size_bytes) / sizeof(char2);
     fpfb->bytes_per_block = vm->vcs_metadata->voltage_block_size_bytes;
 
-    fpfb->weighted_overlap_add_size = vm->v->buffer_size * (sizeof(cuFloatComplex) / sizeof(char2)) / vm->chunks_per_second;
+    fpfb->weighted_overlap_add_size = vm->v->buffer_size * (sizeof(gpuFloatComplex) / sizeof(char2)) / vm->chunks_per_second;
     size_t filter_size = vm->analysis_filter->ncoeffs * sizeof(int);
 
     // Allocate memory for filter and copy across the filter coefficients,
     // casting to int
-    gpuErrchk(cudaMallocHost( (void **)&(fpfb->filter_coeffs),   filter_size ));
-    gpuErrchk(cudaMalloc(     (void **)&(fpfb->d_filter_coeffs), filter_size ));
+    (gpuMallocHost( (void **)&(fpfb->filter_coeffs),   filter_size ));
+    (gpuMalloc(     (void **)&(fpfb->d_filter_coeffs), filter_size ));
     for (i = 0; i < vm->analysis_filter->ncoeffs; i++)
         fpfb->filter_coeffs[i] = (int)vm->analysis_filter->coeffs[i]; // **WARNING! Forcible typecast to int!**
-    gpuErrchk(cudaMemcpyAsync( fpfb->d_filter_coeffs, fpfb->filter_coeffs, filter_size, cudaMemcpyHostToDevice ));
+    (gpuMemcpyAsync( fpfb->d_filter_coeffs, fpfb->filter_coeffs, filter_size, gpuMemcpyHostToDevice ));
 
     // Allocate device memory for the other arrays
     if (flags & PFB_MALLOC_HOST_OUTPUT)
     {
-        cudaMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size );
-        cudaCheckErrors( "vmInitForwardPFB: cudaMallocHost(vcs_data) failed" );
+        gpuMallocHost( (void **)&(fpfb->vcs_data), fpfb->vcs_size );
     }
     else
         fpfb->vcs_data = NULL;
 
     if (flags & PFB_MALLOC_DEVICE_INPUT)
-        gpuErrchk(cudaMalloc( (void **)&(fpfb->d_htr_data), fpfb->d_htr_size ));
+        (gpuMalloc( (void **)&(fpfb->d_htr_data), fpfb->d_htr_size ));
     if (flags & PFB_MALLOC_DEVICE_OUTPUT)
-        gpuErrchk(cudaMalloc( (void **)&(fpfb->d_vcs_data), fpfb->d_vcs_size ));
-    gpuErrchk(cudaMalloc( (void **)&(fpfb->d_weighted_overlap_add), fpfb->weighted_overlap_add_size ));
+        (gpuMalloc( (void **)&(fpfb->d_vcs_data), fpfb->d_vcs_size ));
+    (gpuMalloc( (void **)&(fpfb->d_weighted_overlap_add), fpfb->weighted_overlap_add_size ));
 
     // Construct the cuFFT plan
     int rank     = 1;       // i.e. a 1D FFT
@@ -482,12 +483,12 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
     fpfb->ninputs_per_cufft_batch = 32; // This seems to work, so I'll have to call cuFFT 256/32 = 8 times
     fpfb->cufft_batch_size = fpfb->nspectra_per_chunk * fpfb->ninputs_per_cufft_batch;
 
-    cufftResult res = cufftPlanMany( &(fpfb->plan), rank, &n,
+    gpufftResult res = gpufftPlanMany( &(fpfb->plan), rank, &n,
             inembed, 0, 0, NULL, 0, 0,  // <-- Here are all the ignored data layout parameters
-            CUFFT_C2C, fpfb->cufft_batch_size );
-    if (res != CUFFT_SUCCESS)
+            GPUFFT_C2C, fpfb->cufft_batch_size );
+    if (res != GPUFFT_SUCCESS)
     {
-        fprintf( stderr, "CUFFT error: Plan creation failed with error code %d\n", res );
+        fprintf( stderr, "GPUFFT error: Plan creation failed with error code %d\n", res );
         exit(EXIT_FAILURE);
     }
 
@@ -504,15 +505,15 @@ void vmInitForwardPFB( vcsbeam_context *vm, int M, pfb_flags flags )
  */
 void vmFreeForwardPFB( forward_pfb *fpfb )
 {
-    cufftDestroy( fpfb->plan );
-    gpuErrchk(cudaFreeHost( fpfb->filter_coeffs ));
-    gpuErrchk(cudaFreeHost( fpfb->vcs_data ));
-    gpuErrchk(cudaFreeHost( fpfb->i_output_idx ));
-    gpuErrchk(cudaFree( fpfb->d_filter_coeffs ));
-    gpuErrchk(cudaFree( fpfb->d_htr_data ));
-    gpuErrchk(cudaFree( fpfb->d_vcs_data ));
-    gpuErrchk(cudaFree( fpfb->d_i_output_idx ));
-    gpuErrchk(cudaFree( fpfb->d_weighted_overlap_add ));
+    gpufftDestroy( fpfb->plan );
+    (gpuHostFree( fpfb->filter_coeffs ));
+    (gpuHostFree( fpfb->vcs_data ));
+    (gpuHostFree( fpfb->i_output_idx ));
+    (gpuFree( fpfb->d_filter_coeffs ));
+    (gpuFree( fpfb->d_htr_data ));
+    (gpuFree( fpfb->d_vcs_data ));
+    (gpuFree( fpfb->d_i_output_idx ));
+    (gpuFree( fpfb->d_weighted_overlap_add ));
     free( fpfb );
 }
 
@@ -546,12 +547,11 @@ void vmUploadForwardPFBChunk( vcsbeam_context *vm )
 
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
 
-    cudaMemcpy(
+    gpuMemcpy(
             vm->fpfb->d_htr_data,                                // to
             (char *)vm->v->buffer + chunk*vm->fpfb->htr_stride,  // from
             vm->fpfb->d_htr_size,                                // how much
-            cudaMemcpyHostToDevice );                            // which direction
-    cudaCheckErrors( "vmUploadForwardPFBChunk: cudaMemcpy failed" );
+            gpuMemcpyHostToDevice );                            // which direction
 
     logger_stop_stopwatch( vm->log, "upload" );
 
@@ -577,11 +577,11 @@ void vmWOLAChunk( vcsbeam_context *vm )
     logger_start_stopwatch( vm->log, "pfb-wola", false );
 
     // Set the d_weighted_overlap_add array to zeros
-    gpuErrchk(cudaMemset( fpfb->d_weighted_overlap_add, 0, fpfb->weighted_overlap_add_size ));
+    (gpuMemset( fpfb->d_weighted_overlap_add, 0, fpfb->weighted_overlap_add_size ));
 
     vmWOLA_kernel<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
-    cudaDeviceSynchronize();
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuDeviceSynchronize();
+    ( gpuPeekAtLastError() );
 
     logger_stop_stopwatch( vm->log, "pfb-wola" );
 }
@@ -608,14 +608,14 @@ void vmFPGARoundingChunk( vcsbeam_context *vm )
     }
     else
     {
-        // Otherwise, just convert the ints to floats in preparation for the cuFFT
+        // Otherwise, just convert the ints to floats in preparation for the gpuFFT
         dim3 blocks( (2 * fpfb->nspectra_per_chunk * fpfb->I * fpfb->K) / 1024 ); // The factor of 2 is because each thread will deal with a single int, not a single int2
         dim3 threads( 1024 );
         double scale = 1.0/16384.0; // equivalent to the ">> 14" operation applied in fpga_rounding_and_demotion()
         int2float<<<blocks, threads>>>( fpfb->d_weighted_overlap_add, scale );
     }
-    cudaDeviceSynchronize();
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuDeviceSynchronize();
+    ( gpuPeekAtLastError() );
 
     logger_stop_stopwatch( vm->log, "pfb-round" );
 }
@@ -636,14 +636,14 @@ void vmFFTChunk( vcsbeam_context *vm )
     int batch;
     for (batch = 0; batch < fpfb->I / fpfb->ninputs_per_cufft_batch; batch++)
     {
-        cufftExecC2C(
+        gpufftExecC2C(
                 fpfb->plan,
                 fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
                 fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
-                CUFFT_FORWARD );
+                GPUFFT_FORWARD );
     }
-    cudaDeviceSynchronize();
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuDeviceSynchronize();
+    ( gpuPeekAtLastError() );
 
     logger_stop_stopwatch( vm->log, "pfb-fft" );
 }
@@ -666,8 +666,8 @@ void vmPackChunk( vcsbeam_context *vm )
 
     pack_into_recombined_format<<<blocks, threads>>>( fpfb->d_weighted_overlap_add,
             fpfb->d_vcs_data, fpfb->d_i_output_idx, fpfb->flags );
-    cudaDeviceSynchronize();
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuDeviceSynchronize();
+    ( gpuPeekAtLastError() );
 
     logger_stop_stopwatch( vm->log, "pfb-pack" );
 }
@@ -705,11 +705,11 @@ void vmDownloadForwardPFBChunk( vcsbeam_context *vm )
 
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
 
-    gpuErrchk(cudaMemcpy(
+    (gpuMemcpy(
                 (char *)fpfb->vcs_data + chunk*fpfb->vcs_stride,   // to
                 fpfb->d_vcs_data,                                // from
                 fpfb->d_vcs_size,                                // how much
-                cudaMemcpyDeviceToHost ));                       // which direction
+                gpuMemcpyDeviceToHost ));                       // which direction
 
     logger_stop_stopwatch( vm->log, "download" );
 }
@@ -937,7 +937,7 @@ __global__ void ipfb_kernel(
  * It is assumed that the inverse filter coefficients have already been loaded
  * to the GPU.
  */
-void cu_invert_pfb( cuDoubleComplex *data_buffer_fine, int file_no,
+void cu_invert_pfb( gpuDoubleComplex *data_buffer_fine, int file_no,
                         int npointing, int nsamples, int nchan, int npol,
                         int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_vdif )
@@ -976,16 +976,16 @@ void cu_invert_pfb( cuDoubleComplex *data_buffer_fine, int file_no,
                 }
                 else
                 {
-                    g->in_real[i] = cuCreal( data_buffer_fine[j] );
-                    g->in_imag[i] = cuCimag( data_buffer_fine[j] );
+                    g->in_real[i] = gpuCreal( data_buffer_fine[j] );
+                    g->in_imag[i] = gpuCimag( data_buffer_fine[j] );
                 }
             }
         }
     }
     
     // Copy the data to the device
-    gpuErrchk(cudaMemcpy( g->d_in_real, g->in_real, g->in_size, cudaMemcpyHostToDevice ));
-    gpuErrchk(cudaMemcpy( g->d_in_imag, g->in_imag, g->in_size, cudaMemcpyHostToDevice ));
+    (gpuMemcpy( g->d_in_real, g->in_real, g->in_size, gpuMemcpyHostToDevice ));
+    (gpuMemcpy( g->d_in_imag, g->in_imag, g->in_size, gpuMemcpyHostToDevice ));
     
     // Call the kernel
     if (npointing > 1)
@@ -996,10 +996,10 @@ void cu_invert_pfb( cuDoubleComplex *data_buffer_fine, int file_no,
     ipfb_kernel<<<nsamples, nchan*npol>>>( g->d_in_real, g->d_in_imag,
                                              g->d_ft_real, g->d_ft_imag,
                                              g->ntaps, npol, g->d_out );
-    gpuErrchk( cudaPeekAtLastError() );
+    ( gpuPeekAtLastError() );
 
     // Copy the result back into host memory
-    gpuErrchk(cudaMemcpy( data_buffer_vdif, g->d_out, g->out_size, cudaMemcpyDeviceToHost ));
+    (gpuMemcpy( data_buffer_vdif, g->d_out, g->out_size, gpuMemcpyDeviceToHost ));
 }
 
 
@@ -1011,7 +1011,7 @@ void cu_invert_pfb( cuDoubleComplex *data_buffer_fine, int file_no,
  * multiplication of the filter coefficients and the twiddle factors will be
  * less precise than if a single array containing every combination of floats
  * and twiddle factors is calculated in doubles, and then demoted to floats.
- * Hence, this pre-calculation is done in this function before cudaMemcpy is
+ * Hence, this pre-calculation is done in this function before gpuMemcpy is
  * called.
  *
  * The result is 2x 1D arrays loaded onto the GPU (one for real, one for imag)
@@ -1027,22 +1027,22 @@ void cu_load_ipfb_filter( pfb_filter *filter, struct gpu_ipfb_arrays *g )
     int ch, f, i;
 
     // Setup filter values:
-    cuDoubleComplex ft; // pre-calculated filter coeffs times twiddle factor
-    cuDoubleComplex cf; // temp variable for complex version of filter coeffs
+    gpuDoubleComplex ft; // pre-calculated filter coeffs times twiddle factor
+    gpuDoubleComplex cf; // temp variable for complex version of filter coeffs
     for (f = 0; f < filter->ncoeffs; f++)
     {
-        cf = make_cuDoubleComplex( filter->coeffs[f], 0.0 );
+        cf = make_gpuDoubleComplex( filter->coeffs[f], 0.0 );
         for (ch = 0; ch < filter->nchans; ch++)
         {
             i = filter->ncoeffs*ch + f;
-            ft = cuCmul( filter->twiddles[ch], cf );
-            g->ft_real[i] = cuCreal( ft );
-            g->ft_imag[i] = cuCimag( ft );
+            ft = gpuCmul( filter->twiddles[ch], cf );
+            g->ft_real[i] = gpuCreal( ft );
+            g->ft_imag[i] = gpuCimag( ft );
         }
     }
 
-    gpuErrchk(cudaMemcpy( g->d_ft_real, g->ft_real, g->ft_size, cudaMemcpyHostToDevice ));
-    gpuErrchk(cudaMemcpy( g->d_ft_imag, g->ft_imag, g->ft_size, cudaMemcpyHostToDevice ));
+    (gpuMemcpy( g->d_ft_real, g->ft_real, g->ft_size, gpuMemcpyHostToDevice ));
+    (gpuMemcpy( g->d_ft_imag, g->ft_imag, g->ft_size, gpuMemcpyHostToDevice ));
 }
 
 
@@ -1069,12 +1069,12 @@ void malloc_ipfb( struct gpu_ipfb_arrays *g, pfb_filter *filter, int nsamples,
     g->out_size  = npointing * nsamples * filter->nchans * npol * 2 * sizeof(float);
 
     // Allocate memory on the device
-    gpuErrchk(cudaMalloc( (void **)&g->d_in_real, g->in_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_in_imag, g->in_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_ft_real, g->ft_size ));
-    gpuErrchk(cudaMalloc( (void **)&g->d_ft_imag, g->ft_size ));
+    (gpuMalloc( (void **)&g->d_in_real, g->in_size ));
+    (gpuMalloc( (void **)&g->d_in_imag, g->in_size ));
+    (gpuMalloc( (void **)&g->d_ft_real, g->ft_size ));
+    (gpuMalloc( (void **)&g->d_ft_imag, g->ft_size ));
 
-    gpuErrchk(cudaMalloc( (void **)&g->d_out, g->out_size ));
+    (gpuMalloc( (void **)&g->d_out, g->out_size ));
 
     // Allocate memory for host copies of the same
     g->in_real = (float *)malloc( g->in_size );
@@ -1094,9 +1094,9 @@ void free_ipfb( struct gpu_ipfb_arrays *g )
     free( g->in_imag );
     free( g->ft_real );
     free( g->ft_imag );
-    cudaFree( g->d_in_real );
-    cudaFree( g->d_in_imag );
-    cudaFree( g->d_ft_real );
-    cudaFree( g->d_ft_imag );
-    cudaFree( g->d_out );
+    gpuFree( g->d_in_real );
+    gpuFree( g->d_in_imag );
+    gpuFree( g->d_ft_real );
+    gpuFree( g->d_ft_imag );
+    gpuFree( g->d_out );
 }
