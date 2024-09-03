@@ -85,9 +85,9 @@ $(function() {
 <code>#include &lt;time.h&gt;</code><br />
 <code>#include &lt;math.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
-<code>#include &lt;cuComplex.h&gt;</code><br />
 <code>#include &lt;mwalib.h&gt;</code><br />
 <code>#include &quot;vcsbeam.h&quot;</code><br />
+<code>#include &quot;gpu_macros.h&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for jones.c:</div>
 <div class="dyncontent">
@@ -106,64 +106,64 @@ Functions</h2></td></tr>
 <tr class="memitem:ac6480e78a0fa01cbce1bd9c48aadf539"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ac6480e78a0fa01cbce1bd9c48aadf539">vmCalcJonesAndDelays</a> (vcsbeam_context *vm, double *ras_hours, double *decs_degs, beam_geom *beam_geom_vals)</td></tr>
 <tr class="memdesc:ac6480e78a0fa01cbce1bd9c48aadf539"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wrapper function for <a class="el" href="geometry_8c.html#a810de847675584bc9974936afa489292" title="Calculates the phase delays for all relevant frequencies and pointings.">vmCalcPhi()</a>, <a class="el" href="primary__beam_8c.html#a39d7cb51f87c2ee201508a19bb9a8285">vmCalcB()</a>, and <a class="el" href="jones_8c.html#af5913e5eb13932219386f0905b5ccb00" title="Computes the (inverse) Jones matrix .">vmCalcJ()</a>.  <a href="jones_8c.html#ac6480e78a0fa01cbce1bd9c48aadf539">More...</a><br /></td></tr>
 <tr class="separator:ac6480e78a0fa01cbce1bd9c48aadf539"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0e8dd951e2bd3f3945eac9bcee98d24e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a0e8dd951e2bd3f3945eac9bcee98d24e">cp2x2</a> (cuDoubleComplex *Min, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a0e8dd951e2bd3f3945eac9bcee98d24e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#a0e8dd951e2bd3f3945eac9bcee98d24e">More...</a><br /></td></tr>
-<tr class="separator:a0e8dd951e2bd3f3945eac9bcee98d24e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a78cc7addc19f3da512eaaa8e785a2e0f"><td class="memItemLeft" align="right" valign="top">cuDoubleComplex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a78cc7addc19f3da512eaaa8e785a2e0f">reciprocal_complex</a> (cuDoubleComplex z)</td></tr>
-<tr class="memdesc:a78cc7addc19f3da512eaaa8e785a2e0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the reciprocal of a complex number.  <a href="jones_8c.html#a78cc7addc19f3da512eaaa8e785a2e0f">More...</a><br /></td></tr>
-<tr class="separator:a78cc7addc19f3da512eaaa8e785a2e0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5631baeefb8d9c2c8a167e254ccfed31"><td class="memItemLeft" align="right" valign="top">cuDoubleComplex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a5631baeefb8d9c2c8a167e254ccfed31">negate_complex</a> (cuDoubleComplex z)</td></tr>
-<tr class="memdesc:a5631baeefb8d9c2c8a167e254ccfed31"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the negative of a complex number.  <a href="jones_8c.html#a5631baeefb8d9c2c8a167e254ccfed31">More...</a><br /></td></tr>
-<tr class="separator:a5631baeefb8d9c2c8a167e254ccfed31"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af550b1e1d2b8e6d644a5f66696985c14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14">inv2x2</a> (cuDoubleComplex *Min, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:af550b1e1d2b8e6d644a5f66696985c14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14">More...</a><br /></td></tr>
-<tr class="separator:af550b1e1d2b8e6d644a5f66696985c14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a023495aaa2b304f8a27ba9daf33bc580"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a023495aaa2b304f8a27ba9daf33bc580">cp2x2</a> (gpuDoubleComplex *Min, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:a023495aaa2b304f8a27ba9daf33bc580"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#a023495aaa2b304f8a27ba9daf33bc580">More...</a><br /></td></tr>
+<tr class="separator:a023495aaa2b304f8a27ba9daf33bc580"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a01c08669a45dd06f3a8143c7e044d6c0"><td class="memItemLeft" align="right" valign="top">gpuDoubleComplex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a01c08669a45dd06f3a8143c7e044d6c0">reciprocal_complex</a> (gpuDoubleComplex z)</td></tr>
+<tr class="memdesc:a01c08669a45dd06f3a8143c7e044d6c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the reciprocal of a complex number.  <a href="jones_8c.html#a01c08669a45dd06f3a8143c7e044d6c0">More...</a><br /></td></tr>
+<tr class="separator:a01c08669a45dd06f3a8143c7e044d6c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a3a3cb7f6b02c0ea354f1372969109a"><td class="memItemLeft" align="right" valign="top">gpuDoubleComplex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a8a3a3cb7f6b02c0ea354f1372969109a">negate_complex</a> (gpuDoubleComplex z)</td></tr>
+<tr class="memdesc:a8a3a3cb7f6b02c0ea354f1372969109a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the negative of a complex number.  <a href="jones_8c.html#a8a3a3cb7f6b02c0ea354f1372969109a">More...</a><br /></td></tr>
+<tr class="separator:a8a3a3cb7f6b02c0ea354f1372969109a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b4df0a9729fd7ad07c90dcb37a9aa0f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a9b4df0a9729fd7ad07c90dcb37a9aa0f">inv2x2</a> (gpuDoubleComplex *Min, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:a9b4df0a9729fd7ad07c90dcb37a9aa0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#a9b4df0a9729fd7ad07c90dcb37a9aa0f">More...</a><br /></td></tr>
+<tr class="separator:a9b4df0a9729fd7ad07c90dcb37a9aa0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad17116a2d6b08d8db75d3b6aee9440be"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ad17116a2d6b08d8db75d3b6aee9440be">inv2x2d</a> (double *Min, double *Mout)</td></tr>
 <tr class="memdesc:ad17116a2d6b08d8db75d3b6aee9440be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a \(2\times2\) real-valued matrix.  <a href="jones_8c.html#ad17116a2d6b08d8db75d3b6aee9440be">More...</a><br /></td></tr>
 <tr class="separator:ad17116a2d6b08d8db75d3b6aee9440be"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac0a655af3a288ee5ecabb91f095e93d6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ac0a655af3a288ee5ecabb91f095e93d6">inv2x2S</a> (cuDoubleComplex *Min, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:ac0a655af3a288ee5ecabb91f095e93d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#ac0a655af3a288ee5ecabb91f095e93d6">More...</a><br /></td></tr>
-<tr class="separator:ac0a655af3a288ee5ecabb91f095e93d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a13b739a3ffba31d732a4eb8d6980610b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a13b739a3ffba31d732a4eb8d6980610b">mult2x2d</a> (cuDoubleComplex *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a13b739a3ffba31d732a4eb8d6980610b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of two \(2\times2\) complex-valued matrices.  <a href="jones_8c.html#a13b739a3ffba31d732a4eb8d6980610b">More...</a><br /></td></tr>
-<tr class="separator:a13b739a3ffba31d732a4eb8d6980610b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2651b73c74702a29086fbe0ce75b0e33"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a2651b73c74702a29086fbe0ce75b0e33">mult2x2d_RxC</a> (double *M1, cuDoubleComplex *M2, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a2651b73c74702a29086fbe0ce75b0e33"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of a \(2\times2\) real-valued matrix (on the left) with a \(2\times2\) complex-valued matrix (on the right).  <a href="jones_8c.html#a2651b73c74702a29086fbe0ce75b0e33">More...</a><br /></td></tr>
-<tr class="separator:a2651b73c74702a29086fbe0ce75b0e33"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae22d56f5e4cb6895ee63e3702a1fc3ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ae22d56f5e4cb6895ee63e3702a1fc3ac">mult2x2d_CxR</a> (cuDoubleComplex *M1, double *M2, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:ae22d56f5e4cb6895ee63e3702a1fc3ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of a \(2\times2\) complex-valued matrix (on the left) with a \(2\times2\) real-valued matrix (on the right).  <a href="jones_8c.html#ae22d56f5e4cb6895ee63e3702a1fc3ac">More...</a><br /></td></tr>
-<tr class="separator:ae22d56f5e4cb6895ee63e3702a1fc3ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab6eb3c5a28939b5dd8513339c0f51217"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ab6eb3c5a28939b5dd8513339c0f51217">conj2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:ab6eb3c5a28939b5dd8513339c0f51217"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the conjugate of a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#ab6eb3c5a28939b5dd8513339c0f51217">More...</a><br /></td></tr>
-<tr class="separator:ab6eb3c5a28939b5dd8513339c0f51217"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae83944ac74b5cb9d0c66f541940eed4e"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ae83944ac74b5cb9d0c66f541940eed4e">norm2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:ae83944ac74b5cb9d0c66f541940eed4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Normalises a \(2\times2\) matrix via the Frobenius norm.  <a href="jones_8c.html#ae83944ac74b5cb9d0c66f541940eed4e">More...</a><br /></td></tr>
-<tr class="separator:ae83944ac74b5cb9d0c66f541940eed4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa855d47e66488b80a386d8b46b88fd76"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#aa855d47e66488b80a386d8b46b88fd76">reverse2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:aa855d47e66488b80a386d8b46b88fd76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reverses the elements of a \(2\times2\) matrix.  <a href="jones_8c.html#aa855d47e66488b80a386d8b46b88fd76">More...</a><br /></td></tr>
-<tr class="separator:aa855d47e66488b80a386d8b46b88fd76"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a719879385bcb10110a734b65cba146c1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a719879385bcb10110a734b65cba146c1">swaprows2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a719879385bcb10110a734b65cba146c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps the rows of a \(2\times2\) matrix.  <a href="jones_8c.html#a719879385bcb10110a734b65cba146c1">More...</a><br /></td></tr>
-<tr class="separator:a719879385bcb10110a734b65cba146c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6e4caad10da318cf70cad484c4993d8f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a6e4caad10da318cf70cad484c4993d8f">swapcols2x2</a> (cuDoubleComplex *M, cuDoubleComplex *Mout)</td></tr>
-<tr class="memdesc:a6e4caad10da318cf70cad484c4993d8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps the columns of a \(2\times2\) matrix.  <a href="jones_8c.html#a6e4caad10da318cf70cad484c4993d8f">More...</a><br /></td></tr>
-<tr class="separator:a6e4caad10da318cf70cad484c4993d8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6b0d682c8dd588f8c91e20de549cb2a3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a6b0d682c8dd588f8c91e20de549cb2a3">is2x2zero</a> (cuDoubleComplex *M)</td></tr>
-<tr class="memdesc:a6b0d682c8dd588f8c91e20de549cb2a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if and only if all elements of a \(2\times2\) complex-valued matrix are identically zero.  <a href="jones_8c.html#a6b0d682c8dd588f8c91e20de549cb2a3">More...</a><br /></td></tr>
-<tr class="separator:a6b0d682c8dd588f8c91e20de549cb2a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af2d2c07ed8d82064c00fdf85ff48eadf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#af2d2c07ed8d82064c00fdf85ff48eadf">calc_hermitian</a> (cuDoubleComplex *M, cuDoubleComplex *H)</td></tr>
-<tr class="memdesc:af2d2c07ed8d82064c00fdf85ff48eadf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the Hermitian (i.e.  <a href="jones_8c.html#af2d2c07ed8d82064c00fdf85ff48eadf">More...</a><br /></td></tr>
-<tr class="separator:af2d2c07ed8d82064c00fdf85ff48eadf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6c6ec805c1f3139a266be79b44e56d24"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a6c6ec805c1f3139a266be79b44e56d24">calc_coherency_matrix</a> (cuDoubleComplex *M, cuDoubleComplex *C)</td></tr>
-<tr class="memdesc:a6c6ec805c1f3139a266be79b44e56d24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the coherency matrix of a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#a6c6ec805c1f3139a266be79b44e56d24">More...</a><br /></td></tr>
-<tr class="separator:a6c6ec805c1f3139a266be79b44e56d24"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a52bf647ef5e9e55631b085474c441d29"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a52bf647ef5e9e55631b085474c441d29">fprintf_complex_matrix</a> (FILE *fout, cuDoubleComplex *M)</td></tr>
-<tr class="memdesc:a52bf647ef5e9e55631b085474c441d29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prints a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#a52bf647ef5e9e55631b085474c441d29">More...</a><br /></td></tr>
-<tr class="separator:a52bf647ef5e9e55631b085474c441d29"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a583135325895ffa348112c392fcee914"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a583135325895ffa348112c392fcee914">inv2x2S</a> (gpuDoubleComplex *Min, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:a583135325895ffa348112c392fcee914"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the inverse of a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#a583135325895ffa348112c392fcee914">More...</a><br /></td></tr>
+<tr class="separator:a583135325895ffa348112c392fcee914"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab6f5afa1907b3004c5ca09bd4ad99f40"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ab6f5afa1907b3004c5ca09bd4ad99f40">mult2x2d</a> (gpuDoubleComplex *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:ab6f5afa1907b3004c5ca09bd4ad99f40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of two \(2\times2\) complex-valued matrices.  <a href="jones_8c.html#ab6f5afa1907b3004c5ca09bd4ad99f40">More...</a><br /></td></tr>
+<tr class="separator:ab6f5afa1907b3004c5ca09bd4ad99f40"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a750017a962f53b59a67c80281ef4f72b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a750017a962f53b59a67c80281ef4f72b">mult2x2d_RxC</a> (double *M1, gpuDoubleComplex *M2, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:a750017a962f53b59a67c80281ef4f72b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of a \(2\times2\) real-valued matrix (on the left) with a \(2\times2\) complex-valued matrix (on the right).  <a href="jones_8c.html#a750017a962f53b59a67c80281ef4f72b">More...</a><br /></td></tr>
+<tr class="separator:a750017a962f53b59a67c80281ef4f72b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aefefc2a3b08b6dd45369f021a44d24f5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#aefefc2a3b08b6dd45369f021a44d24f5">mult2x2d_CxR</a> (gpuDoubleComplex *M1, double *M2, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:aefefc2a3b08b6dd45369f021a44d24f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs a matrix multiplication of a \(2\times2\) complex-valued matrix (on the left) with a \(2\times2\) real-valued matrix (on the right).  <a href="jones_8c.html#aefefc2a3b08b6dd45369f021a44d24f5">More...</a><br /></td></tr>
+<tr class="separator:aefefc2a3b08b6dd45369f021a44d24f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff46c099e788c718b864caff1b4b0fa4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#aff46c099e788c718b864caff1b4b0fa4">conj2x2</a> (gpuDoubleComplex *M, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:aff46c099e788c718b864caff1b4b0fa4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the conjugate of a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#aff46c099e788c718b864caff1b4b0fa4">More...</a><br /></td></tr>
+<tr class="separator:aff46c099e788c718b864caff1b4b0fa4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a02f72c305909616b705894b514240033"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a02f72c305909616b705894b514240033">norm2x2</a> (gpuDoubleComplex *M, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:a02f72c305909616b705894b514240033"><td class="mdescLeft">&#160;</td><td class="mdescRight">Normalises a \(2\times2\) matrix via the Frobenius norm.  <a href="jones_8c.html#a02f72c305909616b705894b514240033">More...</a><br /></td></tr>
+<tr class="separator:a02f72c305909616b705894b514240033"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d337a1c23f23707d01f973ab393017d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a7d337a1c23f23707d01f973ab393017d">reverse2x2</a> (gpuDoubleComplex *M, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:a7d337a1c23f23707d01f973ab393017d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reverses the elements of a \(2\times2\) matrix.  <a href="jones_8c.html#a7d337a1c23f23707d01f973ab393017d">More...</a><br /></td></tr>
+<tr class="separator:a7d337a1c23f23707d01f973ab393017d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a033b6781d04f398e46e23c7d06309768"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a033b6781d04f398e46e23c7d06309768">swaprows2x2</a> (gpuDoubleComplex *M, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:a033b6781d04f398e46e23c7d06309768"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps the rows of a \(2\times2\) matrix.  <a href="jones_8c.html#a033b6781d04f398e46e23c7d06309768">More...</a><br /></td></tr>
+<tr class="separator:a033b6781d04f398e46e23c7d06309768"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63b55f365a0f989c203284bd44e2fca1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a63b55f365a0f989c203284bd44e2fca1">swapcols2x2</a> (gpuDoubleComplex *M, gpuDoubleComplex *Mout)</td></tr>
+<tr class="memdesc:a63b55f365a0f989c203284bd44e2fca1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps the columns of a \(2\times2\) matrix.  <a href="jones_8c.html#a63b55f365a0f989c203284bd44e2fca1">More...</a><br /></td></tr>
+<tr class="separator:a63b55f365a0f989c203284bd44e2fca1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad325cb194b364344310f779d9fb25211"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#ad325cb194b364344310f779d9fb25211">is2x2zero</a> (gpuDoubleComplex *M)</td></tr>
+<tr class="memdesc:ad325cb194b364344310f779d9fb25211"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if and only if all elements of a \(2\times2\) complex-valued matrix are identically zero.  <a href="jones_8c.html#ad325cb194b364344310f779d9fb25211">More...</a><br /></td></tr>
+<tr class="separator:ad325cb194b364344310f779d9fb25211"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7135c7f2285b4d7759c15e3acb238b4b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a7135c7f2285b4d7759c15e3acb238b4b">calc_hermitian</a> (gpuDoubleComplex *M, gpuDoubleComplex *H)</td></tr>
+<tr class="memdesc:a7135c7f2285b4d7759c15e3acb238b4b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the Hermitian (i.e.  <a href="jones_8c.html#a7135c7f2285b4d7759c15e3acb238b4b">More...</a><br /></td></tr>
+<tr class="separator:a7135c7f2285b4d7759c15e3acb238b4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30cda8accd07d9ab4a6f97d12a2441c2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a30cda8accd07d9ab4a6f97d12a2441c2">calc_coherency_matrix</a> (gpuDoubleComplex *M, gpuDoubleComplex *C)</td></tr>
+<tr class="memdesc:a30cda8accd07d9ab4a6f97d12a2441c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the coherency matrix of a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#a30cda8accd07d9ab4a6f97d12a2441c2">More...</a><br /></td></tr>
+<tr class="separator:a30cda8accd07d9ab4a6f97d12a2441c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4a6454b288b0c83893098695dbf45e14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="jones_8c.html#a4a6454b288b0c83893098695dbf45e14">fprintf_complex_matrix</a> (FILE *fout, gpuDoubleComplex *M)</td></tr>
+<tr class="memdesc:a4a6454b288b0c83893098695dbf45e14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prints a \(2\times2\) complex-valued matrix.  <a href="jones_8c.html#a4a6454b288b0c83893098695dbf45e14">More...</a><br /></td></tr>
+<tr class="separator:a4a6454b288b0c83893098695dbf45e14"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a6c6ec805c1f3139a266be79b44e56d24"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6c6ec805c1f3139a266be79b44e56d24">&#9670;&nbsp;</a></span>calc_coherency_matrix()</h2>
+<a id="a30cda8accd07d9ab4a6f97d12a2441c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30cda8accd07d9ab4a6f97d12a2441c2">&#9670;&nbsp;</a></span>calc_coherency_matrix()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -171,13 +171,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void calc_coherency_matrix </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>C</em>&#160;</td>
         </tr>
         <tr>
@@ -200,8 +200,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="af2d2c07ed8d82064c00fdf85ff48eadf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af2d2c07ed8d82064c00fdf85ff48eadf">&#9670;&nbsp;</a></span>calc_hermitian()</h2>
+<a id="a7135c7f2285b4d7759c15e3acb238b4b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7135c7f2285b4d7759c15e3acb238b4b">&#9670;&nbsp;</a></span>calc_hermitian()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -209,13 +209,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void calc_hermitian </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>H</em>&#160;</td>
         </tr>
         <tr>
@@ -239,8 +239,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ab6eb3c5a28939b5dd8513339c0f51217"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab6eb3c5a28939b5dd8513339c0f51217">&#9670;&nbsp;</a></span>conj2x2()</h2>
+<a id="aff46c099e788c718b864caff1b4b0fa4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aff46c099e788c718b864caff1b4b0fa4">&#9670;&nbsp;</a></span>conj2x2()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -248,13 +248,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void conj2x2 </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -277,8 +277,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a0e8dd951e2bd3f3945eac9bcee98d24e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0e8dd951e2bd3f3945eac9bcee98d24e">&#9670;&nbsp;</a></span>cp2x2()</h2>
+<a id="a023495aaa2b304f8a27ba9daf33bc580"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a023495aaa2b304f8a27ba9daf33bc580">&#9670;&nbsp;</a></span>cp2x2()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -286,13 +286,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void cp2x2 </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Min</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -314,8 +314,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a52bf647ef5e9e55631b085474c441d29"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a52bf647ef5e9e55631b085474c441d29">&#9670;&nbsp;</a></span>fprintf_complex_matrix()</h2>
+<a id="a4a6454b288b0c83893098695dbf45e14"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4a6454b288b0c83893098695dbf45e14">&#9670;&nbsp;</a></span>fprintf_complex_matrix()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -329,7 +329,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em>&#160;</td>
         </tr>
         <tr>
@@ -354,8 +354,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="af550b1e1d2b8e6d644a5f66696985c14"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af550b1e1d2b8e6d644a5f66696985c14">&#9670;&nbsp;</a></span>inv2x2()</h2>
+<a id="a9b4df0a9729fd7ad07c90dcb37a9aa0f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9b4df0a9729fd7ad07c90dcb37a9aa0f">&#9670;&nbsp;</a></span>inv2x2()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -363,13 +363,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void inv2x2 </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Min</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -428,8 +428,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ac0a655af3a288ee5ecabb91f095e93d6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac0a655af3a288ee5ecabb91f095e93d6">&#9670;&nbsp;</a></span>inv2x2S()</h2>
+<a id="a583135325895ffa348112c392fcee914"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a583135325895ffa348112c392fcee914">&#9670;&nbsp;</a></span>inv2x2S()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -437,13 +437,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void inv2x2S </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Min</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -462,13 +462,13 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a></dd></dl>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000022">Todo:</a></b></dt><dd>Does this do the same thing as <a class="el" href="jones_8c.html#af550b1e1d2b8e6d644a5f66696985c14" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a>? Check the code, and delete if not needed. </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="jones_8c.html#a9b4df0a9729fd7ad07c90dcb37a9aa0f" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a></dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000022">Todo:</a></b></dt><dd>Does this do the same thing as <a class="el" href="jones_8c.html#a9b4df0a9729fd7ad07c90dcb37a9aa0f" title="Computes the inverse of a  complex-valued matrix.">inv2x2()</a>? Check the code, and delete if not needed. </dd></dl>
 
 </div>
 </div>
-<a id="a6b0d682c8dd588f8c91e20de549cb2a3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6b0d682c8dd588f8c91e20de549cb2a3">&#9670;&nbsp;</a></span>is2x2zero()</h2>
+<a id="ad325cb194b364344310f779d9fb25211"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad325cb194b364344310f779d9fb25211">&#9670;&nbsp;</a></span>is2x2zero()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -476,7 +476,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">bool is2x2zero </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em></td><td>)</td>
           <td></td>
         </tr>
@@ -493,8 +493,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a13b739a3ffba31d732a4eb8d6980610b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a13b739a3ffba31d732a4eb8d6980610b">&#9670;&nbsp;</a></span>mult2x2d()</h2>
+<a id="ab6f5afa1907b3004c5ca09bd4ad99f40"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab6f5afa1907b3004c5ca09bd4ad99f40">&#9670;&nbsp;</a></span>mult2x2d()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -502,19 +502,19 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void mult2x2d </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M1</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M2</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -537,8 +537,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ae22d56f5e4cb6895ee63e3702a1fc3ac"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae22d56f5e4cb6895ee63e3702a1fc3ac">&#9670;&nbsp;</a></span>mult2x2d_CxR()</h2>
+<a id="aefefc2a3b08b6dd45369f021a44d24f5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aefefc2a3b08b6dd45369f021a44d24f5">&#9670;&nbsp;</a></span>mult2x2d_CxR()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -546,7 +546,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void mult2x2d_CxR </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M1</em>, </td>
         </tr>
         <tr>
@@ -558,7 +558,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -581,8 +581,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a2651b73c74702a29086fbe0ce75b0e33"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2651b73c74702a29086fbe0ce75b0e33">&#9670;&nbsp;</a></span>mult2x2d_RxC()</h2>
+<a id="a750017a962f53b59a67c80281ef4f72b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a750017a962f53b59a67c80281ef4f72b">&#9670;&nbsp;</a></span>mult2x2d_RxC()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -596,13 +596,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M2</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -625,16 +625,16 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a5631baeefb8d9c2c8a167e254ccfed31"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5631baeefb8d9c2c8a167e254ccfed31">&#9670;&nbsp;</a></span>negate_complex()</h2>
+<a id="a8a3a3cb7f6b02c0ea354f1372969109a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a3a3cb7f6b02c0ea354f1372969109a">&#9670;&nbsp;</a></span>negate_complex()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">cuDoubleComplex negate_complex </td>
+          <td class="memname">gpuDoubleComplex negate_complex </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex&#160;</td>
+          <td class="paramtype">gpuDoubleComplex&#160;</td>
           <td class="paramname"><em>z</em></td><td>)</td>
           <td></td>
         </tr>
@@ -652,8 +652,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ae83944ac74b5cb9d0c66f541940eed4e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae83944ac74b5cb9d0c66f541940eed4e">&#9670;&nbsp;</a></span>norm2x2()</h2>
+<a id="a02f72c305909616b705894b514240033"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a02f72c305909616b705894b514240033">&#9670;&nbsp;</a></span>norm2x2()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -661,13 +661,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">double norm2x2 </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -690,16 +690,16 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a78cc7addc19f3da512eaaa8e785a2e0f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a78cc7addc19f3da512eaaa8e785a2e0f">&#9670;&nbsp;</a></span>reciprocal_complex()</h2>
+<a id="a01c08669a45dd06f3a8143c7e044d6c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a01c08669a45dd06f3a8143c7e044d6c0">&#9670;&nbsp;</a></span>reciprocal_complex()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">cuDoubleComplex reciprocal_complex </td>
+          <td class="memname">gpuDoubleComplex reciprocal_complex </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex&#160;</td>
+          <td class="paramtype">gpuDoubleComplex&#160;</td>
           <td class="paramname"><em>z</em></td><td>)</td>
           <td></td>
         </tr>
@@ -717,8 +717,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="aa855d47e66488b80a386d8b46b88fd76"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa855d47e66488b80a386d8b46b88fd76">&#9670;&nbsp;</a></span>reverse2x2()</h2>
+<a id="a7d337a1c23f23707d01f973ab393017d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d337a1c23f23707d01f973ab393017d">&#9670;&nbsp;</a></span>reverse2x2()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -726,13 +726,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void reverse2x2 </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -758,8 +758,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a6e4caad10da318cf70cad484c4993d8f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6e4caad10da318cf70cad484c4993d8f">&#9670;&nbsp;</a></span>swapcols2x2()</h2>
+<a id="a63b55f365a0f989c203284bd44e2fca1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a63b55f365a0f989c203284bd44e2fca1">&#9670;&nbsp;</a></span>swapcols2x2()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -767,13 +767,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void swapcols2x2 </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>
@@ -799,8 +799,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a719879385bcb10110a734b65cba146c1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a719879385bcb10110a734b65cba146c1">&#9670;&nbsp;</a></span>swaprows2x2()</h2>
+<a id="a033b6781d04f398e46e23c7d06309768"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a033b6781d04f398e46e23c7d06309768">&#9670;&nbsp;</a></span>swaprows2x2()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -808,13 +808,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void swaprows2x2 </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>M</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Mout</em>&#160;</td>
         </tr>
         <tr>

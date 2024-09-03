@@ -83,20 +83,20 @@ $(function() {
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;math.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
-<code>#include &lt;cuComplex.h&gt;</code><br />
 <code>#include &quot;vcsbeam.h&quot;</code><br />
+<code>#include &quot;gpu_macros.h&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for filter.c:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="filter_8c__incl.svg" width="562" height="112"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+<div class="center"><iframe scrolling="no" frameborder="0" src="filter_8c__incl.svg" width="568" height="112"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
 </div>
 </div>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a9cafbbee1263c643450d83363578365c"><td class="memItemLeft" align="right" valign="top">cuDoubleComplex *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="filter_8c.html#a9cafbbee1263c643450d83363578365c">roots_of_unity</a> (int N)</td></tr>
-<tr class="memdesc:a9cafbbee1263c643450d83363578365c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates complex roots of unity.  <a href="filter_8c.html#a9cafbbee1263c643450d83363578365c">More...</a><br /></td></tr>
-<tr class="separator:a9cafbbee1263c643450d83363578365c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf79fb0be687dc854271a633ba9732bf"><td class="memItemLeft" align="right" valign="top">gpuDoubleComplex *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="filter_8c.html#abf79fb0be687dc854271a633ba9732bf">roots_of_unity</a> (int N)</td></tr>
+<tr class="memdesc:abf79fb0be687dc854271a633ba9732bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates complex roots of unity.  <a href="filter_8c.html#abf79fb0be687dc854271a633ba9732bf">More...</a><br /></td></tr>
+<tr class="separator:abf79fb0be687dc854271a633ba9732bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2fac816547ca5054dea3e1a501d4408c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="filter_8c.html#a2fac816547ca5054dea3e1a501d4408c">vmLoadFilter</a> (vcsbeam_context *vm, char *filtername, filter_type type, int nchans)</td></tr>
 <tr class="memdesc:a2fac816547ca5054dea3e1a501d4408c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load a set of filter coefficients.  <a href="filter_8c.html#a2fac816547ca5054dea3e1a501d4408c">More...</a><br /></td></tr>
 <tr class="separator:a2fac816547ca5054dea3e1a501d4408c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -135,14 +135,14 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a9cafbbee1263c643450d83363578365c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9cafbbee1263c643450d83363578365c">&#9670;&nbsp;</a></span>roots_of_unity()</h2>
+<a id="abf79fb0be687dc854271a633ba9732bf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abf79fb0be687dc854271a633ba9732bf">&#9670;&nbsp;</a></span>roots_of_unity()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">cuDoubleComplex* roots_of_unity </td>
+          <td class="memname">gpuDoubleComplex* roots_of_unity </td>
           <td>(</td>
           <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>N</em></td><td>)</td>

@@ -83,12 +83,11 @@ $(function() {
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;time.h&gt;</code><br />
 <code>#include &lt;math.h&gt;</code><br />
-<code>#include &lt;cuComplex.h&gt;</code><br />
-<code>#include &lt;cuda_runtime.h&gt;</code><br />
 <code>#include &lt;mwalib.h&gt;</code><br />
 <code>#include &lt;star/pal.h&gt;</code><br />
 <code>#include &lt;star/palmac.h&gt;</code><br />
 <code>#include &quot;vcsbeam.h&quot;</code><br />
+<code>#include &quot;gpu_macros.h&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for geometry.c:</div>
 <div class="dyncontent">
@@ -98,9 +97,9 @@ Include dependency graph for geometry.c:</div>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ae70052b290c7584548822ba40b9909d3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#ae70052b290c7584548822ba40b9909d3">calc_geometric_delays</a> (beam_geom *beam_geom_vals, uint32_t freq_hz, MetafitsMetadata *obs_metadata, cuDoubleComplex *phi)</td></tr>
-<tr class="memdesc:ae70052b290c7584548822ba40b9909d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the phase delays required for phasing up each antenna.  <a href="geometry_8c.html#ae70052b290c7584548822ba40b9909d3">More...</a><br /></td></tr>
-<tr class="separator:ae70052b290c7584548822ba40b9909d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac55082ae2285d7f44e8da65a577290eb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#ac55082ae2285d7f44e8da65a577290eb">calc_geometric_delays</a> (beam_geom *beam_geom_vals, uint32_t freq_hz, MetafitsMetadata *obs_metadata, gpuDoubleComplex *phi)</td></tr>
+<tr class="memdesc:ac55082ae2285d7f44e8da65a577290eb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the phase delays required for phasing up each antenna.  <a href="geometry_8c.html#ac55082ae2285d7f44e8da65a577290eb">More...</a><br /></td></tr>
+<tr class="separator:ac55082ae2285d7f44e8da65a577290eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a810de847675584bc9974936afa489292"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="geometry_8c.html#a810de847675584bc9974936afa489292">vmCalcPhi</a> (vcsbeam_context *vm, beam_geom *beam_geom_vals)</td></tr>
 <tr class="memdesc:a810de847675584bc9974936afa489292"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the phase delays for all relevant frequencies and pointings.  <a href="geometry_8c.html#a810de847675584bc9974936afa489292">More...</a><br /></td></tr>
 <tr class="separator:a810de847675584bc9974936afa489292"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -262,8 +261,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ae70052b290c7584548822ba40b9909d3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae70052b290c7584548822ba40b9909d3">&#9670;&nbsp;</a></span>calc_geometric_delays()</h2>
+<a id="ac55082ae2285d7f44e8da65a577290eb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac55082ae2285d7f44e8da65a577290eb">&#9670;&nbsp;</a></span>calc_geometric_delays()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -289,7 +288,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>phi</em>&#160;</td>
         </tr>
         <tr>
@@ -501,7 +500,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Calculates the phase delays for all relevant frequencies and pointings. </p>
-<p>Calls <a class="el" href="geometry_8c.html#ae70052b290c7584548822ba40b9909d3" title="Calculates the phase delays required for phasing up each antenna.">calc_geometric_delays()</a> for all frequencies in the relevant coarse channel, and for all requested pointings.</p>
+<p>Calls <a class="el" href="geometry_8c.html#ac55082ae2285d7f44e8da65a577290eb" title="Calculates the phase delays required for phasing up each antenna.">calc_geometric_delays()</a> for all frequencies in the relevant coarse channel, and for all requested pointings.</p>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000016">Todo:</a></b></dt><dd>Incorporate the <code>beam_geom</code> struct into the <code>vm</code> struct. </dd></dl>
 
 </div>

@@ -84,12 +84,12 @@ $(function() {
 <code>#include &lt;math.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
 <code>#include &lt;mwalib.h&gt;</code><br />
-<code>#include &lt;cuComplex.h&gt;</code><br />
 <code>#include &quot;vcsbeam.h&quot;</code><br />
+<code>#include &quot;gpu_macros.h&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for calibration.c:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="calibration_8c__incl.svg" width="660" height="112"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+<div class="center"><iframe scrolling="no" frameborder="0" src="calibration_8c__incl.svg" width="667" height="112"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
 </div>
 </div>
 </div><table class="memberdecls">
@@ -98,21 +98,21 @@ Functions</h2></td></tr>
 <tr class="memitem:a456923a16ff4f680b225d49d7e5ebe63"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#a456923a16ff4f680b225d49d7e5ebe63">vmLoadRTSSolution</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:a456923a16ff4f680b225d49d7e5ebe63"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads a Real Time System (RTS) calibration solution.  <a href="calibration_8c.html#a456923a16ff4f680b225d49d7e5ebe63">More...</a><br /></td></tr>
 <tr class="separator:a456923a16ff4f680b225d49d7e5ebe63"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5a248707c3daf7f72727671c430e6aa9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#a5a248707c3daf7f72727671c430e6aa9">read_dijones_file</a> (cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname)</td></tr>
-<tr class="memdesc:a5a248707c3daf7f72727671c430e6aa9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads in an RTS DIJones file.  <a href="calibration_8c.html#a5a248707c3daf7f72727671c430e6aa9">More...</a><br /></td></tr>
-<tr class="separator:a5a248707c3daf7f72727671c430e6aa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad66159c79c4179391e06774105799bfe"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#ad66159c79c4179391e06774105799bfe">read_bandpass_file</a> (cuDoubleComplex ***Jm, cuDoubleComplex ***Jf, MetafitsMetadata *cal_metadata, char *filename)</td></tr>
-<tr class="memdesc:ad66159c79c4179391e06774105799bfe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads an RTS Bandpass file.  <a href="calibration_8c.html#ad66159c79c4179391e06774105799bfe">More...</a><br /></td></tr>
-<tr class="separator:ad66159c79c4179391e06774105799bfe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abff2c478f69b67bd1a687641d00b3a6a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#abff2c478f69b67bd1a687641d00b3a6a">read_dijones_file</a> (gpuDoubleComplex **Dd, gpuDoubleComplex *A, double *amp, uintptr_t nant, char *fname)</td></tr>
+<tr class="memdesc:abff2c478f69b67bd1a687641d00b3a6a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads in an RTS DIJones file.  <a href="calibration_8c.html#abff2c478f69b67bd1a687641d00b3a6a">More...</a><br /></td></tr>
+<tr class="separator:abff2c478f69b67bd1a687641d00b3a6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab65250156b33e681e092f6e7136ad015"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#ab65250156b33e681e092f6e7136ad015">read_bandpass_file</a> (gpuDoubleComplex ***Jm, gpuDoubleComplex ***Jf, MetafitsMetadata *cal_metadata, char *filename)</td></tr>
+<tr class="memdesc:ab65250156b33e681e092f6e7136ad015"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads an RTS Bandpass file.  <a href="calibration_8c.html#ab65250156b33e681e092f6e7136ad015">More...</a><br /></td></tr>
+<tr class="separator:ab65250156b33e681e092f6e7136ad015"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a20eb84ad9699d8bc39c5f0001cf6b246"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#a20eb84ad9699d8bc39c5f0001cf6b246">vmLoadOffringaSolution</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:a20eb84ad9699d8bc39c5f0001cf6b246"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads in a calibration solution from an Offringa-style solution file.  <a href="calibration_8c.html#a20eb84ad9699d8bc39c5f0001cf6b246">More...</a><br /></td></tr>
 <tr class="separator:a20eb84ad9699d8bc39c5f0001cf6b246"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6360897603b35d1dfe68032a20b19079"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#a6360897603b35d1dfe68032a20b19079">remove_reference_phase</a> (cuDoubleComplex *J, cuDoubleComplex *Jref)</td></tr>
-<tr class="memdesc:a6360897603b35d1dfe68032a20b19079"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rotates the phases of the elements of a complex matrix with respect to a reference matrix.  <a href="calibration_8c.html#a6360897603b35d1dfe68032a20b19079">More...</a><br /></td></tr>
-<tr class="separator:a6360897603b35d1dfe68032a20b19079"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8075cee8c51e05b8157a772f3fb10ebc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#a8075cee8c51e05b8157a772f3fb10ebc">zero_PQ_and_QP</a> (cuDoubleComplex *J)</td></tr>
-<tr class="memdesc:a8075cee8c51e05b8157a772f3fb10ebc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Zeroes the off-diagonal terms of the given matrix.  <a href="calibration_8c.html#a8075cee8c51e05b8157a772f3fb10ebc">More...</a><br /></td></tr>
-<tr class="separator:a8075cee8c51e05b8157a772f3fb10ebc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0de6354de82a5e61372f4a7526f18b77"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#a0de6354de82a5e61372f4a7526f18b77">remove_reference_phase</a> (gpuDoubleComplex *J, gpuDoubleComplex *Jref)</td></tr>
+<tr class="memdesc:a0de6354de82a5e61372f4a7526f18b77"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rotates the phases of the elements of a complex matrix with respect to a reference matrix.  <a href="calibration_8c.html#a0de6354de82a5e61372f4a7526f18b77">More...</a><br /></td></tr>
+<tr class="separator:a0de6354de82a5e61372f4a7526f18b77"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a10b11892a418288b38944da9f6e9e170"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#a10b11892a418288b38944da9f6e9e170">zero_PQ_and_QP</a> (gpuDoubleComplex *J)</td></tr>
+<tr class="memdesc:a10b11892a418288b38944da9f6e9e170"><td class="mdescLeft">&#160;</td><td class="mdescRight">Zeroes the off-diagonal terms of the given matrix.  <a href="calibration_8c.html#a10b11892a418288b38944da9f6e9e170">More...</a><br /></td></tr>
+<tr class="separator:a10b11892a418288b38944da9f6e9e170"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8f042bf36cfe2928b7fcbde7b1ac771f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="calibration_8c.html#a8f042bf36cfe2928b7fcbde7b1ac771f">parse_calibration_correction_file</a> (uint32_t gpstime, calibration *cal)</td></tr>
 <tr class="memdesc:a8f042bf36cfe2928b7fcbde7b1ac771f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parses the PQ phase correction for the given GPS time from the file <code>pq_phase_correction.txt</code>.  <a href="calibration_8c.html#a8f042bf36cfe2928b7fcbde7b1ac771f">More...</a><br /></td></tr>
 <tr class="separator:a8f042bf36cfe2928b7fcbde7b1ac771f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -226,8 +226,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ad66159c79c4179391e06774105799bfe"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad66159c79c4179391e06774105799bfe">&#9670;&nbsp;</a></span>read_bandpass_file()</h2>
+<a id="ab65250156b33e681e092f6e7136ad015"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab65250156b33e681e092f6e7136ad015">&#9670;&nbsp;</a></span>read_bandpass_file()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -235,13 +235,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void read_bandpass_file </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex ***&#160;</td>
+          <td class="paramtype">gpuDoubleComplex ***&#160;</td>
           <td class="paramname"><em>Jm</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex ***&#160;</td>
+          <td class="paramtype">gpuDoubleComplex ***&#160;</td>
           <td class="paramname"><em>Jf</em>, </td>
         </tr>
         <tr>
@@ -278,8 +278,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a5a248707c3daf7f72727671c430e6aa9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5a248707c3daf7f72727671c430e6aa9">&#9670;&nbsp;</a></span>read_dijones_file()</h2>
+<a id="abff2c478f69b67bd1a687641d00b3a6a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abff2c478f69b67bd1a687641d00b3a6a">&#9670;&nbsp;</a></span>read_dijones_file()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -287,13 +287,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void read_dijones_file </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex **&#160;</td>
+          <td class="paramtype">gpuDoubleComplex **&#160;</td>
           <td class="paramname"><em>Dd</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>A</em>, </td>
         </tr>
         <tr>
@@ -338,8 +338,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a6360897603b35d1dfe68032a20b19079"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6360897603b35d1dfe68032a20b19079">&#9670;&nbsp;</a></span>remove_reference_phase()</h2>
+<a id="a0de6354de82a5e61372f4a7526f18b77"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0de6354de82a5e61372f4a7526f18b77">&#9670;&nbsp;</a></span>remove_reference_phase()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -347,13 +347,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void remove_reference_phase </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>J</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>Jref</em>&#160;</td>
         </tr>
         <tr>
@@ -439,8 +439,8 @@ Functions</h2></td></tr>
 <p>Applies various corrections/adjustments to the calibration solutions. </p>
 <p>This function applies to the calibration solutions given in <code>vm&rarr;D</code>. The corrections to be applied are taken from the calibration struct <code>vm&rarr;cal</code>.</p>
 <p>Three (optional) corrections are applied:</p><ol type="1">
-<li>Subtract the phases from each antenna by a reference antenna (see <a class="el" href="calibration_8c.html#a6360897603b35d1dfe68032a20b19079" title="Rotates the phases of the elements of a complex matrix with respect to a reference matrix.">remove_reference_phase()</a>).</li>
-<li>Remove the PQ and QP (i.e. off-diagonal) terms (see <a class="el" href="calibration_8c.html#a8075cee8c51e05b8157a772f3fb10ebc" title="Zeroes the off-diagonal terms of the given matrix.">zero_PQ_and_QP()</a>).</li>
+<li>Subtract the phases from each antenna by a reference antenna (see <a class="el" href="calibration_8c.html#a0de6354de82a5e61372f4a7526f18b77" title="Rotates the phases of the elements of a complex matrix with respect to a reference matrix.">remove_reference_phase()</a>).</li>
+<li>Remove the PQ and QP (i.e. off-diagonal) terms (see <a class="el" href="calibration_8c.html#a10b11892a418288b38944da9f6e9e170" title="Zeroes the off-diagonal terms of the given matrix.">zero_PQ_and_QP()</a>).</li>
 <li>Apply a phase slope to the QQ terms (implemented in this function). </li>
 </ol>
 
@@ -562,8 +562,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a8075cee8c51e05b8157a772f3fb10ebc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8075cee8c51e05b8157a772f3fb10ebc">&#9670;&nbsp;</a></span>zero_PQ_and_QP()</h2>
+<a id="a10b11892a418288b38944da9f6e9e170"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a10b11892a418288b38944da9f6e9e170">&#9670;&nbsp;</a></span>zero_PQ_and_QP()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -571,7 +571,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void zero_PQ_and_QP </td>
           <td>(</td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>J</em></td><td>)</td>
           <td></td>
         </tr>

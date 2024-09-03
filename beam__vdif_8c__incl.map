@@ -1,13 +1,12 @@
 <map id="beam_vdif.c" name="beam_vdif.c">
-<area shape="rect" id="node1" title=" " alt="" coords="407,5,499,32"/>
+<area shape="rect" id="node1" title=" " alt="" coords="341,5,433,32"/>
 <area shape="rect" id="node2" title=" " alt="" coords="5,80,68,107"/>
 <area shape="rect" id="node3" title=" " alt="" coords="92,80,152,107"/>
 <area shape="rect" id="node4" title=" " alt="" coords="177,80,241,107"/>
 <area shape="rect" id="node5" title=" " alt="" coords="265,80,326,107"/>
-<area shape="rect" id="node6" title=" " alt="" coords="350,80,446,107"/>
-<area shape="rect" id="node7" title=" " alt="" coords="471,80,544,107"/>
-<area shape="rect" id="node8" title=" " alt="" coords="568,80,631,107"/>
-<area shape="rect" id="node9" title=" " alt="" coords="655,80,741,107"/>
-<area shape="rect" id="node10" title=" " alt="" coords="765,80,871,107"/>
-<area shape="rect" id="node11" title=" " alt="" coords="896,80,1001,107"/>
+<area shape="rect" id="node6" title=" " alt="" coords="351,80,424,107"/>
+<area shape="rect" id="node7" title=" " alt="" coords="448,80,511,107"/>
+<area shape="rect" id="node8" title=" " alt="" coords="535,80,621,107"/>
+<area shape="rect" id="node9" title=" " alt="" coords="645,80,751,107"/>
+<area shape="rect" id="node10" title=" " alt="" coords="776,80,881,107"/>
 </map>

@@ -1,13 +1,12 @@
 <map id="geometry.c" name="geometry.c">
-<area shape="rect" id="node1" title=" " alt="" coords="413,5,498,32"/>
+<area shape="rect" id="node1" title=" " alt="" coords="338,5,423,32"/>
 <area shape="rect" id="node2" title=" " alt="" coords="5,80,68,107"/>
 <area shape="rect" id="node3" title=" " alt="" coords="92,80,152,107"/>
 <area shape="rect" id="node4" title=" " alt="" coords="176,80,233,107"/>
 <area shape="rect" id="node5" title=" " alt="" coords="258,80,319,107"/>
-<area shape="rect" id="node6" title=" " alt="" coords="343,80,439,107"/>
-<area shape="rect" id="node7" title=" " alt="" coords="464,80,575,107"/>
-<area shape="rect" id="node8" title=" " alt="" coords="599,80,672,107"/>
-<area shape="rect" id="node9" title=" " alt="" coords="697,80,771,107"/>
-<area shape="rect" id="node10" title=" " alt="" coords="795,80,895,107"/>
-<area shape="rect" id="node11" title=" " alt="" coords="919,80,1005,107"/>
+<area shape="rect" id="node6" title=" " alt="" coords="344,80,417,107"/>
+<area shape="rect" id="node7" title=" " alt="" coords="442,80,517,107"/>
+<area shape="rect" id="node8" title=" " alt="" coords="540,80,640,107"/>
+<area shape="rect" id="node9" title=" " alt="" coords="665,80,750,107"/>
+<area shape="rect" id="node10" title=" " alt="" coords="775,80,877,107"/>
 </map>

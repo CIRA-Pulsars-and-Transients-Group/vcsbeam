@@ -84,10 +84,10 @@ $(function() {
 <div class="textblock"><code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;time.h&gt;</code><br />
-<code>#include &lt;cuComplex.h&gt;</code><br />
 <code>#include &lt;mwalib.h&gt;</code><br />
 <code>#include &lt;mwa_hyperbeam.h&gt;</code><br />
 <code>#include &quot;vcsbeam.h&quot;</code><br />
+<code>#include &quot;gpu_macros.h&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for primary_beam.c:</div>
 <div class="dyncontent">
@@ -125,9 +125,9 @@ Functions</h2></td></tr>
 <tr class="memitem:afdec646d89aec813e571bb5a2b64612f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">parallactic_angle_correction</a> (double *Ppa, double lat, double az, double za)</td></tr>
 <tr class="memdesc:afdec646d89aec813e571bb5a2b64612f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the parallactic angle correction matrix, \({\bf P}_\text{pa}\).  <a href="primary__beam_8c.html#afdec646d89aec813e571bb5a2b64612f">More...</a><br /></td></tr>
 <tr class="separator:afdec646d89aec813e571bb5a2b64612f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9ac26c8fd985e50bf21503b1dc0d4ee0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a9ac26c8fd985e50bf21503b1dc0d4ee0">calc_normalised_beam_response</a> (FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, cuDoubleComplex *J, bool apply_pa_correction)</td></tr>
-<tr class="memdesc:a9ac26c8fd985e50bf21503b1dc0d4ee0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the normalised primary beam response to a Stokes I, Q, U, or V sky.  <a href="primary__beam_8c.html#a9ac26c8fd985e50bf21503b1dc0d4ee0">More...</a><br /></td></tr>
-<tr class="separator:a9ac26c8fd985e50bf21503b1dc0d4ee0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a43ac85cc5512798fbd389f82ad9c335b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primary__beam_8c.html#a43ac85cc5512798fbd389f82ad9c335b">calc_normalised_beam_response</a> (FEEBeam *beam, double az, double za, double freq_hz, uint32_t *delays, double *amps, double *IQUV, gpuDoubleComplex *J, bool apply_pa_correction)</td></tr>
+<tr class="memdesc:a43ac85cc5512798fbd389f82ad9c335b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the normalised primary beam response to a Stokes I, Q, U, or V sky.  <a href="primary__beam_8c.html#a43ac85cc5512798fbd389f82ad9c335b">More...</a><br /></td></tr>
+<tr class="separator:a43ac85cc5512798fbd389f82ad9c335b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
@@ -163,8 +163,8 @@ Variables</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a9ac26c8fd985e50bf21503b1dc0d4ee0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9ac26c8fd985e50bf21503b1dc0d4ee0">&#9670;&nbsp;</a></span>calc_normalised_beam_response()</h2>
+<a id="a43ac85cc5512798fbd389f82ad9c335b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a43ac85cc5512798fbd389f82ad9c335b">&#9670;&nbsp;</a></span>calc_normalised_beam_response()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -214,7 +214,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cuDoubleComplex *&#160;</td>
+          <td class="paramtype">gpuDoubleComplex *&#160;</td>
           <td class="paramname"><em>J</em>, </td>
         </tr>
         <tr>

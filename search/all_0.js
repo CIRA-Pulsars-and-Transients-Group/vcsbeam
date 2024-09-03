@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['allocate_5finput_5foutput_5farrays_0',['allocate_input_output_arrays',['../form__beam_8cu.html#a42a8b688f3ed69468b056044bb26461e',1,'form_beam.cu']]],
+  ['allocate_5finput_5foutput_5farrays_0',['allocate_input_output_arrays',['../form__beam_8cpp.html#a42a8b688f3ed69468b056044bb26461e',1,'form_beam.cpp']]],
   ['applications_20_26ndash_3b_20fine_20pfb_20offline_1',['Applications &amp;ndash; Fine PFB Offline',['../applicationsfinepfboffline.html',1,'']]],
   ['applications_20_26ndash_3b_20make_20mwa_20incoh_20beam_2',['Applications &amp;ndash; Make MWA Incoh Beam',['../applicationsmakemwaincohbeam.html',1,'']]],
   ['applications_20_26ndash_3b_20make_20mwa_20tied_2darray_20beam_3',['Applications &amp;ndash; Make MWA Tied-Array Beam',['../applicationsmakemwatiedarraybeam.html',1,'']]],

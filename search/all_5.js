@@ -6,6 +6,16 @@ var searchData=
   ['get_5frelative_5fgps_66',['get_relative_gps',['../metadata_8c.html#a57f36316d98d4277debe3df18d24fb61',1,'metadata.c']]],
   ['get_5fstopwatch_5fidx_67',['get_stopwatch_idx',['../performance_8c.html#a9dca26204e3677a32ba68842b46d16d6',1,'performance.c']]],
   ['get_5fstopwatch_5fmax_5fname_5flength_68',['get_stopwatch_max_name_length',['../performance_8c.html#a4e096449cd4d3baca2e959b4208fcd6b',1,'performance.c']]],
-  ['gpuassert_69',['gpuAssert',['../form__beam_8cu.html#ab3e90881a2476fd461eb2bcfcaa7cf63',1,'gpuAssert(cudaError_t code, const char *file, int line, bool abort=true):&#160;form_beam.cu'],['../pfb_8cu.html#ab3e90881a2476fd461eb2bcfcaa7cf63',1,'gpuAssert(cudaError_t code, const char *file, int line, bool abort=true):&#160;pfb.cu']]],
-  ['gpuerrchk_70',['gpuErrchk',['../form__beam_8cu.html#a3f6ea8e9ef58125936d50d7e1181aa7a',1,'gpuErrchk():&#160;form_beam.cu'],['../pfb_8cu.html#a3f6ea8e9ef58125936d50d7e1181aa7a',1,'gpuErrchk():&#160;pfb.cu']]]
+  ['gpu_5ffft_2ehpp_69',['gpu_fft.hpp',['../gpu__fft_8hpp.html',1,'']]],
+  ['gpuassert_70',['gpuAssert',['../pfb_8cpp.html#ab30891f5325d182547a481d9143f490d',1,'pfb.cpp']]],
+  ['gpufft_5fc2c_71',['GPUFFT_C2C',['../gpu__fft_8hpp.html#a0f58fabe10e86eb89d60cc3e6c1a55cd',1,'gpu_fft.hpp']]],
+  ['gpufft_5fforward_72',['GPUFFT_FORWARD',['../gpu__fft_8hpp.html#aca89c0052d62a8d3be2a3ff33abbdfb3',1,'gpu_fft.hpp']]],
+  ['gpufft_5fsuccess_73',['GPUFFT_SUCCESS',['../gpu__fft_8hpp.html#aef6b2f9cef116b068954b3456e682d25',1,'gpu_fft.hpp']]],
+  ['gpufftcomplex_74',['gpufftComplex',['../gpu__fft_8hpp.html#a46f9f65e532f29b74fad9d7c7adade7a',1,'gpu_fft.hpp']]],
+  ['gpufftdestroy_75',['gpufftDestroy',['../gpu__fft_8hpp.html#ac7cccbb5d4bcb8a0f523003a2daf4fe8',1,'gpu_fft.hpp']]],
+  ['gpufftexecc2c_76',['gpufftExecC2C',['../gpu__fft_8hpp.html#a8723404a29d5f1ad4611fc3073268b45',1,'gpu_fft.hpp']]],
+  ['gpuffthandle_77',['gpufftHandle',['../gpu__fft_8hpp.html#a47f83ef9322a550613a5f9d252fc8a32',1,'gpu_fft.hpp']]],
+  ['gpufftplan2d_78',['gpufftPlan2d',['../gpu__fft_8hpp.html#a3e405ccc43a0265e5481b67d633a5b43',1,'gpu_fft.hpp']]],
+  ['gpufftplanmany_79',['gpufftPlanMany',['../gpu__fft_8hpp.html#a0a4371f43ccf748576d03038417f1208',1,'gpu_fft.hpp']]],
+  ['gpufftresult_80',['gpufftResult',['../gpu__fft_8hpp.html#aed653a6f78cb26cfa9f7faf64585cd42',1,'gpu_fft.hpp']]]
 ];
