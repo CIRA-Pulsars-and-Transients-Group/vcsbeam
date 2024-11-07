@@ -574,16 +574,16 @@ void vmWOLAChunk( vcsbeam_context *vm )
     dim3 blocks( fpfb->nspectra_per_chunk, fpfb->I, fpfb->P );
     dim3 threads( fpfb->K );
 
-    logger_start_stopwatch( vm->log, "pfb-wola", false );
+    //logger_start_stopwatch( vm->log, "pfb-wola", false );
 
     // Set the d_weighted_overlap_add array to zeros
     (gpuMemset( fpfb->d_weighted_overlap_add, 0, fpfb->weighted_overlap_add_size ));
 
     vmWOLA_kernel<<<blocks, threads>>>( fpfb->d_htr_data, fpfb->d_filter_coeffs, fpfb->d_weighted_overlap_add );
-    gpuDeviceSynchronize();
+    //gpuDeviceSynchronize();
     ( gpuPeekAtLastError() );
 
-    logger_stop_stopwatch( vm->log, "pfb-wola" );
+    //logger_stop_stopwatch( vm->log, "pfb-wola" );
 }
 
 /**
@@ -597,7 +597,7 @@ void vmFPGARoundingChunk( vcsbeam_context *vm )
     // Shorthand variable
     forward_pfb *fpfb = vm->fpfb;
 
-    logger_start_stopwatch( vm->log, "pfb-round", false );
+    //logger_start_stopwatch( vm->log, "pfb-round", false );
 
     if (fpfb->flags & PFB_EMULATE_FPGA)
     {
@@ -614,10 +614,10 @@ void vmFPGARoundingChunk( vcsbeam_context *vm )
         double scale = 1.0/16384.0; // equivalent to the ">> 14" operation applied in fpga_rounding_and_demotion()
         int2float<<<blocks, threads>>>( fpfb->d_weighted_overlap_add, scale );
     }
-    gpuDeviceSynchronize();
+    //gpuDeviceSynchronize();
     ( gpuPeekAtLastError() );
 
-    logger_stop_stopwatch( vm->log, "pfb-round" );
+    //logger_stop_stopwatch( vm->log, "pfb-round" );
 }
 
 /**
@@ -631,8 +631,8 @@ void vmFFTChunk( vcsbeam_context *vm )
     // Shorthand variable
     forward_pfb *fpfb = vm->fpfb;
 
-    logger_start_stopwatch( vm->log, "pfb-fft", false );
-
+    //logger_start_stopwatch( vm->log, "pfb-fft", false );
+    // Cristian: maybe we can batch fft together?
     int batch;
     for (batch = 0; batch < fpfb->I / fpfb->ninputs_per_cufft_batch; batch++)
     {
@@ -642,10 +642,10 @@ void vmFFTChunk( vcsbeam_context *vm )
                 fpfb->d_weighted_overlap_add + batch*fpfb->cufft_batch_size*fpfb->K,
                 GPUFFT_FORWARD );
     }
-    gpuDeviceSynchronize();
+    //gpuDeviceSynchronize();
     ( gpuPeekAtLastError() );
 
-    logger_stop_stopwatch( vm->log, "pfb-fft" );
+    //logger_stop_stopwatch( vm->log, "pfb-fft" );
 }
 
 /**
@@ -662,14 +662,14 @@ void vmPackChunk( vcsbeam_context *vm )
     dim3 blocks( fpfb->nspectra_per_chunk, fpfb->K );
     dim3 threads( fpfb->I );
 
-    logger_start_stopwatch( vm->log, "pfb-pack", false );
+    //logger_start_stopwatch( vm->log, "pfb-pack", false );
 
     pack_into_recombined_format<<<blocks, threads>>>( fpfb->d_weighted_overlap_add,
             fpfb->d_vcs_data, fpfb->d_i_output_idx, fpfb->flags );
-    gpuDeviceSynchronize();
+   // gpuDeviceSynchronize();
     ( gpuPeekAtLastError() );
 
-    logger_stop_stopwatch( vm->log, "pfb-pack" );
+    //logger_stop_stopwatch( vm->log, "pfb-pack" );
 }
 
 /**

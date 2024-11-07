@@ -529,7 +529,7 @@ void vmApplyJChunk( vcsbeam_context *vm )
                 vm->datatype );
         gpuCheckLastError(); 
     }
-    ( gpuDeviceSynchronize() );
+    //( gpuDeviceSynchronize() );
 }
 
 /**
@@ -552,7 +552,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
 
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
-    ( gpuDeviceSynchronize() );
+    //( gpuDeviceSynchronize() );
 
     // Send off a parallel CUDA stream for each pointing
     int p;
@@ -578,7 +578,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 vm->out_nstokes );
         gpuCheckLastError();
     }
-    ( gpuDeviceSynchronize() );
+    //( gpuDeviceSynchronize() );
 }
 
 /**
@@ -618,7 +618,7 @@ void vmBeamformSecond( vcsbeam_context *vm )
 
         vm->chunk_to_load++;
     }
-    ( gpuDeviceSynchronize() );
+    // ( gpuDeviceSynchronize() );
 
     // Unlock the buffer for reading
     // TODO: generalise this for arbitrary pipelines

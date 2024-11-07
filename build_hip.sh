@@ -8,14 +8,14 @@ source "${BASH_UTILS_DIR}/build_utils.sh"
 
 # Set the program name and versions, used to create the installation paths.
 PROGRAM_NAME=vcsbeam
-PROGRAM_VERSION=devel
+PROGRAM_VERSION=cristian-dev
 # the following function sets up the installation path according to the
 # cluster the script is running on and the first argument given. The argument
 # can be:
 # - "group": install the software in the group wide directory
 # - "user": install the software only for the current user
 # - "test": install the software in the current working directory
-process_build_script_input group
+process_build_script_input user
 
 # load all the modules required for the program to compile and run.
 # the following command also adds those module names in the modulefile
