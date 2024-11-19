@@ -101,7 +101,6 @@ void vmCalcB(
         configs[config_idx] = NULL;
 
     double * tempJones;
-    tempJones = malloc(8*sizeof(double));
 
     // Normalise to zenith
     int zenith_norm = 1;
@@ -151,12 +150,14 @@ void vmCalcB(
             {
                 // Use the 'dead' configuration temporarily
                 config_idx = DEAD_CONFIG;
+                tempJones = malloc(8*sizeof(double));
                 errInt = fee_calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
                 configs[config_idx]=(gpuDoubleComplex *)(tempJones);
             }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
+                tempJones = malloc(8*sizeof(double));
                 errInt = fee_calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
                 configs[config_idx]=(gpuDoubleComplex *)(tempJones);
 
@@ -187,7 +188,8 @@ void vmCalcB(
             cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, ant, 0, nant, npol)]) );
         }
     }
-    free(tempJones);
+    for (config_idx = 0; config_idx < NCONFIGS; config_idx++)
+        free(configs[config_idx]);
 }
 
 /**
