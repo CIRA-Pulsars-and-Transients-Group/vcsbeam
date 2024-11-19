@@ -11,7 +11,7 @@
    #include <cufft.h>
    #include <cuComplex.h>   
 #else
-   #include <hipfft.h>
+   #include <hipfft/hipfft.h>
 #endif
 
 #endif
