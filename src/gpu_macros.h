@@ -63,7 +63,7 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuMemGetInfo(...) GPU_CHECK_ERROR(cudaMemGetInfo(__VA_ARGS__))
 #define gpuMallocHost(...) GPU_CHECK_ERROR(cudaMallocHost(__VA_ARGS__))
 #define gpuGetDeviceProperties(...) cudaGetDeviceProperties(__VA_ARGS__)
-#define gpuDeviceProp cudaDeviceProp
+#define gpuDeviceProp_t cudaDeviceProp_t
 #define gpuPeekAtLastError cudaPeekAtLastError
 
 // Complex number operations:
@@ -107,7 +107,7 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuMemGetInfo(...) GPU_CHECK_ERROR(hipMemGetInfo(__VA_ARGS__))
 #define gpuMallocHost(...) GPU_CHECK_ERROR(hipHostMalloc(__VA_ARGS__, 0)) // TODO : double check this may be temporary only
 #define gpuGetDeviceProperties(...) GPU_CHECK_ERROR( hipGetDeviceProperties(__VA_ARGS__) )
-#define gpuDeviceProp hipDeviceProp_t
+#define gpuDeviceProp_t hipDeviceProp_t
 #define gpuPeekAtLastError hipPeekAtLastError
 // Complex number operations:
 #define gpuCreal hipCreal
