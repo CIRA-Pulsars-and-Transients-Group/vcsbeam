@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <cuComplex.h>
 
 #include <mwalib.h>
 #include <vdifio.h>
