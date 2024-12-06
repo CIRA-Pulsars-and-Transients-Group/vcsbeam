@@ -284,8 +284,7 @@ int main(int argc, char **argv)
 
             // Run the iPFB kernel
             cu_invert_pfb( data_buffer_fine, timestep_idx, vm->npointing,
-                    nsamples, nchans, npols, vm->vf->sizeof_buffer,
-                    &gi, data_buffer_vdif );
+                    nsamples, nchans, npols, &gi, data_buffer_vdif );
 
             logger_stop_stopwatch( vm->log, "ipfb" );
         }

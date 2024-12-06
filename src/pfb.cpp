@@ -910,6 +910,15 @@ __global__ void ipfb_kernel(
 /**
  * Invert the PFB by applying a resynthesis filter, using GPU acceleration.
  *
+ * @param[in]   data_buffer_fine The fine-channelised voltages
+ * @param       file_no An index corresponding to the second of the data
+ * @param       npointing The number of pointings
+ * @param       nsamples The number of time samples per second of input data
+ * @param       nchan The number of fine channels
+ * @param       npol The number of instrumental polarisations
+ * @param       g The ipfb filter struct
+ * @param[out]  data_buffer_vdif The reconstructed coarse-channelised voltages
+ *
  * This function expects `data_buffer_fine` to be a 1D array of complex
  * voltages with indices following the ordering:
  *
@@ -939,7 +948,6 @@ __global__ void ipfb_kernel(
  */
 void cu_invert_pfb( gpuDoubleComplex *data_buffer_fine, int file_no,
                         int npointing, int nsamples, int nchan, int npol,
-                        int sizeof_buffer,
                         struct gpu_ipfb_arrays *g, float *data_buffer_vdif )
 {
     // Setup input values:
