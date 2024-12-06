@@ -16,6 +16,8 @@
 
 #include "vcsbeam.h"
 
+#define NTHREADS_BEAMFORMING_KERNEL 512
+
 /* Wrapper function for GPU/CUDA error handling.
  * 
  * @todo Remove this function and replace all calls to it with calls to CUDA
@@ -257,78 +259,94 @@ __global__ void vmBeamform_kernel(int nfine_chan,
 
     const unsigned int warp_id {threadIdx.x / warpSize};
     const unsigned int lane_id {threadIdx.x % warpSize};
+    // current warp id with respect to the entire grid.
     const unsigned int glb_warp_id {blockIdx.x * (blockDim.x / warpSize) + warp_id};
-    __shared__ gpuDoubleComplex workspace[512 * 5];
-    
-    if(glb_warp_id >= n_samples * nfine_chan) return;
-    
+    const unsigned int total_warps {gridDim.x * (blockDim.x / warpSize)};
+    /**
+     * the total number of warps created might not cover the total number of beams to be computed.
+     * Hence, the code "moves" the grid over the entire input until all of it is "covered".
+     * Alternatively, the overall input is tiled, the tile size is the number of warps available,
+     * and this is the number of tiles necessary to cover the entire input.
+     */
+    const unsigned int n_loops {(n_samples * nfine_chan + total_warps - 1) / total_warps};
 
-    // Translate GPU block/thread numbers into meaningful names
-    int c    = glb_warp_id / n_samples;
-    int nc   = nfine_chan;  /* The (n)umber of (c)hannels (=128) */
-    int s    = glb_warp_id % n_samples; /* The (s)ample number */
-    int ns   = n_samples;  /* The (n)umber of (s)amples (in a chunk)*/
+    __shared__ gpuDoubleComplex workspace[NTHREADS_BEAMFORMING_KERNEL * 5];
+    // For each tile..
+    for(unsigned int l {0}; l < n_loops; l++){
+        // compute the corresponding beam item id for the current warp.
+        unsigned int current_beam = glb_warp_id + total_warps * l;
+        // If the id is within bounds.. compute the beam
+        if(current_beam < n_samples * nfine_chan){
+            // Translate GPU block/thread numbers into meaningful names
+            int c    = current_beam / n_samples;
+            int nc   = nfine_chan;  /* The (n)umber of (c)hannels (=128) */
+            int s    = current_beam % n_samples; /* The (s)ample number */
+            int ns   = n_samples;  /* The (n)umber of (s)amples (in a chunk)*/
 
-    gpuDoubleComplex ex  = make_gpuDoubleComplex( 0.0, 0.0 );
-    gpuDoubleComplex ey  = make_gpuDoubleComplex( 0.0, 0.0 );
-    gpuDoubleComplex Nxx = make_gpuDoubleComplex( 0.0, 0.0 );
-    gpuDoubleComplex Nxy = make_gpuDoubleComplex( 0.0, 0.0 );
-    gpuDoubleComplex Nyy = make_gpuDoubleComplex( 0.0, 0.0 );
-    // (Nyx is not needed as it's degenerate with Nxy)
+            gpuDoubleComplex ex  = make_gpuDoubleComplex( 0.0, 0.0 );
+            gpuDoubleComplex ey  = make_gpuDoubleComplex( 0.0, 0.0 );
+            gpuDoubleComplex Nxx = make_gpuDoubleComplex( 0.0, 0.0 );
+            gpuDoubleComplex Nxy = make_gpuDoubleComplex( 0.0, 0.0 );
+            gpuDoubleComplex Nyy = make_gpuDoubleComplex( 0.0, 0.0 );
+            // (Nyx is not needed as it's degenerate with Nxy)
 
+            // Just like warps tile beams, threads in a warp tile the antennas.
+            // Each thread computes a partial sum of its corresponding antennas.
+            for(unsigned int ant {lane_id}; ant < nant; ant += warpSize){
+                // Calculate beamform products for each antenna, and then add them together
+                // Calculate the coherent beam (B = J*phi*D)
+                gpuDoubleComplex ex_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+                gpuDoubleComplex ey_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+                ex = gpuCadd(ex, ex_tmp);
+                ey = gpuCadd(ey, ey_tmp);
+                Nxx = gpuCadd(Nxx, gpuCmul( ex_tmp, gpuConj(ex_tmp)));
+                Nxy = gpuCadd(Nxy, gpuCmul( ex_tmp, gpuConj(ey_tmp)));
+                Nyy = gpuCadd(Nyy, gpuCmul( ey_tmp, gpuConj(ey_tmp)));
+            }
+            // intermediate results from thread in a warp are stored in shared memory.
+            workspace[threadIdx.x * 5 + 0] = ex;
+            workspace[threadIdx.x * 5 + 1] = ey;
+            workspace[threadIdx.x * 5 + 2] = Nxx;
+            workspace[threadIdx.x * 5 + 3] = Nxy;
+            workspace[threadIdx.x * 5 + 4] = Nyy;
 
+            // we perform a warp parallel reduction over the partial sums computed by threads in the warp.
+            for(unsigned int i = warpSize/2; i >= 1; i /= 2){
+                if(lane_id < i){
+                    workspace[threadIdx.x * 5] = gpuCadd(workspace[threadIdx.x * 5], workspace[(threadIdx.x + i) * 5]);
+                    workspace[threadIdx.x * 5 + 1] = gpuCadd(workspace[threadIdx.x * 5 + 1], workspace[(threadIdx.x + i) * 5 + 1]);
+                    workspace[threadIdx.x * 5 + 2] = gpuCadd(workspace[threadIdx.x * 5 + 2], workspace[(threadIdx.x + i) * 5 + 2]);
+                    workspace[threadIdx.x * 5 + 3] = gpuCadd(workspace[threadIdx.x * 5 + 3], workspace[(threadIdx.x + i) * 5 + 3]);
+                    workspace[threadIdx.x * 5 + 4] = gpuCadd(workspace[threadIdx.x * 5 + 4], workspace[(threadIdx.x + i) * 5 + 4]);
+                }
+                #ifdef __NVCC__
+                __syncwarp();
+                #endif
+            }
+            // Thread in lane zero has final result for the warp (beam).
+            // Form the stokes parameters for the coherent beam
+            // Only doing it for ant 0 so that it only prints once
+            if ( lane_id == 0 ) {
+                float bnXX = DETECT(workspace[threadIdx.x * 5]) - gpuCreal(workspace[threadIdx.x * 5 + 2]);
+                float bnYY = DETECT(workspace[threadIdx.x * 5 + 1]) - gpuCreal(workspace[threadIdx.x * 5 + 4]);
+                gpuDoubleComplex bnXY = gpuCsub( gpuCmul( workspace[threadIdx.x * 5], gpuConj( workspace[threadIdx.x * 5 + 1] ) ),
+                                            workspace[threadIdx.x * 5 + 3] );
 
-    for(unsigned int ant {lane_id}; ant < nant; ant += warpSize){
-        // Calculate beamform products for each antenna, and then add them together
-        // Calculate the coherent beam (B = J*phi*D)
-        gpuDoubleComplex ex_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-        gpuDoubleComplex ey_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-        ex = gpuCadd(ex, ex_tmp);
-        ey = gpuCadd(ey, ey_tmp);
-        Nxx = gpuCadd(Nxx, gpuCmul( ex_tmp, gpuConj(ex_tmp)));
-        Nxy = gpuCadd(Nxy, gpuCmul( ex_tmp, gpuConj(ey_tmp)));
-        Nyy = gpuCadd(Nyy, gpuCmul( ey_tmp, gpuConj(ey_tmp)));
-    }
+                // Stokes I, Q, U, V:
+                S[C_IDX(p,s+soffset,0,c,ns*nchunk,nstokes,nc)] = invw*(bnXX + bnYY);
+                if ( nstokes == 4 )
+                {
+                    S[C_IDX(p,s+soffset,1,c,ns*nchunk,nstokes,nc)] = invw*(bnXX - bnYY);
+                    S[C_IDX(p,s+soffset,2,c,ns*nchunk,nstokes,nc)] =  2.0*invw*gpuCreal( bnXY );
+                    S[C_IDX(p,s+soffset,3,c,ns*nchunk,nstokes,nc)] = -2.0*invw*gpuCimag( bnXY );
+                }
 
-    workspace[threadIdx.x * 5 + 0] = ex;
-    workspace[threadIdx.x * 5 + 1] = ey;
-    workspace[threadIdx.x * 5 + 2] = Nxx;
-    workspace[threadIdx.x * 5 + 3] = Nxy;
-    workspace[threadIdx.x * 5 + 4] = Nyy;
-
-    
-    for(unsigned int i = warpSize/2; i >= 1; i /= 2){
-        if(lane_id < i){
-            workspace[threadIdx.x * 5] = gpuCadd(workspace[threadIdx.x * 5], workspace[(threadIdx.x + i) * 5]);
-            workspace[threadIdx.x * 5 + 1] = gpuCadd(workspace[threadIdx.x * 5 + 1], workspace[(threadIdx.x + i) * 5 + 1]);
-            workspace[threadIdx.x * 5 + 2] = gpuCadd(workspace[threadIdx.x * 5 + 2], workspace[(threadIdx.x + i) * 5 + 2]);
-            workspace[threadIdx.x * 5 + 3] = gpuCadd(workspace[threadIdx.x * 5 + 3], workspace[(threadIdx.x + i) * 5 + 3]);
-            workspace[threadIdx.x * 5 + 4] = gpuCadd(workspace[threadIdx.x * 5 + 4], workspace[(threadIdx.x + i) * 5 + 4]);
+                // The beamformed products
+                e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = workspace[threadIdx.x * 5 ];
+                e[B_IDX(p,s+soffset,c,1,ns*nchunk,nc,npol)] = workspace[threadIdx.x * 5 + 1];
+            }
         }
-        #ifdef __NVCC__
-        __syncwarp();
-        #endif
-    }
-    // Form the stokes parameters for the coherent beam
-    // Only doing it for ant 0 so that it only prints once
-    if ( lane_id == 0 ) {
-        float bnXX = DETECT(workspace[threadIdx.x * 5]) - gpuCreal(workspace[threadIdx.x * 5 + 2]);
-        float bnYY = DETECT(workspace[threadIdx.x * 5 + 1]) - gpuCreal(workspace[threadIdx.x * 5 + 4]);
-        gpuDoubleComplex bnXY = gpuCsub( gpuCmul( workspace[threadIdx.x * 5], gpuConj( workspace[threadIdx.x * 5 + 1] ) ),
-                                    workspace[threadIdx.x * 5 + 3] );
-
-        // Stokes I, Q, U, V:
-        S[C_IDX(p,s+soffset,0,c,ns*nchunk,nstokes,nc)] = invw*(bnXX + bnYY);
-        if ( nstokes == 4 )
-        {
-            S[C_IDX(p,s+soffset,1,c,ns*nchunk,nstokes,nc)] = invw*(bnXX - bnYY);
-            S[C_IDX(p,s+soffset,2,c,ns*nchunk,nstokes,nc)] =  2.0*invw*gpuCreal( bnXY );
-            S[C_IDX(p,s+soffset,3,c,ns*nchunk,nstokes,nc)] = -2.0*invw*gpuCimag( bnXY );
-        }
-
-        // The beamformed products
-        e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = workspace[threadIdx.x * 5 ];
-        e[B_IDX(p,s+soffset,c,1,ns*nchunk,nc,npol)] = workspace[threadIdx.x * 5 + 1];
+        __syncthreads();
     }
 }
 
@@ -503,16 +521,22 @@ void vmApplyJChunk( vcsbeam_context *vm )
  */
 void vmBeamformChunk( vcsbeam_context *vm )
 {
-    /*
-     * Cristian's implementation. Each warp (instead of an entire block) takes care of computing the
-     beam (work item) for a frequency channel and time sample.
-    */
-    size_t total_work_items = vm->nfine_chan * (vm->fine_sample_rate / vm->chunks_per_second);
-    const int warpSize = 64;
-    const int nthreads = 512;
-    const int warps_per_block = nthreads / warpSize;
-    const int n_blocks = (total_work_items + warps_per_block - 1) / warps_per_block;
 
+    /**
+     * In this implementation each beam computation, one for each frequency channel 
+     * and time sample, is assigned to a warp (32/64 consecutive threads working in
+     * lockstep). A warp is assigned one or more beams to compute depending on how
+     * many thread blocks (hence warps) are created. This number is now unrelated
+     * to the problem at hand and depends on the hardware specifics for better
+     * performance. We create "just enough" blocks to avoid too many context
+     * switches.
+     */
+    struct gpuDeviceProp_t props;
+    int gpu_id = -1;
+    gpuGetDevice(&gpu_id);
+    gpuGetDeviceProperties(&props, gpu_id);
+    unsigned int n_blocks = props.multiProcessorCount * 2;
+    
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
 
@@ -526,7 +550,7 @@ void vmBeamformChunk( vcsbeam_context *vm )
         fprintf(stderr, "I think the coarse channel numbers is: %d\n", vm->coarse_chan_idx);
 #endif
         // Call the beamformer kernel
-        vmBeamform_kernel<<<n_blocks, nthreads, 0, vm->streams[p]>>>(
+        vmBeamform_kernel<<<n_blocks, NTHREADS_BEAMFORMING_KERNEL, 0, vm->streams[p]>>>(
                 vm->nfine_chan, 
                 (vm->fine_sample_rate / vm->chunks_per_second),
                 vm->obs_metadata->num_ants,
