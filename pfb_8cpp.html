@@ -144,9 +144,9 @@ Functions</h2></td></tr>
 <tr class="memitem:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cpp.html#aa6eb2332a6371d8a576e6422d7bc9d79">ipfb_kernel</a> (float *in_real, float *in_imag, float *ft_real, float *ft_imag, int ntaps, int npol, float *out)</td></tr>
 <tr class="memdesc:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel implementing the synthesis PFB.  <a href="pfb_8cpp.html#aa6eb2332a6371d8a576e6422d7bc9d79">More...</a><br /></td></tr>
 <tr class="separator:aa6eb2332a6371d8a576e6422d7bc9d79"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af93d41ccc84ce6a6b1ca7232781cc252"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cpp.html#af93d41ccc84ce6a6b1ca7232781cc252">cu_invert_pfb</a> (gpuDoubleComplex *data_buffer_fine, int file_no, int npointing, int nsamples, int nchan, int npol, int sizeof_buffer, struct gpu_ipfb_arrays *g, float *data_buffer_vdif)</td></tr>
-<tr class="memdesc:af93d41ccc84ce6a6b1ca7232781cc252"><td class="mdescLeft">&#160;</td><td class="mdescRight">Invert the PFB by applying a resynthesis filter, using GPU acceleration.  <a href="pfb_8cpp.html#af93d41ccc84ce6a6b1ca7232781cc252">More...</a><br /></td></tr>
-<tr class="separator:af93d41ccc84ce6a6b1ca7232781cc252"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adfc4c98daf46138148d054a34bff4a3b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cpp.html#adfc4c98daf46138148d054a34bff4a3b">cu_invert_pfb</a> (gpuDoubleComplex *data_buffer_fine, int file_no, int npointing, int nsamples, int nchan, int npol, struct gpu_ipfb_arrays *g, float *data_buffer_vdif)</td></tr>
+<tr class="memdesc:adfc4c98daf46138148d054a34bff4a3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Invert the PFB by applying a resynthesis filter, using GPU acceleration.  <a href="pfb_8cpp.html#adfc4c98daf46138148d054a34bff4a3b">More...</a><br /></td></tr>
+<tr class="separator:adfc4c98daf46138148d054a34bff4a3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45995dfe13bebd70b6d7806078fa6211"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="pfb_8cpp.html#a45995dfe13bebd70b6d7806078fa6211">cu_load_ipfb_filter</a> (pfb_filter *filter, struct gpu_ipfb_arrays *g)</td></tr>
 <tr class="memdesc:a45995dfe13bebd70b6d7806078fa6211"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the inverse PFB filter coefficients to the GPU.  <a href="pfb_8cpp.html#a45995dfe13bebd70b6d7806078fa6211">More...</a><br /></td></tr>
 <tr class="separator:a45995dfe13bebd70b6d7806078fa6211"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -158,8 +158,8 @@ Functions</h2></td></tr>
 <tr class="separator:ac08e04314a805c456827f9b39c930180"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="af93d41ccc84ce6a6b1ca7232781cc252"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af93d41ccc84ce6a6b1ca7232781cc252">&#9670;&nbsp;</a></span>cu_invert_pfb()</h2>
+<a id="adfc4c98daf46138148d054a34bff4a3b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adfc4c98daf46138148d054a34bff4a3b">&#9670;&nbsp;</a></span>cu_invert_pfb()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -203,12 +203,6 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>sizeof_buffer</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype">struct gpu_ipfb_arrays *&#160;</td>
           <td class="paramname"><em>g</em>, </td>
         </tr>
@@ -227,6 +221,19 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Invert the PFB by applying a resynthesis filter, using GPU acceleration. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">data_buffer_fine</td><td>The fine-channelised voltages </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">file_no</td><td>An index corresponding to the second of the data </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">npointing</td><td>The number of pointings </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">nsamples</td><td>The number of time samples per second of input data </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">nchan</td><td>The number of fine channels </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">npol</td><td>The number of instrumental polarisations </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">g</td><td>The ipfb filter struct </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">data_buffer_vdif</td><td>The reconstructed coarse-channelised voltages</td></tr>
+  </table>
+  </dd>
+</dl>
 <p>This function expects <code>data_buffer_fine</code> to be a 1D array of complex voltages with indices following the ordering:</p>
 <div class="fragment"><div class="line">pointing, samp, chan, pol</div>
 </div><!-- fragment --><p>Although <code>data_buffer_fine</code> potentially contains 2 seconds' worth of data, this function only inverts 1 second. The appropriate second is worked out using <code>file_no</code>: if it is even, the first half of <code>data_buffer_fine</code> is used; if odd, the second half.</p>
