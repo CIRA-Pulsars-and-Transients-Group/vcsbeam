@@ -257,22 +257,22 @@ __global__ void vmBeamform_kernel(int nfine_chan,
                                  int nstokes )
 {
 
-    const unsigned int warp_id {threadIdx.x / warpSize};
-    const unsigned int lane_id {threadIdx.x % warpSize};
+    const unsigned int warp_id = threadIdx.x / warpSize;
+    const unsigned int lane_id = threadIdx.x % warpSize;
     // current warp id with respect to the entire grid.
-    const unsigned int glb_warp_id {blockIdx.x * (blockDim.x / warpSize) + warp_id};
-    const unsigned int total_warps {gridDim.x * (blockDim.x / warpSize)};
+    const unsigned int glb_warp_id = blockIdx.x * (blockDim.x / warpSize) + warp_id;
+    const unsigned int total_warps = gridDim.x * (blockDim.x / warpSize);
     /**
      * the total number of warps created might not cover the total number of beams to be computed.
      * Hence, the code "moves" the grid over the entire input until all of it is "covered".
      * Alternatively, the overall input is tiled, the tile size is the number of warps available,
      * and this is the number of tiles necessary to cover the entire input.
      */
-    const unsigned int n_loops {(n_samples * nfine_chan + total_warps - 1) / total_warps};
+    const unsigned int n_loops = (n_samples * nfine_chan + total_warps - 1) / total_warps;
 
     __shared__ gpuDoubleComplex workspace[NTHREADS_BEAMFORMING_KERNEL * 5];
     // For each tile..
-    for(unsigned int l {0}; l < n_loops; l++){
+    for(unsigned int l = 0; l < n_loops; l++){
         // compute the corresponding beam item id for the current warp.
         unsigned int current_beam = glb_warp_id + total_warps * l;
         // If the id is within bounds.. compute the beam
@@ -292,7 +292,7 @@ __global__ void vmBeamform_kernel(int nfine_chan,
 
             // Just like warps tile beams, threads in a warp tile the antennas.
             // Each thread computes a partial sum of its corresponding antennas.
-            for(unsigned int ant {lane_id}; ant < nant; ant += warpSize){
+            for(unsigned int ant = lane_id; ant < nant; ant += warpSize){
                 // Calculate beamform products for each antenna, and then add them together
                 // Calculate the coherent beam (B = J*phi*D)
                 gpuDoubleComplex ex_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
