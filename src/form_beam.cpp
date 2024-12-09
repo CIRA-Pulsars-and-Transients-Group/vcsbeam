@@ -270,7 +270,9 @@ __global__ void vmBeamform_kernel(int nfine_chan,
      */
     const unsigned int n_loops = (n_samples * nfine_chan + total_warps - 1) / total_warps;
 
+    // Each thread in a block has to hold 5 values in shared memory: ex, ey, Nxx, Nxy, Nyy
     __shared__ gpuDoubleComplex workspace[NTHREADS_BEAMFORMING_KERNEL * 5];
+    const unsigned int thread_sm_idx = threadIdx.x * 5;
     // For each tile..
     for(unsigned int l = 0; l < n_loops; l++){
         // compute the corresponding beam item id for the current warp.
@@ -304,20 +306,20 @@ __global__ void vmBeamform_kernel(int nfine_chan,
                 Nyy = gpuCadd(Nyy, gpuCmul( ey_tmp, gpuConj(ey_tmp)));
             }
             // intermediate results from thread in a warp are stored in shared memory.
-            workspace[threadIdx.x * 5 + 0] = ex;
-            workspace[threadIdx.x * 5 + 1] = ey;
-            workspace[threadIdx.x * 5 + 2] = Nxx;
-            workspace[threadIdx.x * 5 + 3] = Nxy;
-            workspace[threadIdx.x * 5 + 4] = Nyy;
+            workspace[thread_sm_idx + 0] = ex;
+            workspace[thread_sm_idx + 1] = ey;
+            workspace[thread_sm_idx + 2] = Nxx;
+            workspace[thread_sm_idx + 3] = Nxy;
+            workspace[thread_sm_idx + 4] = Nyy;
 
             // we perform a warp parallel reduction over the partial sums computed by threads in the warp.
             for(unsigned int i = warpSize/2; i >= 1; i /= 2){
                 if(lane_id < i){
-                    workspace[threadIdx.x * 5] = gpuCadd(workspace[threadIdx.x * 5], workspace[(threadIdx.x + i) * 5]);
-                    workspace[threadIdx.x * 5 + 1] = gpuCadd(workspace[threadIdx.x * 5 + 1], workspace[(threadIdx.x + i) * 5 + 1]);
-                    workspace[threadIdx.x * 5 + 2] = gpuCadd(workspace[threadIdx.x * 5 + 2], workspace[(threadIdx.x + i) * 5 + 2]);
-                    workspace[threadIdx.x * 5 + 3] = gpuCadd(workspace[threadIdx.x * 5 + 3], workspace[(threadIdx.x + i) * 5 + 3]);
-                    workspace[threadIdx.x * 5 + 4] = gpuCadd(workspace[threadIdx.x * 5 + 4], workspace[(threadIdx.x + i) * 5 + 4]);
+                    workspace[thread_sm_idx] = gpuCadd(workspace[thread_sm_idx], workspace[(threadIdx.x + i) * 5]);
+                    workspace[thread_sm_idx + 1] = gpuCadd(workspace[thread_sm_idx + 1], workspace[(threadIdx.x + i) * 5 + 1]);
+                    workspace[thread_sm_idx + 2] = gpuCadd(workspace[thread_sm_idx + 2], workspace[(threadIdx.x + i) * 5 + 2]);
+                    workspace[thread_sm_idx + 3] = gpuCadd(workspace[thread_sm_idx + 3], workspace[(threadIdx.x + i) * 5 + 3]);
+                    workspace[thread_sm_idx + 4] = gpuCadd(workspace[thread_sm_idx + 4], workspace[(threadIdx.x + i) * 5 + 4]);
                 }
                 #ifdef __NVCC__
                 __syncwarp();
@@ -327,10 +329,10 @@ __global__ void vmBeamform_kernel(int nfine_chan,
             // Form the stokes parameters for the coherent beam
             // Only doing it for ant 0 so that it only prints once
             if ( lane_id == 0 ) {
-                float bnXX = DETECT(workspace[threadIdx.x * 5]) - gpuCreal(workspace[threadIdx.x * 5 + 2]);
-                float bnYY = DETECT(workspace[threadIdx.x * 5 + 1]) - gpuCreal(workspace[threadIdx.x * 5 + 4]);
-                gpuDoubleComplex bnXY = gpuCsub( gpuCmul( workspace[threadIdx.x * 5], gpuConj( workspace[threadIdx.x * 5 + 1] ) ),
-                                            workspace[threadIdx.x * 5 + 3] );
+                float bnXX = DETECT(workspace[thread_sm_idx]) - gpuCreal(workspace[thread_sm_idx + 2]);
+                float bnYY = DETECT(workspace[thread_sm_idx + 1]) - gpuCreal(workspace[thread_sm_idx + 4]);
+                gpuDoubleComplex bnXY = gpuCsub( gpuCmul( workspace[thread_sm_idx], gpuConj( workspace[thread_sm_idx + 1] ) ),
+                                            workspace[thread_sm_idx + 3] );
 
                 // Stokes I, Q, U, V:
                 S[C_IDX(p,s+soffset,0,c,ns*nchunk,nstokes,nc)] = invw*(bnXX + bnYY);
@@ -342,8 +344,8 @@ __global__ void vmBeamform_kernel(int nfine_chan,
                 }
 
                 // The beamformed products
-                e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = workspace[threadIdx.x * 5 ];
-                e[B_IDX(p,s+soffset,c,1,ns*nchunk,nc,npol)] = workspace[threadIdx.x * 5 + 1];
+                e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = workspace[thread_sm_idx ];
+                e[B_IDX(p,s+soffset,c,1,ns*nchunk,nc,npol)] = workspace[thread_sm_idx + 1];
             }
         }
         __syncthreads();
