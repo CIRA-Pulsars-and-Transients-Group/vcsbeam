@@ -322,6 +322,15 @@ __global__ void vmBeamform_kernel(int nfine_chan,
                     workspace[thread_sm_idx + 4] = gpuCadd(workspace[thread_sm_idx + 4], workspace[(threadIdx.x + i) * 5 + 4]);
                 }
                 #ifdef __NVCC__
+                /* Cristian's note
+                This instruction is only needed for NVIDIA GPUs starting from the Volta architecture, 
+                that introduces the independent thread scheduling option 
+                (https://stackoverflow.com/questions/70987051/independent-thread-scheduling-since-volta).
+                In such architecture, threads within a warp can execute independently from one another and 
+                one of them can "run ahead" of the other ones, possibly creating a race condition.
+                In AMD GPUs, and NVIDIA GPUs previous to Volta, this is not available. All threads in a warp 
+                execute the same instruction in lockstep (or a no-op in thread diverging situation).
+                No thread can run ahead of others in the same warp. */
                 __syncwarp();
                 #endif
             }
