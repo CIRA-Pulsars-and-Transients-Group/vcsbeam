@@ -63,7 +63,7 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #define gpuMemGetInfo(...) GPU_CHECK_ERROR(cudaMemGetInfo(__VA_ARGS__))
 #define gpuMallocHost(...) GPU_CHECK_ERROR(cudaMallocHost(__VA_ARGS__))
 #define gpuGetDeviceProperties(...) cudaGetDeviceProperties(__VA_ARGS__)
-#define gpuDeviceProp_t cudaDeviceProp_t
+#define gpuDeviceProp_t cudaDeviceProp
 #define gpuPeekAtLastError cudaPeekAtLastError
 
 // Complex number operations:
