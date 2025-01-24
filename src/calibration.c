@@ -117,6 +117,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     // Make the master mpi thread print out the antenna names of both
     // obs and cal metafits. "Header" printed here, actual numbers
     // printed inside antenna for loop below
+    /*
     if (vm->log)
     {
         if (vm->log->world_rank == 0)
@@ -143,6 +144,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
             logger_message( vm->log, "" );
         }
     }
+    */
 
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
