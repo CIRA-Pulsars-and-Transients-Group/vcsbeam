@@ -28,6 +28,9 @@ vcsbeam_context *vmInit( bool use_mpi )
     // Allocate memory for the VCSBEAM_METADATA struct
     vcsbeam_context *vm = (vcsbeam_context *)malloc( sizeof(vcsbeam_context) );
 
+    gpuSetDevice(0);
+    gpuDeviceSynchronize();
+
     // Initialise MPI
     vm->use_mpi = use_mpi;
     if (use_mpi)
