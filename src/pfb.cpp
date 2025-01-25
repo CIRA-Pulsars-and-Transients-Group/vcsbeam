@@ -900,8 +900,8 @@ __global__ void ipfb_kernel(
     }
 
     // out[] includes both polarisations, at adjacent indices
-    out[2*idx]   = out_real / K;
-    out[2*idx+1] = out_imag / K;
+    out[2*idx]   = -out_real / K;
+    out[2*idx+1] = -out_imag / K;
 
     __syncthreads();
 }
@@ -984,8 +984,11 @@ void cu_invert_pfb( gpuDoubleComplex *data_buffer_fine, int file_no,
                 }
                 else
                 {
-                    g->in_real[i] = gpuCreal( data_buffer_fine[j] );
-                    g->in_imag[i] = gpuCimag( data_buffer_fine[j] );
+                    // Here, the swapping of real <--> imag was made to fix the long-standing
+                    // "VDIF bug". It's unclear why we *have* to do this, but it seems to
+                    // work. There is probably some other swapping that happens secretly elsewhere.
+                    g->in_real[i] = gpuCimag( data_buffer_fine[j] );
+                    g->in_imag[i] = gpuCreal( data_buffer_fine[j] );
                 }
             }
         }
