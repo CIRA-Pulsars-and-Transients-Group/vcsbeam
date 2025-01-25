@@ -525,13 +525,12 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
     gpuDoubleComplex Dread[nvispol];
 
-    uint32_t nant   = vm->cal_metadata->num_ants;
     uint32_t ninput = vm->cal_metadata->num_rf_inputs;
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
 #ifdef DEBUG
     fprintf( stderr, "*** Reading Offringa-style solution, DEBUG ***\n" );
     fprintf( stderr, "Quantities determined via vcsbeam context struct, DEBUG\n" );
-    fprintf( stderr, "nant = vm->cal_metadata->num_ants = %u\n", nant );
+    fprintf( stderr, "nant = vm->cal_metadata->num_ants = %u\n", vm->cal_metadata->num_ants );
     fprintf( stderr, "ninput = vm->cal_metadata->num_rf_inputs = %u\n", ninput );
     fprintf( stderr, "nantpol = vm->cal_metadata->num_ant_pols = %lu (should be 2)\n", nantpol );
     fprintf( stderr, "nvispol = vm->cal_metadata->num_visibility_pols = %lu (should be 4)\n", nvispol );
@@ -604,7 +603,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf(stderr, "Fine channel frequency (Hz)                          = %lf\n"
                         "-- Closest matching frequency in cal metafits (Hz)   = %lf\n"
                         "-- Equivalent index into solutions file, assuming\n"
-                        "   solutions were made by averaging %d channels      = %u\n"
+                        "   solutions were made by averaging %u channels      = %u\n"
                         "   together:\n", 
                         f, cal_fine_chan_freqs_hz[best_cal_ch], cal_fscrunch_factor, Ch);
 #endif
