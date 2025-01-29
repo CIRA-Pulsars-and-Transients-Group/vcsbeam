@@ -25,6 +25,7 @@ if(USE_CUDA)
     set(GPU_FFTLIB cufft)
     message(STATUS "CUDA generation enabled.")
     message(NOTICE "Using the available CUDA 'native' architecture.")
+    include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 elseif(USE_HIP)
     # NOTE: The enable_language(HIP ...) macro is only available from CMake 3.21.
     # For versions < 3.21, comment out the enable_language macro and simply
