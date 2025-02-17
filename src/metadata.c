@@ -28,9 +28,6 @@ vcsbeam_context *vmInit( bool use_mpi )
     // Allocate memory for the VCSBEAM_METADATA struct
     vcsbeam_context *vm = (vcsbeam_context *)malloc( sizeof(vcsbeam_context) );
 
-    gpuSetDevice(0);
-    gpuDeviceSynchronize();
-
     // Initialise MPI
     vm->use_mpi = use_mpi;
     if (use_mpi)
@@ -696,14 +693,14 @@ void vmMallocJVDevice( vcsbeam_context *vm )
 #ifdef DEBUG
     printf("%lu\n", vm->d_Jv_size_bytes);
     size_t mf, ma;
-    cudaMemGetInfo(&mf, &ma); //TODO: This will break, need equiv. definitions
+    gpuMemGetInfo(&mf, &ma);
     printf("free: %zu ... total: %zu\n", mf, ma);
 #endif
 
     gpuMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
 
 #ifdef DEBUG
-    cudaMemGetInfo(&mf, &ma); //TODO: This will break, need equiv. definitions
+    gpuMemGetInfo(&mf, &ma);
     printf("free: %zu ... total: %zu\n", mf, ma);
 #endif
 
@@ -1707,7 +1704,7 @@ void vmParsePointingFile( vcsbeam_context *vm, const char *filename )
     fclose( f );
 
     // Set up CUDA streams (one stream per pointing)
-    vmCreateCudaStreams( vm );
+    vmCreateCudaStreams( vm ); // Note this is not actually CUDA specific anymore
 }
 
 /**
