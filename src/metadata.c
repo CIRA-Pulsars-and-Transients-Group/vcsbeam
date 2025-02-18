@@ -920,6 +920,7 @@ void vmPushChunk( vcsbeam_context *vm )
     gpuMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, gpuMemcpyHostToDevice );
 
     logger_stop_stopwatch( vm->log, "upload" );
+    gpuDeviceSynchronize();
 }
 
 /**

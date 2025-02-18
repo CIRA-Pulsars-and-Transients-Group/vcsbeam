@@ -278,6 +278,10 @@ int main(int argc, char **argv)
             logger_start_stopwatch( vm->log, "ipfb", true );
 
             vmPullE( vm );
+            char fname[256];
+            sprintf(fname, "e_dump_%d.bin", timestep_idx);
+            FILE *fp = fopen(fname, "w");
+            fwrite((char*) vm->e, sizeof(char), vm->e_size_bytes, fp);
 
             // Load the voltage data into the buffer
             prepare_data_buffer_fine( data_buffer_fine, vm, timestep_idx );
@@ -696,6 +700,7 @@ void make_tied_array_beam_parse_cmdline(
 void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
         struct vdifinfo *vf, vdif_header *vhdr, float *data_buffer_vdif )
 {
+    static int step = 0;
     int p;
     for (p = 0; p < vm->npointing; p++)
     {
@@ -724,6 +729,11 @@ void write_step( vcsbeam_context *vm, mpi_psrfits *mpfs,
 
         if (vm->output_coarse_channels)
         {
+            // char fname[256];
+            // sprintf(fname, "vdif_dump_%d.bin", step++);
+            // FILE *fp = fopen(fname, "w");
+            // fwrite((char*) data_buffer_vdif, sizeof(char), vf->sizeof_buffer, fp);
+
             vdif_write_second( &vf[p], vhdr,
                     data_buffer_vdif + p * vf->sizeof_buffer );
         }

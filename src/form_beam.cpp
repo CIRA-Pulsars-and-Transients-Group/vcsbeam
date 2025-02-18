@@ -361,6 +361,139 @@ __global__ void vmBeamform_kernel(int nfine_chan,
     }
 }
 
+__global__ void vmBeamform_kernel_old( gpuDoubleComplex *Jv_Q,
+    gpuDoubleComplex *Jv_P,
+    gpuDoubleComplex *phi,
+    double invw,
+    int p,
+    int soffset,
+    int nchunk,
+    gpuDoubleComplex *e,
+    float *S,
+    int npol,
+    int nstokes )
+{
+// Translate GPU block/thread numbers into meaningful names
+int c    = blockIdx.x;  /* The (c)hannel number */
+int nc   = gridDim.x;   /* The (n)umber of (c)hannels (=128) */
+int s    = blockIdx.y;  /* The (s)ample number */
+int ns   = gridDim.y;   /* The (n)umber of (s)amples (in a chunk)*/
+
+int ant  = threadIdx.x; /* The (ant)enna number */
+int nant = blockDim.x;  /* The (n)_umber of (ant)ennas */
+
+// Organise dynamically allocated shared arrays (see tag 11NSTATION for kernel call)
+extern __shared__ double arrays[];
+// These SHOULD be *aligned* on integer numbers of 4-byte blocks.
+
+// NOTE: Because these are complex-doubles, each takes up 2*sizeof(double), hence the stride of 2 here.
+/* Given that we need to ensure access alignment on the 4-byte boundaries (CUDA requirement), we have
+to make sure that the array access corresponds to an integer number of sizeof(double), which
+means we need to use even indexes to access memory. This ensures for all `nant` that we access
+within the memory boundaries. This StackOverflow post helped us figure this out:
+
+https://stackoverflow.com/questions/70765553/cuda-shared-memory-alignement-in-documentation
+
+(Previously, the indexes were: 1*nant, 3*nant, etc.)
+*/
+gpuDoubleComplex *ex  = (gpuDoubleComplex *)(&arrays[0*nant]);
+gpuDoubleComplex *ey  = (gpuDoubleComplex *)(&arrays[2*nant]);
+gpuDoubleComplex *Nxx = (gpuDoubleComplex *)(&arrays[4*nant]);
+gpuDoubleComplex *Nxy = (gpuDoubleComplex *)(&arrays[6*nant]);
+gpuDoubleComplex *Nyy = (gpuDoubleComplex *)(&arrays[8*nant]);
+// (Nyx is not needed as it's degenerate with Nxy)
+
+// Calculate the beam and the noise floor
+/* Fix from Maceij regarding NaNs in output when running on Athena, 13 April 2018.
+Apparently the different compilers and architectures are treating what were
+unintialised variables very differently */
+ex[ant]  = make_gpuDoubleComplex( 0.0, 0.0 );
+ey[ant]  = make_gpuDoubleComplex( 0.0, 0.0 );
+
+Nxx[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
+Nxy[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
+Nyy[ant] = make_gpuDoubleComplex( 0.0, 0.0 );
+__syncthreads();
+
+// Calculate beamform products for each antenna, and then add them together
+// Calculate the coherent beam (B = J*phi*D)
+ex[ant] = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+ey[ant] = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+
+Nxx[ant] = gpuCmul( ex[ant], gpuConj(ex[ant]) );
+Nxy[ant] = gpuCmul( ex[ant], gpuConj(ey[ant]) );
+Nyy[ant] = gpuCmul( ey[ant], gpuConj(ey[ant]) );
+__syncthreads();
+
+// Detect the coherent beam
+// The safest, slowest option: Just get one thread to do it
+if ( ant == 0 )
+{
+for (int i = 1; i < nant; i++)
+{
+ex[0]  = gpuCadd( ex[0],  ex[i] );
+ey[0]  = gpuCadd( ey[0],  ey[i] );
+Nxx[0] = gpuCadd( Nxx[0], Nxx[i] );
+Nxy[0] = gpuCadd( Nxy[0], Nxy[i] );
+Nyy[0] = gpuCadd( Nyy[0], Nyy[i] );
+}
+}
+__syncthreads();
+
+// Form the stokes parameters for the coherent beam
+// Only doing it for ant 0 so that it only prints once
+if ( ant == 0 )
+{
+float bnXX = DETECT(ex[0]) - gpuCreal(Nxx[0]);
+float bnYY = DETECT(ey[0]) - gpuCreal(Nyy[0]);
+gpuDoubleComplex bnXY = gpuCsub( gpuCmul( ex[0], gpuConj( ey[0] ) ),
+       Nxy[0] );
+
+// Stokes I, Q, U, V:
+S[C_IDX(p,s+soffset,0,c,ns*nchunk,nstokes,nc)] = invw*(bnXX + bnYY);
+if ( nstokes == 4 )
+{
+S[C_IDX(p,s+soffset,1,c,ns*nchunk,nstokes,nc)] = invw*(bnXX - bnYY);
+S[C_IDX(p,s+soffset,2,c,ns*nchunk,nstokes,nc)] =  2.0*invw*gpuCreal( bnXY );
+S[C_IDX(p,s+soffset,3,c,ns*nchunk,nstokes,nc)] = -2.0*invw*gpuCimag( bnXY );
+}
+
+// The beamformed products
+e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = ex[0];
+e[B_IDX(p,s+soffset,c,1,ns*nchunk,nc,npol)] = ey[0];
+}
+__syncthreads();
+
+/** #ifdef DEBUG
+if (c==50 && s == 3 && ant==0)
+{
+printf( "Pre-add:\n" );
+for (int i = 0; i < 1; i++)
+{
+printf( "    "
+"ex[%3d];ey[%3d]=[%5.3lf,%5.3lf];[%5.3lf,%5.3lf]  "
+"ph[%3d]=[%5.3lf,%5.3lf]  "
+"JQ[%3d]=[%5.3lf,%5.3lf]  "
+"JP[%3d]=[%5.3lf,%5.3lf]  "
+"\n",
+i, i,
+gpuCreal( ex[i] ), gpuCimag( ex[i] ),
+gpuCreal( ey[i] ), gpuCimag( ey[i] ),
+i,
+gpuCreal( phi[PHI_IDX(p,i,c,nant,nc)] ), gpuCimag( phi[PHI_IDX(p,i,c,nant,nc)] ),
+i,
+gpuCreal( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ), gpuCimag( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ),
+i,
+gpuCreal( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] ), gpuCimag( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] )
+);
+}
+printf( "Post-add: ex[0]; ey[0] = [%.3lf, %.3lf]; [%.3lf, %.3lf]\n",
+gpuCreal( ex[ant] ), gpuCimag( ex[ant] ),
+gpuCreal( ey[ant] ), gpuCimag( ey[ant] ) );
+}
+#endif **/
+
+}
 
 /**
  * CUDA kernel for normalising Stokes parameters
@@ -499,10 +632,23 @@ void cu_form_incoh_beam(
 /**
  * Computes \f${\bf J}^{-1} {\bf v}\f$.
  */
+#include <iostream>
 void vmApplyJChunk( vcsbeam_context *vm )
 {
     dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
     dim3 stat( vm->obs_metadata->num_ants );
+
+    std::cout << "APPLY CHUNK " << std::endl;
+    static int jcount = 0;
+    char fname[256];
+    sprintf(fname, "j_dump_%d.bin", jcount);
+    FILE *fp = fopen(fname, "w");
+    fwrite((char*) vm->J, sizeof(char), vm->J_size_bytes, fp);
+
+    sprintf(fname, "dj_dump_%d.bin", jcount++);
+    FILE *fp2 = fopen(fname, "w");
+    fwrite((char*) vm->d_J, sizeof(char), vm->d_J_size_bytes, fp2);
+
 
     // J times v
     // Send off a parallel CUDA stream for each pointing
@@ -530,6 +676,51 @@ void vmApplyJChunk( vcsbeam_context *vm )
  *
  * @todo Split the beamforming operations into separate steps/kernels.
  */
+
+ void vmBeamformChunkOld( vcsbeam_context *vm )
+{
+    uintptr_t shared_array_size = 11 * vm->obs_metadata->num_ants * sizeof(double);
+    // (To see how the 11*STATION double arrays are used, go to this code tag: 11NSTATION)
+#ifdef DEBUG
+    fprintf( stderr, "shared_array_size=%d bytes\n", 11 * vm->obs_metadata->num_ants * sizeof(double));
+#endif
+
+    // Define GPU compute frame sizes
+    dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
+    dim3 stat( vm->obs_metadata->num_ants );
+
+    // Get the "chunk" number
+    int chunk = vm->chunk_to_load % vm->chunks_per_second;
+    ( gpuDeviceSynchronize() );
+
+    // Send off a parallel CUDA stream for each pointing
+    int p;
+    for (p = 0; p < vm->npointing; p++ )
+    {
+#ifdef DEBUG
+        fprintf(stderr, "vm->npointing=%d  pointing=%d\n", vm->npointing, p);
+        fprintf(stderr, "chan_samples=(%d,%d,%d) stat=(%d,%d,%d)\n", chan_samples.x, chan_samples.y, chan_samples.z, stat.x, stat.y, stat.z);
+        fprintf(stderr, "I think the coarse channel numbers is: %d\n", vm->coarse_chan_idx);
+#endif
+        // Call the beamformer kernel
+        vmBeamform_kernel_old<<<chan_samples, stat, shared_array_size, vm->streams[p]>>>(
+                vm->d_Jv_Q,
+                vm->d_Jv_P,
+                vm->gdelays.d_phi,
+                1.0/(double)vm->num_not_flagged,
+                p,
+                chunk*vm->fine_sample_rate/vm->chunks_per_second,
+                vm->chunks_per_second,
+                vm->d_e,
+                (float *)vm->d_S,
+                vm->obs_metadata->num_ant_pols,
+                vm->out_nstokes );
+        gpuCheckLastError();
+    }
+    ( gpuDeviceSynchronize() );
+}
+
+#include <iostream>
 void vmBeamformChunk( vcsbeam_context *vm )
 {
 
@@ -548,9 +739,32 @@ void vmBeamformChunk( vcsbeam_context *vm )
     gpuGetDeviceProperties(&props, gpu_id);
     unsigned int n_blocks = props.multiProcessorCount * 2;
     
+    static int dumpid = 0;
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
+    gpuDeviceSynchronize();
+    std::cout << "JV sixe = " << vm->d_Jv_size_bytes << std::endl;
+    gpuDoubleComplex *jVq_host = (gpuDoubleComplex*) malloc(vm->d_Jv_size_bytes);
+    gpuDoubleComplex *jVp_host = (gpuDoubleComplex*) malloc(vm->d_Jv_size_bytes);
+    size_t phisize = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(gpuDoubleComplex);
+    gpuDoubleComplex *phi_host = (gpuDoubleComplex*) malloc(phisize);
+    gpuMemcpy(jVq_host, vm->d_Jv_Q, vm->d_Jv_size_bytes, gpuMemcpyDeviceToHost);
+    gpuMemcpy(jVp_host, vm->d_Jv_P, vm->d_Jv_size_bytes, gpuMemcpyDeviceToHost);
+    gpuMemcpy(phi_host, vm->gdelays.d_phi, phisize, gpuMemcpyDeviceToHost);
 
+    char fname[256];
+    sprintf(fname, "Jvp_dump_%d.bin", dumpid);
+    FILE *fp1 = fopen(fname, "w");
+    fwrite((char*) jVp_host, sizeof(char), vm->d_Jv_size_bytes, fp1);
+    sprintf(fname, "phi_dump_%d.bin", dumpid);
+    FILE *fp3 = fopen(fname, "w");
+    fwrite((char*) phi_host, sizeof(char), phisize, fp3);
+    sprintf(fname, "Jvq_dump_%d.bin", dumpid++);
+    FILE *fp2 = fopen(fname, "w");
+    fwrite((char*) jVq_host, sizeof(char), vm->d_Jv_size_bytes, fp2);
+    
+    free(jVp_host); free(jVq_host); free(phi_host);
+    
     // Send off a parallel CUDA stream for each pointing
     int p;
     for (p = 0; p < vm->npointing; p++ )
@@ -579,6 +793,8 @@ void vmBeamformChunk( vcsbeam_context *vm )
         gpuCheckLastError();
     }
     ( gpuDeviceSynchronize() );
+
+
 }
 
 /**
@@ -632,7 +848,7 @@ void vmBeamformSecond( vcsbeam_context *vm )
 void vmPullE( vcsbeam_context *vm )
 {
     // Copy the results back into host memory
-    gpuMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, gpuMemcpyDeviceToHost );
+    gpuMemcpy( vm->e, vm->d_e, vm->e_size_bytes, gpuMemcpyDeviceToHost );
 }
 
 /**
@@ -640,7 +856,7 @@ void vmPullE( vcsbeam_context *vm )
  */
 void vmPullS( vcsbeam_context *vm )
 {
-    gpuMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, gpuMemcpyDeviceToHost );
+    gpuMemcpy( vm->S, vm->d_S, vm->S_size_bytes, gpuMemcpyDeviceToHost );
 }
 
 /**
