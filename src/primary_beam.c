@@ -60,7 +60,6 @@ const double *sky[] = { Isky, Qsky, Usky, Vsky };
 
 
 
-
 void handle_hyperbeam_error(char file[], int line_num, const char function_name[]) {
     int err_length = hb_last_error_length(); 
     char *err = malloc(err_length * sizeof(char));
@@ -152,13 +151,24 @@ void vmCalcB(
                 config_idx = DEAD_CONFIG;
                 tempJones = malloc(8*sizeof(double));
                 errInt = fee_calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
+                
+                if (isnan(tempJones[0]) || isnan(tempJones[1]) || isnan(tempJones[2]) || isnan(tempJones[3]) || isnan(tempJones[4]) || isnan(tempJones[5]) || isnan(tempJones[6]) || isnan(tempJones[7]) ){
+                    printf("NANS in Beam\n");
+                    memset( tempJones, 0, JONES_SIZE_BYTES );
+                }
+                
                 configs[config_idx]=(gpuDoubleComplex *)(tempJones);
             }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
+               
                 // Get the calculated FEE Beam (using Hyperbeam)
                 tempJones = malloc(8*sizeof(double));
                 errInt = fee_calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
+                if (isnan(tempJones[0]) || isnan(tempJones[1]) || isnan(tempJones[2]) || isnan(tempJones[3]) || isnan(tempJones[4]) || isnan(tempJones[5]) || isnan(tempJones[6]) || isnan(tempJones[7]) ){
+                    printf("NANS in Beam\n");
+                    memset( tempJones, 0, JONES_SIZE_BYTES );
+                }
                 configs[config_idx]=(gpuDoubleComplex *)(tempJones);
 
                 // Apply the parallactic angle correction
@@ -183,8 +193,16 @@ void vmCalcB(
                 handle_hyperbeam_error("Primary Beam",183, "fee_calc_jones");   
                 exit(EXIT_FAILURE);
             }
-
+            if (isnan(tempJones[0]) || isnan(tempJones[1]) || isnan(tempJones[2]) || isnan(tempJones[3]) || isnan(tempJones[4]) || isnan(tempJones[5]) || isnan(tempJones[6]) || isnan(tempJones[7]) ){
+                printf("NANS in Beam\n");
+                memset( tempJones, 0, JONES_SIZE_BYTES );
+            }
             // Copy the answer into the B matrix (for this antenna)
+            if (isnan(configs[config_idx][0].x) || isnan(configs[config_idx][1].x) || isnan(configs[config_idx][2].x) || isnan(configs[config_idx][3].x) || isnan(configs[config_idx][0].y) || isnan(configs[config_idx][1].y) || isnan(configs[config_idx][2].y) || isnan(configs[config_idx][3].y) ) {
+                printf("NANs after corrections in configs.\n");
+                memset( configs[config_idx], 0, JONES_SIZE_BYTES );
+            }
+                
             cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, ant, 0, nant, npol)]) );
         }
     }

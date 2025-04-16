@@ -112,14 +112,14 @@ void vmCalcJ( vcsbeam_context *vm )
     gpuDoubleComplex Ji[npol*npol];              // Gain in Desired Direction
     static int dump = 0;
     double Fnorm;
-    char fname[256];
-    sprintf(fname, "vm_d_dump_%d.bin", dump);
-    FILE *fp = fopen(fname, "w");
-    fwrite((char*) vm->D, sizeof(char),vm->D_size_bytes, fp);
+    // char fname[256];
+    // sprintf(fname, "vm_d_dump_%d.bin", dump);
+    // FILE *fp = fopen(fname, "w");
+    // fwrite((char*) vm->D, sizeof(char),vm->D_size_bytes, fp);
 
-    sprintf(fname, "vm_pb_dump_%d.bin", dump++);
-    FILE *fp2 = fopen(fname, "w");
-    fwrite((char*) vm->pb.B, sizeof(char), vm->pb.npointings * vm->pb.nant * vm->pb.npol * sizeof(gpuDoubleComplex), fp2);
+    // sprintf(fname, "vm_pb_dump_%d.bin", dump++);
+    // FILE *fp2 = fopen(fname, "w");
+    // fwrite((char*) vm->pb.B, sizeof(char), vm->pb.npointings * vm->pb.nant * vm->pb.npol * sizeof(gpuDoubleComplex), fp2);
 
     int d_idx, j_idx, pb_idx;
 

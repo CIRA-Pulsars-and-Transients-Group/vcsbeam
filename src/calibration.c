@@ -639,7 +639,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
             // Assume that if there are any nans in the Jones matrix, then
             // EVERY element in the Jones matrix is a nan. Therefore, only need
             // to check one element.
-            if (isnan(Dread[0].x))
+            if (isnan(Dread[0].x) || isnan(Dread[1].x) || isnan(Dread[2].x) || isnan(Dread[3].x) || isnan(Dread[0].y) || isnan(Dread[1].y) || isnan(Dread[2].y) || isnan(Dread[3].y) )
                 memset( Dread, 0, JONES_SIZE_BYTES );
 
             // Get the destination index

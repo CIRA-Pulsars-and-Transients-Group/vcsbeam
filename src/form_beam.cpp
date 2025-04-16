@@ -298,7 +298,10 @@ __global__ void vmBeamform_kernel(int nfine_chan,
                 // Calculate beamform products for each antenna, and then add them together
                 // Calculate the coherent beam (B = J*phi*D)
                 gpuDoubleComplex ex_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+                if(isnan(ex_tmp.x) || isnan(ex_tmp.y)) continue;
                 gpuDoubleComplex ey_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+                if(isnan(ey_tmp.x) || isnan(ey_tmp.y)) continue;
+                
                 ex = gpuCadd(ex, ex_tmp);
                 ey = gpuCadd(ey, ey_tmp);
                 Nxx = gpuCadd(Nxx, gpuCmul( ex_tmp, gpuConj(ex_tmp)));
@@ -638,16 +641,16 @@ void vmApplyJChunk( vcsbeam_context *vm )
     dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
     dim3 stat( vm->obs_metadata->num_ants );
 
-    std::cout << "APPLY CHUNK " << std::endl;
-    static int jcount = 0;
-    char fname[256];
-    sprintf(fname, "j_dump_%d.bin", jcount);
-    FILE *fp = fopen(fname, "w");
-    fwrite((char*) vm->J, sizeof(char), vm->J_size_bytes, fp);
+    // std::cout << "APPLY CHUNK " << std::endl;
+    // static int jcount = 0;
+    // char fname[256];
+    // sprintf(fname, "j_dump_%d.bin", jcount);
+    // FILE *fp = fopen(fname, "w");
+    // fwrite((char*) vm->J, sizeof(char), vm->J_size_bytes, fp);
 
-    sprintf(fname, "dj_dump_%d.bin", jcount++);
-    FILE *fp2 = fopen(fname, "w");
-    fwrite((char*) vm->d_J, sizeof(char), vm->d_J_size_bytes, fp2);
+    // sprintf(fname, "dj_dump_%d.bin", jcount++);
+    // FILE *fp2 = fopen(fname, "w");
+    // fwrite((char*) vm->d_J, sizeof(char), vm->d_J_size_bytes, fp2);
 
 
     // J times v
@@ -743,27 +746,27 @@ void vmBeamformChunk( vcsbeam_context *vm )
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
     gpuDeviceSynchronize();
-    std::cout << "JV sixe = " << vm->d_Jv_size_bytes << std::endl;
-    gpuDoubleComplex *jVq_host = (gpuDoubleComplex*) malloc(vm->d_Jv_size_bytes);
-    gpuDoubleComplex *jVp_host = (gpuDoubleComplex*) malloc(vm->d_Jv_size_bytes);
-    size_t phisize = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(gpuDoubleComplex);
-    gpuDoubleComplex *phi_host = (gpuDoubleComplex*) malloc(phisize);
-    gpuMemcpy(jVq_host, vm->d_Jv_Q, vm->d_Jv_size_bytes, gpuMemcpyDeviceToHost);
-    gpuMemcpy(jVp_host, vm->d_Jv_P, vm->d_Jv_size_bytes, gpuMemcpyDeviceToHost);
-    gpuMemcpy(phi_host, vm->gdelays.d_phi, phisize, gpuMemcpyDeviceToHost);
+    // std::cout << "JV sixe = " << vm->d_Jv_size_bytes << std::endl;
+    // gpuDoubleComplex *jVq_host = (gpuDoubleComplex*) malloc(vm->d_Jv_size_bytes);
+    // gpuDoubleComplex *jVp_host = (gpuDoubleComplex*) malloc(vm->d_Jv_size_bytes);
+    // size_t phisize = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(gpuDoubleComplex);
+    // gpuDoubleComplex *phi_host = (gpuDoubleComplex*) malloc(phisize);
+    // gpuMemcpy(jVq_host, vm->d_Jv_Q, vm->d_Jv_size_bytes, gpuMemcpyDeviceToHost);
+    // gpuMemcpy(jVp_host, vm->d_Jv_P, vm->d_Jv_size_bytes, gpuMemcpyDeviceToHost);
+    // gpuMemcpy(phi_host, vm->gdelays.d_phi, phisize, gpuMemcpyDeviceToHost);
 
-    char fname[256];
-    sprintf(fname, "Jvp_dump_%d.bin", dumpid);
-    FILE *fp1 = fopen(fname, "w");
-    fwrite((char*) jVp_host, sizeof(char), vm->d_Jv_size_bytes, fp1);
-    sprintf(fname, "phi_dump_%d.bin", dumpid);
-    FILE *fp3 = fopen(fname, "w");
-    fwrite((char*) phi_host, sizeof(char), phisize, fp3);
-    sprintf(fname, "Jvq_dump_%d.bin", dumpid++);
-    FILE *fp2 = fopen(fname, "w");
-    fwrite((char*) jVq_host, sizeof(char), vm->d_Jv_size_bytes, fp2);
+    // // char fname[256];
+    // // sprintf(fname, "Jvp_dump_%d.bin", dumpid);
+    // // FILE *fp1 = fopen(fname, "w");
+    // // fwrite((char*) jVp_host, sizeof(char), vm->d_Jv_size_bytes, fp1);
+    // // sprintf(fname, "phi_dump_%d.bin", dumpid);
+    // // FILE *fp3 = fopen(fname, "w");
+    // // fwrite((char*) phi_host, sizeof(char), phisize, fp3);
+    // // sprintf(fname, "Jvq_dump_%d.bin", dumpid++);
+    // // FILE *fp2 = fopen(fname, "w");
+    // // fwrite((char*) jVq_host, sizeof(char), vm->d_Jv_size_bytes, fp2);
     
-    free(jVp_host); free(jVq_host); free(phi_host);
+    // free(jVp_host); free(jVq_host); free(phi_host);
     
     // Send off a parallel CUDA stream for each pointing
     int p;

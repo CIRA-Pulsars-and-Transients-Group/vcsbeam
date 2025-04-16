@@ -278,10 +278,10 @@ int main(int argc, char **argv)
             logger_start_stopwatch( vm->log, "ipfb", true );
 
             vmPullE( vm );
-            char fname[256];
-            sprintf(fname, "e_dump_%d.bin", timestep_idx);
-            FILE *fp = fopen(fname, "w");
-            fwrite((char*) vm->e, sizeof(char), vm->e_size_bytes, fp);
+            // char fname[256];
+            // sprintf(fname, "e_dump_%d.bin", timestep_idx);
+            // FILE *fp = fopen(fname, "w");
+            // fwrite((char*) vm->e, sizeof(char), vm->e_size_bytes, fp);
 
             // Load the voltage data into the buffer
             prepare_data_buffer_fine( data_buffer_fine, vm, timestep_idx );
