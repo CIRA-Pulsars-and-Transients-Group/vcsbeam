@@ -100,7 +100,7 @@ void vmCalcB(
     for (config_idx = 0; config_idx < NCONFIGS; config_idx++)
         configs[config_idx] = NULL;
 
-    double * tempJones;
+    double *tempJones;
 
     // Normalise to zenith
     int zenith_norm = 1;
@@ -115,13 +115,13 @@ void vmCalcB(
 
     double az, za; // (az)imuth and (z)enith (a)ngle in radians
 
-    uint8_t iauOrder=0; //Boolean 0= don't set Jones matrix to be iau order but instead mwa order in CalcJones
+    uint8_t iauOrder = 0; //Boolean 0= don't set Jones matrix to be iau order but instead mwa order in CalcJones
 
-    uint32_t numAmps=16; //number of dipole gains used (16 or 32)
+    uint32_t numAmps = 16; //number of dipole gains used (16 or 32)
 
     int32_t errInt; //exit code integer for calcJones
 
-    double * arrayLatitudeRad=NULL;
+    double *arrayLatitudeRad = NULL;
 
     // Loop through the pointings and calculate the primary beam matrices
     for (p = 0; p < pb->npointings; p++)
@@ -151,40 +151,97 @@ void vmCalcB(
                 // Use the 'dead' configuration temporarily
                 config_idx = DEAD_CONFIG;
                 tempJones = malloc(8*sizeof(double));
-                errInt = fee_calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
-                configs[config_idx]=(gpuDoubleComplex *)(tempJones);
+                errInt = fee_calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], numAmps, zenith_norm, arrayLatitudeRad, iauOrder, tempJones);
+                
+                // Check error code, exit if it's not 0
+                if (errInt != 0)
+                {             
+                    handle_hyperbeam_error(__FILE__, (__LINE__ - 5), "fee_calc_jones");   
+                    exit(EXIT_FAILURE);
+                }
+                
+                // Check elements and emit a warning if there are NaNs in the primary beam output.
+                // If NaNs are detected, set the Jones matrix to zero.
+                if (
+                    isnan(tempJones[0]) || 
+                    isnan(tempJones[1]) || 
+                    isnan(tempJones[2]) || 
+                    isnan(tempJones[3]) || 
+                    isnan(tempJones[4]) || 
+                    isnan(tempJones[5]) || 
+                    isnan(tempJones[6]) || 
+                    isnan(tempJones[7]) 
+                    )
+                {
+                    printf("NaNs in Primary Beam Jones matrix!!?\n");
+                    memset( tempJones, 0, JONES_SIZE_BYTES );
+                }
+                configs[config_idx] = (gpuDoubleComplex *)(tempJones);
             }
             else if (configs[config_idx] == NULL) // Call Hyperbeam if this config hasn't been done yet
             {
                 // Get the calculated FEE Beam (using Hyperbeam)
                 tempJones = malloc(8*sizeof(double));
-                errInt = fee_calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input],numAmps, zenith_norm, arrayLatitudeRad ,iauOrder , tempJones);
-                configs[config_idx]=(gpuDoubleComplex *)(tempJones);
+                errInt = fee_calc_jones(pb->beam, az, za, pb->freq_hz, pb->delays[rf_input], pb->amps[rf_input], numAmps, zenith_norm, arrayLatitudeRad, iauOrder, tempJones);
 
-                // Apply the parallactic angle correction
-#ifdef DEBUG
-                if (config_idx == 0)
-                {
-                    fprintf( stderr, "Bhb     = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
-                    fprintf( stderr, "Ppa     = " ); fprintf( stderr, "[ %lf, %lf; %lf, %lf ]\n", P[0], P[1], P[2], P[3]  );
+                // Check error code, exit if it's not 0
+                if (errInt != 0)
+                {             
+                    handle_hyperbeam_error(__FILE__, (__LINE__ - 5), "fee_calc_jones");   
+                    exit(EXIT_FAILURE);
                 }
-#endif
-                mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );
-#ifdef DEBUG
-                if (config_idx == 0)
+                
+                // Check elements and emit a warning if there are NaNs in the primary beam output.
+                // If NaNs are detected, set the Jones matrix to zero.
+                if (
+                    isnan(tempJones[0]) || 
+                    isnan(tempJones[1]) || 
+                    isnan(tempJones[2]) || 
+                    isnan(tempJones[3]) || 
+                    isnan(tempJones[4]) || 
+                    isnan(tempJones[5]) || 
+                    isnan(tempJones[6]) || 
+                    isnan(tempJones[7]) 
+                    )
                 {
-                    fprintf( stderr, "B       = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
+                    printf("NaNs in Primary Beam Jones matrix!!?\n");
+                    memset( tempJones, 0, JONES_SIZE_BYTES );
                 }
+                configs[config_idx] = (gpuDoubleComplex *)(tempJones);
+            }
+                
+            // Apply the parallactic angle correction, regardless of configuration
+#ifdef DEBUG
+            if (config_idx == 0)
+            {
+                fprintf( stderr, "Bhb     = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
+                fprintf( stderr, "Ppa     = " ); fprintf( stderr, "[ %lf, %lf; %lf, %lf ]\n", P[0], P[1], P[2], P[3]  );
+             }
 #endif
+             mult2x2d_CxR( configs[config_idx], P, configs[config_idx] );
+#ifdef DEBUG
+            if (config_idx == 0)
+            {
+                fprintf( stderr, "B       = " ); fprintf_complex_matrix( stderr, configs[config_idx] );
             }
-
-            if (errInt !=0)
-            {             
-                handle_hyperbeam_error("Primary Beam",183, "fee_calc_jones");   
-                exit(EXIT_FAILURE);
-            }
+#endif
 
             // Copy the answer into the B matrix (for this antenna)
+            // Since we do an operation on the matrix in this case, check again for NaNs
+            if (
+                isnan(configs[config_idx][0].x) || 
+                isnan(configs[config_idx][1].x) || 
+                isnan(configs[config_idx][2].x) || 
+                isnan(configs[config_idx][3].x) || 
+                isnan(configs[config_idx][0].y) || 
+                isnan(configs[config_idx][1].y) || 
+                isnan(configs[config_idx][2].y) || 
+                isnan(configs[config_idx][3].y)
+                )
+            {
+                printf("NaNs in Primary Beam Jones matrix after parallactic corrections!!?\n");
+                memset( configs[config_idx], 0, JONES_SIZE_BYTES );
+            }
             cp2x2( configs[config_idx], &(pb->B[PB_IDX(p, ant, 0, nant, npol)]) );
         }
     }
@@ -213,11 +270,12 @@ void vmCreatePrimaryBeam( vcsbeam_context *vm )
     vm->pb.B = (gpuDoubleComplex *)malloc( size );
 
     vm->pb.beam = NULL;
-    errInt= new_fee_beam( HYPERBEAM_HDF5, &vm->pb.beam );
-
+    errInt = new_fee_beam( HYPERBEAM_HDF5, &vm->pb.beam );
+    
+    // Check error code, exit if it's not 0
     if (errInt != 0)
     {
-        handle_hyperbeam_error("Primary Beam", 213, "new_fee_beam");
+        handle_hyperbeam_error(__FILE__, (__LINE__ - 5), "new_fee_beam");
         exit(EXIT_FAILURE);
     }
 
