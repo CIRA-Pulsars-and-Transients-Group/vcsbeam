@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #include "gpu_fft.hpp"
 #include "gpu_macros.h"
