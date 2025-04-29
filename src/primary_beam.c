@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 #include <mwalib.h>
 #include <mwa_hyperbeam.h>
