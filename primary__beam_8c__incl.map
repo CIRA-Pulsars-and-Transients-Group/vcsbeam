@@ -1,10 +1,11 @@
 <map id="primary_beam.c" name="primary_beam.c">
-<area shape="rect" id="node1" title=" " alt="" coords="237,5,351,32"/>
+<area shape="rect" id="node1" title=" " alt="" coords="277,5,391,32"/>
 <area shape="rect" id="node2" title=" " alt="" coords="5,80,68,107"/>
 <area shape="rect" id="node3" title=" " alt="" coords="92,80,152,107"/>
 <area shape="rect" id="node4" title=" " alt="" coords="176,80,233,107"/>
-<area shape="rect" id="node5" title=" " alt="" coords="257,80,331,107"/>
-<area shape="rect" id="node6" title=" " alt="" coords="355,80,486,107"/>
-<area shape="rect" id="node7" title=" " alt="" coords="510,80,595,107"/>
-<area shape="rect" id="node8" title=" " alt="" coords="620,80,723,107"/>
+<area shape="rect" id="node5" title=" " alt="" coords="258,80,319,107"/>
+<area shape="rect" id="node6" title=" " alt="" coords="344,80,417,107"/>
+<area shape="rect" id="node7" title=" " alt="" coords="442,80,573,107"/>
+<area shape="rect" id="node8" title=" " alt="" coords="597,80,682,107"/>
+<area shape="rect" id="node9" title=" " alt="" coords="707,80,809,107"/>
 </map>
