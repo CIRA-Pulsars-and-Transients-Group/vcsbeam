@@ -558,18 +558,28 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
 
 //fprintf(stderr, "Dread (Interval = %d, ant = %d, Ch = %d): ", Interval, ant, Ch); fprintf_complex_matrix( stderr, Dread );
 
-            // If there are any nans, set them to zero instead
-            // Assume that if there are any nans in the Jones matrix, then
-            // EVERY element in the Jones matrix is a nan. Therefore, only need
-            // to check one element.
-            if (isnan(Dread[0].x))
+            // If there are any nans, set the Jones matrix to zeros instead.
+            // Check every element, rather than assuming that the real part
+            // of the first element (Dread[0].x) is representative of the whole.
+            if (
+                isnan(Dread[0].x) || 
+                isnan(Dread[1].x) || 
+                isnan(Dread[2].x) || 
+                isnan(Dread[3].x) || 
+                isnan(Dread[0].y) || 
+                isnan(Dread[1].y) || 
+                isnan(Dread[2].y) || 
+                isnan(Dread[3].y)
+                )
+            {
                 memset( Dread, 0, JONES_SIZE_BYTES );
+            }
 
             // Copy this matrix into every corresponding "voltage" fine channel
             for (vch = ch*interp_factor; vch < (ch + 1)*interp_factor; vch++)
             {
                 // Get the destination index
-                d_idx = D_IDX(ant,vch,0,0,vcs_nchan,nantpol);
+                d_idx = D_IDX(ant, vch, 0, 0, vcs_nchan, nantpol);
 
                 // Copy it across
                 cp2x2( Dread, &(vm->D[d_idx]) );
