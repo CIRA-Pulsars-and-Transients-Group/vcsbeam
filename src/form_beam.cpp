@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
 
 #include "gpu_fft.hpp"
 #include "gpu_macros.h"
@@ -299,9 +298,7 @@ __global__ void vmBeamform_kernel(int nfine_chan,
                 // Calculate beamform products for each antenna, and then add them together
                 // Calculate the coherent beam (B = J*phi*D)
                 gpuDoubleComplex ex_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-                if(isnan(ex_tmp.x) || isnan(ex_tmp.y)) continue;  // TODO: Bandaid guard solution - why should there be NaNs??
                 gpuDoubleComplex ey_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-                if(isnan(ey_tmp.x) || isnan(ey_tmp.y)) continue;  // TODO: Bandaid guard solution - why should there be NaNs??
                 ex = gpuCadd(ex, ex_tmp);
                 ey = gpuCadd(ey, ey_tmp);
                 Nxx = gpuCadd(Nxx, gpuCmul( ex_tmp, gpuConj(ex_tmp)));
