@@ -8,14 +8,14 @@ source "${BASH_UTILS_DIR}/build_utils.sh"
 
 # Set the program name and versions, used to create the installation paths.
 PROGRAM_NAME=vcsbeam
-PROGRAM_VERSION=devel
+PROGRAM_VERSION=patched
 # the following function sets up the installation path according to the
 # cluster the script is running on and the first argument given. The argument
 # can be:
 # - "group": install the software in the group wide directory
 # - "user": install the software only for the current user
 # - "test": install the software in the current working directory
-process_build_script_input group
+process_build_script_input user
 
 # load all the modules required for the program to compile and run.
 # the following command also adds those module names in the modulefile
@@ -23,7 +23,7 @@ process_build_script_input group
 
 # module use /software/projects/pawsey1045/setonix/2024.05/modules/zen3/gcc/12.2.0/
 # module_load module1/ver module2/ver ..
-module_load pal/0.9.8-yyskiux mwalib/1.3.3-qvtlpxn cfitsio/4.3.0 rocm/5.7.3 psrfits-utils/2023-10-08-ltewgrw vdifio/master-u6heigs hyperbeam/0.5.0-glmva5q
+module_load pal/0.9.8-yyskiux mwalib/1.5.0 cfitsio/4.3.0 rocm/5.7.3 psrfits-utils/2023-10-08-ennrbqc  vdifio/master-o4bnlck hyperbeam/0.9.3
 
 module load cmake/3.27.7
 
