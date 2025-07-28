@@ -5,7 +5,7 @@
 
 #if defined (__NVCC__) || defined (__HIPCC__)
 
-inline int gpu_support() { return 1;}
+static inline int gpu_support() { return 1;}
 #define __GPU__
 
 // I first define the error handling macro and related definitions. I will
@@ -24,7 +24,7 @@ inline int gpu_support() { return 1;}
 #define gpuGetErrorString hipGetErrorString
 #endif
 
-inline void __gpu_check_error(gpuError_t x, const char *file, int line){
+static inline void __gpu_check_error(gpuError_t x, const char *file, int line){
     if(x != gpuSuccess){
         fprintf(stderr, "GPU error (%s:%d): %s\n", file, line, gpuGetErrorString(x));
         exit(1);
@@ -125,19 +125,19 @@ inline void __gpu_check_error(gpuError_t x, const char *file, int line){
 #endif
 #define gpuCheckLastError(...) GPU_CHECK_ERROR(gpuGetLastError())
 #else
-inline int gpu_support() { return 0;}
+static inline int gpu_support() { return 0;}
 #endif
 #ifdef __GPU__
 
 
-inline int num_available_gpus() {
+static inline int num_available_gpus() {
     int num_gpus;
     gpuGetDeviceCount(&num_gpus);
     return num_gpus;
 }
 
 #else
-inline int num_available_gpus() {
+static inline int num_available_gpus() {
     return 0;
 }
 #endif

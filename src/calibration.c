@@ -117,6 +117,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     // Make the master mpi thread print out the antenna names of both
     // obs and cal metafits. "Header" printed here, actual numbers
     // printed inside antenna for loop below
+    /*
     if (vm->log)
     {
         if (vm->log->world_rank == 0)
@@ -143,6 +144,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
             logger_message( vm->log, "" );
         }
     }
+    */
 
     // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
     // Do this for each of the _voltage_ observation's fine channels (use
@@ -425,9 +427,6 @@ void read_bandpass_file(
  */
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
-    // Shorthand variables
-    int coarse_chan_idx = vm->cal_coarse_chan_idxs_to_process[0];
-
     // Open the calibration file for reading
     FILE *fp = NULL;
     fp = fopen(vm->cal.caldir,"r");
@@ -438,20 +437,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     }
 
     // Read in the necessary information from the header
-    // NOTE: assumes that the number of channels in the calibration solution
-    //       matches the number of channels being requested for processing
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
-    uint32_t nant   = vm->cal_metadata->num_ants;
-    uint32_t nchan  = vm->cal_metadata->num_corr_fine_chans_per_coarse;
-    uint32_t nChan  = nchan * vm->mpi_size; // = total number of fine channels REQUESTED to process
-    uint32_t ninput = vm->cal_metadata->num_rf_inputs;
-    uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t vcs_nchan = vm->nfine_chan;
-    uintptr_t interp_factor = vcs_nchan / nchan;
-    uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
-
-    // Make another dummy matrix for reading in
-    gpuDoubleComplex Dread[nvispol];
 
     fseek(fp, 16, SEEK_SET);
     fread(&intervalCount,     sizeof(uint32_t), 1, fp);
@@ -459,16 +445,94 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     fread(&channelCount,      sizeof(uint32_t), 1, fp);
     fread(&polarizationCount, sizeof(uint32_t), 1, fp);
 
+    // Get the coarse channel being handled by this MPI task
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    // Contrary to expectation, this ^^^ produces the correct index for each MPI task
+    //fprintf(stderr, "coarse_chan_idx = %d\n", coarse_chan_idx);
+    CoarseChannel *coarse_chan = &vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx];
+    //fprintf(stderr, "coarse chan width hz = %u\n", coarse_chan.chan_width_hz);
+    //fprintf(stderr, "coarse chan centre hz = %u\n", coarse_chan.chan_centre_hz);
+
+    // Get the (observation) fine channel information needed to calculate the
+    // frequencies of each fine channel for the coarse channel (for this MPI task)
+    double df = coarse_chan->chan_width_hz / (double)vm->nfine_chan;                         // Width of a fine channel in Hz
+    double f0 = coarse_chan->chan_centre_hz - (double)coarse_chan->chan_width_hz/2.0 + df/2; // Ctr freq of the first fine channel (in the relevant coarse channel) in Hz
+    //fprintf(stderr, "vm->nfine_chan = %d\n", vm->nfine_chan);
+
+    /* SM: The above 'df' and 'f0' are later used to calculate the centre frequency of each
+     * fine channel in the target observation. I did actually try the following instead...
+     *
+     * for (int idx = 0; idx < vm->obs_metadata->num_metafits_fine_chan_freqs_hz; idx++)
+     *     fprintf(stderr, "%lf\n", vm->obs_metadata->metafits_fine_chan_freqs_hz[idx]);
+     *
+     * ... because the available struct fields provided by mwalib (at least, v0.16.4,
+     * which is what I'm testing this against) seem to imply the fine channel frequencies
+     * have already been calculated and are available in a vector. However, running the
+     * above seems to give only the centre frequencies of the coarse channels, not the
+     * fine channels as expected. Hence, I'm calculating the fine channel frequencies
+     * myself, as per the code above this block comment.
+     */
+
+    // We now have to do the same for the coarse channels given in the calibration solution.
+    // The trouble is that there may well have been extra frequency channel averaging that
+    // occurred during the generation of the calibration solution, so that
+    //
+    //   the number of channels in the .bin file < the number of the channels in the cal's metafits
+    //
+    // *** ASSUMPTION!! ***
+    // We will assume that the number of channels that may have been averaged together is
+    // always a constant integer number. We calculate that number now.
+
+    MetafitsMetadata *cal = vm->cal_metadata; // A shorthand, just to shorten the below code
+    uint32_t cal_fscrunch_factor = (cal->num_metafits_coarse_chans * cal->num_corr_fine_chans_per_coarse) / channelCount;
+
+    // Similar to being able to calculate the frequencies of the fine channels in the target
+    // observation, we also want to be able to calculate the frequencies of the fine channels
+    // in the calibration observation, so that we can map one to the other. To account for
+    // the possibility that the calibration solutions are picket-fence, or that the mapping
+    // is otherwise complicated, we have each MPI task have a local copy of the whole array
+    // of fine channel frequencies.
+
+    // Width of a fine channel in Hz:
+    double cal_df = cal->coarse_chan_width_hz / (double)cal->num_corr_fine_chans_per_coarse;
+
+    // Total number of fine channels across *all* coarse channels
+    uintptr_t cal_total_nfine_chans = cal->num_corr_fine_chans_per_coarse * cal->num_metafits_coarse_chans;
+
+    // Create an array of the necessary size, and populate it
+    double cal_fine_chan_freqs_hz[cal_total_nfine_chans];
+    for (int ch = 0; ch < cal_total_nfine_chans; ch++) {
+        // Calculate the coarse channel index
+        int cal_coarse_chan_idx = ch / cal->num_corr_fine_chans_per_coarse;
+        // ...and get the relevant coarse channel
+        CoarseChannel *cal_coarse_chan = &cal->metafits_coarse_chans[cal_coarse_chan_idx];
+
+        // Ctr freq of the first fine channel (in this coarse channel) in Hz
+        double cal_f0 = cal_coarse_chan->chan_centre_hz - (double)cal_coarse_chan->chan_width_hz/2.0 + cal_df/2;
+
+        // Get the fine channel index within this coarse channel
+        int cal_fine_chan_idx = ch % cal->num_corr_fine_chans_per_coarse;
+
+        // Calculate the frequency of this fine channel and put it in the prepared array
+        cal_fine_chan_freqs_hz[ch] = cal_f0 + cal_df * cal_fine_chan_idx;
+
+#ifdef DEBUG
+        fprintf(stderr, "calibration metafits fine channel [%4d] (Hz) = %lf\n", ch, cal_fine_chan_freqs_hz[ch]);
+#endif
+    }
+
+    // Make a dummy matrix for reading in data
+    uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+    gpuDoubleComplex Dread[nvispol];
+
+    uint32_t ninput = vm->cal_metadata->num_rf_inputs;
+    uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
 #ifdef DEBUG
     fprintf( stderr, "*** Reading Offringa-style solution, DEBUG ***\n" );
     fprintf( stderr, "Quantities determined via vcsbeam context struct, DEBUG\n" );
-    fprintf( stderr, "nant = vm->cal_metadata->num_ants = %u\n", nant );
-    fprintf( stderr, "nchan = vm->cal_metadata->num_corr_fine_chans_per_coarse = %u\n", nchan );
-    fprintf( stderr, "nChan = nchan * vm->mpi_size = %u\n", nChan );
+    fprintf( stderr, "nant = vm->cal_metadata->num_ants = %u\n", vm->cal_metadata->num_ants );
     fprintf( stderr, "ninput = vm->cal_metadata->num_rf_inputs = %u\n", ninput );
     fprintf( stderr, "nantpol = vm->cal_metadata->num_ant_pols = %lu (should be 2)\n", nantpol );
-    fprintf( stderr, "vcs_nchan = vm->nfine_chan = %lu\n", vcs_nchan );
-    fprintf( stderr, "interp_factor = vcs_nchan / nchan = %lu\n", interp_factor );
     fprintf( stderr, "nvispol = vm->cal_metadata->num_visibility_pols = %lu (should be 4)\n", nvispol );
 
     fprintf( stderr, "Quantities read from binary file, DEBUG\n" );
@@ -485,71 +549,84 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stdout, "Warning: Only the first interval in the calibration " );
         fprintf( stdout, "solution (%s) will be used\n", vm->cal.caldir );
     }
-    if (antennaCount != nant)
+    if (antennaCount != vm->obs_metadata->num_ants)
     {
         fprintf( stderr, "Error: Calibration solution (%s) ", vm->cal.caldir );
         fprintf( stderr, "contains a different number of antennas (%u) ", antennaCount );
-        fprintf( stderr, "than specified (%u)\n", nant );
+        fprintf( stderr, "than specified the target observation (%u)\n", vm->obs_metadata->num_ants );
         exit(EXIT_FAILURE);
     }
-    if (channelCount != nChan)
-    {
-        fprintf( stdout, "Warning: Calibration solution (%s) ", vm->cal.caldir );
-        fprintf( stdout, "contains a different number (%u) ", channelCount );
-        fprintf( stdout, "than the requested (%u) channels.\n", nChan );
-        nChan = channelCount;
-        nchan = nChan / vm->mpi_size;
-        interp_factor = vcs_nchan / nchan;
-        fprintf( stdout, "Assuming calibration channels are "
-                "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
-#ifdef DEBUG
-    fprintf( stderr, "New nChan = %u\n", nChan );
-    fprintf( stderr, "New nchan = %u\n", nchan );
-    fprintf( stderr, "New interp_factor = %lu\n", interp_factor );
-#endif
-    }
-    if (coarse_chan_idx >= (int)vm->cal_metadata->num_metafits_coarse_chans)
-    {
-        fprintf( stderr, "Error: Requested coarse channel number (%d) ", coarse_chan_idx );
-        fprintf( stderr, "is more than the number of channels " );
-        fprintf( stderr, "available in the calibration solution (%s)\n", vm->cal.caldir );
-        exit(EXIT_FAILURE);
-    }
-
 
     // Iterate through antennas and channels
     uint32_t ant; // The antenna number (as defined in metafits "Antenna")
     uint32_t i;   // Just a dummy index into the metafits array of rf_inputs
-    uint32_t ch;  // (Fine) channel number (within given coarse channel)
-    uint32_t Ch;  // (Fine) channel number (within total set of channels)
+    uint32_t ch;  // Target observation Fine channel number (within given coarse channel)
+    uint32_t Ch;  // Calibration solution fine channel number (within total set of channels)
     uint32_t vch; // (Fine) channel number (within coarse channel in voltage obs)
     uint32_t Interval = 0;  // Only use the first interval
     long fpos; // Position within the gains file
     uintptr_t d_idx; // Idx into the D array
     Rfinput *rfinput = NULL;
 
-    for (i = 0; i < ninput; i++)
+    double f; // In the subloop over fine channels in the observation, this gets set to the frequency of the fine channel in Hz
+
+    // Loop over observation channels
+    for (ch = 0; ch < vm->nfine_chan; ch++)
     {
-        // We only need information for each antenna, so skip one of the pols
-        rfinput = &(vm->cal_metadata->rf_inputs[i]);
-        if (*(rfinput->pol) == 'Y')
-            continue;
+        // Get the frequency of the (target observation) fine channel under consideration
+        f = f0 + df*ch;
 
-        // Get the antenna number
-        ant = rfinput->ant;
+        // Find the nearest frequency in the calibration observation
+        int best_cal_ch = 0;
+        double best_diff_freq = fabs(f - cal_fine_chan_freqs_hz[0]);
+        double diff_freq;
+        for (int cal_ch = 1; cal_ch < cal_total_nfine_chans; cal_ch++) {
+            diff_freq = fabs(f - cal_fine_chan_freqs_hz[cal_ch]);
+            if (diff_freq < best_diff_freq) {
+                best_cal_ch = cal_ch;
+                best_diff_freq = diff_freq;
+            } else {
+               break;
+               // The reason why breaking is ok here is ONLY because of the ASSUMPTION
+               // that the fine channel frequencies are sequential. That is, once the
+               // diff's start getting worse (meaning that the frequencies are now moving
+               // away from the best solution), they will always get worse, so we can
+               // ignore the rest of the frequencies.
+            }
+        }
+        // Now, because of the possibility that the calibration solutions frequencies have
+        // been averaged, we calculate the channel index into the solutions array by simply
+        // dividing the (best) index of the calibration metafits by the fscrunching factor.
+        Ch = best_cal_ch / cal_fscrunch_factor;
 
-        // Loop over channels
-        for (ch = 0; ch < nchan; ch++)
+#ifdef DEBUG
+        fprintf(stderr, "Fine channel frequency (Hz)                          = %lf\n"
+                        "-- Closest matching frequency in cal metafits (Hz)   = %lf\n"
+                        "-- Equivalent index into solutions file, assuming\n"
+                        "   solutions were made by averaging %u channels      = %u\n"
+                        "   together:\n", 
+                        f, cal_fine_chan_freqs_hz[best_cal_ch], cal_fscrunch_factor, Ch);
+#endif
+
+        for (i = 0; i < ninput; i++)
         {
-            // Translate from "fine channel number within coarse channel"
-            // to "fine channel number within whole observation"
-            Ch = ch + coarse_chan_idx * nchan;
+            // We read in full pol calibration solutions (as 2x2 matrices), but they are
+            // organised by "antenna" in the calibration solution file. So we don't really
+            // want to loop by "RF input", but by "antenna" instead. The easiest way to do
+            // this is to just skip over inputs with one particular polarisation. Here, we
+            // arbitrarily choose 'Y'.
+            rfinput = &(vm->cal_metadata->rf_inputs[i]);
+            if (*(rfinput->pol) == 'Y')
+                continue;
+
+            // Get the antenna number
+            ant = rfinput->ant;
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
-                Interval * (nant * nChan * JONES_SIZE_BYTES) +
-                ant      *        (nChan * JONES_SIZE_BYTES) +
-                Ch       *                (JONES_SIZE_BYTES);
+                Interval * (antennaCount * channelCount * JONES_SIZE_BYTES) +
+                ant      *                (channelCount * JONES_SIZE_BYTES) +
+                Ch       *                               (JONES_SIZE_BYTES);
             fseek( fp, fpos, SEEK_SET );
 
 //fprintf(stderr, "ftell=%lu    ", ftell(fp));
@@ -565,15 +642,11 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
             if (isnan(Dread[0].x))
                 memset( Dread, 0, JONES_SIZE_BYTES );
 
-            // Copy this matrix into every corresponding "voltage" fine channel
-            for (vch = ch*interp_factor; vch < (ch + 1)*interp_factor; vch++)
-            {
-                // Get the destination index
-                d_idx = D_IDX(ant,vch,0,0,vcs_nchan,nantpol);
+            // Get the destination index
+            d_idx = D_IDX(ant,ch,0,0,vm->nfine_chan,nantpol);
 
-                // Copy it across
-                cp2x2( Dread, &(vm->D[d_idx]) );
-            }
+            // Copy it across
+            cp2x2( Dread, &(vm->D[d_idx]) );
         }
     }
 
