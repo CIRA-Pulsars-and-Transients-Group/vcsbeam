@@ -20,11 +20,9 @@ find_package(XGPU)
 # Enable the support and relevant compiliation flags/config for the selected GPU language
 if(USE_CUDA)
     enable_language(CUDA C CXX)
-    set(CMAKE_CUDA_ARCHITECTURES "native") 
     add_definitions("-D__NVCC__")
     set(GPU_FFTLIB cufft)
     message(STATUS "CUDA generation enabled.")
-    message(NOTICE "Using the available CUDA 'native' architecture.")
 elseif(USE_HIP)
     # NOTE: The enable_language(HIP ...) macro is only available from CMake 3.21.
     # For versions < 3.21, comment out the enable_language macro and simply
@@ -65,12 +63,14 @@ file(GLOB vcsbeam_c_sources
     "src/buffer.c"
     "src/calibration.c"
     "src/metadata.c"
+    "src/gpu_macros.c"
 )
 
 # Collect the source files _with_ GPU kernels
 file(GLOB vcsbeam_gpu_sources 
     "src/form_beam.cpp"
     "src/pfb.cpp"
+    "src/gpu_macros.cpp"
 )
 
 if(USE_CUDA)
