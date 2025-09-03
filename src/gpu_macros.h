@@ -2,6 +2,7 @@
 #define __GPU_MACROS_H__
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #if defined (__NVCC__) || defined (__HIPCC__)
 
@@ -24,12 +25,21 @@ inline int gpu_support() { return 1;}
 #define gpuGetErrorString hipGetErrorString
 #endif
 
+//#ifdef __NVCC__
+//    extern C {
+//#endif
+void __gpu_check_error(gpuError_t x, const char *file, int line);
+//#ifdef __NVCC__
+//    };
+//#endif
+/*
 inline void __gpu_check_error(gpuError_t x, const char *file, int line){
     if(x != gpuSuccess){
         fprintf(stderr, "GPU error (%s:%d): %s\n", file, line, gpuGetErrorString(x));
         exit(1);
     }
 }
+*/
 #define GPU_CHECK_ERROR(X)({\
     __gpu_check_error((X), __FILE__, __LINE__);\
 })
