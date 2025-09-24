@@ -190,7 +190,7 @@ void vmBindObsData(
     for (c = 0; c < num_coarse_chans_to_process; c++)
     {
         vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
-        vm->cal_coarse_chan_idxs_to_process[c] = c;
+        vm->cal_coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
     }
 
     // Copy across the data directory
