@@ -502,9 +502,9 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         // nchan = nChan / vm->mpi_size;
         // interp_factor = vcs_nchan / nchan;
         fprintf( stdout, "Assuming calibration have only %d coarse channels "
-                "instead of %lu", vm->mpi_size, vm->cal_metadata->num_metafits_coarse_chans);
+                "instead of %lu.\n", vm->mpi_size, vm->cal_metadata->num_metafits_coarse_chans);
         fprintf( stdout, "Assuming calibration channel %d corresponds to "
-                "vcs channel %lu with index %d", vm->mpi_rank, 
+                "vcs channel %lu with index %d.\n", vm->mpi_rank, 
                 vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number, coarse_chan_idx);
 #ifdef DEBUG
     fprintf( stderr, "New nChan = %u\n", nChan );
@@ -545,16 +545,16 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         // Loop over channels
         for (ch = 0; ch < nchan; ch++)
         {
-            // Check if first fine channel is correct
-            if (ch == 0)
-            {
-                fprintf( stdout, "First fine channel to process is %d for coarse channel %d",
-                        ch, coarse_chan_idx);
-            }
-
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
             Ch = ch + coarse_chan_idx * nchan;
+
+            // Check if first fine channel is correct
+            if (ch == 0 && i == 0)
+            {
+                fprintf( stdout, "First fine channel to process is %d for coarse channel %d.\n",
+                        Ch, coarse_chan_idx);
+            }
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
