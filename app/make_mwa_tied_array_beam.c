@@ -42,6 +42,7 @@ struct make_tied_array_beam_opts {
     char              *cal_metafits;     // Filename of the metafits file
     char              *caldir;           // Location of calibration data
     int                cal_type;         // Either RTS or OFFRINGA
+    int                cal_chan_width_hz // Fine channel width of the calibration solution
     char              *ref_ant;          // Reference antenna for calibration phases
     double             phase_offset;     // Rotate the phase of Y by m*freq + c, where
     double             phase_slope;      //   m = phase_slope (rad/Hz)
