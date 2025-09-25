@@ -502,9 +502,9 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         // nchan = nChan / vm->mpi_size;
         // interp_factor = vcs_nchan / nchan;
         fprintf( stdout, "Assuming calibration have only %d coarse channels "
-                "instead of %lu", vm->mpi_size, vm->cal_metadata->num_metafits_coarse_chans);
+                "instead of %d", vm->mpi_size, vm->cal_metadata->num_metafits_coarse_chans);
         fprintf( stdout, "Assuming calibration channel %d corresponds to "
-                "vcs channel %lu with index %d", vm->mpi_rank, 
+                "vcs channel %d with index %d", vm->mpi_rank, 
                 vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number, coarse_chan_idx);
 #ifdef DEBUG
     fprintf( stderr, "New nChan = %u\n", nChan );
@@ -548,7 +548,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
             // Check if first fine channel is correct
             if (ch == 0)
             {
-                fprintf( stdout, "First fine channel to process is %d for coarse channel %d",
+                fprintf( stdout, "First fine channel to process is %d for coarse channel %d"
                         ch, coarse_chan_idx)
             }
 
