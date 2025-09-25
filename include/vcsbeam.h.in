@@ -184,6 +184,7 @@ typedef struct calibration_t
     char  *metafits;           // Filename of the metafits file
     char  *caldir;             // Location of calibration data
     int    cal_type;           // Either RTS or OFFRINGA
+    int    chan_width_hz;      // Fine channel width of calibration solution
     char  *ref_ant;            // Reference antenna for calibration phases
     bool   keep_cross_terms;   // Include PQ and QP of calibration Jones matrices
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where

@@ -549,7 +549,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
             if (ch == 0)
             {
                 fprintf( stdout, "First fine channel to process is %d for coarse channel %d",
-                        ch, coarse_chan_idx)
+                        ch, coarse_chan_idx);
             }
 
             // Translate from "fine channel number within coarse channel"
