@@ -515,7 +515,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"pointings",       required_argument, 0, 'P'},
                 {"data-location",   required_argument, 0, 'd'},
                 {"cal-location",    required_argument, 0, 'C'},
-                {"cal-chan-width",  required_argument, 0, CCW},
+                {"cal-chan-width",  required_argument, 0, 'w'},
                 {"metafits",        required_argument, 0, 'm'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
@@ -532,7 +532,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:hm:n:N:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:hm:n:N:OpP:R:sS:t:T:U:vV:w:X",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -557,9 +557,6 @@ void make_tied_array_beam_parse_cmdline(
                 case 'C':
                     opts->caldir = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->caldir, optarg );
-                    break;
-                case CCW:
-                    opts->cal_chan_width_hz = atoi(optarg);
                     break;
                 case 'd':
                     opts->datadir = (char *)malloc( strlen(optarg) + 1 );
@@ -640,6 +637,9 @@ void make_tied_array_beam_parse_cmdline(
                 case 'V':
                     printf( "MWA Beamformer %s\n", VCSBEAM_VERSION);
                     exit(0);
+                    break;
+                case 'w':
+                    opts->cal_chan_width_hz = atoi(optarg);
                     break;
                 case 'X':
                     opts->keep_cross_terms = true;
