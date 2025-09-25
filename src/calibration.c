@@ -10,9 +10,9 @@
 #include <string.h>
 
 #include <mwalib.h>
-#include <cuComplex.h>
 
 #include "vcsbeam.h"
+#include "gpu_macros.h"
 
 /**
  * Loads a Real Time System (RTS) calibration solution.
@@ -86,20 +86,20 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
     }
 
     // Temporary arrays for DI Jones matrices ('Dd') and Bandpass matrices ('Db')
-    cuDoubleComplex  **Dd = (cuDoubleComplex ** )calloc( nant, sizeof(cuDoubleComplex * ) );
-    cuDoubleComplex ***Db = (cuDoubleComplex ***)calloc( nant, sizeof(cuDoubleComplex **) );
+    gpuDoubleComplex  **Dd = (gpuDoubleComplex ** )calloc( nant, sizeof(gpuDoubleComplex * ) );
+    gpuDoubleComplex ***Db = (gpuDoubleComplex ***)calloc( nant, sizeof(gpuDoubleComplex **) );
 
     // The array for the final output product (D = Dd x Db)
     // Use D_IDX for indexing
-    cuDoubleComplex A[nvispol];
+    gpuDoubleComplex A[nvispol];
 
     for (ant = 0; ant < nant; ant++)
     {
-        Dd[ant] = (cuDoubleComplex * )calloc( nvispol, sizeof(cuDoubleComplex  ) );
-        Db[ant] = (cuDoubleComplex **)calloc( nchan,   sizeof(cuDoubleComplex *) );
+        Dd[ant] = (gpuDoubleComplex * )calloc( nvispol, sizeof(gpuDoubleComplex  ) );
+        Db[ant] = (gpuDoubleComplex **)calloc( nchan,   sizeof(gpuDoubleComplex *) );
 
         for (ch = 0; ch < nchan; ch++)
-            Db[ant][ch] = (cuDoubleComplex *)calloc( nvispol, sizeof(cuDoubleComplex) );
+            Db[ant][ch] = (gpuDoubleComplex *)calloc( nvispol, sizeof(gpuDoubleComplex) );
     }
 
     // Read in the DI Jones file
@@ -107,7 +107,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
 
     // Invert the alignment matrix and multiply it to the gains matrix
     // Eq. (29) in Ord et al. (2019)
-    cuDoubleComplex Ainv[nvispol];
+    gpuDoubleComplex Ainv[nvispol];
     inv2x2( A, Ainv );
 
     // Read in the Bandpass file
@@ -224,7 +224,7 @@ void vmLoadRTSSolution( vcsbeam_context *vm )
  * format. However, this code is maintained independently from the RTS,
  * so if the RTS changes, this code may break.
  */
-void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, uintptr_t nant, char *fname )
+void read_dijones_file( gpuDoubleComplex **Dd, gpuDoubleComplex *A, double *amp, uintptr_t nant, char *fname )
 {
     // Open the file for reading
     FILE *fp = NULL;
@@ -256,7 +256,7 @@ void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, u
         for (i = 0; i < NDBL_PER_JONES; i++)
             fscanf( fp, "%lf,", &J[i] );
 
-        cp2x2( (cuDoubleComplex *)J, Dd[ant] );
+        cp2x2( (gpuDoubleComplex *)J, Dd[ant] );
     }
 
     fclose(fp);
@@ -279,8 +279,8 @@ void read_dijones_file( cuDoubleComplex **Dd, cuDoubleComplex *A, double *amp, u
  * arrays to values to their preferred values.
  */
 void read_bandpass_file(
-        cuDoubleComplex ***Jm, // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
-        cuDoubleComplex ***Jf, // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
+        gpuDoubleComplex ***Jm, // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
+        gpuDoubleComplex ***Jf, // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
         MetafitsMetadata  *cal_metadata,
         char *filename         // Input:  name of bandpass file
         )
@@ -340,7 +340,7 @@ void read_bandpass_file(
     double amp,ph;             // For holding the read-in value pairs (real, imaginary)
     int pol;                   // Number between 0 and 3. Corresponds to position in Jm/Jf matrices: [0,1]
                                //                                                                    [2,3]
-    cuDoubleComplex ***J;      // Either points to Jm or Jf, according to which row we're on
+    gpuDoubleComplex ***J;      // Either points to Jm or Jf, according to which row we're on
 
     for (ant = 0; ant < nant; ant++)
     {
@@ -402,7 +402,7 @@ void read_bandpass_file(
                 fscanf( f, "%lf,%lf,", &amp, &ph ); // Read in the re,im pairs in each row
 
                 // Convert to complex number and store in output array
-                J[ant][ch][pol] = make_cuDoubleComplex( amp*cos(ph), amp*sin(ph) );
+                J[ant][ch][pol] = make_gpuDoubleComplex( amp*cos(ph), amp*sin(ph) );
             }
         } // End for loop over 8 rows (for one antenna)
     }
@@ -426,7 +426,7 @@ void read_bandpass_file(
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    int coarse_chan_idx = vm->cal_coarse_chan_idxs_to_process[0];
 
     // Open the calibration file for reading
     FILE *fp = NULL;
@@ -438,7 +438,8 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     }
 
     // Read in the necessary information from the header
-
+    // NOTE: assumes that the number of channels in the calibration solution
+    //       matches the number of channels being requested for processing
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
     uint32_t nant   = vm->cal_metadata->num_ants;
     uint32_t nchan  = vm->cal_metadata->coarse_chan_width_hz / vm->cal.chan_width_hz;
@@ -450,13 +451,32 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
 
     // Make another dummy matrix for reading in
-    cuDoubleComplex Dread[nvispol];
+    gpuDoubleComplex Dread[nvispol];
 
     fseek(fp, 16, SEEK_SET);
     fread(&intervalCount,     sizeof(uint32_t), 1, fp);
     fread(&antennaCount,      sizeof(uint32_t), 1, fp);
     fread(&channelCount,      sizeof(uint32_t), 1, fp);
     fread(&polarizationCount, sizeof(uint32_t), 1, fp);
+
+#ifdef DEBUG
+    fprintf( stderr, "*** Reading Offringa-style solution, DEBUG ***\n" );
+    fprintf( stderr, "Quantities determined via vcsbeam context struct, DEBUG\n" );
+    fprintf( stderr, "nant = vm->cal_metadata->num_ants = %u\n", nant );
+    fprintf( stderr, "nchan = vm->cal_metadata->num_corr_fine_chans_per_coarse = %u\n", nchan );
+    fprintf( stderr, "nChan = nchan * vm->mpi_size = %u\n", nChan );
+    fprintf( stderr, "ninput = vm->cal_metadata->num_rf_inputs = %u\n", ninput );
+    fprintf( stderr, "nantpol = vm->cal_metadata->num_ant_pols = %lu (should be 2)\n", nantpol );
+    fprintf( stderr, "vcs_nchan = vm->nfine_chan = %lu\n", vcs_nchan );
+    fprintf( stderr, "interp_factor = vcs_nchan / nchan = %lu\n", interp_factor );
+    fprintf( stderr, "nvispol = vm->cal_metadata->num_visibility_pols = %lu (should be 4)\n", nvispol );
+
+    fprintf( stderr, "Quantities read from binary file, DEBUG\n" );
+    fprintf( stderr, "intervalCount = %u\n", intervalCount );
+    fprintf( stderr, "antennaCount = %u\n", antennaCount );
+    fprintf( stderr, "channelCount = %u\n", channelCount );
+    fprintf( stderr, "polarizationCount = %u\n", polarizationCount );
+#endif
 
     // Error-checking the info extracted from the header,
     // making sure it matches the metadata
@@ -468,15 +488,15 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     if (antennaCount != nant)
     {
         fprintf( stderr, "Error: Calibration solution (%s) ", vm->cal.caldir );
-        fprintf( stderr, "contains a different number of antennas (%d) ", antennaCount );
-        fprintf( stderr, "than specified (%d)\n", nant );
+        fprintf( stderr, "contains a different number of antennas (%u) ", antennaCount );
+        fprintf( stderr, "than specified (%u)\n", nant );
         exit(EXIT_FAILURE);
     }
     if (channelCount != nChan)
     {
         fprintf( stdout, "Warning: Calibration solution (%s) ", vm->cal.caldir );
-        fprintf( stdout, "contains a different number (%d) ", channelCount );
-        fprintf( stdout, "than the expected (%d) channels.\n", nChan );
+        fprintf( stdout, "contains a different number (%u) ", channelCount );
+        fprintf( stdout, "than the requested (%u) channels.\n", nChan );
         nChan = channelCount;
         coarse_chan_idx = vm->mpi_rank;
         // nchan = nChan / vm->mpi_size;
@@ -486,6 +506,11 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stdout, "Assuming calibration channel %d corresponds to "
                 "vcs channel %d with index %d", vm->mpi_rank, 
                 vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number, coarse_chan_idx);
+#ifdef DEBUG
+    fprintf( stderr, "New nChan = %u\n", nChan );
+    fprintf( stderr, "New nchan = %u\n", nchan );
+    fprintf( stderr, "New interp_factor = %lu\n", interp_factor );
+#endif
     }
     if (coarse_chan_idx >= (int)vm->cal_metadata->num_metafits_coarse_chans)
     {
@@ -494,6 +519,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stderr, "available in the calibration solution (%s)\n", vm->cal.caldir );
         exit(EXIT_FAILURE);
     }
+
 
     // Iterate through antennas and channels
     uint32_t ant; // The antenna number (as defined in metafits "Antenna")
@@ -528,7 +554,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
 
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
-            Ch = ch + coarse_chan_idx*nchan;
+            Ch = ch + coarse_chan_idx * nchan;
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
@@ -599,24 +625,24 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
  * This operation does not affect the magnitudes of the elements of
  * \f${\bf J}\f$, but only their phases.
  */
-void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
+void remove_reference_phase( gpuDoubleComplex *J, gpuDoubleComplex *Jref )
 {
-    cuDoubleComplex PP0norm, PQ0norm, QP0norm, QQ0norm;
-    double PPscale = 1.0/cuCabs( Jref[0] ); // = 1/|PP|
-    double PQscale = 1.0/cuCabs( Jref[1] ); // = 1/|PQ|
-    double QPscale = 1.0/cuCabs( Jref[2] ); // = 1/|QP|
-    double QQscale = 1.0/cuCabs( Jref[3] ); // = 1/|QQ|
+    gpuDoubleComplex PP0norm, PQ0norm, QP0norm, QQ0norm;
+    double PPscale = 1.0/gpuCabs( Jref[0] ); // = 1/|PP|
+    double PQscale = 1.0/gpuCabs( Jref[1] ); // = 1/|PQ|
+    double QPscale = 1.0/gpuCabs( Jref[2] ); // = 1/|QP|
+    double QQscale = 1.0/gpuCabs( Jref[3] ); // = 1/|QQ|
 
-    PP0norm = make_cuDoubleComplex( PPscale*cuCreal(Jref[0]), PPscale*cuCimag(Jref[0]) ); // = PP/|PP|
-    PQ0norm = make_cuDoubleComplex( PQscale*cuCreal(Jref[1]), PQscale*cuCimag(Jref[1]) ); // = PQ/|PQ|
-    QP0norm = make_cuDoubleComplex( QPscale*cuCreal(Jref[2]), QPscale*cuCimag(Jref[2]) ); // = QP/|QP|
-    QQ0norm = make_cuDoubleComplex( QQscale*cuCreal(Jref[3]), QQscale*cuCimag(Jref[3]) ); // = QQ/|QQ|
+    PP0norm = make_gpuDoubleComplex( PPscale*gpuCreal(Jref[0]), PPscale*gpuCimag(Jref[0]) ); // = PP/|PP|
+    PQ0norm = make_gpuDoubleComplex( PQscale*gpuCreal(Jref[1]), PQscale*gpuCimag(Jref[1]) ); // = PQ/|PQ|
+    QP0norm = make_gpuDoubleComplex( QPscale*gpuCreal(Jref[2]), QPscale*gpuCimag(Jref[2]) ); // = QP/|QP|
+    QQ0norm = make_gpuDoubleComplex( QQscale*gpuCreal(Jref[3]), QQscale*gpuCimag(Jref[3]) ); // = QQ/|QQ|
 
     // Essentially phase rotations
-    if (isfinite(PPscale))  J[0] = cuCdiv( J[0], PP0norm );
-    if (isfinite(PQscale))  J[1] = cuCdiv( J[1], PQ0norm );
-    if (isfinite(QPscale))  J[2] = cuCdiv( J[2], QP0norm );
-    if (isfinite(QQscale))  J[3] = cuCdiv( J[3], QQ0norm );
+    if (isfinite(PPscale))  J[0] = gpuCdiv( J[0], PP0norm );
+    if (isfinite(PQscale))  J[1] = gpuCdiv( J[1], PQ0norm );
+    if (isfinite(QPscale))  J[2] = gpuCdiv( J[2], QP0norm );
+    if (isfinite(QQscale))  J[3] = gpuCdiv( J[3], QQ0norm );
 }
 
 /**
@@ -632,10 +658,10 @@ void remove_reference_phase( cuDoubleComplex *J, cuDoubleComplex *Jref )
  *     \begin{bmatrix} J_0 & 0 \\ 0 & J_3 \end{bmatrix}.
  * \f]
  */
-void zero_PQ_and_QP( cuDoubleComplex *J )
+void zero_PQ_and_QP( gpuDoubleComplex *J )
 {
-    J[1] = make_cuDoubleComplex( 0.0, 0.0 );
-    J[2] = make_cuDoubleComplex( 0.0, 0.0 );
+    J[1] = make_gpuDoubleComplex( 0.0, 0.0 );
+    J[2] = make_gpuDoubleComplex( 0.0, 0.0 );
 }
 
 /**
@@ -796,7 +822,7 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
     //     phi = slope*freq + offset
 
     double          phi; // rad
-    cuDoubleComplex z;   // complex phase
+    gpuDoubleComplex z;   // complex phase
 
     long int freq_ch; // Hz
     long int frequency  = vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_start_hz; // Hz
@@ -810,7 +836,7 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
 
     // A temporary copy of the reference antenna matrix, so that we don't clobber it midway
     // through this operation!
-    cuDoubleComplex Dref[nantpol*nantpol];
+    gpuDoubleComplex Dref[nantpol*nantpol];
 
     // Go through all the antennas and divide the phases by the reference antenna
     uintptr_t ant, ch;
@@ -829,7 +855,7 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
             // Convert the slope and offset into a complex phase
             freq_ch = frequency + ch*chan_width;                // The frequency of this fine channel (Hz)
             phi = vm->cal.phase_slope*freq_ch + vm->cal.phase_offset; // (rad)
-            z = make_cuDoubleComplex( cos(phi), sin(phi) );
+            z = make_gpuDoubleComplex( cos(phi), sin(phi) );
         }
 
         for (ant = 0; ant < nant; ant++)
@@ -857,10 +883,10 @@ void vmApplyCalibrationCorrections( vcsbeam_context *vm )
             if (apply_phase_slope)
             {
                 d_idx = D_IDX(ant,ch,0,0,nchan,nantpol);
-                vm->D[d_idx] = cuCmul( vm->D[d_idx], z );
+                vm->D[d_idx] = gpuCmul( vm->D[d_idx], z );
 
                 d_idx = D_IDX(ant,ch,1,0,nchan,nantpol);
-                vm->D[d_idx] = cuCmul( vm->D[d_idx], z );
+                vm->D[d_idx] = gpuCmul( vm->D[d_idx], z );
             }
         }
     }
@@ -947,10 +973,10 @@ void vmSetCustomTileFlags( vcsbeam_context *vm )
     vmParseFlaggedTilenamesFile( vm->cal.flags_file, &vm->cal );
 
     // Create a "zero" matrix that will be copied
-    cuDoubleComplex Zero[4];
+    gpuDoubleComplex Zero[4];
     int i;
     for (i = 0; i < 4; i++)
-        Zero[i] = make_cuDoubleComplex( 0.0, 0.0 );
+        Zero[i] = make_gpuDoubleComplex( 0.0, 0.0 );
 
     // Loop through the tilenames listed in the calibration struct
     char     *tilename; // The tilename in question

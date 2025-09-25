@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-#include <cuComplex.h>
 
 #include "vcsbeam.h"
+#include "gpu_macros.h"
 
 /**
  * Calculates complex roots of unity.
@@ -18,14 +18,14 @@
  * @param N The number of roots to calculate
  * @return A list of all complex numbers \f$z\f$ such that \f$z^N = 1\f$.
  */
-cuDoubleComplex *roots_of_unity( int N )
+gpuDoubleComplex *roots_of_unity( int N )
 /* Creates a complex-valued array containing the N roots of unity.
  * The caller must free this memory (by passing the returned pointer to
  * free()).
  */
 {
     // Allocate memory
-    cuDoubleComplex *roots = (cuDoubleComplex *)malloc( N*sizeof(cuDoubleComplex) );
+    gpuDoubleComplex *roots = (gpuDoubleComplex *)malloc( N*sizeof(gpuDoubleComplex) );
 
     // Make sure memory was allocated correctly
     if (!roots)
@@ -41,7 +41,7 @@ cuDoubleComplex *roots_of_unity( int N )
     {
         // e^{2πin/N}
         double th = 2*M_PI*(double)n/(double)N;
-        roots[n] = make_cuDoubleComplex(cos(th), sin(th));
+        roots[n] = make_gpuDoubleComplex(cos(th), sin(th));
     }
 
     return roots;

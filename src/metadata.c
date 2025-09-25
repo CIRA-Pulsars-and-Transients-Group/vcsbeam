@@ -12,6 +12,8 @@
 
 #include "vcsbeam.h"
 
+#include "gpu_macros.h"
+
 /**
  * Initialises a VCSBeam context struct.
  *
@@ -178,6 +180,7 @@ void vmBindObsData(
     // Construct the gps second and coarse chan idx arrays
     vm->gps_seconds_to_process = (uint32_t *)malloc( vm->num_gps_seconds_to_process * sizeof(uint32_t) );
     vm->coarse_chan_idxs_to_process = (int *)malloc( vm->num_coarse_chans_to_process * sizeof(int) );
+    vm->cal_coarse_chan_idxs_to_process = (int *)malloc( vm->num_coarse_chans_to_process * sizeof(int) );
 
     int g;
     for (g = 0; g < vm->num_gps_seconds_to_process; g++)
@@ -189,6 +192,7 @@ void vmBindObsData(
     for (c = 0; c < num_coarse_chans_to_process; c++)
     {
         vm->coarse_chan_idxs_to_process[c] = c + first_coarse_chan_idx;
+        vm->cal_coarse_chan_idxs_to_process[c] = c;
     }
 
     // Copy across the data directory
@@ -321,6 +325,7 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     // Free manually created arrays
     free( vm->gps_seconds_to_process );
     free( vm->coarse_chan_idxs_to_process );
+    free( vm->cal_coarse_chan_idxs_to_process );
 
     // Free mwalib structs
     mwalib_metafits_metadata_free( vm->obs_metadata );
@@ -463,12 +468,10 @@ void vmMallocJVHost( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->fine_sample_rate *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
-    cudaMallocHost( (void **)&(vm->Jv_P), vm->Jv_size_bytes );
-    cudaCheckErrors( "vmMallocJVHost: cudaMallocHost(Jv_P) failed" );
-    cudaMallocHost( (void **)&(vm->Jv_Q), vm->Jv_size_bytes );
-    cudaCheckErrors( "vmMallocJVHost: cudaMallocHost(Jv_Q) failed" );
+    gpuMallocHost( (void **)&(vm->Jv_P), vm->Jv_size_bytes );
+    gpuMallocHost( (void **)&(vm->Jv_Q), vm->Jv_size_bytes );
 }
 
 /**
@@ -485,11 +488,10 @@ void vmMallocEHost( vcsbeam_context *vm )
         vm->fine_sample_rate *
         vm->nfine_chan *
         vm->obs_metadata->num_ant_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on host
-    cudaMallocHost( (void **)&(vm->e), vm->e_size_bytes );
-    cudaCheckErrors( "vmMallocEHost: cudaMallocHost failed" );
+    gpuMallocHost( (void **)&(vm->e), vm->e_size_bytes );
 }
 
 /**
@@ -504,8 +506,7 @@ void vmMallocSHost( vcsbeam_context *vm )
     vm->S_size_bytes = vm->npointing * vm->nfine_chan * vm->out_nstokes * vm->fine_sample_rate * sizeof(float);
 
     // Allocate memory on host
-    cudaMallocHost( (void **)&(vm->S), vm->S_size_bytes );
-    cudaCheckErrors( "vmMallocSHost: cudaMallocHost failed" );
+    gpuMallocHost( (void **)&(vm->S), vm->S_size_bytes );
 }
 
 /**
@@ -522,11 +523,10 @@ void vmMallocJHost( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
-    cudaMallocHost( (void **)&(vm->J), vm->J_size_bytes );
-    cudaCheckErrors( "vmMallocJHost: cudaMallocHost failed" );
+    gpuMallocHost( (void **)&(vm->J), vm->J_size_bytes );
 }
 
 /**
@@ -542,11 +542,10 @@ void vmMallocDHost( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
-    cudaMallocHost( (void **)&(vm->D), vm->D_size_bytes );
-    cudaCheckErrors( "vmMallocDHost: cudaMallocHost failed" );
+    gpuMallocHost( (void **)&(vm->D), vm->D_size_bytes );
 }
 
 /**
@@ -562,10 +561,8 @@ void vmMallocPQIdxsHost( vcsbeam_context *vm )
     vm->pol_idxs_size_bytes = vm->obs_metadata->num_ants * sizeof(uint32_t);
 
     // Allocate memory on device
-    cudaMallocHost( (void **)&(vm->polP_idxs), vm->pol_idxs_size_bytes );
-    cudaCheckErrors( "vmMallocPQIdxsHost: cudaMallocHost(polP_idxs) failed" );
-    cudaMallocHost( (void **)&(vm->polQ_idxs), vm->pol_idxs_size_bytes );
-    cudaCheckErrors( "vmMallocPQIdxsHost: cudaMallocHost(polQ_idxs) failed" );
+    gpuMallocHost( (void **)&(vm->polP_idxs), vm->pol_idxs_size_bytes );
+    gpuMallocHost( (void **)&(vm->polQ_idxs), vm->pol_idxs_size_bytes );
 }
 
 /**
@@ -585,10 +582,8 @@ void vmFreeVHost( vcsbeam_context *vm )
  */
 void vmFreeJVHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->Jv_P );
-    cudaCheckErrors( "vmFreeJVHost: cudaFreeHost(Jv_P) failed" );
-    cudaFreeHost( vm->Jv_Q );
-    cudaCheckErrors( "vmFreeJVHost: cudaFreeHost(Jv_Q) failed" );
+    gpuHostFree( vm->Jv_P );
+    gpuHostFree( vm->Jv_Q );
 }
 
 /**
@@ -598,8 +593,7 @@ void vmFreeJVHost( vcsbeam_context *vm )
  */
 void vmFreeEHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->e );
-    cudaCheckErrors( "vmFreeEHost: cudaFreeHost failed" );
+    gpuHostFree( vm->e );
 }
 
 /**
@@ -609,8 +603,7 @@ void vmFreeEHost( vcsbeam_context *vm )
  */
 void vmFreeSHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->S );
-    cudaCheckErrors( "vmFreeSHost: cudaFreeHost failed" );
+    gpuHostFree( vm->S );
 }
 
 /**
@@ -620,8 +613,7 @@ void vmFreeSHost( vcsbeam_context *vm )
  */
 void vmFreeJHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->J );
-    cudaCheckErrors( "vmFreeJHost: cudaFreeHost failed" );
+    gpuHostFree( vm->J );
 }
 
 /**
@@ -631,8 +623,7 @@ void vmFreeJHost( vcsbeam_context *vm )
  */
 void vmFreeDHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->D );
-    cudaCheckErrors( "vmFreeDHost: cudaFreeHost failed" );
+    gpuHostFree( vm->D );
 }
 
 /**
@@ -642,10 +633,8 @@ void vmFreeDHost( vcsbeam_context *vm )
  */
 void vmFreePQIdxsHost( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->polP_idxs );
-    cudaCheckErrors( "vmFreePQIdxsHost: cudaFreeHost(polP_idxs) failed" );
-    cudaFreeHost( vm->polQ_idxs );
-    cudaCheckErrors( "vmFreePQIdxsHost: cudaFreeHost(polQ_idxs) failed" );
+    gpuHostFree( vm->polP_idxs );
+    gpuHostFree( vm->polQ_idxs );
 }
 
 /**
@@ -669,8 +658,7 @@ void vmMallocVDevice( vcsbeam_context *vm )
     if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
     {
         vm->d_v_size_bytes = vm->bytes_per_second / vm->chunks_per_second;
-        cudaMalloc( (void **)&vm->d_v,  vm->d_v_size_bytes );
-        cudaCheckErrors( "vmMallocVDevice: cudaMalloc failed" );
+        gpuMalloc( (void **)&vm->d_v,  vm->d_v_size_bytes );
     }
     else // if (vm->obs_metadata->mwa_version == VCSMWAXv2)
     {
@@ -699,13 +687,24 @@ void vmMallocJVDevice( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->fine_sample_rate *
-        sizeof(cuDoubleComplex) /
+        sizeof(gpuDoubleComplex) /
         vm->chunks_per_second;
 
-    cudaMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
-    cudaCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_P) failed" );
-    cudaMalloc( (void **)&vm->d_Jv_Q,  vm->d_Jv_size_bytes );
-    cudaCheckErrors( "vmMallocJVDevice: cudaMalloc(d_Jv_Q) failed" );
+#ifdef DEBUG
+    printf("%lu\n", vm->d_Jv_size_bytes);
+    size_t mf, ma;
+    cudaMemGetInfo(&mf, &ma); //TODO: This will break, need equiv. definitions
+    printf("free: %zu ... total: %zu\n", mf, ma);
+#endif
+
+    gpuMalloc( (void **)&vm->d_Jv_P,  vm->d_Jv_size_bytes );
+
+#ifdef DEBUG
+    cudaMemGetInfo(&mf, &ma); //TODO: This will break, need equiv. definitions
+    printf("free: %zu ... total: %zu\n", mf, ma);
+#endif
+
+    gpuMalloc( (void **)&vm->d_Jv_Q,  vm->d_Jv_size_bytes );
 }
 
 /**
@@ -722,11 +721,10 @@ void vmMallocEDevice( vcsbeam_context *vm )
         vm->fine_sample_rate *
         vm->nfine_chan *
         vm->obs_metadata->num_ant_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
-    cudaMalloc( (void **)&(vm->d_e), vm->d_e_size_bytes );
-    cudaCheckErrors( "vmMallocEDevice: cudaMalloc failed" );
+    gpuMalloc( (void **)&(vm->d_e), vm->d_e_size_bytes );
 }
 
 /**
@@ -741,8 +739,7 @@ void vmMallocSDevice( vcsbeam_context *vm )
     vm->d_S_size_bytes = vm->npointing * vm->nfine_chan * vm->out_nstokes * vm->fine_sample_rate * sizeof(float);
 
     // Allocate memory on device
-    cudaMalloc( (void **)&(vm->d_S), vm->d_S_size_bytes );
-    cudaCheckErrors( "vmMallocSDevice: cudaMalloc failed" );
+    gpuMalloc( (void **)&(vm->d_S), vm->d_S_size_bytes );
 }
 
 /**
@@ -759,11 +756,10 @@ void vmMallocJDevice( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
-    cudaMalloc( (void **)&(vm->d_J), vm->d_J_size_bytes );
-    cudaCheckErrors( "vmMallocJDevice: cudaMalloc failed" );
+    gpuMalloc( (void **)&(vm->d_J), vm->d_J_size_bytes );
 }
 
 /**
@@ -779,11 +775,10 @@ void vmMallocDDevice( vcsbeam_context *vm )
         vm->obs_metadata->num_ants *
         vm->nfine_chan *
         vm->obs_metadata->num_visibility_pols *
-        sizeof(cuDoubleComplex);
+        sizeof(gpuDoubleComplex);
 
     // Allocate memory on device
-    cudaMalloc( (void **)&(vm->d_D), vm->d_D_size_bytes );
-    cudaCheckErrors( "vmMallocDDevice: cudaMalloc failed" );
+    gpuMalloc( (void **)&(vm->d_D), vm->d_D_size_bytes );
 }
 
 /**
@@ -799,10 +794,8 @@ void vmMallocPQIdxsDevice( vcsbeam_context *vm )
     vm->d_pol_idxs_size_bytes = vm->obs_metadata->num_ants * sizeof(uint32_t);
 
     // Allocate memory on device
-    cudaMalloc( (void **)&(vm->d_polP_idxs), vm->d_pol_idxs_size_bytes );
-    cudaCheckErrors( "vmMallocPQIdxsDevice: cudaMalloc(polP_idxs) failed" );
-    cudaMalloc( (void **)&(vm->d_polQ_idxs), vm->d_pol_idxs_size_bytes );
-    cudaCheckErrors( "vmMallocPQIdxsDevice: cudaMalloc(polQ_idxs) failed" );
+    gpuMalloc( (void **)&(vm->d_polP_idxs), vm->d_pol_idxs_size_bytes );
+    gpuMalloc( (void **)&(vm->d_polQ_idxs), vm->d_pol_idxs_size_bytes );
 }
 
 /**
@@ -819,8 +812,7 @@ void vmFreeVDevice( vcsbeam_context *vm )
 {
     if (vm->obs_metadata->mwa_version == VCSLegacyRecombined)
     {
-        cudaFree( vm->d_v );
-        cudaCheckErrors( "vmFreeVDevice: cudaFree failed" );
+        gpuFree( vm->d_v );
     }
 }
 
@@ -831,10 +823,8 @@ void vmFreeVDevice( vcsbeam_context *vm )
  */
 void vmFreeJVDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_Jv_P );
-    cudaCheckErrors( "vmFreeJVDevice: cudaFree(d_Jv_P) failed" );
-    cudaFree( vm->d_Jv_Q );
-    cudaCheckErrors( "vmFreeJVDevice: cudaFree(d_Jv_Q) failed" );
+    gpuFree( vm->d_Jv_P );
+    gpuFree( vm->d_Jv_Q );
 }
 
 /**
@@ -844,8 +834,7 @@ void vmFreeJVDevice( vcsbeam_context *vm )
  */
 void vmFreeEDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_e );
-    cudaCheckErrors( "vmFreeEDevice: cudaFree failed" );
+    gpuFree( vm->d_e );
 }
 
 /**
@@ -855,8 +844,7 @@ void vmFreeEDevice( vcsbeam_context *vm )
  */
 void vmFreeSDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_S );
-    cudaCheckErrors( "vmFreeSDevice: cudaFree failed" );
+    gpuFree( vm->d_S );
 }
 
 /**
@@ -866,8 +854,7 @@ void vmFreeSDevice( vcsbeam_context *vm )
  */
 void vmFreeJDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_J );
-    cudaCheckErrors( "vmFreeJDevice: cudaFree failed" );
+    gpuFree( vm->d_J );
 }
 
 
@@ -878,8 +865,7 @@ void vmFreeJDevice( vcsbeam_context *vm )
  */
 void vmFreeDDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_D );
-    cudaCheckErrors( "vmFreeDDevice: cudaFree failed" );
+    gpuFree( vm->d_D );
 }
 
 
@@ -890,10 +876,8 @@ void vmFreeDDevice( vcsbeam_context *vm )
  */
 void vmFreePQIdxsDevice( vcsbeam_context *vm )
 {
-    cudaFree( vm->d_polP_idxs );
-    cudaCheckErrors( "vmFreePQIdxsDevice: cudaFree(polP_idxs) failed" );
-    cudaFree( vm->d_polQ_idxs );
-    cudaCheckErrors( "vmFreePQIdxsDevice: cudaFree(polQ_idxs) failed" );
+    gpuFree( vm->d_polP_idxs );
+    gpuFree( vm->d_polQ_idxs );
 }
 
 /**
@@ -905,33 +889,16 @@ void vmFreePQIdxsDevice( vcsbeam_context *vm )
  *
  * LOGIC IS CURRENTLY FAULTY AND INCOMPLETE. DO NOT USE!
  */
-void vmSetMaxGPUMem( vcsbeam_context *vm, uintptr_t max_gpu_mem_bytes )
+void vmSetMaxGPUMem( vcsbeam_context *vm, int nchunks )
 {
-    vm->max_gpu_mem_bytes = max_gpu_mem_bytes;
-
-    // Requested maximum can't be more that available memory
-    struct cudaDeviceProp gpu_properties;
-    cudaGetDeviceProperties( &gpu_properties, 0 );
-
-    if (max_gpu_mem_bytes == 0) // Default behaviour: "0" = just use maximum available
-    {
-        vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
-    }
-    else if (max_gpu_mem_bytes > gpu_properties.totalGlobalMem )
-    {
-        fprintf( stderr, "warning: vmSetMaxGPUMem(): requested maximum (%lu) "
-                "exceeds available memory (%lu). Setting to max available.\n",
-                vm->max_gpu_mem_bytes, gpu_properties.totalGlobalMem );
-        vm->max_gpu_mem_bytes = gpu_properties.totalGlobalMem;
-    }
-
-    // (This currently only accounts for some of the memory needed)
-    vm->chunks_per_second = (vm->bytes_per_second + vm->Jv_size_bytes) /
-        vm->max_gpu_mem_bytes + 1;
+    vm->chunks_per_second = nchunks;
 
     // Make sure the number of chunks is divisible by the number of samples (per second)
-    while ( vm->sample_rate % vm->chunks_per_second != 0 )
-        vm->chunks_per_second++;
+    if ( vm->sample_rate % vm->chunks_per_second != 0 )
+    {
+        logger_timed_message( vm->log, "Bad number of chunks requested: must divide number of samples per second of data." );
+        exit(EXIT_FAILURE);
+    }
 
     // Calculate the amount of gpu memory needed
     vm->d_v_size_bytes = vm->bytes_per_second / vm->chunks_per_second;
@@ -950,8 +917,7 @@ void vmPushChunk( vcsbeam_context *vm )
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
     char *ptrHost = (char *)vm->v->buffer + chunk*vm->d_v_size_bytes;
 
-    cudaMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, cudaMemcpyHostToDevice );
-    cudaCheckErrors( "vmMemcpyNextChunk: cudaMemcpy failed" );
+    gpuMemcpy( vm->d_v, ptrHost, vm->d_v_size_bytes, gpuMemcpyHostToDevice );
 
     logger_stop_stopwatch( vm->log, "upload" );
 }
@@ -1033,18 +999,18 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
  */
 void vmPushJ( vcsbeam_context *vm )
 {
-#ifdef DEBUG
+/*#ifdef DEBUG
     printf("J_size_bytes = %lu\n", vm->J_size_bytes);
     uint8_t *dummy = (uint8_t *)(vm->J);
-    for (uintptr_t byte = 0; byte < vm->J_size_bytes; byte++)
+    uintptr_t byte;
+    for (byte = 0; byte < vm->J_size_bytes; byte++)
     {
         if (byte % 16 == 0)  printf("\n");
         if (byte % 8 == 0)  printf(" ");
         printf ("%02x ", dummy[byte]);
     }
-#endif
-    cudaMemcpy( vm->d_J, vm->J, vm->J_size_bytes, cudaMemcpyHostToDevice );
-    cudaCheckErrors( "vmMemcpyJ: cudaMemcpy failed" );
+#endif */
+    gpuMemcpy( vm->d_J, vm->J, vm->J_size_bytes, gpuMemcpyHostToDevice );
 }
 
 /**
@@ -1056,13 +1022,12 @@ void vmPushJ( vcsbeam_context *vm )
  */
 void vmCreateCudaStreams( vcsbeam_context *vm )
 {
-    vm->streams = (cudaStream_t *)malloc( vm->npointing * sizeof(cudaStream_t) );
+    vm->streams = (gpuStream_t *)malloc( vm->npointing * sizeof(gpuStream_t) );
 
     unsigned int p;
     for (p = 0; p < vm->npointing; p++)
     {
-        cudaStreamCreate( &(vm->streams[p]) );
-        cudaCheckErrors( "vmCreateCudaStreams: cudaStreamCreate failed" );
+        gpuStreamCreate( &(vm->streams[p]) );
     }
 }
 
@@ -1078,8 +1043,7 @@ void vmDestroyCudaStreams( vcsbeam_context *vm )
     unsigned int p;
     for (p = 0; p < vm->npointing; p++)
     {
-        cudaStreamDestroy( vm->streams[p] );
-        cudaCheckErrors( "vmDestroyCudaStreams: cudaStreamDestroy failed" );
+        gpuStreamDestroy( vm->streams[p] );
     }
 
     free( vm->streams );
@@ -1102,19 +1066,13 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
     vm->scales_size  = vm->npointing*nchan*vm->out_nstokes*sizeof(float);
     vm->Cscaled_size = vm->npointing*mpfs[0].coarse_chan_pf.sub.bytes_per_subint;
 
-    cudaMalloc( (void **)&vm->d_offsets, vm->offsets_size );
-    cudaCheckErrors( "vmCreateStatistics: cudaMalloc(offsets) failed" );
-    cudaMalloc( (void **)&vm->d_scales,  vm->scales_size );
-    cudaCheckErrors( "vmCreateStatistics: cudaMalloc(scales) failed" );
-    cudaMalloc( (void **)&vm->d_Cscaled, vm->Cscaled_size );
-    cudaCheckErrors( "vmCreateStatistics: cudaMalloc(Cscaled) failed" );
+    gpuMalloc( (void **)&vm->d_offsets, vm->offsets_size );
+    gpuMalloc( (void **)&vm->d_scales,  vm->scales_size );
+    gpuMalloc( (void **)&vm->d_Cscaled, vm->Cscaled_size );
 
-    cudaMallocHost( (void **)&vm->offsets, vm->offsets_size );
-    cudaCheckErrors( "vmCreateStatistics: cudaMallocHost(offsets) failed" );
-    cudaMallocHost( (void **)&vm->scales,  vm->scales_size );
-    cudaCheckErrors( "vmCreateStatistics: cudaMallocHost(scales) failed" );
-    cudaMallocHost( (void **)&vm->Cscaled, vm->Cscaled_size );
-    cudaCheckErrors( "vmCreateStatistics: cudaMallocHost(Cscaled) failed" );
+    gpuMallocHost( (void **)&vm->offsets, vm->offsets_size );
+    gpuMallocHost( (void **)&vm->scales,  vm->scales_size );
+    gpuMallocHost( (void **)&vm->Cscaled, vm->Cscaled_size );
 }
 
 /**
@@ -1127,19 +1085,13 @@ void vmCreateStatistics( vcsbeam_context *vm, mpi_psrfits *mpfs )
  */
 void vmDestroyStatistics( vcsbeam_context *vm )
 {
-    cudaFreeHost( vm->offsets );
-    cudaCheckErrors( "vmDestroyStatistics: cudaFreeHost(offsets) failed" );
-    cudaFreeHost( vm->scales );
-    cudaCheckErrors( "vmDestroyStatistics: cudaFreeHost(scales) failed" );
-    cudaFreeHost( vm->Cscaled );
-    cudaCheckErrors( "vmDestroyStatistics: cudaFreeHost(Cscaled) failed" );
+    gpuHostFree( vm->offsets );
+    gpuHostFree( vm->scales );
+    gpuHostFree( vm->Cscaled );
 
-    cudaFree( vm->d_offsets );
-    cudaCheckErrors( "vmDestroyStatistics: cudaFree(offsets) failed" );
-    cudaFree( vm->d_scales );
-    cudaCheckErrors( "vmDestroyStatistics: cudaFree(scales) failed" );
-    cudaFree( vm->d_Cscaled );
-    cudaCheckErrors( "vmDestroyStatistics: cudaFree(Cscaled) failed" );
+    gpuFree( vm->d_offsets );
+    gpuFree( vm->d_scales );
+    gpuFree( vm->d_Cscaled );
 }
 
 /**
@@ -1156,7 +1108,7 @@ void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
     vm->npointing       = npointings;
     vm->S_size_bytes    = vm->npointing * vm->nchan * vm->out_nstokes * vm->sample_rate * sizeof(float);
     vm->d_S_size_bytes  = vm->S_size_bytes;
-    vm->e_size_bytes    = vm->npointing * vm->sample_rate * vm->nchan * npol * sizeof(cuDoubleComplex);
+    vm->e_size_bytes    = vm->npointing * vm->sample_rate * vm->nchan * npol * sizeof(gpuDoubleComplex);
     vm->d_e_size_bytes  = vm->e_size_bytes;
 }
 

@@ -8,14 +8,15 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
-#include <cuComplex.h>
-#include <cuda_runtime.h>
+// #include <cuComplex.h>
+// #include <cuda_runtime.h>
 
 #include <mwalib.h>
 #include <star/pal.h>
 #include <star/palmac.h>
 
 #include "vcsbeam.h"
+#include "gpu_macros.h"
 
 /**
  * Calculates the phase delays required for phasing up each antenna.
@@ -40,7 +41,7 @@ void calc_geometric_delays(
         beam_geom         *beam_geom_vals,
         uint32_t           freq_hz,
         MetafitsMetadata  *obs_metadata,
-        cuDoubleComplex   *phi )
+        gpuDoubleComplex   *phi )
 {
     double E, N, H; // Location of the antenna: (E)ast, (N)orth, (H)eight
     double cable;   // The cable length for a given antenna
@@ -95,7 +96,7 @@ void calc_geometric_delays(
 
         // Eq. (3) in Ord et al. (2019)
         phase = 2.0 * M_PI * Delta_t * freq_hz;
-        phi[Rf->ant] = make_cuDoubleComplex( cos( phase ), sin( phase ));
+        phi[Rf->ant] = make_gpuDoubleComplex( cos( phase ), sin( phase ));
     }
 }
 
@@ -114,7 +115,7 @@ void vmCalcPhi(
  */
 {
     geometric_delays *gdelays = &vm->gdelays;
-    cuDoubleComplex phi[gdelays->nant]; // <-- Temporary location for result
+    gpuDoubleComplex phi[gdelays->nant]; // <-- Temporary location for result
 
     uintptr_t p, c, a;
     for (p = 0; p < gdelays->npointings; p++)
@@ -162,13 +163,11 @@ void vmCreateGeometricDelays( vcsbeam_context *vm )
     }
 
     // Allocate memory
-    size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(cuDoubleComplex);
+    size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(gpuDoubleComplex);
 
-    cudaMallocHost( (void **)&(vm->gdelays.phi), size );
-    cudaCheckErrors( "error: create_geometric_delays: cudaMallocHost failed" );
+    gpuMallocHost( (void **)&(vm->gdelays.phi), size );
 
-    cudaMalloc( (void **)&(vm->gdelays.d_phi), size );
-    cudaCheckErrors( "error: create_geometric_delays: cudaMalloc failed" );
+    gpuMalloc( (void **)&(vm->gdelays.d_phi), size );
 }
 
 /**
@@ -182,11 +181,9 @@ void free_geometric_delays( geometric_delays *gdelays )
 {
     free( gdelays->chan_freqs_hz );
 
-    cudaFreeHost( gdelays->phi );
-    cudaCheckErrors( "(free_geometric_delays) cudaFreeHost failed" );
+    gpuHostFree( gdelays->phi );
 
-    cudaFree( gdelays->d_phi );
-    cudaCheckErrors( "(free_geometric_delays) cudaFree failed" );
+    gpuFree( gdelays->d_phi );
 }
 
 /**
@@ -196,9 +193,8 @@ void vmPushPhi( vcsbeam_context *vm )
 /* Copy host memory block to device
  */
 {
-    size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(cuDoubleComplex);
-    cudaMemcpyAsync( vm->gdelays.d_phi, vm->gdelays.phi, size, cudaMemcpyHostToDevice, 0 );
-    cudaCheckErrors( "error: vmPushPhi: cudaMemcpyAsync failed" );
+    size_t size = vm->gdelays.npointings * vm->gdelays.nant * vm->gdelays.nchan * sizeof(gpuDoubleComplex);
+    gpuMemcpyAsync( vm->gdelays.d_phi, vm->gdelays.phi, size, gpuMemcpyHostToDevice, 0 );
 }
 
 /**
@@ -452,19 +448,19 @@ double calc_array_factor(
     double array_factor;
 
     uintptr_t nant = obs_metadata->num_ants;
-    cuDoubleComplex w[nant], psi[nant];
+    gpuDoubleComplex w[nant], psi[nant];
 
     calc_geometric_delays( bg1, freq_hz, obs_metadata, w );
     calc_geometric_delays( bg2, freq_hz, obs_metadata, psi );
 
-    cuDoubleComplex cumsum = make_cuDoubleComplex( 0.0, 0.0 );
+    gpuDoubleComplex cumsum = make_gpuDoubleComplex( 0.0, 0.0 );
     uintptr_t a;
     for (a = 0; a < nant; a++)
     {
-        cumsum = cuCadd( cumsum, cuCmul( cuConj(w[a]), psi[a] ) );
+        cumsum = gpuCadd( cumsum, gpuCmul( gpuConj(w[a]), psi[a] ) );
     }
 
-    array_factor = cuCabs( cumsum ) / nant;
+    array_factor = gpuCabs( cumsum ) / nant;
     array_factor *= array_factor;
 
     return array_factor;

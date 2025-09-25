@@ -13,8 +13,8 @@
 
 // Non-standard dependencies
 #include <mwalib.h>
-#include <cuda_runtime.h>
 #include <mpi.h>
+#include "gpu_macros.h"
 
 // Local includes
 #include "vcsbeam.h"
@@ -90,14 +90,10 @@ int main(int argc, char **argv)
 
     allocate_input_output_arrays( (void **)&data, (void **)&d_data, data_size );
 
-    cudaMalloc( (void **)&d_incoh, incoh_size );
-    cudaCheckErrors( "cudaMalloc(d_incoh) failed" );
-    cudaMalloc( (void **)&d_offsets, nchans*sizeof(float) );
-    cudaCheckErrors( "cudaMalloc(d_offsets) failed" );
-    cudaMalloc( (void **)&d_scales,  nchans*sizeof(float) );
-    cudaCheckErrors( "cudaMalloc(d_scales) failed" );
-    cudaMalloc( (void **)&d_Iscaled, Iscaled_size );
-    cudaCheckErrors( "cudaMalloc(Iscaled) failed" );
+    gpuMalloc( (void **)&d_incoh, incoh_size );
+    gpuMalloc( (void **)&d_offsets, nchans*sizeof(float) );
+    gpuMalloc( (void **)&d_scales,  nchans*sizeof(float) );
+    gpuMalloc( (void **)&d_Iscaled, Iscaled_size );
 
     // Get pointing geometry information
     beam_geom beam_geom_vals;
@@ -179,14 +175,10 @@ int main(int argc, char **argv)
 
     free_input_output_arrays( data, d_data );
 
-    cudaFree( d_incoh );
-    cudaCheckErrors( "cudaFree(d_incoh) failed" );
-    cudaFree( d_offsets );
-    cudaCheckErrors( "cudaFree(d_offsets) failed" );
-    cudaFree( d_scales );
-    cudaCheckErrors( "cudaFree(d_scales) failed" );
-    cudaFree( d_Iscaled );
-    cudaCheckErrors( "cudaFree(d_Iscaled) failed" );
+    gpuFree( d_incoh );
+    gpuFree( d_offsets );
+    gpuFree( d_scales );
+    gpuFree( d_Iscaled );
 
     // Clean up memory associated with mwalib
     destroy_vcsbeam_context( vm );
@@ -343,7 +335,7 @@ void read_step( VoltageContext *vcs_context, uint64_t gps_second,
                 gps_second,
                 1,
                 coarse_chan_idx,
-                data,
+                (char*)data,
                 data_size,
                 error_message,
                 ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)

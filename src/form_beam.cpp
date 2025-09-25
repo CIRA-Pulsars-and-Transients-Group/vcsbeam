@@ -10,17 +10,20 @@
 #include <string.h>
 #include <time.h>
 
-#include <cuComplex.h>
-#include <cuda_runtime.h>
+#include "gpu_fft.hpp"
+#include "gpu_macros.h"
+
 
 #include "vcsbeam.h"
+
+#define NTHREADS_BEAMFORMING_KERNEL 512
 
 /* Wrapper function for GPU/CUDA error handling.
  * 
  * @todo Remove this function and replace all calls to it with calls to CUDA
  *       error functions.
  */
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+/*inline void gpuAssert(gpuError_t code, const char *file, int line, bool abort=true)
 {
     if (code != 0)
     {
@@ -30,10 +33,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
             exit(code);
         }
     }
-}
+}*/
 
 // define a macro for accessing gpuAssert
-#define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
+// #define gpuErrchk(ans) {gpuAssert((ans), __FILE__, __LINE__, true);}
 
 
 /**
@@ -75,7 +78,7 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
     __syncthreads();
 
     // Convert input data to complex double
-    cuDoubleComplex v; // Complex voltage
+    gpuDoubleComplex v; // Complex voltage
     uint8_t sample = data[v_IDX(s,c,i,nc,ni)];
     v = UCMPLX4_TO_CMPLX_FLT(sample);
 
@@ -119,9 +122,9 @@ __global__ void incoh_beam( uint8_t *data, float *incoh )
  * \f$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\f$
  */
 __global__ void vmApplyJ_kernel( void            *data,
-                                 cuDoubleComplex *J,
-                                 cuDoubleComplex *Jv_Q,
-                                 cuDoubleComplex *Jv_P,
+                                 gpuDoubleComplex *J,
+                                 gpuDoubleComplex *Jv_Q,
+                                 gpuDoubleComplex *Jv_P,
                                  uint32_t      *polQ_idxs,
                                  uint32_t      *polP_idxs,
                                  int npol,
@@ -150,7 +153,7 @@ __global__ void vmApplyJ_kernel( void            *data,
     int iQ   = polQ_idxs[ant]; /* The input index for the Q pol for this antenna */
     int iP   = polP_idxs[ant]; /* The input index for the P pol for this antenna */
 
-    cuDoubleComplex vq, vp;
+    gpuDoubleComplex vq, vp;
     // Convert input data to complex float
     if (datatype == VM_INT4)
     {
@@ -160,7 +163,7 @@ __global__ void vmApplyJ_kernel( void            *data,
     }
     else if (datatype == VM_DBL)
     {
-        cuDoubleComplex *v = (cuDoubleComplex *)data;
+        gpuDoubleComplex *v = (gpuDoubleComplex *)data;
         vq = v[v_IDX(s,c,iQ,nc,ni)];
         vp = v[v_IDX(s,c,iP,nc,ni)];
     }
@@ -170,11 +173,12 @@ __global__ void vmApplyJ_kernel( void            *data,
     // Jv_Q = Jqq*vq + Jqp*vp
     // Jv_P = Jpq*vq + Jpy*vp
 
-    Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] = cuCadd( cuCmul( J[J_IDX(p,ant,c,0,0,nant,nc,npol)], vq ),
-                                                 cuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
-    Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] = cuCadd( cuCmul( J[J_IDX(p,ant,c,1,0,nant,nc,npol)], vq ),
-                                                 cuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
-#ifdef DEBUG
+    Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] = gpuCadd( gpuCmul( J[J_IDX(p,ant,c,0,0,nant,nc,npol)], vq ),
+                                                  gpuCmul( J[J_IDX(p,ant,c,0,1,nant,nc,npol)], vp ) );
+    Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] = gpuCadd( gpuCmul( J[J_IDX(p,ant,c,1,0,nant,nc,npol)], vq ),
+                                                  gpuCmul( J[J_IDX(p,ant,c,1,1,nant,nc,npol)], vp ) );
+
+/*#ifdef DEBUG
     if (c==50 && s == 3 && ant==0)
     {
         for (int i = 0; i < 1; i++)
@@ -182,28 +186,31 @@ __global__ void vmApplyJ_kernel( void            *data,
             printf( "Jinv[%3d]      = [%5.3lf,%5.3lf, %5.3lf,%5.3lf]\n"
                     "                 [%5.3lf,%5.3lf, %5.3lf,%5.3lf]\n",
                     i,
-                    cuCreal(J[J_IDX(p,i,c,0,0,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,0,0,nant,nc,npol)]),
-                    cuCreal(J[J_IDX(p,i,c,0,1,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,0,1,nant,nc,npol)]),
-                    cuCreal(J[J_IDX(p,i,c,1,0,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,1,0,nant,nc,npol)]),
-                    cuCreal(J[J_IDX(p,i,c,1,1,nant,nc,npol)]), cuCimag(J[J_IDX(p,i,c,1,1,nant,nc,npol)]) );
-            cuDoubleComplex *v = (cuDoubleComplex *)data;
+                    gpuCreal(J[J_IDX(p,i,c,0,0,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,0,0,nant,nc,npol)]),
+                    gpuCreal(J[J_IDX(p,i,c,0,1,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,0,1,nant,nc,npol)]),
+                    gpuCreal(J[J_IDX(p,i,c,1,0,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,1,0,nant,nc,npol)]),
+                    gpuCreal(J[J_IDX(p,i,c,1,1,nant,nc,npol)]), gpuCimag(J[J_IDX(p,i,c,1,1,nant,nc,npol)]) );
+            gpuDoubleComplex *v = (gpuDoubleComplex *)data;
             printf( "v[Q=%3d,P=%3d] = [%5.3lf,%5.3lf]; [%5.3lf,%5.3lf]\n",
                     polQ_idxs[i], polP_idxs[i],
-                    cuCreal( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ),
-                    cuCreal( v[v_IDX(s,c,polP_idxs[i],nc,ni)] ), cuCimag( v[v_IDX(s,c,polP_idxs[i],nc,ni)] )
+                    gpuCreal( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ), gpuCimag( v[v_IDX(s,c,polQ_idxs[i],nc,ni)] ),
+                    gpuCreal( v[v_IDX(s,c,polP_idxs[i],nc,ni)] ), gpuCimag( v[v_IDX(s,c,polP_idxs[i],nc,ni)] )
                   );
             printf( "Jinv * v = [%5.3lf,%5.3lf]; [%5.3lf,%5.3lf]\n",
-                    cuCreal(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), cuCimag(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), 
-                    cuCreal(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)]), cuCimag(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)])
+                    gpuCreal(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), gpuCimag(Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)]), 
+                    gpuCreal(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)]), gpuCimag(Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)])
                   );
         }
     }
-#endif
+#endif */
 }
 
 /**
  * CUDA kernel for phasing up and summing the voltages over antenna.
  *
+ * @param[in] nfine_chan Number of fine channels
+ * @param[in] n_samples Number of time samples
+ * @param[in] nant Number of antennas
  * @param[in] Jv_Q The Q polarisation of the product \f${\bf J}^{-1}{\bf v}\f$,
  *                 with layout \f$N_t \times N_f \times N_a\f$
  * @param[in] Jv_P The P polarisation of the product \f${\bf J}^{-1}{\bf v}\f$,
@@ -234,142 +241,128 @@ __global__ void vmApplyJ_kernel( void            *data,
  * The expected thread configuration is
  * \f$\langle\langle\langle(N_f, N_t), N_a\rangle\rangle\rangle.\f$
  */
-__global__ void vmBeamform_kernel( cuDoubleComplex *Jv_Q,
-                                 cuDoubleComplex *Jv_P,
-                                 cuDoubleComplex *phi,
+__global__ void vmBeamform_kernel(int nfine_chan,
+                                 int n_samples, 
+                                 int nant, 
+                                 gpuDoubleComplex *Jv_Q,
+                                 gpuDoubleComplex *Jv_P,
+                                 gpuDoubleComplex *phi,
                                  double invw,
                                  int p,
                                  int soffset,
                                  int nchunk,
-                                 cuDoubleComplex *e,
+                                 gpuDoubleComplex *e,
                                  float *S,
                                  int npol,
                                  int nstokes )
 {
-    // Translate GPU block/thread numbers into meaningful names
-    int c    = blockIdx.x;  /* The (c)hannel number */
-    int nc   = gridDim.x;   /* The (n)umber of (c)hannels (=128) */
-    int s    = blockIdx.y;  /* The (s)ample number */
-    int ns   = gridDim.y;   /* The (n)umber of (s)amples (in a chunk)*/
 
-    int ant  = threadIdx.x; /* The (ant)enna number */
-    int nant = blockDim.x;  /* The (n)_umber of (ant)ennas */
+    const unsigned int warp_id = threadIdx.x / warpSize;
+    const unsigned int lane_id = threadIdx.x % warpSize;
+    // current warp id with respect to the entire grid.
+    const unsigned int glb_warp_id = blockIdx.x * (blockDim.x / warpSize) + warp_id;
+    const unsigned int total_warps = gridDim.x * (blockDim.x / warpSize);
+    /**
+     * the total number of warps created might not cover the total number of beams to be computed.
+     * Hence, the code "moves" the grid over the entire input until all of it is "covered".
+     * Alternatively, the overall input is tiled, the tile size is the number of warps available,
+     * and this is the number of tiles necessary to cover the entire input.
+     */
+    const unsigned int n_loops = (n_samples * nfine_chan + total_warps - 1) / total_warps;
 
-    /*// GPU profiling
-    clock_t start, stop;
-    double setup_t, detect_t, sum_t, stokes_t;
-    if ((p == 0) && (ant == 0) && (c == 0) && (s == 0)) start = clock();*/
+    // Each thread in a block has to hold 5 values in shared memory: ex, ey, Nxx, Nxy, Nyy
+    __shared__ gpuDoubleComplex workspace[NTHREADS_BEAMFORMING_KERNEL * 5];
+    const unsigned int thread_sm_idx = threadIdx.x * 5;
+    // For each tile..
+    for(unsigned int l = 0; l < n_loops; l++){
+        // compute the corresponding beam item id for the current warp.
+        unsigned int current_beam = glb_warp_id + total_warps * l;
+        // If the id is within bounds.. compute the beam
+        if(current_beam < n_samples * nfine_chan){
+            // Translate GPU block/thread numbers into meaningful names
+            int c    = current_beam / n_samples;
+            int nc   = nfine_chan;  /* The (n)umber of (c)hannels (=128) */
+            int s    = current_beam % n_samples; /* The (s)ample number */
+            int ns   = n_samples;  /* The (n)umber of (s)amples (in a chunk)*/
 
-    // Organise dynamically allocated shared arrays (see tag 11NSTATION for kernel call)
-    extern __shared__ double arrays[];
+            gpuDoubleComplex ex  = make_gpuDoubleComplex( 0.0, 0.0 );
+            gpuDoubleComplex ey  = make_gpuDoubleComplex( 0.0, 0.0 );
+            gpuDoubleComplex Nxx = make_gpuDoubleComplex( 0.0, 0.0 );
+            gpuDoubleComplex Nxy = make_gpuDoubleComplex( 0.0, 0.0 );
+            gpuDoubleComplex Nyy = make_gpuDoubleComplex( 0.0, 0.0 );
+            // (Nyx is not needed as it's degenerate with Nxy)
 
-    cuDoubleComplex *ex  = (cuDoubleComplex *)(&arrays[1*nant]);
-    cuDoubleComplex *ey  = (cuDoubleComplex *)(&arrays[3*nant]);
-    cuDoubleComplex *Nxx = (cuDoubleComplex *)(&arrays[5*nant]);
-    cuDoubleComplex *Nxy = (cuDoubleComplex *)(&arrays[7*nant]);
-    cuDoubleComplex *Nyy = (cuDoubleComplex *)(&arrays[9*nant]);
-    // (Nyx is not needed as it's degenerate with Nxy)
+            // Just like warps tile beams, threads in a warp tile the antennas.
+            // Each thread computes a partial sum of its corresponding antennas.
+            for(unsigned int ant = lane_id; ant < nant; ant += warpSize){
+                // Calculate beamform products for each antenna, and then add them together
+                // Calculate the coherent beam (B = J*phi*D)
+                gpuDoubleComplex ex_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+                if(isnan(ex_tmp.x) || isnan(ex_tmp.y)) continue;
+                gpuDoubleComplex ey_tmp = gpuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
+                if(isnan(ey_tmp.x) || isnan(ey_tmp.y)) continue;
+                ex = gpuCadd(ex, ex_tmp);
+                ey = gpuCadd(ey, ey_tmp);
+                Nxx = gpuCadd(Nxx, gpuCmul( ex_tmp, gpuConj(ex_tmp)));
+                Nxy = gpuCadd(Nxy, gpuCmul( ex_tmp, gpuConj(ey_tmp)));
+                Nyy = gpuCadd(Nyy, gpuCmul( ey_tmp, gpuConj(ey_tmp)));
+            }
+            // intermediate results from thread in a warp are stored in shared memory.
+            workspace[thread_sm_idx + 0] = ex;
+            workspace[thread_sm_idx + 1] = ey;
+            workspace[thread_sm_idx + 2] = Nxx;
+            workspace[thread_sm_idx + 3] = Nxy;
+            workspace[thread_sm_idx + 4] = Nyy;
 
-    // Calculate the beam and the noise floor
+            // we perform a warp parallel reduction over the partial sums computed by threads in the warp.
+            for(unsigned int i = warpSize/2; i >= 1; i /= 2){
+                if(lane_id < i){
+                    workspace[thread_sm_idx] = gpuCadd(workspace[thread_sm_idx], workspace[(threadIdx.x + i) * 5]);
+                    workspace[thread_sm_idx + 1] = gpuCadd(workspace[thread_sm_idx + 1], workspace[(threadIdx.x + i) * 5 + 1]);
+                    workspace[thread_sm_idx + 2] = gpuCadd(workspace[thread_sm_idx + 2], workspace[(threadIdx.x + i) * 5 + 2]);
+                    workspace[thread_sm_idx + 3] = gpuCadd(workspace[thread_sm_idx + 3], workspace[(threadIdx.x + i) * 5 + 3]);
+                    workspace[thread_sm_idx + 4] = gpuCadd(workspace[thread_sm_idx + 4], workspace[(threadIdx.x + i) * 5 + 4]);
+                }
+                #ifdef __NVCC__
+                /* Cristian's note
+                This instruction is only needed for NVIDIA GPUs starting from the Volta architecture, 
+                that introduces the independent thread scheduling option 
+                (https://stackoverflow.com/questions/70987051/independent-thread-scheduling-since-volta).
+                In such architecture, threads within a warp can execute independently from one another and 
+                one of them can "run ahead" of the other ones, possibly creating a race condition.
+                In AMD GPUs, and NVIDIA GPUs previous to Volta, this is not available. All threads in a warp 
+                execute the same instruction in lockstep (or a no-op in thread diverging situation).
+                No thread can run ahead of others in the same warp. */
+                __syncwarp();
+                #endif
+            }
+            // Thread in lane zero has final result for the warp (beam).
+            // Form the stokes parameters for the coherent beam
+            // Only doing it for ant 0 so that it only prints once
+            if ( lane_id == 0 ) {
+                float bnXX = DETECT(workspace[thread_sm_idx]) - gpuCreal(workspace[thread_sm_idx + 2]);
+                float bnYY = DETECT(workspace[thread_sm_idx + 1]) - gpuCreal(workspace[thread_sm_idx + 4]);
+                gpuDoubleComplex bnXY = gpuCsub( gpuCmul( workspace[thread_sm_idx], gpuConj( workspace[thread_sm_idx + 1] ) ),
+                                            workspace[thread_sm_idx + 3] );
 
-    /* Fix from Maceij regarding NaNs in output when running on Athena, 13 April 2018.
-    Apparently the different compilers and architectures are treating what were
-    unintialised variables very differently */
+                // Stokes I, Q, U, V:
+                S[C_IDX(p,s+soffset,0,c,ns*nchunk,nstokes,nc)] = invw*(bnXX + bnYY);
+                if ( nstokes == 4 )
+                {
+                    S[C_IDX(p,s+soffset,1,c,ns*nchunk,nstokes,nc)] = invw*(bnXX - bnYY);
+                    S[C_IDX(p,s+soffset,2,c,ns*nchunk,nstokes,nc)] =  2.0*invw*gpuCreal( bnXY );
+                    S[C_IDX(p,s+soffset,3,c,ns*nchunk,nstokes,nc)] = -2.0*invw*gpuCimag( bnXY );
+                }
 
-    ex[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
-    ey[ant]  = make_cuDoubleComplex( 0.0, 0.0 );
-
-    Nxx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
-    Nxy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
-    //Nyx[ant] = make_cuDoubleComplex( 0.0, 0.0 );
-    Nyy[ant] = make_cuDoubleComplex( 0.0, 0.0 );
-    __syncthreads();
-
-    // Calculate beamform products for each antenna, and then add them together
-    // Calculate the coherent beam (B = J*phi*D)
-    ex[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_Q[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-    ey[ant] = cuCmul( phi[PHI_IDX(p,ant,c,nant,nc)], Jv_P[Jv_IDX(p,s,c,ant,ns,nc,nant)] );
-
-    Nxx[ant] = cuCmul( ex[ant], cuConj(ex[ant]) );
-    Nxy[ant] = cuCmul( ex[ant], cuConj(ey[ant]) );
-    Nyy[ant] = cuCmul( ey[ant], cuConj(ey[ant]) );
-
-    // Detect the coherent beam
-    // The safest, slowest option: Just get one thread to do it
-    __syncthreads();
-    if ( ant == 0 )
-    {
-        for (int i = 1; i < nant; i++)
-        {
-            ex[0]  = cuCadd( ex[0],  ex[i] );
-            ey[0]  = cuCadd( ey[0],  ey[i] );
-            Nxx[0] = cuCadd( Nxx[0], Nxx[i] );
-            Nxy[0] = cuCadd( Nxy[0], Nxy[i] );
-            //Nyx[0]=cuCadd( Nyx[0], Nyx[i] );
-            Nyy[0] = cuCadd( Nyy[0], Nyy[i] );
+                // The beamformed products
+                e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = workspace[thread_sm_idx ];
+                e[B_IDX(p,s+soffset,c,1,ns*nchunk,nc,npol)] = workspace[thread_sm_idx + 1];
+            }
         }
+        __syncthreads();
     }
-    __syncthreads();
-
-    // Form the stokes parameters for the coherent beam
-    // Only doing it for ant 0 so that it only prints once
-    if ( ant == 0 )
-    {
-        float bnXX = DETECT(ex[0]) - cuCreal(Nxx[0]);
-        float bnYY = DETECT(ey[0]) - cuCreal(Nyy[0]);
-        cuDoubleComplex bnXY = cuCsub( cuCmul( ex[0], cuConj( ey[0] ) ),
-                                    Nxy[0] );
-
-        // Stokes I, Q, U, V:
-        S[C_IDX(p,s+soffset,0,c,ns*nchunk,nstokes,nc)] = invw*(bnXX + bnYY);
-        if ( nstokes == 4 )
-        {
-            S[C_IDX(p,s+soffset,1,c,ns*nchunk,nstokes,nc)] = invw*(bnXX - bnYY);
-            S[C_IDX(p,s+soffset,2,c,ns*nchunk,nstokes,nc)] =  2.0*invw*cuCreal( bnXY );
-            S[C_IDX(p,s+soffset,3,c,ns*nchunk,nstokes,nc)] = -2.0*invw*cuCimag( bnXY );
-        }
-
-        // The beamformed products
-        e[B_IDX(p,s+soffset,c,0,ns*nchunk,nc,npol)] = ex[0];
-        e[B_IDX(p,s+soffset,c,1,ns*nchunk,nc,npol)] = ey[0];
-    }
-    __syncthreads();
-
-#ifdef DEBUG
-    if (c==50 && s == 3 && ant==0)
-    {
-        printf( "Pre-add:\n" );
-        for (int i = 0; i < 1; i++)
-        {
-            printf( "    "
-                    "ex[%3d];ey[%3d]=[%5.3lf,%5.3lf];[%5.3lf,%5.3lf]  "
-                    "ph[%3d]=[%5.3lf,%5.3lf]  "
-                    "JQ[%3d]=[%5.3lf,%5.3lf]  "
-                    "JP[%3d]=[%5.3lf,%5.3lf]  "
-                    "\n",
-                    i, i,
-                    cuCreal( ex[i] ), cuCimag( ex[i] ),
-                    cuCreal( ey[i] ), cuCimag( ey[i] ),
-                    i,
-                    cuCreal( phi[PHI_IDX(p,i,c,nant,nc)] ), cuCimag( phi[PHI_IDX(p,i,c,nant,nc)] ),
-                    i,
-                    cuCreal( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ), cuCimag( Jv_Q[Jv_IDX(p,s,c,i,ns,nc,nant)] ),
-                    i,
-                    cuCreal( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] ), cuCimag( Jv_P[Jv_IDX(p,s,c,i,ns,nc,nant)] )
-                    );
-        }
-        printf( "Post-add: ex[0]; ey[0] = [%.3lf, %.3lf]; [%.3lf, %.3lf]\n",
-                cuCreal( ex[ant] ), cuCimag( ex[ant] ),
-                cuCreal( ey[ant] ), cuCimag( ey[ant] ) );
-    /*
-        printf( "phi[3]  = [%lf, %lf]\n",
-                cuCreal(phi[PHI_IDX(p,ant,c,nant,nc)]),
-                cuCimag(phi[PHI_IDX(p,ant,c,nant,nc)]) );
-    */
-    }
-#endif
-
 }
+
 
 /**
  * CUDA kernel for normalising Stokes parameters
@@ -482,7 +475,7 @@ void cu_form_incoh_beam(
 */
 {
     // Copy the data to the device
-    gpuErrchk(cudaMemcpyAsync( d_data, data, data_size, cudaMemcpyHostToDevice ));
+    (gpuMemcpyAsync( d_data, data, data_size, gpuMemcpyHostToDevice ));
 
     // Call the kernels
     dim3 chan_samples( nchan, nsample );
@@ -490,19 +483,19 @@ void cu_form_incoh_beam(
     // Call the incoherent beam kernel
     incoh_beam<<<chan_samples, ninput>>>( d_data, d_incoh );
 
-    gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuPeekAtLastError() );
+    ( gpuDeviceSynchronize() );
 
     dim3 chan_stokes(nchan, 1);
     int npointing = 1;
     renormalise_channels_kernel<<<npointing, chan_stokes>>>( d_incoh, nsample, d_offsets, d_scales, d_Iscaled );
-    gpuErrchk( cudaPeekAtLastError() );
+    ( gpuPeekAtLastError() );
 
     // Copy the results back into host memory
     // (NB: Asynchronous copy here breaks the output)
-    gpuErrchk(cudaMemcpy( offsets, d_offsets, nchan*sizeof(float), cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( scales,  d_scales,  nchan*sizeof(float), cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( Iscaled, d_Iscaled, Iscaled_size,        cudaMemcpyDeviceToHost ));
+    (gpuMemcpy( offsets, d_offsets, nchan*sizeof(float), gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( scales,  d_scales,  nchan*sizeof(float), gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( Iscaled, d_Iscaled, Iscaled_size,        gpuMemcpyDeviceToHost ));
 }
 
 /**
@@ -520,7 +513,7 @@ void vmApplyJChunk( vcsbeam_context *vm )
     {
         vmApplyJ_kernel<<<chan_samples, stat, 0, vm->streams[p]>>>(
                 vm->d_v,
-                (cuDoubleComplex *)vm->d_J,
+                (gpuDoubleComplex *)vm->d_J,
                 vm->d_Jv_Q,
                 vm->d_Jv_P,
                 vm->d_polQ_idxs,
@@ -528,9 +521,9 @@ void vmApplyJChunk( vcsbeam_context *vm )
                 vm->obs_metadata->num_ant_pols,
                 p,
                 vm->datatype );
-        cudaCheckErrors( "vmApplyJChunk: vmApplyJ_kernel failed" );
+        gpuCheckLastError(); 
     }
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuDeviceSynchronize() );
 }
 
 /**
@@ -541,20 +534,39 @@ void vmApplyJChunk( vcsbeam_context *vm )
  */
 void vmBeamformChunk( vcsbeam_context *vm )
 {
-    uintptr_t shared_array_size = 11 * vm->obs_metadata->num_ants * sizeof(double);
-    // (To see how the 11*STATION double arrays are used, go to this code tag: 11NSTATION)
 
-    dim3 chan_samples( vm->nfine_chan, vm->fine_sample_rate / vm->chunks_per_second );
-    dim3 stat( vm->obs_metadata->num_ants );
-
+    /**
+     * In this implementation each beam computation, one for each frequency channel 
+     * and time sample, is assigned to a warp (32/64 consecutive threads working in
+     * lockstep). A warp is assigned one or more beams to compute depending on how
+     * many thread blocks (hence warps) are created. This number is now unrelated
+     * to the problem at hand and depends on the hardware specifics for better
+     * performance. We create "just enough" blocks to avoid too many context
+     * switches.
+     */
+    struct gpuDeviceProp_t props;
+    int gpu_id = -1;
+    gpuGetDevice(&gpu_id);
+    gpuGetDeviceProperties(&props, gpu_id);
+    unsigned int n_blocks = props.multiProcessorCount * 2;
+    
     // Get the "chunk" number
     int chunk = vm->chunk_to_load % vm->chunks_per_second;
+
     // Send off a parallel CUDA stream for each pointing
     int p;
     for (p = 0; p < vm->npointing; p++ )
     {
+#ifdef DEBUG
+        fprintf(stderr, "vm->npointing=%d  pointing=%d\n", vm->npointing, p);
+        fprintf(stderr, "chan_samples=(%d,%d,%d) stat=(%d,%d,%d)\n", chan_samples.x, chan_samples.y, chan_samples.z, stat.x, stat.y, stat.z);
+        fprintf(stderr, "I think the coarse channel numbers is: %d\n", vm->coarse_chan_idx);
+#endif
         // Call the beamformer kernel
-        vmBeamform_kernel<<<chan_samples, stat, shared_array_size, vm->streams[p]>>>(
+        vmBeamform_kernel<<<n_blocks, NTHREADS_BEAMFORMING_KERNEL, 0, vm->streams[p]>>>(
+                vm->nfine_chan, 
+                (vm->fine_sample_rate / vm->chunks_per_second),
+                vm->obs_metadata->num_ants,
                 vm->d_Jv_Q,
                 vm->d_Jv_P,
                 vm->gdelays.d_phi,
@@ -566,11 +578,9 @@ void vmBeamformChunk( vcsbeam_context *vm )
                 (float *)vm->d_S,
                 vm->obs_metadata->num_ant_pols,
                 vm->out_nstokes );
-
-        cudaCheckErrors( "vmBeamformChunk: vmBeamform_kernel failed" );
+        gpuCheckLastError();
     }
-    gpuErrchk( cudaDeviceSynchronize() );
-
+    ( gpuDeviceSynchronize() );
 }
 
 /**
@@ -610,7 +620,7 @@ void vmBeamformSecond( vcsbeam_context *vm )
 
         vm->chunk_to_load++;
     }
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuDeviceSynchronize() );
 
     // Unlock the buffer for reading
     // TODO: generalise this for arbitrary pipelines
@@ -624,8 +634,7 @@ void vmBeamformSecond( vcsbeam_context *vm )
 void vmPullE( vcsbeam_context *vm )
 {
     // Copy the results back into host memory
-    cudaMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, cudaMemcpyDeviceToHost );
-    cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
+    gpuMemcpyAsync( vm->e, vm->d_e, vm->e_size_bytes, gpuMemcpyDeviceToHost );
 }
 
 /**
@@ -633,44 +642,7 @@ void vmPullE( vcsbeam_context *vm )
  */
 void vmPullS( vcsbeam_context *vm )
 {
-    cudaMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, cudaMemcpyDeviceToHost );
-    cudaCheckErrors( "vmPullE: cudaMemcpyAsync failed" );
-}
-
-/**
- * Copies the beamformed voltages into a different array to prepare for
- * inverting the PFB.
- *
- * @todo Remove prepare_detected_beam() and use a "host buffer" instead.
- */
-void prepare_detected_beam( cuDoubleComplex ****detected_beam,
-                   mpi_psrfits *mpfs, vcsbeam_context *vm )
-{
-    // Get shortcut variables
-    uintptr_t nchan  = vm->nfine_chan;
-    uintptr_t npol   = vm->obs_metadata->num_ant_pols; // = 2
-    int file_no = vm->chunk_to_load / vm->chunks_per_second;
-
-    // Copy the data back from e back into the detected_beam array
-    // Make sure we put it back into the correct half of the array, depending
-    // on whether this is an even or odd second.
-    int offset, i;
-    offset = file_no % 2 * vm->fine_sample_rate;
-
-    // TODO: turn detected_beam into a 1D array
-    int p, ch, s, pol;
-    for (p   = 0; p   < vm->npointing  ; p++  )
-    for (s   = 0; s   < vm->fine_sample_rate; s++  )
-    for (ch  = 0; ch  < nchan      ; ch++ )
-    for (pol = 0; pol < npol       ; pol++)
-    {
-        i = p  * (npol*nchan*vm->fine_sample_rate) +
-            s  * (npol*nchan)                   +
-            ch * (npol)                         +
-            pol;
-
-        detected_beam[p][s+offset][ch][pol] = vm->e[i];
-    }
+    gpuMemcpyAsync( vm->S, vm->d_S, vm->S_size_bytes, gpuMemcpyDeviceToHost );
 }
 
 /**
@@ -685,12 +657,12 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
     // Flatten the bandpass
     dim3 chan_stokes(vm->nfine_chan, vm->out_nstokes);
     renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_S, vm->fine_sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
-    gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaDeviceSynchronize() );
+    ( gpuPeekAtLastError() );
+    ( gpuDeviceSynchronize() );
 
-    gpuErrchk(cudaMemcpy( vm->offsets, vm->d_offsets, vm->offsets_size, cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( vm->scales,  vm->d_scales,  vm->scales_size,  cudaMemcpyDeviceToHost ));
-    gpuErrchk(cudaMemcpy( vm->Cscaled, vm->d_Cscaled, vm->Cscaled_size, cudaMemcpyDeviceToHost ));
+    (gpuMemcpy( vm->offsets, vm->d_offsets, vm->offsets_size, gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( vm->scales,  vm->d_scales,  vm->scales_size,  gpuMemcpyDeviceToHost ));
+    (gpuMemcpy( vm->Cscaled, vm->d_Cscaled, vm->Cscaled_size, gpuMemcpyDeviceToHost ));
 
     unsigned int p;
     for (p = 0; p < vm->npointing; p++)
@@ -708,10 +680,8 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
  */
 void vmPushPolIdxLists( vcsbeam_context *vm )
 {
-    cudaMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
-    cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polQ_idxs) failed" );
-    cudaMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, cudaMemcpyHostToDevice );
-    cudaCheckErrors( "vmMemcpyPolIdxLists: cudaMemcpy(polP_idxs) failed" );
+    gpuMemcpy( vm->d_polQ_idxs, vm->polQ_idxs, vm->pol_idxs_size_bytes, gpuMemcpyHostToDevice );
+    gpuMemcpy( vm->d_polP_idxs, vm->polP_idxs, vm->pol_idxs_size_bytes, gpuMemcpyHostToDevice );
 }
 
 /**
@@ -722,8 +692,7 @@ void vmPushPolIdxLists( vcsbeam_context *vm )
 float *create_pinned_data_buffer( size_t size )
 {
     float *ptr;
-    cudaMallocHost( &ptr, size );
-    cudaCheckErrors("cudaMallocHost data_buffer fail");
+    gpuMallocHost( &ptr, size );
 
     // Initialise to zeros
     memset( ptr, 0, size );
@@ -737,51 +706,79 @@ float *create_pinned_data_buffer( size_t size )
  *
  * @todo Remove the function create_detected_beam().
  */
-cuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
+gpuDoubleComplex ****create_detected_beam( int npointing, int nsamples, int nchan, int npol )
 // Allocate memory for complex weights matrices
 {
     int p, s, ch; // Loop variables
-    cuDoubleComplex ****array;
+    gpuDoubleComplex ****array;
 
-    array = (cuDoubleComplex ****)malloc( npointing * sizeof(cuDoubleComplex ***) );
+    array = (gpuDoubleComplex ****)malloc( npointing * sizeof(gpuDoubleComplex ***) );
     for (p = 0; p < npointing; p++)
     {
-        array[p] = (cuDoubleComplex ***)malloc( nsamples * sizeof(cuDoubleComplex **) );
+        array[p] = (gpuDoubleComplex ***)malloc( nsamples * sizeof(gpuDoubleComplex **) );
 
         for (s = 0; s < nsamples; s++)
         {
-            array[p][s] = (cuDoubleComplex **)malloc( nchan * sizeof(cuDoubleComplex *) );
+            array[p][s] = (gpuDoubleComplex **)malloc( nchan * sizeof(gpuDoubleComplex *) );
 
             for (ch = 0; ch < nchan; ch++)
-                array[p][s][ch] = (cuDoubleComplex *)malloc( npol * sizeof(cuDoubleComplex) );
+                array[p][s][ch] = (gpuDoubleComplex *)malloc( npol * sizeof(gpuDoubleComplex) );
         }
     }
     return array;
 }
 
 
-/**
- * (Deprecated) Frees memory on the CPU.
- *
- * @todo Remove the function destroy_detected_beam().
- */
-void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsamples, int nchan )
+/*
+* Create a 1-D host buffer containing the fine-channelised complex voltage samples which
+* will be given to the IPFB.
+*/
+gpuDoubleComplex *create_data_buffer_fine( int npointing, int nsamples, int nchan, int npol )
 {
-    int p, s, ch;
-    for (p = 0; p < npointing; p++)
+    int buffer_size = npointing * nsamples * nchan * npol * sizeof(gpuDoubleComplex);
+    
+    // Allocate host memory for buffer
+    gpuDoubleComplex *data_buffer_fine;
+    data_buffer_fine = (gpuDoubleComplex *)malloc( buffer_size );
+
+    // Initialise buffer to zeros
+    memset( data_buffer_fine, 0, buffer_size );
+
+    return data_buffer_fine;
+}
+
+
+/*
+* Copy the fine-channelised beamformed voltages into a data buffer so that it can
+* be given to the IPFB.
+*/
+void prepare_data_buffer_fine( gpuDoubleComplex *data_buffer_fine, vcsbeam_context *vm,
+                    uintptr_t timestep_idx )
+{
+    // Get shortcut variables
+    uintptr_t nchan = vm->nfine_chan;
+    uintptr_t npol  = vm->obs_metadata->num_ant_pols; // = 2
+    int file_no = timestep_idx % 2;
+
+    // Copy the beamformed data from e into the data buffer
+    // Make sure we put it back into the correct half of the array, depending
+    // on whether this is an even or odd second.
+    int offset = file_no % 2 * vm->fine_sample_rate;
+
+    int p,s,ch,pol,i,j;
+    for (p   = 0; p   < vm->npointing;        p++   )
+    for (s   = 0; s   < vm->fine_sample_rate; s++   )
+    for (ch  = 0; ch  < nchan;                ch++  )
+    for (pol = 0; pol < npol;                 pol++ )
     {
-        for (s = 0; s < nsamples; s++)
-        {
-            for (ch = 0; ch < nchan; ch++)
-                free( array[p][s][ch] );
+        // Calculate index for e
+        i = B_IDX(p,s,ch,pol,vm->fine_sample_rate,nchan,npol);
 
-            free( array[p][s] );
-        }
+        // Calculate index for data_buffer_fine
+        j = B_IDX(p,s+offset,ch,pol,vm->fine_sample_rate,nchan,npol);
 
-        free( array[p] );
+        data_buffer_fine[j] = vm->e[i];
     }
-
-    free( array );
 }
 
 /**
@@ -791,11 +788,9 @@ void destroy_detected_beam( cuDoubleComplex ****array, int npointing, int nsampl
  */
 void allocate_input_output_arrays( void **data, void **d_data, size_t size )
 {
-    cudaMallocHost( data, size );
-    cudaCheckErrors( "cudaMallocHost() failed" );
+    gpuMallocHost( data, size );
 
-    cudaMalloc( d_data, size );
-    cudaCheckErrors( "cudaMalloc() failed" );
+    gpuMalloc( d_data, size );
 }
 
 /**
@@ -805,9 +800,7 @@ void allocate_input_output_arrays( void **data, void **d_data, size_t size )
  */
 void free_input_output_arrays( void *data, void *d_data )
 {
-    cudaFreeHost( data );
-    cudaCheckErrors( "cudaFreeHost() failed" );
+    gpuHostFree( data );
 
-    cudaFree( d_data );
-    cudaCheckErrors( "cudaFree() failed" );
+    gpuFree( d_data );
 }

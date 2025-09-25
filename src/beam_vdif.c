@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <cuComplex.h>
 
 #include <mwalib.h>
 #include <vdifio.h>
@@ -115,17 +114,27 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
 
     // write a CPSR2 test header for DSPSR
     char ascii_header[MWA_HEADER_SIZE] = MWA_HEADER_INIT;
-    //ascii_header_set( ascii_header, "UTC_START", "%s", vf->date_obs  );
-    ascii_header_set( ascii_header, "DATAFILE",   "%s", filename      );
-    ascii_header_set( ascii_header, "INSTRUMENT", "%s", "VDIF"        );
-    ascii_header_set( ascii_header, "TELESCOPE",  "%s", vf->telescope );
-    ascii_header_set( ascii_header, "MODE",       "%s", vf->obs_mode  );
-    ascii_header_set( ascii_header, "FREQ",       "%f", vf->fctr      );
+    
+    ascii_header_set( ascii_header, "TELESCOPE",  "%s", vf->telescope   );
+    ascii_header_set( ascii_header, "MODE",       "%s", vf->obs_mode    );
+    ascii_header_set( ascii_header, "INSTRUMENT", "%s", "VDIF"          );
+    ascii_header_set( ascii_header, "DATAFILE",   "%s", filename        );
 
-    ascii_header_set( ascii_header, "BW",         "%f", vf->BW        );
-    ascii_header_set( ascii_header, "RA",         "%s", vf->ra_str    );
-    ascii_header_set( ascii_header, "DEC",        "%s", vf->dec_str   );
-    ascii_header_set( ascii_header, "SOURCE",     "%s", vf->source    );
+    ascii_header_set( ascii_header, "MJD_START",  "%f", vf->MJD_start   );
+    ascii_header_set( ascii_header, "MJD_EPOCH",  "%f", vf->MJD_epoch   );
+    ascii_header_set( ascii_header, "SEC_OFFSET", "%f", vf->sec_offset  );
+
+    ascii_header_set( ascii_header, "SOURCE",     "%s", vf->source      );
+    ascii_header_set( ascii_header, "RA",         "%s", vf->ra_str      );
+    ascii_header_set( ascii_header, "DEC",        "%s", vf->dec_str     );
+
+    ascii_header_set( ascii_header, "FREQ",       "%f", vf->fctr        );
+    ascii_header_set( ascii_header, "BW",         "%f", vf->BW          );
+    ascii_header_set( ascii_header, "TSAMP",      "%f", 1e6/(float) vf->sample_rate );
+
+    ascii_header_set( ascii_header, "NBIT",       "%d", vf->bits        );
+    ascii_header_set( ascii_header, "NDIM",       "%d", vf->iscomplex+1 );
+    ascii_header_set( ascii_header, "NPOL",       "%d", vf->npol        );
 
     sprintf( filename, "%s.hdr", vf->basefilename );
     fs = fopen( filename,"w" );
@@ -139,10 +148,14 @@ void vdif_write_data( struct vdifinfo *vf, int8_t *output )
  *
  * @param vm The VCSBeam context struct
  * @param beam_geom_vals A `beam_geom` struct containing pointing information
+ * @param mjd_start The start MJD of the observation
+ * @param sec_offset The offset from the start of the observation in seconds
  */
 void vmPopulateVDIFHeader(
         vcsbeam_context  *vm,
-        beam_geom        *beam_geom_vals )
+        beam_geom        *beam_geom_vals,
+        double           mjd_start,
+        double           sec_offset )
 {
     // Write log message
     sprintf( vm->log_message, "Preparing headers for output (receiver channel %lu)",
@@ -215,8 +228,11 @@ void vmPopulateVDIFHeader(
 
         strncpy( vm->vf[p].date_obs, time_utc, sizeof(time_utc) );
 
-        vm->vf[p].MJD_epoch = beam_geom_vals->intmjd + beam_geom_vals->fracmjd;
-        vm->vf[p].fctr      = vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz / 1e6; // (MHz)
+        vm->vf[p].MJD_start  = mjd_start;
+        vm->vf[p].sec_offset = sec_offset;
+        vm->vf[p].MJD_epoch  = beam_geom_vals->intmjd + beam_geom_vals->fracmjd;
+        vm->vf[p].fctr       = vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz / 1e6; // (MHz)
+        vm->vf[p].npol       = 2;
         strncpy( vm->vf[p].source, "unset", 24 );
 
         // The output file basename

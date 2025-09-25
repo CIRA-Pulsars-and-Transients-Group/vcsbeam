@@ -22,14 +22,14 @@ endif(NOT DEFINED PAL_ROOT_DIR)
 
 if(NOT PAL_FOUND)
 
-#  find_path(PAL_INCLUDE_DIR pal.h
-#      HINTS ${PAL_ROOT_DIR} PATH_SUFFIXES include NO_SYSTEM_ENVIRONMENT_PATH)
-#  find_library(PAL_LIBRARY pal
-#      HINTS ${PAL_ROOT_DIR} PATH_SUFFIXES lib)
-#  mark_as_advanced(PAL_INCLUDE_DIR PAL_LIBRARY NO_SYSTEM_ENVIRONMENT_PATH)
+  find_path(PAL_INCLUDE_DIR pal.h
+      HINTS ${PAL_ROOT_DIR} PATH_SUFFIXES include/star NO_SYSTEM_ENVIRONMENT_PATH)
+  find_library(PAL_LIBRARY pal
+      HINTS ${PAL_ROOT_DIR} PATH_SUFFIXES lib/star lib64/star)
+  mark_as_advanced(PAL_INCLUDE_DIR PAL_LIBRARY NO_SYSTEM_ENVIRONMENT_PATH)
 
-  set(PAL_INCLUDE_DIR ${PAL_ROOT_DIR}/include)
-  set(PAL_LIBRARY ${PAL_ROOT_DIR}/lib/libpal.so)
+  #set(PAL_INCLUDE_DIR ${PAL_ROOT_DIR}/include)
+  #set(PAL_LIBRARY ${PAL_ROOT_DIR}/lib/libpal.so)
 
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(PAL DEFAULT_MSG
