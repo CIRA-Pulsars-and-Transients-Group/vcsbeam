@@ -117,6 +117,7 @@ int main(int argc, char **argv)
     }
 
     vm->cal.metafits     = strdup( opts.cal_metafits );
+    vm->cal.chan_width_hz    = opts.cal_chan_width_hz;
     vm->cal.ref_ant      = strdup( opts.ref_ant );
     vm->cal.phase_offset = opts.phase_offset;
     vm->cal.phase_slope  = opts.phase_slope;
@@ -425,6 +426,7 @@ void usage()
     printf( "\nCALIBRATION OPTIONS\n\n"
             "\t-B, --bandpass             Use the Bandpass (fine channel) as well as the DIJones (coarse channel) solutions\n"
             "\t                           (only relevant for RTS) [default: off]\n"
+            "\t--cal-chan-width           The fine channel width of the input calibration solution in Hz. [default: 40000 Hz]"
             "\t-F, --flagged-tiles=FILE   FILE is a text file including the TileNames of extra tiles to be flagged.\n"
             "\t                           By default, tiles flagged in both the calibration and the observation metafits file\n"
             "\t                           are flagged in the beamformer. The utility 'rts_flag_ant_to_tilenames.py' can be used\n"
@@ -483,6 +485,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->cal_metafits         = NULL;  // filename of the metafits file for the calibration observation
     opts->caldir               = NULL;  // The path to where the calibration solutions live
     opts->cal_type             = CAL_RTS;
+    opts->cal_chan_width_hz    = 40000; // Default calibration channel width is 40 kHz
     opts->ref_ant              = NULL;
     opts->keep_cross_terms     = false;
     opts->phase_offset         = 0.0;
@@ -508,6 +511,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"pointings",       required_argument, 0, 'P'},
                 {"data-location",   required_argument, 0, 'd'},
                 {"cal-location",    required_argument, 0, 'C'},
+                {"cal-chan-width",  required_argument, 0, CCW},
                 {"metafits",        required_argument, 0, 'm'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
@@ -550,6 +554,9 @@ void make_tied_array_beam_parse_cmdline(
                 case 'C':
                     opts->caldir = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->caldir, optarg );
+                    break;
+                case CCW:
+                    opts->cal_chan_width_hz = atoi(optarg);
                     break;
                 case 'd':
                     opts->datadir = (char *)malloc( strlen(optarg) + 1 );

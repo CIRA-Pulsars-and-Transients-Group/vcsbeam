@@ -990,7 +990,7 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
                 ntimesteps,
                 vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
                 coarse_chan_idx,
-                vm->num_coarse_chans_to_process );
+                vm->mpi_size-1);
     logger_timed_message( vm->log, vm->log_message );
 
     logger_start_stopwatch( vm->log, "read", true );
@@ -1259,7 +1259,7 @@ void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint6
     uint64_t t0_gps_second = vm->obs_metadata->metafits_timesteps[0].gps_time_ms/1000;
     uintptr_t timestep_idx = (gps_second - t0_gps_second) / vm->seconds_per_file;
 
-    printf("vmGetVoltFilename: gps_second = %lu; t0_gps_second = %lu\n", gps_second, t0_gps_second);
+    // printf("vmGetVoltFilename: gps_second = %lu; t0_gps_second = %lu\n", gps_second, t0_gps_second);
     if (mwalib_metafits_get_expected_volt_filename(
                 vm->obs_context,
                 timestep_idx,

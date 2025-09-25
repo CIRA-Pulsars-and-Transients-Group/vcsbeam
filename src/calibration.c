@@ -441,7 +441,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
 
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
     uint32_t nant   = vm->cal_metadata->num_ants;
-    uint32_t nchan  = vm->cal_metadata->num_corr_fine_chans_per_coarse;
+    uint32_t nchan  = vm->cal_metadata->coarse_chan_width_hz / vm->cal.chan_width_hz;
     uint32_t nChan  = nchan * vm->cal_metadata->num_metafits_coarse_chans;
     uint32_t ninput = vm->cal_metadata->num_rf_inputs;
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
@@ -478,10 +478,14 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stdout, "contains a different number (%d) ", channelCount );
         fprintf( stdout, "than the expected (%d) channels.\n", nChan );
         nChan = channelCount;
-        nchan = nChan / vm->cal_metadata->num_metafits_coarse_chans;
-        interp_factor = vcs_nchan / nchan;
-        fprintf( stdout, "Assuming calibration channels are "
-                "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
+        coarse_chan_idx = vm->mpi_rank;
+        // nchan = nChan / vm->mpi_size;
+        // interp_factor = vcs_nchan / nchan;
+        fprintf( stdout, "Assuming calibration have only %d coarse channels "
+                "instead of %d", vm->mpi_size, vm->cal_metadata->num_metafits_coarse_chans);
+        fprintf( stdout, "Assuming calibration channel %d corresponds to "
+                "vcs channel %d with index %d", vm->mpi_rank, 
+                vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number, coarse_chan_idx);
     }
     if (coarse_chan_idx >= (int)vm->cal_metadata->num_metafits_coarse_chans)
     {
@@ -515,6 +519,13 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         // Loop over channels
         for (ch = 0; ch < nchan; ch++)
         {
+            // Check if first fine channel is correct
+            if (ch == 0)
+            {
+                fprintf( stdout, "First fine channel to process is %d for coarse channel %d"
+                        ch, coarse_chan_idx)
+            }
+
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
             Ch = ch + coarse_chan_idx*nchan;
