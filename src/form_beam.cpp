@@ -415,8 +415,8 @@ __global__ void renormalise_channels_kernel( float *S, int nsamp, int ds, float 
     //float summed = 0.0;
 
     // Initialise min and max values to the first sample
-    float min = S[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
-    float max = S[C_IDX(p,0,stokes,chan,nstep,nstokes,nchan)];
+    float min = S[C_IDX(p,0,stokes,chan,nsamp,nstokes,nchan)];
+    float max = S[C_IDX(p,0,stokes,chan,nsamp,nstokes,nchan)];
 
     // Get the data statistics
     int i;
