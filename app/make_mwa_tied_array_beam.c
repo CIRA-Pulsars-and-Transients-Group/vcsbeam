@@ -37,6 +37,7 @@ struct make_tied_array_beam_opts {
     bool               out_fine;         // Output fine channelised data (PSRFITS)
     bool               out_coarse;       // Output coarse channelised data (VDIF)
     int                out_nstokes;      // Number of stokes parameters in PSRFITS output
+    int                ds_factor;        // Downsample factor of PSRFITS output
 
     // Calibration options
     char              *cal_metafits;     // Filename of the metafits file
