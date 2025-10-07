@@ -503,7 +503,7 @@ void cu_form_incoh_beam(
 
     dim3 chan_stokes(nchan, 1);
     int npointing = 1;
-    renormalise_channels_kernel<<<npointing, chan_stokes>>>( d_incoh, nsample, d_offsets, d_scales, d_Iscaled );
+    renormalise_channels_kernel<<<npointing, chan_stokes>>>( d_incoh, nsample, 1, d_offsets, d_scales, d_Iscaled );
     ( gpuPeekAtLastError() );
 
     // Copy the results back into host memory
