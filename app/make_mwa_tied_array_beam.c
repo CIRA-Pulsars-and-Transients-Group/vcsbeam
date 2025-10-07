@@ -540,7 +540,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:dD:e:f:F:hm:n:N:OpP:R:sS:t:T:U:vV:w:X",
+                             "A:b:Bc:C:d:D:e:f:F:hm:n:N:OpP:R:sS:t:T:U:vV:w:X",
                              long_options, &option_index);
             if (c == -1)
                 break;
