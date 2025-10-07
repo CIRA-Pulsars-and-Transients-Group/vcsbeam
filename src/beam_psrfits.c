@@ -267,6 +267,7 @@ void populate_spliced_psrfits_header(
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file
  * @param outpol Either 1 (for Stokes I only) or 4 (for full Stokes)
+ * @param ds Downsampling factor, fixed to a value that 10,000 is divisible by
  * @param beam_geom_vals A `beam_geom` struct containing pointing
  *        information
  * @param incoh_basename The prefix for the output PSRFITS files (only for
@@ -285,6 +286,7 @@ void populate_psrfits_header(
         struct psrfits   *pf,
         int               max_sec_per_file,
         int               outpol,
+        int               ds,
         beam_geom        *beam_geom_vals,
         char             *incoh_basename,
         bool              is_coherent )
@@ -333,7 +335,7 @@ void populate_psrfits_header(
     strcpy(pf->hdr.cal_mode,   "OFF");
     strcpy(pf->hdr.feed_mode,  "FA");
 
-    pf->hdr.dt   = 1.0/sample_rate; // (sec)
+    pf->hdr.dt   = 1.0/sample_rate*ds; // (sec)
     pf->hdr.fctr = vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].chan_centre_hz / 1e6; // (MHz)
     pf->hdr.BW   = vm->obs_metadata->coarse_chan_width_hz / 1e6;  // (MHz)
 
@@ -359,7 +361,7 @@ void populate_psrfits_header(
     pf->hdr.orig_nchan = pf->hdr.nchan;
     pf->hdr.orig_df    = pf->hdr.df;
     pf->hdr.nbits      = 8;
-    pf->hdr.nsblk      = sample_rate;  // block is always 1 second of data
+    pf->hdr.nsblk      = sample_rate/ds;  // block is always 1 second of data
 
     pf->hdr.ds_freq_fact = 1;
     pf->hdr.ds_time_fact = 1;
@@ -492,6 +494,7 @@ void free_psrfits( struct psrfits *pf )
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file
  * @param nstokes Either 1 (for Stokes I only) or 4 (for full Stokes)
+ * @param ds Downsampling factor, fixed to a value that 10,000 is divisible by
  * @param bg A `beam_geom` struct containing pointing
  *        information
  * @param outfile The prefix for the output PSRFITS files
@@ -503,6 +506,7 @@ void vmInitMPIPsrfits(
         mpi_psrfits *mpf,
         int max_sec_per_file,
         int nstokes,
+        int ds,
         beam_geom *bg,
         char *outfile,
         bool is_coherent )
@@ -518,12 +522,12 @@ void vmInitMPIPsrfits(
     // Populate the PSRFITS header struct for the combined (spliced) output file
     if (vm->mpi_rank == mpf->writer_id)
         populate_spliced_psrfits_header( vm, &(mpf->spliced_pf),
-                max_sec_per_file, nstokes,
+                max_sec_per_file, nstokes, ds,
                 bg, outfile, is_coherent );
 
     // Populate the PSRFITS header struct for a single channel
     populate_psrfits_header( vm, &(mpf->coarse_chan_pf), max_sec_per_file,
-            nstokes, bg, outfile, is_coherent );
+            nstokes, ds, bg, outfile, is_coherent );
 
     // Create MPI vector types designed to splice the coarse channels together
     // correctly during MPI_Gather

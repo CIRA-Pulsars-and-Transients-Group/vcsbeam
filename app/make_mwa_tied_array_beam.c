@@ -215,7 +215,7 @@ int main(int argc, char **argv)
     {
         for (p = 0; p < vm->npointing; p++)
         {
-            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, opts.out_nstokes,
+            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, opts.out_nstokes, opts.ds_factor,
                     &(beam_geom_vals[p]), NULL, true );
         }
     }
