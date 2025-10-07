@@ -426,7 +426,8 @@ void read_bandpass_file(
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    int coarse_chan_idx = vm->cal_coarse_chan_idxs_to_process[0];
+    int cal_coarse_chan_idx = vm->cal_coarse_chan_idxs_to_process[0];
+    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
 
     // Open the calibration file for reading
     FILE *fp = NULL;
@@ -498,7 +499,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stdout, "contains a different number (%u) ", channelCount );
         fprintf( stdout, "than the requested (%u) channels.\n", nChan );
         nChan = channelCount;
-        coarse_chan_idx = vm->mpi_rank;
+        cal_coarse_chan_idx = vm->mpi_rank;
         // nchan = nChan / vm->mpi_size;
         // interp_factor = vcs_nchan / nchan;
         fprintf( stdout, "Assuming calibration have only %d coarse channels "
@@ -547,12 +548,12 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         {
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
-            Ch = ch + coarse_chan_idx * nchan;
+            Ch = ch + cal_coarse_chan_idx * nchan;
 
             // Check if first fine channel is correct
             if (ch == 0 && i == 0)
             {
-                fprintf( stdout, "First fine channel to process is %d for coarse channel %d.\n",
+                fprintf( stdout, "First calibration fine channel to process is %d for vcs coarse channel %d.\n",
                         Ch, coarse_chan_idx);
             }
 

@@ -105,6 +105,8 @@ int main(int argc, char **argv)
     // Set up case for stokes output and number of chunks per second of data
     vm->out_nstokes = opts.out_nstokes;
     vm->chunks_per_second = opts.nchunks;
+    // Adding one for downsampling rate
+    vm->ds_factor = opts.ds_factor;
     // If we need to, set up the forward PFB
     if (vm->do_forward_pfb)
     {
@@ -426,6 +428,8 @@ void usage()
             "\t-p, --out-fine             Output fine-channelised, full-Stokes data (PSRFITS)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
             "\t-N, --out-nstokes          Number of stokes parameters to output. Either 1 (stokes I only) or 4 (stokes IQUV)\n"
+            "\t-D, --ds-factor            Downsampling factor of the output PSRFITS file. Must be a value that 10,000 is\n"
+            "\                            divisble by. [default: 1]\n"
             "\t-t, --max_t                Maximum number of seconds per output FITS file. [default: 200]\n"
             "\t-v, --out-coarse           Output coarse-channelised, 2-pol (XY) data (VDIF)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
@@ -480,6 +484,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->out_fine             = false; // Output fine channelised data (PSRFITS)
     opts->out_coarse           = false; // Output coarse channelised data (VDIF)
     opts->out_nstokes          = 4;     // Output stokes IQUV by default
+    opts->ds_factor            = 1;     // No downsampling by default
     opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
@@ -509,6 +514,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"out-fine",        no_argument,       0, 'p'},
                 {"out-coarse",      no_argument,       0, 'v'},
                 {"out-nstokes",     no_argument,       0, 'N'},
+                {"ds-factor",       no_argument,       0, 'D'},
                 {"max_t",           required_argument, 0, 't'},
                 {"analysis_filter", required_argument, 0, 'A'},
                 {"synth_filter",    required_argument, 0, 'S'},
@@ -562,6 +568,16 @@ void make_tied_array_beam_parse_cmdline(
                 case 'd':
                     opts->datadir = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->datadir, optarg );
+                    break;
+                case 'D':
+                    opts->ds_factor = atoi(optarg);
+                    if ((opts->ds_factor != 0) && (10000 % opts->ds_factor != 0))
+                    {
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "-%c argument must be a value that 10,000 is"
+                                "divisible by", c );
+                        exit(EXIT_FAILURE);
+                    }
                     break;
                 case 'f':
                     opts->coarse_chan_str = (char *)malloc( strlen(optarg) + 1 );

@@ -26,6 +26,7 @@
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file
  * @param outpol Either 1 (for Stokes I only) or 4 (for full Stokes)
+ * @param ds Downsampling factor, fixed to a value that 10,000 is divisible by
  * @param beam_geom_vals A `beam_geom` struct containing pointing information
  * @param basename The prefix for the output PSRFITS files
  * @param is_coherent `true` for tied-array beamforming, `false` for
@@ -41,6 +42,7 @@ void populate_spliced_psrfits_header(
         struct psrfits   *pf,
         int               max_sec_per_file,
         int               outpol,
+        int               ds,
         beam_geom        *beam_geom_vals,
         char             *basename,
         bool              is_coherent )
@@ -99,7 +101,7 @@ void populate_spliced_psrfits_header(
 
     // Set subint length, sampling and frequency references
     pf->hdr.scanlen = 1.0; // in sec
-    pf->hdr.dt      = 1.0/sample_rate; // (sec)
+    pf->hdr.dt      = 1.0/sample_rate*ds; // (sec)
     pf->hdr.fctr    = 0.5*(vm->obs_metadata->metafits_coarse_chans[first_coarse_chan_idx].chan_centre_hz +
                         vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_centre_hz) / 1e6; // (MHz)
     pf->hdr.BW      = (vm->obs_metadata->metafits_coarse_chans[last_coarse_chan_idx].chan_end_hz -
@@ -124,7 +126,7 @@ void populate_spliced_psrfits_header(
     pf->hdr.orig_df    = pf->hdr.df;
     pf->hdr.nbits      = 8;
     pf->hdr.orig_nbits = 8;  // in Scott's version of psrfits_utils this is an entry need to figure out the original nbits of the data
-    pf->hdr.nsblk      = sample_rate;  // block is always 1 second of data
+    pf->hdr.nsblk      = sample_rate/ds;  // block is always 1 second of data
 
     pf->hdr.ds_freq_fact = 1;
     pf->hdr.ds_time_fact = 1;

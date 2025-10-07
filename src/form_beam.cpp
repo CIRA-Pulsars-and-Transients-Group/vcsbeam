@@ -369,7 +369,8 @@ __global__ void vmBeamform_kernel(int nfine_chan,
  *
  * @param[in]  S       The original Stokes parameters,
  *                     with layout \f$N_t \times N_s \times N_f\f$
- * @param      nstep   \f$N_t\f$
+ * @param      nsamp   \f$N_t\f$
+ * @param      ds      Downsampling factor for PSRFITS output
  * @param[out] offsets The amount of offset needed to recover the original
  *                     values from the normalised ones
  * @param[out] scales  The scaling needed to recover the original values
@@ -399,7 +400,7 @@ __global__ void vmBeamform_kernel(int nfine_chan,
  * @todo Optimise the renormalisation kernel (e.g. by removing the for loop
  *       over timesteps.
  */
-__global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets, float *scales, uint8_t *Sscaled )
+__global__ void renormalise_channels_kernel( float *S, int nsamp, int ds, float *offsets, float *scales, uint8_t *Sscaled )
 {
     // Translate GPU block/thread numbers into meaningful names
     int chan    = threadIdx.x; /* The (c)hannel number */
@@ -419,9 +420,16 @@ __global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets
 
     // Get the data statistics
     int i;
+    int j;
+    int nstep = nsamp / ds;
     for (i = 0; i < nstep; i++)
     {
-        val = S[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)];
+        val = S[C_IDX(p,i*ds,stokes,chan,nsamp,nstokes,nchan)];
+        for (j = 1; j < ds; j++)
+        {
+            val += S[C_IDX(p,i*ds+j,stokes,chan,nsamp,nstokes,nchan)];
+        }
+        val /= ds;
         min = (val < min ? val : min);
         max = (val > max ? val : max);
         //summed += fabsf(val);
@@ -433,7 +441,14 @@ __global__ void renormalise_channels_kernel( float *S, int nstep, float *offsets
 
     for (i = 0; i < nstep; i++)
     {
-        val = (S[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] - offset) / scale;
+        val = S[C_IDX(p,i*ds,stokes,chan,nsamp,nstokes,nchan)];
+        for (j = 1; j < ds; j++)
+        {
+            val += S[C_IDX(p,i*ds+j,stokes,chan,nsamp,nstokes,nchan)];
+        }
+        val /= ds;
+        val -= offset;
+        val /= scale;
         Sscaled[C_IDX(p,i,stokes,chan,nstep,nstokes,nchan)] = (uint8_t)(val + 0.5);
     }
 
@@ -656,7 +671,7 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
 {
     // Flatten the bandpass
     dim3 chan_stokes(vm->nfine_chan, vm->out_nstokes);
-    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_S, vm->fine_sample_rate, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
+    renormalise_channels_kernel<<<vm->npointing, chan_stokes, 0, vm->streams[0]>>>( (float *)vm->d_S, vm->fine_sample_rate, vm->ds_factor, vm->d_offsets, vm->d_scales, vm->d_Cscaled );
     ( gpuPeekAtLastError() );
     ( gpuDeviceSynchronize() );
 
