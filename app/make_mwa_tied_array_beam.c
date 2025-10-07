@@ -430,7 +430,7 @@ void usage()
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
             "\t-N, --out-nstokes          Number of stokes parameters to output. Either 1 (stokes I only) or 4 (stokes IQUV)\n"
             "\t-D, --ds-factor            Downsampling factor of the output PSRFITS file. Must be a value that 10,000 is\n"
-            "\                            divisble by. [default: 1]\n"
+            "\t                           divisble by. [default: 1]\n"
             "\t-t, --max_t                Maximum number of seconds per output FITS file. [default: 200]\n"
             "\t-v, --out-coarse           Output coarse-channelised, 2-pol (XY) data (VDIF)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
