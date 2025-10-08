@@ -108,14 +108,7 @@ int main(int argc, char **argv)
     vm->chunks_per_second = opts.nchunks;
     // Adding one for downsampling rate
     vm->ds_factor = opts.ds_factor;
-    if (vm->fine_sample_rate % vm->ds_factor != 0)
-    {
-        sprintf( vm->log_message, "Invalid downsampling factor %u for "
-                "fine sample rate of %u! Setting downsampling rate to 1", 
-                vm->ds_factor, vm->fine_sample_rate);
-        logger_timed_message( vm->log, vm->log_message );
-        vm->ds_factor = 1;
-    }
+
     // If we need to, set up the forward PFB
     if (vm->do_forward_pfb)
     {
@@ -126,6 +119,16 @@ int main(int argc, char **argv)
         // Create and init the PFB struct
         int M = K; // The filter stride (M = K <=> "critically sampled PFB")
         vmInitForwardPFB( vm, M, (opts.smart ? PFB_SMART : PFB_FULL_PRECISION) );
+    }
+
+    // Now fine sample rate should be nsamples per second
+    if (vm->fine_sample_rate % vm->ds_factor != 0)
+    {
+        sprintf( vm->log_message, "Invalid downsampling factor %u for "
+                "fine sample rate of %u! Setting downsampling rate to 1",
+                vm->ds_factor, vm->fine_sample_rate);
+        logger_timed_message( vm->log, vm->log_message );
+        vm->ds_factor = 1;
     }
 
     vm->cal.metafits      = strdup( opts.cal_metafits );
@@ -224,7 +227,7 @@ int main(int argc, char **argv)
     {
         for (p = 0; p < vm->npointing; p++)
         {
-            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, opts.out_nstokes, opts.ds_factor,
+            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, vm->out_nstokes, vm->ds_factor,
                     &(beam_geom_vals[p]), NULL, true );
         }
     }
