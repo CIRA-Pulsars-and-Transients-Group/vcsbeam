@@ -684,7 +684,7 @@ void vmSendSToFits( vcsbeam_context *vm, mpi_psrfits *mpfs )
     {
         memcpy( mpfs[p].coarse_chan_pf.sub.dat_offsets, &(vm->offsets[p*vm->nfine_chan*vm->out_nstokes]), vm->nfine_chan*vm->out_nstokes*sizeof(float) );
         memcpy( mpfs[p].coarse_chan_pf.sub.dat_scales, &(vm->scales[p*vm->nfine_chan*vm->out_nstokes]), vm->nfine_chan*vm->out_nstokes*sizeof(float) );
-        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->fine_sample_rate*vm->nfine_chan*vm->out_nstokes]), vm->fine_sample_rate*vm->nfine_chan*vm->out_nstokes );
+        memcpy( mpfs[p].coarse_chan_pf.sub.data, &(vm->Cscaled[p*vm->fine_sample_rate/vm->ds_factor*vm->nfine_chan*vm->out_nstokes]), vm->fine_sample_rate/vm->ds_factor*vm->nfine_chan*vm->out_nstokes );
     }
 
 }
