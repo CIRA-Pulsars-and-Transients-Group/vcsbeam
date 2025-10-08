@@ -114,7 +114,7 @@ int main(int argc, char **argv)
                 "fine sample rate of %u! Setting downsampling rate to 1", 
                 vm->ds_factor, vm->fine_sample_rate);
         logger_timed_message( vm->log, vm->log_message );
-        vm->ds_factor = 1
+        vm->ds_factor = 1;
     }
     // If we need to, set up the forward PFB
     if (vm->do_forward_pfb)
