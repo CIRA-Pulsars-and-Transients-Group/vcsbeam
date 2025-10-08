@@ -108,6 +108,14 @@ int main(int argc, char **argv)
     vm->chunks_per_second = opts.nchunks;
     // Adding one for downsampling rate
     vm->ds_factor = opts.ds_factor;
+    if (vm->fine_sample_rate % vm->ds_factor != 0)
+    {
+        sprintf( vm->log_message, "Invalid downsampling factor %u for "
+                "fine sample rate of %u! Setting downsampling rate to 1", 
+                vm->ds_factor, vm->fine_sample_rate);
+        logger_timed_message( vm->log, vm->log_message );
+        vm->ds_factor = 1
+    }
     // If we need to, set up the forward PFB
     if (vm->do_forward_pfb)
     {
@@ -572,11 +580,10 @@ void make_tied_array_beam_parse_cmdline(
                     break;
                 case 'D':
                     opts->ds_factor = atoi(optarg);
-                    if ((opts->ds_factor != 0) && (10000 % opts->ds_factor != 0))
+                    if (opts->ds_factor <= 0)
                     {
                         fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
-                                "-%c argument must be a value that 10,000 is"
-                                "divisible by", c );
+                                "-%c argument must be larger than 0\n", c );
                         exit(EXIT_FAILURE);
                     }
                     break;
@@ -603,7 +610,7 @@ void make_tied_array_beam_parse_cmdline(
                     if ((opts->out_nstokes != 1) && (opts->out_nstokes != 4))
                     {
                         fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
-                                "-%c argument must be either 1 or 4", c );
+                                "-%c argument must be either 1 or 4\n", c );
                         exit(EXIT_FAILURE);
                     }
                     break;
