@@ -49,6 +49,8 @@ struct make_tied_array_beam_opts {
     bool               custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
     bool               keep_cross_terms; // Include PQ and QP of calibration Jones matrices
     bool               use_bandpass;     // Use the Bandpass solutions
+    bool               picket_fence;     // Assuming input data is picket fenced. Will process calibration data
+                                         // accordingly
 
     // Other options
     char              *analysis_filter;  // Which analysis filter to use
