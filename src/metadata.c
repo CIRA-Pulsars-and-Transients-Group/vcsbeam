@@ -956,7 +956,7 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
                 ntimesteps,
                 vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
                 coarse_chan_idx,
-                vm->mpi_size-1);
+                vm->num_coarse_chans_to_process );
     logger_timed_message( vm->log, vm->log_message );
 
     logger_start_stopwatch( vm->log, "read", true );

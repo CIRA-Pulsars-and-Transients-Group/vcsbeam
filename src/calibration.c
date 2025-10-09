@@ -443,8 +443,8 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     //       matches the number of channels being requested for processing
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
     uint32_t nant   = vm->cal_metadata->num_ants;
-    uint32_t nchan  = vm->cal_metadata->coarse_chan_width_hz / vm->cal.chan_width_hz;
-    uint32_t nChan  = nchan * vm->cal_metadata->num_metafits_coarse_chans;
+    uint32_t nchan  = vm->cal_metadata->num_corr_fine_chans_per_coarse;
+    uint32_t nChan  = nchan * vm->mpi_size; // = total number of fine channels REQUESTED to process
     uint32_t ninput = vm->cal_metadata->num_rf_inputs;
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
     uintptr_t vcs_nchan = vm->nfine_chan;
@@ -499,14 +499,10 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stdout, "contains a different number (%u) ", channelCount );
         fprintf( stdout, "than the requested (%u) channels.\n", nChan );
         nChan = channelCount;
-        cal_coarse_chan_idx = vm->mpi_rank;
-        // nchan = nChan / vm->mpi_size;
-        // interp_factor = vcs_nchan / nchan;
-        fprintf( stdout, "Assuming calibration have only %d coarse channels "
-                "instead of %lu.\n", vm->mpi_size, vm->cal_metadata->num_metafits_coarse_chans);
-        fprintf( stdout, "Assuming calibration channel %d corresponds to "
-                "vcs channel %lu with index %d.\n", vm->mpi_rank, 
-                vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number, coarse_chan_idx);
+        nchan = nChan / vm->mpi_size;
+        interp_factor = vcs_nchan / nchan;
+        fprintf( stdout, "Assuming calibration channels are "
+                "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
 #ifdef DEBUG
     fprintf( stderr, "New nChan = %u\n", nChan );
     fprintf( stderr, "New nchan = %u\n", nchan );
@@ -549,13 +545,6 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
             Ch = ch + cal_coarse_chan_idx * nchan;
-
-            // Check if first fine channel is correct
-            if (ch == 0 && i == 0)
-            {
-                fprintf( stdout, "First calibration fine channel to process is %d for vcs coarse channel %d.\n",
-                        Ch, coarse_chan_idx);
-            }
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
