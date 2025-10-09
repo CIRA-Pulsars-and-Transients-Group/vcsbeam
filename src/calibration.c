@@ -426,8 +426,7 @@ void read_bandpass_file(
 void vmLoadOffringaSolution( vcsbeam_context *vm )
 {
     // Shorthand variables
-    int cal_coarse_chan_idx = vm->cal_coarse_chan_idxs_to_process[0];
-    int coarse_chan_idx = vm->coarse_chan_idxs_to_process[0];
+    int coarse_chan_idx = vm->cal_coarse_chan_idxs_to_process[0];
 
     // Open the calibration file for reading
     FILE *fp = NULL;
@@ -544,7 +543,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         {
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
-            Ch = ch + cal_coarse_chan_idx * nchan;
+            Ch = ch + coarse_chan_idx * nchan;
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
