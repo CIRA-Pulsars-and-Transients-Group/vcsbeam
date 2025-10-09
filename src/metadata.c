@@ -266,7 +266,7 @@ void vmBindCalibrationData( vcsbeam_context *vm,
 
     if (picket_fence)
     {
-        for (c = 0; c < num_coarse_chans_to_process; c++)
+        for (int c = 0; c < num_coarse_chans_to_process; c++)
         {
             vm->cal_coarse_chan_idxs_to_process[c] = c + vm->mpi_rank;
         }
