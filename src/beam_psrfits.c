@@ -26,7 +26,8 @@
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file
  * @param outpol Either 1 (for Stokes I only) or 4 (for full Stokes)
- * @param ds Downsampling factor, fixed to a value that 10,000 is divisible by
+ * @param ds Downsampling factor, must be a value divisible by the fine 
+ *        sampling rate, otherwise set to 1 in the main code
  * @param beam_geom_vals A `beam_geom` struct containing pointing information
  * @param basename The prefix for the output PSRFITS files
  * @param is_coherent `true` for tied-array beamforming, `false` for
@@ -267,7 +268,8 @@ void populate_spliced_psrfits_header(
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file
  * @param outpol Either 1 (for Stokes I only) or 4 (for full Stokes)
- * @param ds Downsampling factor, fixed to a value that 10,000 is divisible by
+ * @param ds Downsampling factor, must be a value divisible by the fine 
+ *        sampling rate, otherwise set to 1 in the main code
  * @param beam_geom_vals A `beam_geom` struct containing pointing
  *        information
  * @param incoh_basename The prefix for the output PSRFITS files (only for
@@ -494,7 +496,8 @@ void free_psrfits( struct psrfits *pf )
  * @param max_sec_per_file The number of seconds written to each output
  *        PSRFITS file
  * @param nstokes Either 1 (for Stokes I only) or 4 (for full Stokes)
- * @param ds Downsampling factor, fixed to a value that 10,000 is divisible by
+ * @param ds Downsampling factor, must be a value divisible by the fine 
+ *        sampling rate, otherwise set to 1 in the main code
  * @param bg A `beam_geom` struct containing pointing
  *        information
  * @param outfile The prefix for the output PSRFITS files
