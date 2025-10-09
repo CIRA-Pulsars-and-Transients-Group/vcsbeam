@@ -220,7 +220,7 @@ int main(int argc, char **argv)
      * GET CALIBRATION SOLUTION *
      ****************************/
 
-    vmBindCalibrationData( vm, opts.caldir, opts.cal_type, opts.use_bandpass, opts.custom_flags );
+    vmBindCalibrationData( vm, 1, opts.caldir, opts.cal_type, opts.use_bandpass, opts.picket_fence, opts.custom_flags );
     vmReadCalibration( vm );
 
     // Apply any calibration corrections
@@ -437,6 +437,8 @@ void usage()
             "\t                           are flagged in the beamformer. The utility 'rts_flag_ant_to_tilenames.py' can be used\n"
             "\t                           to convert the antenna numbers listed in the RTS 'flagged_tiles.txt' file into human-\n"
             "\t                           readable tile names.\n"
+            "\t-k, --picket-fence         Input data is picket fenced data. Will assume the calibration solution contains the\n"
+            "\t                           same set of channels as the input data."
             "\t-O, --offringa             The calibration solution is in the Offringa format instead of\n"
             "\t                           the default RTS format. In this case, the argument to -C should\n" 
             "\t                           be the full path to the binary solution file.\n"
@@ -487,6 +489,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->cal_metafits         = NULL;  // filename of the metafits file for the calibration observation
     opts->caldir               = NULL;  // The path to where the calibration solutions live
     opts->cal_type             = CAL_RTS;
+    opts->picket_fence         = false;
     opts->ref_ant              = NULL;
     opts->keep_cross_terms     = false;
     opts->phase_offset         = 0.0;
@@ -515,6 +518,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"metafits",        required_argument, 0, 'm'},
                 {"cal-metafits",    required_argument, 0, 'c'},
                 {"coarse-chan",     required_argument, 0, 'f'},
+                {"picket-fence",    no_argument,       0, 'k'},
                 {"ref-ant",         required_argument, 0, 'R'},
                 {"flagged-tiles",   required_argument, 0, 'F'},
                 {"cross-terms",     no_argument,       0, 'X'},
@@ -528,7 +532,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:hm:n:N:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:h:k:m:n:N:OpP:R:sS:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -569,6 +573,9 @@ void make_tied_array_beam_parse_cmdline(
                 case 'h':
                     usage();
                     exit(EXIT_SUCCESS);
+                    break;
+                case 'k':
+                    opts->picket_fence = true;
                     break;
                 case 'm':
                     opts->metafits = strdup(optarg);

@@ -236,26 +236,41 @@ void vmBindObsData(
  * Binds a calibration solution to the VCSBeam context.
  *
  * @param vm The VCSBeam context struct
+ * @param num_coarse_chans_to_process The number of coarse channels to process
  * @param caldir The directory containing RTS solution files, OR the path of
  *        an Offringa-style calibration solution file
  * @param cal_type Either `CAL_RTS` or `CAL_OFFRINGA`
  * @param use_bandpass Whether to include the Bandpass information (relevant
  *        for RTS solutions only)
+ * @param picket_fence Whether the input data is picket fence data. if so, 
+ *        assume the calibration solution has the same set of channels as 
+ *        the input data
  * @param flags_file A file containing names of (extra) tiles to be flagged,
  *        or `NULL`
  */
 void vmBindCalibrationData( vcsbeam_context *vm,
+        int     num_coarse_chans_to_process,
         char   *caldir,
         int     cal_type,
         bool    use_bandpass,  // only relevant for RTS observations
+        bool    picket_fence,
         char   *flags_file )
 {
     // Set the calibration type (either RTS or Offringa)
     vm->cal.cal_type     = cal_type;
     vm->cal.use_bandpass = use_bandpass;
+    vm->cal.picket_fence = picket_fence;
 
     vm->cal.caldir       = (char *)malloc( strlen( caldir ) + 1 );
     strcpy( vm->cal.caldir, caldir );
+
+    if (picket_fence)
+    {
+        for (c = 0; c < num_coarse_chans_to_process; c++)
+        {
+            vm->cal_coarse_chan_idxs_to_process[c] = c + vm->mpi_rank;
+        }
+    }
 
     if (flags_file != NULL)
     {

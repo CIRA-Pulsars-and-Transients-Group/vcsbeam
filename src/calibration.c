@@ -498,6 +498,20 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stdout, "contains a different number (%u) ", channelCount );
         fprintf( stdout, "than the requested (%u) channels.\n", nChan );
         nChan = channelCount;
+        // Figure our the correct number of fine channels in a coarse channel from 
+        // the calibration solution
+        if (vm->cal.picket_fence)
+        {
+            // Assuming calibration solution has same number of coarse channels as 
+            // the number of MPI processes for picket fenced data
+            nchan = nChan / vm->mpi_size; 
+        }
+        else
+        {
+            // Assuming 24 coarse channels in calibration solution for continuous 
+            // data
+            nchan = nChan / 24;
+        }
         nchan = nChan / vm->mpi_size;
         interp_factor = vcs_nchan / nchan;
         fprintf( stdout, "Assuming calibration channels are "
