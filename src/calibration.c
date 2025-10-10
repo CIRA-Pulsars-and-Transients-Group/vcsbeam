@@ -561,13 +561,6 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
             // to "fine channel number within whole observation"
             Ch = ch + coarse_chan_idx * nchan;
 
-            // Check if reading in the correct calibration channel
-            if ((i == 0) && (ch == 0))
-            {
-                fprintf( stdout, "First fine channel index is %u ", Ch)
-                fprintf( stdout, "For coarse channel index %u\n", coarse_chan_idx)
-            }
-
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
                 Interval * (nant * nChan * JONES_SIZE_BYTES) +

@@ -294,7 +294,7 @@ int main(int argc, char **argv)
         // Splice channels together
         if (vm->output_fine_channels) // Only PSRFITS output can be combined into a single file
         {
-            vmPullS( vm );
+ 	    vmPullS( vm );
             vmSendSToFits( vm, mpfs );
 
             logger_start_stopwatch( vm->log, "splice", true );
@@ -534,7 +534,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:h:k:m:n:N:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:e:f:F:hkm:n:N:OpP:R:sS:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
