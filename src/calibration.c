@@ -505,7 +505,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         // Assuming calibration solution has same number of coarse channels as 
         // the number of MPI processes for picket fenced data
         fprintf( stdout, "Assuming %u coarse channels in the calibration "
-                "solution for picket fence data", vm->mpi_size);
+                "solution for picket fence data\n", vm->mpi_size);
         nchan = nChan / vm->mpi_size; 
     }
     else
@@ -513,7 +513,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         // Assuming 24 coarse channels in calibration solution for contiguous 
         // data
         fprintf( stdout, "Assuming %u coarse channels in the calibration "
-                "solution for contiguous data", 24);
+                "solution for contiguous data\n", 24);
         nchan = nChan / 24;
     }
     interp_factor = vcs_nchan / nchan;
@@ -560,6 +560,13 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
             // Translate from "fine channel number within coarse channel"
             // to "fine channel number within whole observation"
             Ch = ch + coarse_chan_idx * nchan;
+
+            // Check if reading in the correct calibration channel
+            if ((i == 0) && (ch == 0))
+            {
+                fprintf( stdout, "First fine channel index is %u ", Ch)
+                fprintf( stdout, "For coarse channel index %u\n", coarse_chan_idx)
+            }
 
             // Move the file pointer to the correct place
             fpos = OFFRINGA_HEADER_SIZE_BYTES +
