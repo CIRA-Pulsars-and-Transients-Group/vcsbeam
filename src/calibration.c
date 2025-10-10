@@ -448,7 +448,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     // Set these values later after checking the calibration solution size
     uint32_t nchan;
     uint32_t nChan;
-    uintptr_t vcs_nchan;
+    uintptr_t interp_factor;
 
     // Make another dummy matrix for reading in
     gpuDoubleComplex Dread[nvispol];
