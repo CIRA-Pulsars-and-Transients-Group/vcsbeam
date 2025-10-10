@@ -438,17 +438,17 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     }
 
     // Read in the necessary information from the header
-    // NOTE: assumes that the number of channels in the calibration solution
-    //       matches the number of channels being requested for processing
     uint32_t intervalCount, antennaCount, channelCount, polarizationCount;
     uint32_t nant   = vm->cal_metadata->num_ants;
-    uint32_t nchan  = vm->cal_metadata->num_corr_fine_chans_per_coarse;
-    uint32_t nChan  = nchan * vm->mpi_size; // = total number of fine channels REQUESTED to process
     uint32_t ninput = vm->cal_metadata->num_rf_inputs;
     uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
     uintptr_t vcs_nchan = vm->nfine_chan;
-    uintptr_t interp_factor = vcs_nchan / nchan;
     uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
+
+    // Set these values later after checking the calibration solution size
+    uint32_t nchan;
+    uint32_t nChan;
+    uintptr_t vcs_nchan;
 
     // Make another dummy matrix for reading in
     gpuDoubleComplex Dread[nvispol];
@@ -492,36 +492,37 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
         fprintf( stderr, "than specified (%u)\n", nant );
         exit(EXIT_FAILURE);
     }
-    if (channelCount != nChan)
+
+    // Now set the calibration solution settings correctly
+    fprintf( stdout, "Calibration solution (%s) ", vm->cal.caldir );
+    fprintf( stdout, "has (%u) total channels\n", channelCount );
+    nChan = channelCount;
+    // Figure our the correct number of fine channels in a coarse channel from 
+    // the calibration solution
+    if (vm->cal.picket_fence)
     {
-        fprintf( stdout, "Warning: Calibration solution (%s) ", vm->cal.caldir );
-        fprintf( stdout, "contains a different number (%u) ", channelCount );
-        fprintf( stdout, "than the requested (%u) channels.\n", nChan );
-        nChan = channelCount;
-        // Figure our the correct number of fine channels in a coarse channel from 
-        // the calibration solution
-        if (vm->cal.picket_fence)
-        {
-            // Assuming calibration solution has same number of coarse channels as 
-            // the number of MPI processes for picket fenced data
-            nchan = nChan / vm->mpi_size; 
-        }
-        else
-        {
-            // Assuming 24 coarse channels in calibration solution for continuous 
-            // data
-            nchan = nChan / 24;
-        }
-        nchan = nChan / vm->mpi_size;
-        interp_factor = vcs_nchan / nchan;
-        fprintf( stdout, "Assuming calibration channels are "
-                "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
+        // Assuming calibration solution has same number of coarse channels as 
+        // the number of MPI processes for picket fenced data
+        fprintf( stdout, "Assuming %u coarse channels in the calibration 
+                solution for picket fence data", vm->mpi_size)
+        nchan = nChan / vm->mpi_size; 
+    }
+    else
+    {
+        // Assuming 24 coarse channels in calibration solution for contiguous 
+        // data
+        fprintf( stdout, "Assuming %u coarse channels in the calibration 
+                solution for contiguous data", 24)
+        nchan = nChan / 24;
+    }
+    interp_factor = vcs_nchan / nchan;
+    fprintf( stdout, "Assuming calibration channels are "
+            "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
 #ifdef DEBUG
     fprintf( stderr, "New nChan = %u\n", nChan );
     fprintf( stderr, "New nchan = %u\n", nchan );
     fprintf( stderr, "New interp_factor = %lu\n", interp_factor );
 #endif
-    }
     if (coarse_chan_idx >= (int)vm->cal_metadata->num_metafits_coarse_chans)
     {
         fprintf( stderr, "Error: Requested coarse channel number (%d) ", coarse_chan_idx );
