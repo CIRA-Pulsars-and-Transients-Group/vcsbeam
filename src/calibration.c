@@ -504,16 +504,16 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     {
         // Assuming calibration solution has same number of coarse channels as 
         // the number of MPI processes for picket fenced data
-        fprintf( stdout, "Assuming %u coarse channels in the calibration 
-                solution for picket fence data", vm->mpi_size);
+        fprintf( stdout, "Assuming %u coarse channels in the calibration "
+                "solution for picket fence data", vm->mpi_size);
         nchan = nChan / vm->mpi_size; 
     }
     else
     {
         // Assuming 24 coarse channels in calibration solution for contiguous 
         // data
-        fprintf( stdout, "Assuming %u coarse channels in the calibration 
-                solution for contiguous data", 24);
+        fprintf( stdout, "Assuming %u coarse channels in the calibration "
+                "solution for contiguous data", 24);
         nchan = nChan / 24;
     }
     interp_factor = vcs_nchan / nchan;
