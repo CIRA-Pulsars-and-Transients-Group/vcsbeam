@@ -37,6 +37,7 @@ struct make_tied_array_beam_opts {
     bool               out_fine;         // Output fine channelised data (PSRFITS)
     bool               out_coarse;       // Output coarse channelised data (VDIF)
     int                out_nstokes;      // Number of stokes parameters in PSRFITS output
+    int                ds_factor;        // Downsample factor of PSRFITS output
 
     // Calibration options
     char              *cal_metafits;     // Filename of the metafits file
@@ -106,6 +107,9 @@ int main(int argc, char **argv)
     // Set up case for stokes output and number of chunks per second of data
     vm->out_nstokes = opts.out_nstokes;
     vm->chunks_per_second = opts.nchunks;
+    // Adding one for downsampling rate
+    vm->ds_factor = opts.ds_factor;
+
     // If we need to, set up the forward PFB
     if (vm->do_forward_pfb)
     {
@@ -118,10 +122,20 @@ int main(int argc, char **argv)
         vmInitForwardPFB( vm, M, (opts.smart ? PFB_SMART : PFB_FULL_PRECISION) );
     }
 
-    vm->cal.metafits     = strdup( opts.cal_metafits );
-    vm->cal.ref_ant      = opts.ref_ant ? strdup( opts.ref_ant ) : NULL;
-    vm->cal.phase_offset = opts.phase_offset;
-    vm->cal.phase_slope  = opts.phase_slope;
+    // Now fine sample rate should be nsamples per second
+    if (vm->fine_sample_rate % vm->ds_factor != 0)
+    {
+        sprintf( vm->log_message, "Invalid downsampling factor %u for "
+                "fine sample rate of %u! Setting downsampling rate to 1",
+                vm->ds_factor, vm->fine_sample_rate);
+        logger_timed_message( vm->log, vm->log_message );
+        vm->ds_factor = 1;
+    }
+
+    vm->cal.metafits      = strdup( opts.cal_metafits );
+    vm->cal.ref_ant       = opts.ref_ant ? strdup( opts.ref_ant ) : NULL;
+    vm->cal.phase_offset  = opts.phase_offset;
+    vm->cal.phase_slope   = opts.phase_slope;
     vm->cal.custom_pq_correction = opts.custom_pq_correction;
     vm->cal.keep_cross_terms     = opts.keep_cross_terms;
 
@@ -213,7 +227,7 @@ int main(int argc, char **argv)
     {
         for (p = 0; p < vm->npointing; p++)
         {
-            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, opts.out_nstokes,
+            vmInitMPIPsrfits( vm, &(mpfs[p]), opts.max_sec_per_file, vm->out_nstokes, vm->ds_factor,
                     &(beam_geom_vals[p]), NULL, true );
         }
     }
@@ -426,6 +440,8 @@ void usage()
             "\t-p, --out-fine             Output fine-channelised, full-Stokes data (PSRFITS)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
             "\t-N, --out-nstokes          Number of stokes parameters to output. Either 1 (stokes I only) or 4 (stokes IQUV)\n"
+            "\t-D, --ds-factor            Downsampling factor of the output PSRFITS file. Must be a value that the fine sampling \n"
+            "\t                           rate is divisble by. [default: 1]\n"
             "\t-t, --max_t                Maximum number of seconds per output FITS file. [default: 200]\n"
             "\t-v, --out-coarse           Output coarse-channelised, 2-pol (XY) data (VDIF)\n"
             "\t                           (if neither -p nor -v are used, default behaviour is to match channelisation of input)\n"
@@ -481,6 +497,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->out_fine             = false; // Output fine channelised data (PSRFITS)
     opts->out_coarse           = false; // Output coarse channelised data (VDIF)
     opts->out_nstokes          = 4;     // Output stokes IQUV by default
+    opts->ds_factor            = 1;     // No downsampling by default
     opts->analysis_filter      = NULL;
     opts->synth_filter         = NULL;
     opts->max_sec_per_file     = 200;   // Number of seconds per fits files
@@ -510,6 +527,7 @@ void make_tied_array_beam_parse_cmdline(
                 {"out-fine",        no_argument,       0, 'p'},
                 {"out-coarse",      no_argument,       0, 'v'},
                 {"out-nstokes",     no_argument,       0, 'N'},
+                {"ds-factor",       no_argument,       0, 'D'},
                 {"max_t",           required_argument, 0, 't'},
                 {"analysis_filter", required_argument, 0, 'A'},
                 {"synth_filter",    required_argument, 0, 'S'},
@@ -534,7 +552,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:e:f:F:hkm:n:N:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:D:e:f:F:hkm:n:N:OpP:R:sS:t:T:U:vVX",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -564,6 +582,15 @@ void make_tied_array_beam_parse_cmdline(
                     opts->datadir = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->datadir, optarg );
                     break;
+                case 'D':
+                    opts->ds_factor = atoi(optarg);
+                    if (opts->ds_factor <= 0)
+                    {
+                        fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
+                                "-%c argument must be larger than 0\n", c );
+                        exit(EXIT_FAILURE);
+                    }
+                    break;
                 case 'f':
                     opts->coarse_chan_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->coarse_chan_str, optarg );
@@ -590,7 +617,7 @@ void make_tied_array_beam_parse_cmdline(
                     if ((opts->out_nstokes != 1) && (opts->out_nstokes != 4))
                     {
                         fprintf( stderr, "error: make_tied_array_beam_parse_cmdline: "
-                                "-%c argument must be either 1 or 4", c );
+                                "-%c argument must be either 1 or 4\n", c );
                         exit(EXIT_FAILURE);
                     }
                     break;
