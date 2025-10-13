@@ -630,8 +630,9 @@ typedef struct vcsbeam_context_t
     int nchan;                        // Number of channels
     int nfine_chan;                   // Number of fine channels
 
-    // Output number of stokes parameters needed
+    // Output number of stokes parameters and downsampling factor needed
     int out_nstokes;
+    int ds_factor;
 
     // VDIF output
     vdif_header      vhdr;
@@ -1064,6 +1065,7 @@ void populate_psrfits_header(
         struct psrfits   *pf,
         int               max_sec_per_file,
         int               outpol,
+        int               ds,
         beam_geom        *beam_geom_vals,
         char             *incoh_basename,
         bool              is_coherent );
@@ -1073,6 +1075,7 @@ void populate_spliced_psrfits_header(
         struct psrfits   *pf,
         int               max_sec_per_file,
         int               outpol,
+        int               ds,
         beam_geom        *beam_geom_vals,
         char             *basename,
         bool              is_coherent );
@@ -1084,6 +1087,7 @@ void vmInitMPIPsrfits(
         mpi_psrfits *mpf,
         int max_sec_per_file,
         int nstokes,
+        int ds,
         beam_geom *bg,
         char *outfile,
         bool is_coherent );

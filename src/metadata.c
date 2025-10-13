@@ -1211,7 +1211,7 @@ void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint6
     uint64_t t0_gps_second = vm->obs_metadata->metafits_timesteps[0].gps_time_ms/1000;
     uintptr_t timestep_idx = (gps_second - t0_gps_second) / vm->seconds_per_file;
 
-    printf("vmGetVoltFilename: gps_second = %lu; t0_gps_second = %lu\n", gps_second, t0_gps_second);
+    // printf("vmGetVoltFilename: gps_second = %lu; t0_gps_second = %lu\n", gps_second, t0_gps_second);
     if (mwalib_metafits_get_expected_volt_filename(
                 vm->obs_context,
                 timestep_idx,
