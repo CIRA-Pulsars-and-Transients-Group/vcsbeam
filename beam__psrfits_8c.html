@@ -99,18 +99,18 @@ Include dependency graph for beam_psrfits.c:</div>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a1b1165242a2c05b841f32c75941fef98"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98">populate_spliced_psrfits_header</a> (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, beam_geom *beam_geom_vals, char *basename, bool is_coherent)</td></tr>
-<tr class="memdesc:a1b1165242a2c05b841f32c75941fef98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a PSRFITS struct with data derived from the observation.  <a href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98">More...</a><br /></td></tr>
-<tr class="separator:a1b1165242a2c05b841f32c75941fef98"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa17b6021a54d95cbbdcf1993a3f9c401"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__psrfits_8c.html#aa17b6021a54d95cbbdcf1993a3f9c401">populate_psrfits_header</a> (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, beam_geom *beam_geom_vals, char *incoh_basename, bool is_coherent)</td></tr>
-<tr class="memdesc:aa17b6021a54d95cbbdcf1993a3f9c401"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a PSRFITS struct with data derived from the observation.  <a href="beam__psrfits_8c.html#aa17b6021a54d95cbbdcf1993a3f9c401">More...</a><br /></td></tr>
-<tr class="separator:aa17b6021a54d95cbbdcf1993a3f9c401"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17e868dded82769276e196d4db60f74b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__psrfits_8c.html#a17e868dded82769276e196d4db60f74b">populate_spliced_psrfits_header</a> (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, int ds, beam_geom *beam_geom_vals, char *basename, bool is_coherent)</td></tr>
+<tr class="memdesc:a17e868dded82769276e196d4db60f74b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a PSRFITS struct with data derived from the observation.  <a href="beam__psrfits_8c.html#a17e868dded82769276e196d4db60f74b">More...</a><br /></td></tr>
+<tr class="separator:a17e868dded82769276e196d4db60f74b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08908f915bbcc0556ba3302d9613f5bf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__psrfits_8c.html#a08908f915bbcc0556ba3302d9613f5bf">populate_psrfits_header</a> (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, int ds, beam_geom *beam_geom_vals, char *incoh_basename, bool is_coherent)</td></tr>
+<tr class="memdesc:a08908f915bbcc0556ba3302d9613f5bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a PSRFITS struct with data derived from the observation.  <a href="beam__psrfits_8c.html#a08908f915bbcc0556ba3302d9613f5bf">More...</a><br /></td></tr>
+<tr class="separator:a08908f915bbcc0556ba3302d9613f5bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a694dca6cb834978402ab95c924a25655"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__psrfits_8c.html#a694dca6cb834978402ab95c924a25655">free_psrfits</a> (struct psrfits *pf)</td></tr>
 <tr class="memdesc:a694dca6cb834978402ab95c924a25655"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees the memory associated with a PSRFITS struct.  <a href="beam__psrfits_8c.html#a694dca6cb834978402ab95c924a25655">More...</a><br /></td></tr>
 <tr class="separator:a694dca6cb834978402ab95c924a25655"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4cf54ed6f7ba05a75a16707eed88c8d5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__psrfits_8c.html#a4cf54ed6f7ba05a75a16707eed88c8d5">vmInitMPIPsrfits</a> (vcsbeam_context *vm, mpi_psrfits *mpf, int max_sec_per_file, int nstokes, beam_geom *bg, char *outfile, bool is_coherent)</td></tr>
-<tr class="memdesc:a4cf54ed6f7ba05a75a16707eed88c8d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a struct for managing multiple PSRFITS files via MPI processes.  <a href="beam__psrfits_8c.html#a4cf54ed6f7ba05a75a16707eed88c8d5">More...</a><br /></td></tr>
-<tr class="separator:a4cf54ed6f7ba05a75a16707eed88c8d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0e8bf68ad2295d600940b026f30dd1e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__psrfits_8c.html#a0e8bf68ad2295d600940b026f30dd1e3">vmInitMPIPsrfits</a> (vcsbeam_context *vm, mpi_psrfits *mpf, int max_sec_per_file, int nstokes, int ds, beam_geom *bg, char *outfile, bool is_coherent)</td></tr>
+<tr class="memdesc:a0e8bf68ad2295d600940b026f30dd1e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a struct for managing multiple PSRFITS files via MPI processes.  <a href="beam__psrfits_8c.html#a0e8bf68ad2295d600940b026f30dd1e3">More...</a><br /></td></tr>
+<tr class="separator:a0e8bf68ad2295d600940b026f30dd1e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2e46b986bf7a5adca1963eda2ffb971f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="beam__psrfits_8c.html#a2e46b986bf7a5adca1963eda2ffb971f">free_mpi_psrfits</a> (mpi_psrfits *mpf)</td></tr>
 <tr class="memdesc:a2e46b986bf7a5adca1963eda2ffb971f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees the memory associated with an <code>mpi_psrfits</code> struct.  <a href="beam__psrfits_8c.html#a2e46b986bf7a5adca1963eda2ffb971f">More...</a><br /></td></tr>
 <tr class="separator:a2e46b986bf7a5adca1963eda2ffb971f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -202,8 +202,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="aa17b6021a54d95cbbdcf1993a3f9c401"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa17b6021a54d95cbbdcf1993a3f9c401">&#9670;&nbsp;</a></span>populate_psrfits_header()</h2>
+<a id="a08908f915bbcc0556ba3302d9613f5bf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a08908f915bbcc0556ba3302d9613f5bf">&#9670;&nbsp;</a></span>populate_psrfits_header()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -231,6 +231,12 @@ Functions</h2></td></tr>
           <td></td>
           <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>outpol</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>ds</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -265,6 +271,7 @@ Functions</h2></td></tr>
     <tr><td class="paramname">pf</td><td>The PSRFITS struct to be populated </td></tr>
     <tr><td class="paramname">max_sec_per_file</td><td>The number of seconds written to each output PSRFITS file </td></tr>
     <tr><td class="paramname">outpol</td><td>Either 1 (for Stokes I only) or 4 (for full Stokes) </td></tr>
+    <tr><td class="paramname">ds</td><td>Downsampling factor, must be a value divisible by the fine sampling rate, otherwise set to 1 in the main code </td></tr>
     <tr><td class="paramname">beam_geom_vals</td><td>A <code>beam_geom</code> struct containing pointing information </td></tr>
     <tr><td class="paramname">incoh_basename</td><td>The prefix for the output PSRFITS files (only for incoherent beamforming) </td></tr>
     <tr><td class="paramname">is_coherent</td><td><code>true</code> for tied-array beamforming, <code>false</code> for incoherent beamforming</td></tr>
@@ -272,12 +279,12 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <p>This function is designed for PSRFITS files containing a single coarse channel.</p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo:</a></b></dt><dd>Merge with <a class="el" href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98" title="Populates a PSRFITS struct with data derived from the observation.">populate_spliced_psrfits_header()</a> to avoid code duplication. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo:</a></b></dt><dd>Merge with <a class="el" href="beam__psrfits_8c.html#a17e868dded82769276e196d4db60f74b" title="Populates a PSRFITS struct with data derived from the observation.">populate_spliced_psrfits_header()</a> to avoid code duplication. </dd></dl>
 
 </div>
 </div>
-<a id="a1b1165242a2c05b841f32c75941fef98"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1b1165242a2c05b841f32c75941fef98">&#9670;&nbsp;</a></span>populate_spliced_psrfits_header()</h2>
+<a id="a17e868dded82769276e196d4db60f74b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17e868dded82769276e196d4db60f74b">&#9670;&nbsp;</a></span>populate_spliced_psrfits_header()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -305,6 +312,12 @@ Functions</h2></td></tr>
           <td></td>
           <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>outpol</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>ds</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -339,6 +352,7 @@ Functions</h2></td></tr>
     <tr><td class="paramname">pf</td><td>The PSRFITS struct to be populated </td></tr>
     <tr><td class="paramname">max_sec_per_file</td><td>The number of seconds written to each output PSRFITS file </td></tr>
     <tr><td class="paramname">outpol</td><td>Either 1 (for Stokes I only) or 4 (for full Stokes) </td></tr>
+    <tr><td class="paramname">ds</td><td>Downsampling factor, must be a value divisible by the fine sampling rate, otherwise set to 1 in the main code </td></tr>
     <tr><td class="paramname">beam_geom_vals</td><td>A <code>beam_geom</code> struct containing pointing information </td></tr>
     <tr><td class="paramname">basename</td><td>The prefix for the output PSRFITS files </td></tr>
     <tr><td class="paramname">is_coherent</td><td><code>true</code> for tied-array beamforming, <code>false</code> for incoherent beamforming</td></tr>
@@ -350,8 +364,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a4cf54ed6f7ba05a75a16707eed88c8d5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4cf54ed6f7ba05a75a16707eed88c8d5">&#9670;&nbsp;</a></span>vmInitMPIPsrfits()</h2>
+<a id="a0e8bf68ad2295d600940b026f30dd1e3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0e8bf68ad2295d600940b026f30dd1e3">&#9670;&nbsp;</a></span>vmInitMPIPsrfits()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -379,6 +393,12 @@ Functions</h2></td></tr>
           <td></td>
           <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>nstokes</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>ds</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -413,6 +433,7 @@ Functions</h2></td></tr>
     <tr><td class="paramname">mpf</td><td>A pointer to the new struct to be initialised </td></tr>
     <tr><td class="paramname">max_sec_per_file</td><td>The number of seconds written to each output PSRFITS file </td></tr>
     <tr><td class="paramname">nstokes</td><td>Either 1 (for Stokes I only) or 4 (for full Stokes) </td></tr>
+    <tr><td class="paramname">ds</td><td>Downsampling factor, must be a value divisible by the fine sampling rate, otherwise set to 1 in the main code </td></tr>
     <tr><td class="paramname">bg</td><td>A <code>beam_geom</code> struct containing pointing information </td></tr>
     <tr><td class="paramname">outfile</td><td>The prefix for the output PSRFITS files </td></tr>
     <tr><td class="paramname">is_coherent</td><td><code>true</code> for tied-array beamforming, <code>false</code> for incoherent beamforming </td></tr>

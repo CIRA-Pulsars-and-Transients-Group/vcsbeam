@@ -104,11 +104,11 @@ $(function() {
 <dd><a class="anchor" id="_todo000025"></a>Fill in an example of stats output for <a class="el" href="performance_8c.html#aca6f9a8ac2a6d748e0b1405b81aab84d" title="Prints all stopwatches&#39; statistics.">logger_report_all_stats()</a>.  </dd>
 <dt>Member <a class="el" href="geometry_8c.html#aa953d4605eeee44e39f62dbc4e3beca6">mjd2lst</a>  (double mjd, double *lst)</dt>
 <dd><a class="anchor" id="_todo000020"></a>Consider removing <a class="el" href="geometry_8c.html#aa953d4605eeee44e39f62dbc4e3beca6" title="Convert MJD to LST.">mjd2lst()</a>, since it consists only of a single call to a <code>pal</code> function.  </dd>
-<dt>Member <a class="el" href="beam__psrfits_8c.html#aa17b6021a54d95cbbdcf1993a3f9c401">populate_psrfits_header</a>  (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, beam_geom *beam_geom_vals, char *incoh_basename, bool is_coherent)</dt>
-<dd><a class="anchor" id="_todo000006"></a>Merge with <a class="el" href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98" title="Populates a PSRFITS struct with data derived from the observation.">populate_spliced_psrfits_header()</a> to avoid code duplication.  </dd>
-<dt>Member <a class="el" href="beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98">populate_spliced_psrfits_header</a>  (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, beam_geom *beam_geom_vals, char *basename, bool is_coherent)</dt>
+<dt>Member <a class="el" href="beam__psrfits_8c.html#a08908f915bbcc0556ba3302d9613f5bf">populate_psrfits_header</a>  (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, int ds, beam_geom *beam_geom_vals, char *incoh_basename, bool is_coherent)</dt>
+<dd><a class="anchor" id="_todo000006"></a>Merge with <a class="el" href="beam__psrfits_8c.html#a17e868dded82769276e196d4db60f74b" title="Populates a PSRFITS struct with data derived from the observation.">populate_spliced_psrfits_header()</a> to avoid code duplication.  </dd>
+<dt>Member <a class="el" href="beam__psrfits_8c.html#a17e868dded82769276e196d4db60f74b">populate_spliced_psrfits_header</a>  (vcsbeam_context *vm, struct psrfits *pf, int max_sec_per_file, int outpol, int ds, beam_geom *beam_geom_vals, char *basename, bool is_coherent)</dt>
 <dd><a class="anchor" id="_todo000005"></a>Change the name to conform to standard.  </dd>
-<dt>Member <a class="el" href="form__beam_8cpp.html#a418658321f739c188e3adee521b3c03b">renormalise_channels_kernel</a>  (float *S, int nstep, float *offsets, float *scales, uint8_t *Sscaled)</dt>
+<dt>Member <a class="el" href="form__beam_8cpp.html#ad25b38692d8cad450ce5e31a1d14fff8">renormalise_channels_kernel</a>  (float *S, int nsamp, int ds, float *offsets, float *scales, uint8_t *Sscaled)</dt>
 <dd><a class="anchor" id="_todo000009"></a>Optimise the renormalisation kernel (e.g. by removing the for loop over timesteps.  </dd>
 <dt>Page <a class="el" href="usersguidebeamforming.html">User's Guide &ndash; Beamforming</a>  </dt>
 <dd><p class="startdd"><a class="anchor" id="_todo000004"></a>Finish the calibration section (and probably move it all to the Calibration workflow page).</p>

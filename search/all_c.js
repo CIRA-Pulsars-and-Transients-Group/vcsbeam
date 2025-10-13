@@ -9,8 +9,8 @@ var searchData=
   ['parse_5fra_120',['parse_ra',['../geometry_8c.html#afe7d4548fa61ca4aaea6a98f5aa7be24',1,'geometry.c']]],
   ['performance_2ec_121',['performance.c',['../performance_8c.html',1,'']]],
   ['pfb_2ecpp_122',['pfb.cpp',['../pfb_8cpp.html',1,'']]],
-  ['populate_5fpsrfits_5fheader_123',['populate_psrfits_header',['../beam__psrfits_8c.html#aa17b6021a54d95cbbdcf1993a3f9c401',1,'beam_psrfits.c']]],
-  ['populate_5fspliced_5fpsrfits_5fheader_124',['populate_spliced_psrfits_header',['../beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98',1,'beam_psrfits.c']]],
+  ['populate_5fpsrfits_5fheader_123',['populate_psrfits_header',['../beam__psrfits_8c.html#a08908f915bbcc0556ba3302d9613f5bf',1,'beam_psrfits.c']]],
+  ['populate_5fspliced_5fpsrfits_5fheader_124',['populate_spliced_psrfits_header',['../beam__psrfits_8c.html#a17e868dded82769276e196d4db60f74b',1,'beam_psrfits.c']]],
   ['prepare_5fdata_5fbuffer_5ffine_125',['prepare_data_buffer_fine',['../form__beam_8cpp.html#a8f460fee6d5b9aa52d1ff0abbbdd4607',1,'form_beam.cpp']]],
   ['primary_5fbeam_2ec_126',['primary_beam.c',['../primary__beam_8c.html',1,'']]]
 ];

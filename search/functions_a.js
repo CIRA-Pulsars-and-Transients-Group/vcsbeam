@@ -7,7 +7,7 @@ var searchData=
   ['parse_5fcoarse_5fchan_5fstring_352',['parse_coarse_chan_string',['../metadata_8c.html#a9724ecfbe52d405c909bc55348480000',1,'metadata.c']]],
   ['parse_5fdec_353',['parse_dec',['../geometry_8c.html#a69a8300a739499e65687da3e7adb3479',1,'geometry.c']]],
   ['parse_5fra_354',['parse_ra',['../geometry_8c.html#afe7d4548fa61ca4aaea6a98f5aa7be24',1,'geometry.c']]],
-  ['populate_5fpsrfits_5fheader_355',['populate_psrfits_header',['../beam__psrfits_8c.html#aa17b6021a54d95cbbdcf1993a3f9c401',1,'beam_psrfits.c']]],
-  ['populate_5fspliced_5fpsrfits_5fheader_356',['populate_spliced_psrfits_header',['../beam__psrfits_8c.html#a1b1165242a2c05b841f32c75941fef98',1,'beam_psrfits.c']]],
+  ['populate_5fpsrfits_5fheader_355',['populate_psrfits_header',['../beam__psrfits_8c.html#a08908f915bbcc0556ba3302d9613f5bf',1,'beam_psrfits.c']]],
+  ['populate_5fspliced_5fpsrfits_5fheader_356',['populate_spliced_psrfits_header',['../beam__psrfits_8c.html#a17e868dded82769276e196d4db60f74b',1,'beam_psrfits.c']]],
   ['prepare_5fdata_5fbuffer_5ffine_357',['prepare_data_buffer_fine',['../form__beam_8cpp.html#a8f460fee6d5b9aa52d1ff0abbbdd4607',1,'form_beam.cpp']]]
 ];

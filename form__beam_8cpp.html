@@ -111,9 +111,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a49103497877e923acda5738f2ba2b4bc"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cpp.html#a49103497877e923acda5738f2ba2b4bc">vmBeamform_kernel</a> (int nfine_chan, int n_samples, int nant, gpuDoubleComplex *Jv_Q, gpuDoubleComplex *Jv_P, gpuDoubleComplex *phi, double invw, int p, int soffset, int nchunk, gpuDoubleComplex *e, float *S, int npol, int nstokes)</td></tr>
 <tr class="memdesc:a49103497877e923acda5738f2ba2b4bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for phasing up and summing the voltages over antenna.  <a href="form__beam_8cpp.html#a49103497877e923acda5738f2ba2b4bc">More...</a><br /></td></tr>
 <tr class="separator:a49103497877e923acda5738f2ba2b4bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a418658321f739c188e3adee521b3c03b"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cpp.html#a418658321f739c188e3adee521b3c03b">renormalise_channels_kernel</a> (float *S, int nstep, float *offsets, float *scales, uint8_t *Sscaled)</td></tr>
-<tr class="memdesc:a418658321f739c188e3adee521b3c03b"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for normalising Stokes parameters.  <a href="form__beam_8cpp.html#a418658321f739c188e3adee521b3c03b">More...</a><br /></td></tr>
-<tr class="separator:a418658321f739c188e3adee521b3c03b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad25b38692d8cad450ce5e31a1d14fff8"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cpp.html#ad25b38692d8cad450ce5e31a1d14fff8">renormalise_channels_kernel</a> (float *S, int nsamp, int ds, float *offsets, float *scales, uint8_t *Sscaled)</td></tr>
+<tr class="memdesc:ad25b38692d8cad450ce5e31a1d14fff8"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel for normalising Stokes parameters.  <a href="form__beam_8cpp.html#ad25b38692d8cad450ce5e31a1d14fff8">More...</a><br /></td></tr>
+<tr class="separator:ad25b38692d8cad450ce5e31a1d14fff8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aefd0c7b588cf2413c51863dcb4d25521"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="form__beam_8cpp.html#aefd0c7b588cf2413c51863dcb4d25521">cu_form_incoh_beam</a> (uint8_t *data, uint8_t *d_data, size_t data_size, float *d_incoh, unsigned int nsample, int nchan, int ninput, float *offsets, float *d_offsets, float *scales, float *d_scales, uint8_t *Iscaled, uint8_t *d_Iscaled, size_t Iscaled_size)</td></tr>
 <tr class="memdesc:aefd0c7b588cf2413c51863dcb4d25521"><td class="mdescLeft">&#160;</td><td class="mdescRight">Form an incoherent beam.  <a href="form__beam_8cpp.html#aefd0c7b588cf2413c51863dcb4d25521">More...</a><br /></td></tr>
 <tr class="separator:aefd0c7b588cf2413c51863dcb4d25521"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -525,8 +525,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a418658321f739c188e3adee521b3c03b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a418658321f739c188e3adee521b3c03b">&#9670;&nbsp;</a></span>renormalise_channels_kernel()</h2>
+<a id="ad25b38692d8cad450ce5e31a1d14fff8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad25b38692d8cad450ce5e31a1d14fff8">&#9670;&nbsp;</a></span>renormalise_channels_kernel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -541,7 +541,13 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>nstep</em>, </td>
+          <td class="paramname"><em>nsamp</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>ds</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -573,7 +579,8 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">S</td><td>The original Stokes parameters, with layout \(N_t \times N_s \times N_f\) </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">nstep</td><td>\(N_t\) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">nsamp</td><td>\(N_t\) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">ds</td><td>Downsampling factor for PSRFITS output </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">offsets</td><td>The amount of offset needed to recover the original values from the normalised ones </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">scales</td><td>The scaling needed to recover the original values from the normalised ones </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">Sscaled</td><td>The normalised Stokes parameters</td></tr>
