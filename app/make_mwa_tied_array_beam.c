@@ -308,7 +308,7 @@ int main(int argc, char **argv)
         // Splice channels together
         if (vm->output_fine_channels) // Only PSRFITS output can be combined into a single file
         {
- 	    vmPullS( vm );
+ 	        vmPullS( vm );
             vmSendSToFits( vm, mpfs );
 
             logger_start_stopwatch( vm->log, "splice", true );

@@ -695,7 +695,7 @@ void vmBindObsData(
         char *datadir );
 
 void vmBindCalibrationData( vcsbeam_context *vm,
-        int num_coarse_chans_to_process,
+        int     num_coarse_chans_to_process,
         char   *caldir,
         int     cal_type,
         bool    picket_fence,
