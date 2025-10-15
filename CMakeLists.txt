@@ -5,6 +5,7 @@ project(vcsbeam)
 # TODO: Is there a way to make sure these are required and mutually exclusive?
 option(USE_CUDA "Compile the code with NVIDIA GPU support." OFF)
 option(USE_HIP "Compile the code with AMD GPU support." OFF)
+option(USE_OPENMP "Compile with OpenMP enabled." ON)
 
 # Find packages needed
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
@@ -85,6 +86,10 @@ add_library(vcsbeam STATIC
     ${vcsbeam_gpu_sources}
 )
 
+if(USE_OPENMP)
+    find_package(OpenMP REQUIRED)
+    target_link_libraries(vcsbeam OpenMP::OpenMP_CXX)
+endif()
 # Various gates defining which source files should be available based on
 # which dependencies were found on the system.
 if(MPI_FOUND AND PAL_FOUND AND PSRFITS_UTILS_FOUND)
