@@ -965,8 +965,7 @@ void read_from_buffer(vcsbeam_context *vm,
         size_t total_seconds = vm->seconds_per_file * (desired_seconds_in_buffer / vm->seconds_per_file);
         size_t total_bytes = vm->bytes_per_second * total_seconds;
         seconds_buffer.capacity = total_seconds;
-        printf("Will allocate %lu GiB for 'seconds_buffer', corresponding to %lu seconds.\n",
-            total_bytes / (1024.0f * 1024.0f * 1024.0f), total_seconds);
+        printf("Will allocate %.4f GiB for 'seconds_buffer', corresponding to %lu seconds.\n", (total_bytes / (1024.0f * 1024.0f * 1024.0f)), total_seconds);
         seconds_buffer.data = (char*) malloc(total_bytes);
         seconds_buffer.current_gps_second = gps_second_start;
         if(!seconds_buffer.data){
@@ -982,11 +981,19 @@ void read_from_buffer(vcsbeam_context *vm,
         // TODO: use read file function in mwalib next
         size_t seconds_to_read = seconds_buffer.capacity < seconds_buffer.n_remaining_gps_seconds ? \
             seconds_buffer.capacity : seconds_buffer.n_remaining_gps_seconds;
-        if(mwalib_voltage_context_read_second(vm->vcs_context, seconds_buffer.current_gps_second, seconds_to_read,
-                voltage_coarse_chan_index, seconds_buffer.data, vm->bytes_per_second * seconds_to_read,
-                vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS){
-            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
-            exit(EXIT_FAILURE);
+        size_t start_gps = seconds_buffer.current_gps_second;
+        size_t end_gps = seconds_buffer.current_gps_second + seconds_to_read;
+        size_t read_size = vm->bytes_per_second * vm->seconds_per_file;
+
+        #pragma omp parallel for schedule(static) num_threads((seconds_to_read/vm->seconds_per_file))
+        for(size_t sec_idx = start_gps; sec_idx < end_gps; sec_idx += vm->seconds_per_file){
+            // We are assuming that the seconds_to_read is always a integer multiple of seconds_per_file!
+            if(mwalib_voltage_context_read_second(vm->vcs_context, sec_idx, vm->seconds_per_file,
+                    voltage_coarse_chan_index, seconds_buffer.data + read_size * (sec_idx - start_gps), read_size,
+                    vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS){
+                fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
+                exit(EXIT_FAILURE);
+            }
         }
         seconds_buffer.count = 0u;
         seconds_buffer.size = seconds_to_read;
