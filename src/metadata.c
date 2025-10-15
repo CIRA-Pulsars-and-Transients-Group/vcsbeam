@@ -922,6 +922,85 @@ void vmPushChunk( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "upload" );
 }
 
+
+/**
+    @Cristian: here is a simple test to see if we can read as much data as we can in one go.
+    And whether that will improve the I/O performance of the program. At first, it is all
+    sequential. That is, a buffer is allocated, and populated when emptied, and consumed by
+    vmReadNextSecond transparently.
+*/
+
+struct {
+    char *data;
+    uint64_t current_gps_second;
+    uint64_t n_remaining_gps_seconds;
+    uint64_t count;
+    uint64_t size;
+    uint64_t capacity;
+} seconds_buffer = {NULL, 0u, 0u, 0u, 0u, 0u};
+
+
+void read_from_buffer(vcsbeam_context *vm,
+                    unsigned long gps_second_start,
+                    size_t gps_second_count,
+                    size_t voltage_coarse_chan_index,
+                    signed char *buffer_ptr,
+                    size_t buffer_len,
+                    const char *error_message,
+                    size_t error_message_length){
+    
+    if(seconds_buffer.data == NULL){
+        // Initialise the structure
+        //unsigned int nfiletimes;          // The number of "file" timesteps
+        seconds_buffer.n_remaining_gps_seconds = vm->nfiletimes * vm->seconds_per_file;
+        printf("CDP DEBUG: n_remaining_gps_seconds is set to: %lu, "
+            "with nfiletimes = %lu and seconds per file = %lu\n",
+            seconds_buffer.n_remaining_gps_seconds, vm->nfiletimes, vm->seconds_per_file);
+        // the following must be greater than the number of seconds
+        // in each file.
+        // TODO: check gps_second_count is less than buffer size
+        // TODO: find a clever way of doing this.
+        size_t desired_seconds_in_buffer = 32;
+        // this will ensure each file is read in full
+        size_t total_seconds = vm->seconds_per_file * (desired_seconds_in_buffer / vm->seconds_per_file);
+        size_t total_bytes = vm->bytes_per_second * total_seconds;
+        seconds_buffer.capacity = total_seconds;
+        printf("Will allocate %lu GiB for 'seconds_buffer', corresponding to %lu seconds.\n",
+            total_bytes / (1024.0f * 1024.0f * 1024.0f), total_seconds);
+        seconds_buffer.data = (char*) malloc(total_bytes);
+        seconds_buffer.current_gps_second = gps_second_start;
+        if(!seconds_buffer.data){
+            fprintf(stderr, "Error allocating memory for 'seconds_buffer'.\n");
+            exit(1);
+        }
+    }
+    // TODO: do not support gps_second_count != 1, because the mechanism to refill the buffer
+    // might be more complicated
+    if(seconds_buffer.count == seconds_buffer.size){
+        // buffer is empty, refill it
+        // TODO: check for read sizes less than buffer size
+        // TODO: use read file function in mwalib next
+        size_t seconds_to_read = seconds_buffer.capacity < seconds_buffer.n_remaining_gps_seconds ? \
+            seconds_buffer.capacity : seconds_buffer.n_remaining_gps_seconds;
+        if(mwalib_voltage_context_read_second(vm->vcs_context, seconds_buffer.current_gps_second, seconds_to_read,
+                voltage_coarse_chan_index, seconds_buffer.data, vm->bytes_per_second * seconds_to_read,
+                vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS){
+            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
+            exit(EXIT_FAILURE);
+        }
+        seconds_buffer.count = 0u;
+        seconds_buffer.size = seconds_to_read;
+        seconds_buffer.n_remaining_gps_seconds -= seconds_to_read;
+    }
+
+    char *source = seconds_buffer.data + seconds_buffer.count * vm->bytes_per_second;
+    memcpy(buffer_ptr, source, vm->bytes_per_second * gps_second_count);
+    seconds_buffer.count += gps_second_count;
+    // we are assuming seconds are read sequentially!
+    seconds_buffer.current_gps_second += gps_second_count;
+}
+
+
 /**
  * Reads a second's worth of input data from the observation files.
  *
@@ -969,20 +1048,15 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
             vm->error_message,
             ERROR_MESSAGE_LEN);
     */
-
-    if (mwalib_voltage_context_read_second(
-                vm->vcs_context,
+    read_from_buffer(
+                vm,
                 gps_second,
                 1,
                 coarse_chan_idx,
                 vm->v->read_ptr,
                 vm->v->read_size,
                 vm->error_message,
-                ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
-        exit(EXIT_FAILURE);
-    }
+                ERROR_MESSAGE_LEN);
 
     logger_stop_stopwatch( vm->log, "read" );
 
