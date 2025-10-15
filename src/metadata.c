@@ -960,7 +960,7 @@ void read_from_buffer(vcsbeam_context *vm,
         // in each file.
         // TODO: check gps_second_count is less than buffer size
         // TODO: find a clever way of doing this.
-        size_t desired_seconds_in_buffer = 32;
+        size_t desired_seconds_in_buffer = 64;
         // this will ensure each file is read in full
         size_t total_seconds = vm->seconds_per_file * (desired_seconds_in_buffer / vm->seconds_per_file);
         size_t total_bytes = vm->bytes_per_second * total_seconds;
