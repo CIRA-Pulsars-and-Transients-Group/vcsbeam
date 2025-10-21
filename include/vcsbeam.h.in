@@ -189,6 +189,7 @@ typedef struct calibration_t
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where
     double phase_slope;        //   m = phase_slope (rad/Hz)
                                //   c = phase_offset (rad)
+    bool   picket_fence;       // Whether input data is picket fence data
     bool   use_bandpass;       // Use the Bandpass solutions
     bool   custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
     char  *flags_file;         // Name of file containing custom flagged tiles
@@ -694,8 +695,10 @@ void vmBindObsData(
         char *datadir );
 
 void vmBindCalibrationData( vcsbeam_context *vm,
+        int     num_coarse_chans_to_process,
         char   *caldir,
         int     cal_type,
+        bool    picket_fence,
         bool    use_bandpass,  // only relevant for RTS observations
         char   *flags_file );
 
