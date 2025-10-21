@@ -512,7 +512,7 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     {
         // Assuming 24 coarse channels in calibration solution for contiguous 
         // data
-        fprintf( stdout, "Assuming %u coarse channels in the calibration "
+        fprintf( stdout, "Assuming %d coarse channels in the calibration "
                 "solution for contiguous data\n", 24);
         nchan = nChan / 24;
     }
