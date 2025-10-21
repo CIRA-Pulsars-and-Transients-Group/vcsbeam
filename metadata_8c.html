@@ -101,9 +101,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a091372039dcad27a96221fa22cd58d5e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a091372039dcad27a96221fa22cd58d5e">vmBindObsData</a> (vcsbeam_context *vm, char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset, char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset, char *datadir)</td></tr>
 <tr class="memdesc:a091372039dcad27a96221fa22cd58d5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a set of observation files to the VCSBeam context.  <a href="metadata_8c.html#a091372039dcad27a96221fa22cd58d5e">More...</a><br /></td></tr>
 <tr class="separator:a091372039dcad27a96221fa22cd58d5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6d82fbfb82a80d86875463d9cc542486"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a6d82fbfb82a80d86875463d9cc542486">vmBindCalibrationData</a> (vcsbeam_context *vm, char *caldir, int cal_type, bool use_bandpass, char *flags_file)</td></tr>
-<tr class="memdesc:a6d82fbfb82a80d86875463d9cc542486"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a calibration solution to the VCSBeam context.  <a href="metadata_8c.html#a6d82fbfb82a80d86875463d9cc542486">More...</a><br /></td></tr>
-<tr class="separator:a6d82fbfb82a80d86875463d9cc542486"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e5d80a34249f1cdafabae0815dad856"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a3e5d80a34249f1cdafabae0815dad856">vmBindCalibrationData</a> (vcsbeam_context *vm, int num_coarse_chans_to_process, char *caldir, int cal_type, bool use_bandpass, bool picket_fence, char *flags_file)</td></tr>
+<tr class="memdesc:a3e5d80a34249f1cdafabae0815dad856"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a calibration solution to the VCSBeam context.  <a href="metadata_8c.html#a3e5d80a34249f1cdafabae0815dad856">More...</a><br /></td></tr>
+<tr class="separator:a3e5d80a34249f1cdafabae0815dad856"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa1824ef3922bf4cd94ba1d17d9b6789f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#aa1824ef3922bf4cd94ba1d17d9b6789f">vmReadCalibration</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:aa1824ef3922bf4cd94ba1d17d9b6789f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads in a calibration solution.  <a href="metadata_8c.html#aa1824ef3922bf4cd94ba1d17d9b6789f">More...</a><br /></td></tr>
 <tr class="separator:aa1824ef3922bf4cd94ba1d17d9b6789f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -592,8 +592,8 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
 
 </div>
 </div>
-<a id="a6d82fbfb82a80d86875463d9cc542486"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6d82fbfb82a80d86875463d9cc542486">&#9670;&nbsp;</a></span>vmBindCalibrationData()</h2>
+<a id="a3e5d80a34249f1cdafabae0815dad856"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e5d80a34249f1cdafabae0815dad856">&#9670;&nbsp;</a></span>vmBindCalibrationData()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -603,6 +603,12 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
           <td>(</td>
           <td class="paramtype">vcsbeam_context *&#160;</td>
           <td class="paramname"><em>vm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>num_coarse_chans_to_process</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -625,6 +631,12 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>picket_fence</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">char *&#160;</td>
           <td class="paramname"><em>flags_file</em>&#160;</td>
         </tr>
@@ -640,9 +652,11 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">vm</td><td>The VCSBeam context struct </td></tr>
+    <tr><td class="paramname">num_coarse_chans_to_process</td><td>The number of coarse channels to process </td></tr>
     <tr><td class="paramname">caldir</td><td>The directory containing RTS solution files, OR the path of an Offringa-style calibration solution file </td></tr>
     <tr><td class="paramname">cal_type</td><td>Either <code>CAL_RTS</code> or <code>CAL_OFFRINGA</code> </td></tr>
     <tr><td class="paramname">use_bandpass</td><td>Whether to include the Bandpass information (relevant for RTS solutions only) </td></tr>
+    <tr><td class="paramname">picket_fence</td><td>Whether the input data is picket fence data. if so, assume the calibration solution has the same set of channels as the input data </td></tr>
     <tr><td class="paramname">flags_file</td><td>A file containing names of (extra) tiles to be flagged, or <code>NULL</code> </td></tr>
   </table>
   </dd>
