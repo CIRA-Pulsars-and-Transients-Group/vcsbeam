@@ -12,6 +12,10 @@
 
 #include "vcsbeam.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "gpu_macros.h"
 
 /**
@@ -928,21 +932,29 @@ void vmPushChunk( vcsbeam_context *vm )
     And whether that will improve the I/O performance of the program. At first, it is all
     sequential. That is, a buffer is allocated, and populated when emptied, and consumed by
     vmReadNextSecond transparently.
+
+    We are making the assumption that seconds are processed contiguously. That is,
+    the sequence of GPS seconds that is passed to vmReadNextSeconds corresponds to the
+    sequence defined by the files referenced in `common_timestep_indices`.
 */
 
 struct {
+    // where the data is stored.
     char *data;
-    uint64_t current_gps_second;
-    uint64_t n_remaining_gps_seconds;
+    // next timestep file to read.
+    uint64_t current_timestep_idx;
+    // keeps track of the number of remaining seconds that need to be processed.
+    uint64_t n_remaining_seconds;
+    // number of seconds in the buffer that have been already processed.
     uint64_t count;
+    // number of seconds currently stored in the buffer.
     uint64_t size;
+    // how many seconds can the buffer store.
     uint64_t capacity;
 } seconds_buffer = {NULL, 0u, 0u, 0u, 0u, 0u};
 
 
-void read_from_buffer(vcsbeam_context *vm,
-                    unsigned long gps_second_start,
-                    size_t gps_second_count,
+void read_second_from_buffer(vcsbeam_context *vm,
                     size_t voltage_coarse_chan_index,
                     signed char *buffer_ptr,
                     size_t buffer_len,
@@ -951,27 +963,33 @@ void read_from_buffer(vcsbeam_context *vm,
     
     if(seconds_buffer.data == NULL){
         // Initialise the structure
-        //unsigned int nfiletimes;          // The number of "file" timesteps
-        seconds_buffer.n_remaining_gps_seconds = vm->nfiletimes * vm->seconds_per_file;
-        printf("CDP DEBUG: n_remaining_gps_seconds is set to: %lu, "
+        // Initially, all seconds must still be processed.
+        seconds_buffer.n_remaining_seconds = vm->nfiletimes * vm->seconds_per_file;
+        printf("CDP DEBUG: n_remaining_seconds is set to: %lu, "
             "with nfiletimes = %lu and seconds per file = %lu\n",
-            seconds_buffer.n_remaining_gps_seconds, vm->nfiletimes, vm->seconds_per_file);
+            seconds_buffer.n_remaining_seconds, vm->nfiletimes, vm->seconds_per_file);
         // the following must be greater than the number of seconds
         // in each file.
         // TODO: check gps_second_count is less than buffer size
         // TODO: find a clever way of doing this.
         size_t desired_seconds_in_buffer = 64;
         // this will ensure each file is read in full
-        size_t total_seconds = vm->seconds_per_file * (desired_seconds_in_buffer / vm->seconds_per_file);
-        size_t total_bytes = vm->bytes_per_second * total_seconds;
-        seconds_buffer.capacity = total_seconds;
-        printf("Will allocate %.4f GiB for 'seconds_buffer', corresponding to %lu seconds.\n", (total_bytes / (1024.0f * 1024.0f * 1024.0f)), total_seconds);
+        seconds_buffer.capacity = vm->seconds_per_file * (desired_seconds_in_buffer / vm->seconds_per_file);
+        size_t total_bytes = vm->bytes_per_second * seconds_buffer.capacity;
+        printf("Will allocate %.4f GiB for 'seconds_buffer', corresponding to %lu seconds.\n", (total_bytes / (1024.0f * 1024.0f * 1024.0f)), seconds_buffer.capacity);
         seconds_buffer.data = (char*) malloc(total_bytes);
-        seconds_buffer.current_gps_second = gps_second_start;
         if(!seconds_buffer.data){
             fprintf(stderr, "Error allocating memory for 'seconds_buffer'.\n");
             exit(1);
         }
+        seconds_buffer.current_time_idx = vm->vcs_metadata->common_timestep_indices[0];
+        
+        printf("Timestep indices are: ");
+        for(int i = 0; i < vm->vcs_metadata->num_common_timesteps; i++) printf("%d, ", vm->vcs_metadata->common_timestep_indices[i]);
+        printf("\n");
+        printf("Voltage block size: %lu, voltage blocks per second %lu\n", vm->vcs_metadata->voltage_block_size_bytes, vm->vcs_metadata->num_voltage_blocks_per_second);
+        printf("Expected voltage data size: %lu\n", vm->vcs_metadata->expected_voltage_data_file_size_bytes - vm->vcs_metadata->data_file_header_size_bytes -vm->vcs_metadata->delay_block_size_bytes);
+        
     }
     // TODO: do not support gps_second_count != 1, because the mechanism to refill the buffer
     // might be more complicated
@@ -979,32 +997,36 @@ void read_from_buffer(vcsbeam_context *vm,
         // buffer is empty, refill it
         // TODO: check for read sizes less than buffer size
         // TODO: use read file function in mwalib next
-        size_t seconds_to_read = seconds_buffer.capacity < seconds_buffer.n_remaining_gps_seconds ? \
-            seconds_buffer.capacity : seconds_buffer.n_remaining_gps_seconds;
-        size_t start_gps = seconds_buffer.current_gps_second;
-        size_t end_gps = seconds_buffer.current_gps_second + seconds_to_read;
-        size_t read_size = vm->bytes_per_second * vm->seconds_per_file;
-
-        #pragma omp parallel for schedule(static) num_threads((seconds_to_read/vm->seconds_per_file))
-        for(size_t sec_idx = start_gps; sec_idx < end_gps; sec_idx += vm->seconds_per_file){
-            // We are assuming that the seconds_to_read is always a integer multiple of seconds_per_file!
-            if(mwalib_voltage_context_read_second(vm->vcs_context, sec_idx, vm->seconds_per_file,
-                    voltage_coarse_chan_index, seconds_buffer.data + read_size * (sec_idx - start_gps), read_size,
-                    vm->error_message, ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS){
-                fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
-                exit(EXIT_FAILURE);
+        size_t seconds_to_read = seconds_buffer.capacity < seconds_buffer.n_remaining_seconds ? \
+            seconds_buffer.capacity : seconds_buffer.n_remaining_seconds;
+        size_t start_timestep_idx = seconds_buffer.current_timestep_idx;
+        size_t n_timesteps_to_read = seconds_to_read / vm->seconds_per_file;
+        size_t end_timestep_idx = seconds_buffer.current_timestep_idx + n_timesteps_to_read;
+        size_t read_size = ((size_t) vm->bytes_per_second) * vm->seconds_per_file;
+        
+        printf("Seconds to read is %lu, read_size is %lu\n", seconds_to_read, read_size);
+        #pragma omp parallel for schedule(static)
+        for(size_t timestep_idx = start_timestep_idx; timestep_idx < end_timestep_idx; timestep_idx += 1){
+            printf("Thread %d of %d reading sec %lu (sec per file is %d)\n", omp_get_thread_num(), omp_get_num_threads(), sec_idx, vm->seconds_per_file);
+            if(mwalib_voltage_context_read_file(vm->vcs_context,
+                                         timestep_idx,
+                                         voltage_coarse_chan_index,
+                                         seconds_buffer.data + read_size * (timestep_idx - start_timestep_idx), read_size,
+                                         vm->error_message, ERROR_MESSAGE_LEN)!= MWALIB_SUCCESS){
+                 fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
+                 exit(EXIT_FAILURE);
             }
         }
         seconds_buffer.count = 0u;
         seconds_buffer.size = seconds_to_read;
-        seconds_buffer.n_remaining_gps_seconds -= seconds_to_read;
+        seconds_buffer.n_remaining_seconds -= seconds_to_read;
+        seconds_buffer.current_time_idx += n_timesteps_to_read;
     }
 
     char *source = seconds_buffer.data + seconds_buffer.count * vm->bytes_per_second;
-    memcpy(buffer_ptr, source, vm->bytes_per_second * gps_second_count);
-    seconds_buffer.count += gps_second_count;
-    // we are assuming seconds are read sequentially!
-    seconds_buffer.current_gps_second += gps_second_count;
+    // read the next seocond
+    memcpy(buffer_ptr, source, vm->bytes_per_second);
+    seconds_buffer.count += 1;
 }
 
 

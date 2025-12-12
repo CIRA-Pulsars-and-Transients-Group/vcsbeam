@@ -657,6 +657,17 @@ typedef struct vcsbeam_context_t
     char log_message[MAX_COMMAND_LENGTH];
 
     char error_message[ERROR_MESSAGE_LEN]; // MWALIB error message buffer
+
+    /**
+        2025 Pawsey Uptake Project - Cristian.
+        This patch adds the option to read an entire input file at once, as opposed to only read one second 
+        at a time. The change drastically improves I/O bandwidth especially when reading .sub files. The
+        file is cached into a dedicated buffer from which the `vmReadNextSecond` function will read from.
+        Furthermore, multiple files, corresponding to multiple seconds, can be read in parallel and cached.
+        This extra functionality requires minimal change to `vmReadNextSecond` transparent to the rest
+        of the VCSBeam code.
+    
+    */
 } vcsbeam_context;
 
 #define NO_ANTENNA_FOUND  -1
