@@ -666,8 +666,23 @@ typedef struct vcsbeam_context_t
         Furthermore, multiple files, corresponding to multiple seconds, can be read in parallel and cached.
         This extra functionality requires minimal change to `vmReadNextSecond` transparent to the rest
         of the VCSBeam code.
-    
     */
+    bool use_seconds_buffer;
+    struct {
+        // where the data is stored.
+        char *data;
+        // next timestep file to read.
+        uint64_t current_timestep_idx;
+        // keeps track of the number of remaining seconds that need to be processed.
+        uint64_t n_remaining_seconds;
+        // number of seconds in the buffer that have been already processed.
+        uint64_t count;
+        // number of seconds currently stored in the buffer.
+        uint64_t size;
+        // how many seconds the buffer can store.
+        uint64_t capacity;
+    } seconds_buffer;
+
 } vcsbeam_context;
 
 #define NO_ANTENNA_FOUND  -1
@@ -678,7 +693,7 @@ extern "C" {
 
 void vmCheckError( vm_error err );
 
-vcsbeam_context *vmInit( bool use_mpi );
+vcsbeam_context *vmInit( bool use_mpi, int seconds_buffer_size );
 
 /**    
  * vmBindObsData

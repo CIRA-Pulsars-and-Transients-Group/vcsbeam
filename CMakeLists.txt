@@ -88,7 +88,7 @@ add_library(vcsbeam STATIC
 
 if(USE_OPENMP)
     find_package(OpenMP REQUIRED)
-    target_link_libraries(vcsbeam OpenMP::OpenMP_CXX)
+    target_link_libraries(vcsbeam OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
 endif()
 # Various gates defining which source files should be available based on
 # which dependencies were found on the system.
