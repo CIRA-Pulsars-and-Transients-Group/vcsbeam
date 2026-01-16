@@ -153,7 +153,6 @@ vcsbeam_context *vmInit( bool use_mpi, int seconds_buffer_size )
     logger_add_stopwatch( vm->log, "download",  "Downloading the data to the host" );
     logger_add_stopwatch( vm->log, "splice",    "Splicing coarse channels together" );
     logger_add_stopwatch( vm->log, "write",     "Writing out data to file" );
-    logger_add_stopwatch( vm->log, "init-buffer",     "Initialise the memory buffer." );
     logger_add_stopwatch( vm->log, "read-seconds",     "Reading seconds into memory buffer." );
     
 
