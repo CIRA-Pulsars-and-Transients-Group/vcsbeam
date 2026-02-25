@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 
     mpi_psrfits mpf;
     int nstokes = 1;
-    vmInitMPIPsrfits( vm, &mpf, opts.max_sec_per_file, nstokes,
+    vmInitMPIPsrfits( vm, &mpf, opts.max_sec_per_file, nstokes, 1,
             &beam_geom_vals, opts.outfile, false );
 
     // Begin the main loop: go through data one second at a time
