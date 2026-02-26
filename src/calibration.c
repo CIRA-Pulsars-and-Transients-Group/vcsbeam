@@ -1061,10 +1061,13 @@ void free_calibration( calibration *cal )
     if (cal->flags_file != NULL)
         free( cal->flags_file );
 
-    int i;
-    for (i = 0; i < cal->nflags; i++)
+    if (cal->flagged_tilenames != NULL)
     {
-        free( cal->flagged_tilenames[i] );
+        int i;
+        for (i = 0; i < cal->nflags; i++)
+        {
+            free( cal->flagged_tilenames[i] );
+        }
+        free( cal->flagged_tilenames );
     }
-    free( cal->flagged_tilenames );
 }
