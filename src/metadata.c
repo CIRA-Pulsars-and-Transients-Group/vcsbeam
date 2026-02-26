@@ -361,10 +361,7 @@ void destroy_vcsbeam_context( vcsbeam_context *vm )
     if (vm->decs_degs != NULL)  free( vm->decs_degs );
 
     // Calibration
-    if (vm->cal != NULL)
-    {
-        free_calibration( &vm->cal );
-    }
+    free_calibration( &vm->cal );
 
     // Filters
     if (vm->analysis_filter != NULL)
