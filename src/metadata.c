@@ -942,19 +942,26 @@ void vmPushChunk( vcsbeam_context *vm )
 
 
 /**
-    @Cristian: here is a simple test to see if we can read as much data as we can in one go.
-    And whether that will improve the I/O performance of the program. At first, it is all
-    sequential. That is, a buffer is allocated, and populated when emptied, and consumed by
-    vmReadNextSecond transparently.
+    2025 Uptake Project with Pawsey. Author: Cristian Di Pietrantonio.
+
+    The `read_next_second_from_buffer` function implements an alternative to
+    the mwalib's `mwalib_voltage_context_read_second` function. The difference
+    between the two is that this function, `read_next_second_from_buffer`,
+    will read entire input voltage files, possibly in parallel, and cache the
+    contents in an in-memory buffer. The function will return the next second
+    of data to be processed, read from said buffer instead of the input file
+    directly. In other words, the function adds a caching mechanism to improve
+    the I/O bandwidth my reading larger chunks of data, in parallel.
+    The `seconds_buffer` structure is defined in `vcsbeam.h.in`, lines 660-686.
+
+    The function is called in `vmReadNextSecond` when the option
+    `vm->use_seconds_buffer` is set to true. Otherwise, mwalib is called
+    directly.
 
     We are making the assumption that seconds are processed contiguously. That is,
     the sequence of GPS seconds that is passed to vmReadNextSeconds corresponds to the
     sequence defined by the files referenced in `common_timestep_indices`.
 */
-
-
-
-
 void read_next_second_from_buffer(vcsbeam_context *vm,
                     size_t voltage_coarse_chan_index,
                     signed char *buffer_ptr,
@@ -973,7 +980,7 @@ void read_next_second_from_buffer(vcsbeam_context *vm,
        
         sprintf(vm->log_message, "read_next_second_from_buffer: will allocate %.4f GiB for 'seconds_buffer', "
             "corresponding to %lu seconds.", (total_bytes / (1024.0f * 1024.0f * 1024.0f)), vm->seconds_buffer.capacity);
-        logger_message( vm->log, vm->log_message );
+        logger_message(vm->log, vm->log_message);
         
         vm->seconds_buffer.data = (char*) malloc(total_bytes);
         if(!(vm->seconds_buffer.data)){
@@ -991,9 +998,8 @@ void read_next_second_from_buffer(vcsbeam_context *vm,
         size_t n_timesteps_to_read = seconds_to_read / vm->seconds_per_file;
         size_t end_timestep_idx = vm->seconds_buffer.current_timestep_idx + n_timesteps_to_read;
         size_t read_size = ((size_t) vm->bytes_per_second) * vm->seconds_per_file;
-        logger_start_stopwatch( vm->log, "read-seconds", true);
-        // sprintf(vm->log_message, "read_next_second_from_buffer: will now read %lu seconds into the buffer.\n", seconds_to_read);
-        logger_message( vm->log, vm->log_message );
+        sprintf(vm->log_message, "read_next_second_from_buffer: will now read %lu seconds into the buffer.\n", seconds_to_read);
+        logger_message(vm->log, vm->log_message);
         // Read multiple (file) timesteps in parallel using OpenMP
         #pragma omp parallel for schedule(static)
         for(size_t timestep_idx = start_timestep_idx; timestep_idx < end_timestep_idx; timestep_idx += 1){
@@ -1010,7 +1016,6 @@ void read_next_second_from_buffer(vcsbeam_context *vm,
         vm->seconds_buffer.size = seconds_to_read;
         vm->seconds_buffer.n_remaining_seconds -= seconds_to_read;
         vm->seconds_buffer.current_timestep_idx += n_timesteps_to_read;
-        logger_stop_stopwatch( vm->log, "read-seconds");
     }
 
     char *source = vm->seconds_buffer.data + vm->seconds_buffer.count * vm->bytes_per_second;
