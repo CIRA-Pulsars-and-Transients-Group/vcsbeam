@@ -184,8 +184,6 @@ int main(int argc, char **argv)
     // Clean up memory associated with mwalib
     destroy_vcsbeam_context( vm );
 
-    logger_timed_message( vm->log, "Exiting successfully" );
-
     return EXIT_SUCCESS;
 }
 
