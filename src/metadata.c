@@ -984,34 +984,36 @@ void read_next_second_from_buffer(vcsbeam_context *vm,
                     const char *error_message,
                     size_t error_message_length){
     
-    if(vm->seconds_buffer.data == NULL){
+    struct seconds_buffer_t* vmsb = &(vm->seconds_buffer);
+    
+    if(vmsb->data == NULL){
         // First time the structure is accessed. It must be initialised.
         // Initially, all seconds must still be processed.
-        vm->seconds_buffer.n_remaining_seconds = vm->nfiletimes * vm->seconds_per_file;
-        size_t desired_seconds_in_buffer = vm->seconds_buffer.capacity;
+        vmsb->n_remaining_seconds = vm->nfiletimes * vm->seconds_per_file;
+        size_t desired_seconds_in_buffer = vmsb->capacity;
         // this will ensure each file is read in full
-        vm->seconds_buffer.capacity = vm->seconds_per_file * (desired_seconds_in_buffer / vm->seconds_per_file);
-        size_t total_bytes = vm->bytes_per_second * vm->seconds_buffer.capacity;
+        vmsb->capacity = vm->seconds_per_file * (desired_seconds_in_buffer / vm->seconds_per_file);
+        size_t total_bytes = vm->bytes_per_second * vmsb->capacity;
        
         sprintf(vm->log_message, "read_next_second_from_buffer: will allocate %.4f GiB for 'seconds_buffer', "
-            "corresponding to %lu seconds.", (total_bytes / (1024.0f * 1024.0f * 1024.0f)), vm->seconds_buffer.capacity);
+            "corresponding to %lu seconds.", (total_bytes / (1024.0f * 1024.0f * 1024.0f)), vmsb->capacity);
         logger_message(vm->log, vm->log_message);
         
-        vm->seconds_buffer.data = (char*) malloc(total_bytes);
-        if(!(vm->seconds_buffer.data)){
+        vmsb->data = (char*) malloc(total_bytes);
+        if(!(vmsb->data)){
             fprintf(stderr, "Error allocating memory for 'seconds_buffer'.\n");
             exit(1);
         }
-        vm->seconds_buffer.current_timestep_idx = vm->vcs_metadata->common_timestep_indices[0];
+        vmsb->current_timestep_idx = vm->vcs_metadata->common_timestep_indices[0];
     }
 
-    if(vm->seconds_buffer.count == vm->seconds_buffer.size){
+    if(vmsb->count == vmsb->size){
         // All seconds in the buffer have been used. The buffer is empty, refill it
-        size_t seconds_to_read = vm->seconds_buffer.capacity < vm->seconds_buffer.n_remaining_seconds ? \
-            vm->seconds_buffer.capacity : vm->seconds_buffer.n_remaining_seconds;
-        size_t start_timestep_idx = vm->seconds_buffer.current_timestep_idx;
+        size_t seconds_to_read = vmsb->capacity < vmsb->n_remaining_seconds ? \
+            vmsb->capacity : vmsb->n_remaining_seconds;
+        size_t start_timestep_idx = vmsb->current_timestep_idx;
         size_t n_timesteps_to_read = seconds_to_read / vm->seconds_per_file;
-        size_t end_timestep_idx = vm->seconds_buffer.current_timestep_idx + n_timesteps_to_read;
+        size_t end_timestep_idx = vmsb->current_timestep_idx + n_timesteps_to_read;
         size_t read_size = ((size_t) vm->bytes_per_second) * vm->seconds_per_file;
         sprintf(vm->log_message, "read_next_second_from_buffer: will now read %lu seconds into the buffer.\n", seconds_to_read);
         logger_message(vm->log, vm->log_message);
@@ -1021,22 +1023,22 @@ void read_next_second_from_buffer(vcsbeam_context *vm,
             if(mwalib_voltage_context_read_file(vm->vcs_context,
                                          timestep_idx,
                                          voltage_coarse_chan_index,
-                                         vm->seconds_buffer.data + read_size * (timestep_idx - start_timestep_idx), read_size,
+                                         vmsb->data + read_size * (timestep_idx - start_timestep_idx), read_size,
                                          vm->error_message, ERROR_MESSAGE_LEN)!= MWALIB_SUCCESS){
                  fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
                  exit(EXIT_FAILURE);
             }
         }
-        vm->seconds_buffer.count = 0u;
-        vm->seconds_buffer.size = seconds_to_read;
-        vm->seconds_buffer.n_remaining_seconds -= seconds_to_read;
-        vm->seconds_buffer.current_timestep_idx += n_timesteps_to_read;
+        vmsb->count = 0u;
+        vmsb->size = seconds_to_read;
+        vmsb->n_remaining_seconds -= seconds_to_read;
+        vmsb->current_timestep_idx += n_timesteps_to_read;
     }
 
-    char *source = vm->seconds_buffer.data + vm->seconds_buffer.count * vm->bytes_per_second;
+    char *source = vmsb->data + vmsb->count * vm->bytes_per_second;
     // read the next seocond into the actual VCSBeam buffer.
     memcpy(buffer_ptr, source, vm->bytes_per_second);
-    vm->seconds_buffer.count += 1;
+    vmsb->count += 1;
 }
 
 
