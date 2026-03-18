@@ -457,7 +457,7 @@ void usage()
             "\t                           to convert the antenna numbers listed in the RTS 'flagged_tiles.txt' file into human-\n"
             "\t                           readable tile names.\n"
             "\t-k, --picket-fence         Input data is picket fenced data. Will assume the calibration solution contains the\n"
-            "\t                           same set of channels as the input data."
+            "\t                           same set of channels as the input data.\n"
             "\t-O, --offringa             The calibration solution is in the Offringa format instead of\n"
             "\t                           the default RTS format. In this case, the argument to -C should\n" 
             "\t                           be the full path to the binary solution file.\n"

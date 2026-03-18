@@ -1015,7 +1015,7 @@ void read_next_second_from_buffer(vcsbeam_context *vm,
         size_t n_timesteps_to_read = seconds_to_read / vm->seconds_per_file;
         size_t end_timestep_idx = vmsb->current_timestep_idx + n_timesteps_to_read;
         size_t read_size = ((size_t) vm->bytes_per_second) * vm->seconds_per_file;
-        sprintf(vm->log_message, "read_next_second_from_buffer: will now read %lu seconds into the buffer.\n", seconds_to_read);
+        sprintf(vm->log_message, "read_next_second_from_buffer: will now read %zu seconds into the buffer.\n", seconds_to_read);
         logger_message(vm->log, vm->log_message);
         // Read multiple (file) timesteps in parallel using OpenMP
         #pragma omp parallel for schedule(static)
