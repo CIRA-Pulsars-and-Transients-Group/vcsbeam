@@ -12,6 +12,10 @@
 
 #include "vcsbeam.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "gpu_macros.h"
 
 /**
@@ -23,7 +27,7 @@
  * Once the VCSBeam context is finished with, it should be freed with a call
  * to destroy_vcsbeam_context().
  */
-vcsbeam_context *vmInit( bool use_mpi )
+vcsbeam_context *vmInit( bool use_mpi, int seconds_buffer_size )
 {
     // Allocate memory for the VCSBEAM_METADATA struct
     vcsbeam_context *vm = (vcsbeam_context *)malloc( sizeof(vcsbeam_context) );
@@ -42,7 +46,19 @@ vcsbeam_context *vmInit( bool use_mpi )
         vm->mpi_rank = PERFORMANCE_NO_MPI;
     }
     vm->writer = 0;
-
+    if(seconds_buffer_size > 0){
+        vm->use_seconds_buffer = true;
+        // To keep the implementation simple and contained to a single function,
+        // the actual initialisation of the structure happens the first time it
+        // is accessed.
+        vm->seconds_buffer.data = NULL;
+        vm->seconds_buffer.current_timestep_idx = 0u;
+        vm->seconds_buffer.n_remaining_seconds = 0u;
+        vm->seconds_buffer.count = 0u;
+        vm->seconds_buffer.size = 0u;
+        // just a way to pass the buffer size to the initialisation function
+        vm->seconds_buffer.capacity = (unsigned int) seconds_buffer_size;
+    }
     // TODO: Change this to give user flexibility of how to use mpi structure
     vm->ncoarse_chans   = vm->mpi_size;
     vm->coarse_chan_idx = (vm->use_mpi ? vm->mpi_rank : 0);
@@ -137,6 +153,8 @@ vcsbeam_context *vmInit( bool use_mpi )
     logger_add_stopwatch( vm->log, "download",  "Downloading the data to the host" );
     logger_add_stopwatch( vm->log, "splice",    "Splicing coarse channels together" );
     logger_add_stopwatch( vm->log, "write",     "Writing out data to file" );
+    logger_add_stopwatch( vm->log, "read-seconds",     "Reading seconds into memory buffer." );
+    
 
     // Initialise pointing RAs and Decs to NULL
     vm->ras_hours = NULL;
@@ -937,6 +955,93 @@ void vmPushChunk( vcsbeam_context *vm )
     logger_stop_stopwatch( vm->log, "upload" );
 }
 
+
+/**
+    2025 Uptake Project with Pawsey. Author: Cristian Di Pietrantonio.
+
+    The `read_next_second_from_buffer` function implements an alternative to
+    the mwalib's `mwalib_voltage_context_read_second` function. The difference
+    between the two is that this function, `read_next_second_from_buffer`,
+    will read entire input voltage files, possibly in parallel, and cache the
+    contents in an in-memory buffer. The function will return the next second
+    of data to be processed, read from said buffer instead of the input file
+    directly. In other words, the function adds a caching mechanism to improve
+    the I/O bandwidth my reading larger chunks of data, in parallel.
+    The `seconds_buffer` structure is defined in `vcsbeam.h.in`, lines 660-686.
+
+    The function is called in `vmReadNextSecond` when the option
+    `vm->use_seconds_buffer` is set to true. Otherwise, mwalib is called
+    directly.
+
+    We are making the assumption that seconds are processed contiguously. That is,
+    the sequence of GPS seconds that is passed to vmReadNextSeconds corresponds to the
+    sequence defined by the files referenced in `common_timestep_indices`.
+*/
+void read_next_second_from_buffer(vcsbeam_context *vm,
+                    size_t voltage_coarse_chan_index,
+                    signed char *buffer_ptr,
+                    size_t buffer_len,
+                    const char *error_message,
+                    size_t error_message_length){
+    
+    struct seconds_buffer_t* vmsb = &(vm->seconds_buffer);
+    
+    if(vmsb->data == NULL){
+        // First time the structure is accessed. It must be initialised.
+        // Initially, all seconds must still be processed.
+        vmsb->n_remaining_seconds = vm->nfiletimes * vm->seconds_per_file;
+        size_t desired_seconds_in_buffer = vmsb->capacity;
+        // this will ensure each file is read in full
+        vmsb->capacity = vm->seconds_per_file * (desired_seconds_in_buffer / vm->seconds_per_file);
+        size_t total_bytes = vm->bytes_per_second * vmsb->capacity;
+       
+        sprintf(vm->log_message, "read_next_second_from_buffer: will allocate %.4f GiB for 'seconds_buffer', "
+            "corresponding to %lu seconds.", (total_bytes / (1024.0f * 1024.0f * 1024.0f)), vmsb->capacity);
+        logger_message(vm->log, vm->log_message);
+        
+        vmsb->data = (char*) malloc(total_bytes);
+        if(!(vmsb->data)){
+            fprintf(stderr, "Error allocating memory for 'seconds_buffer'.\n");
+            exit(1);
+        }
+        vmsb->current_timestep_idx = vm->vcs_metadata->common_timestep_indices[0];
+    }
+
+    if(vmsb->count == vmsb->size){
+        // All seconds in the buffer have been used. The buffer is empty, refill it
+        size_t seconds_to_read = vmsb->capacity < vmsb->n_remaining_seconds ? \
+            vmsb->capacity : vmsb->n_remaining_seconds;
+        size_t start_timestep_idx = vmsb->current_timestep_idx;
+        size_t n_timesteps_to_read = seconds_to_read / vm->seconds_per_file;
+        size_t end_timestep_idx = vmsb->current_timestep_idx + n_timesteps_to_read;
+        size_t read_size = ((size_t) vm->bytes_per_second) * vm->seconds_per_file;
+        sprintf(vm->log_message, "read_next_second_from_buffer: will now read %zu seconds into the buffer.\n", seconds_to_read);
+        logger_message(vm->log, vm->log_message);
+        // Read multiple (file) timesteps in parallel using OpenMP
+        #pragma omp parallel for schedule(static)
+        for(size_t timestep_idx = start_timestep_idx; timestep_idx < end_timestep_idx; timestep_idx += 1){
+            if(mwalib_voltage_context_read_file(vm->vcs_context,
+                                         timestep_idx,
+                                         voltage_coarse_chan_index,
+                                         vmsb->data + read_size * (timestep_idx - start_timestep_idx), read_size,
+                                         vm->error_message, ERROR_MESSAGE_LEN)!= MWALIB_SUCCESS){
+                 fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
+                 exit(EXIT_FAILURE);
+            }
+        }
+        vmsb->count = 0u;
+        vmsb->size = seconds_to_read;
+        vmsb->n_remaining_seconds -= seconds_to_read;
+        vmsb->current_timestep_idx += n_timesteps_to_read;
+    }
+
+    char *source = vmsb->data + vmsb->count * vm->bytes_per_second;
+    // read the next seocond into the actual VCSBeam buffer.
+    memcpy(buffer_ptr, source, vm->bytes_per_second);
+    vmsb->count += 1;
+}
+
+
 /**
  * Reads a second's worth of input data from the observation files.
  *
@@ -984,8 +1089,18 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
             vm->error_message,
             ERROR_MESSAGE_LEN);
     */
-
-    if (mwalib_voltage_context_read_second(
+    if(vm->use_seconds_buffer){
+        // Use underlying buffering mechanism to read multiple seconds in memory, in parallel.
+        read_next_second_from_buffer(
+            vm,
+            coarse_chan_idx,
+            vm->v->read_ptr,
+            vm->v->read_size,
+            vm->error_message,
+            ERROR_MESSAGE_LEN);
+    }else{
+        // No buffering, just read the next second from the file.
+        if (mwalib_voltage_context_read_second(
                 vm->vcs_context,
                 gps_second,
                 1,
@@ -993,10 +1108,10 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
                 vm->v->read_ptr,
                 vm->v->read_size,
                 vm->error_message,
-                ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS)
-    {
-        fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
-        exit(EXIT_FAILURE);
+                ERROR_MESSAGE_LEN ) != MWALIB_SUCCESS) {
+            fprintf( stderr, "error: mwalib_voltage_context_read_file failed: %s", vm->error_message );
+            exit(EXIT_FAILURE);
+        }
     }
 
     logger_stop_stopwatch( vm->log, "read" );

@@ -33,6 +33,7 @@ struct cmd_line_opts {
     char              *coarse_chan_str;   // Absolute or relative coarse channel number
     char              *outfile;       // Base name of the output PSRFITS file
     int                max_sec_per_file;    // Number of seconds per fits file
+    int                seconds_buffer_size; // Number of seconds to preload into memory to increase I/O bandwidth usage.
 };
 
 /*************************************
@@ -57,7 +58,7 @@ int main(int argc, char **argv)
     make_incoh_beam_parse_cmdline( argc, argv, &opts );
 
     bool use_mpi = true;
-    vcsbeam_context *vm = vmInit( use_mpi );
+    vcsbeam_context *vm = vmInit( use_mpi, opts.seconds_buffer_size);
     vmLoadObsMetafits( vm, opts.metafits );
     vmBindObsData( vm,
         opts.coarse_chan_str, 1, vm->coarse_chan_idx,
@@ -211,6 +212,7 @@ void usage()
             "\t                          [default: \"<PROJECT>_<OBSID>_incoh_ch<CHAN>\"]\n"
             "\t-S, --max_output_t=SECS   Maximum number of SECS per output FITS file [default: 200]\n"
             "\t-T, --nseconds=VAL        Process VAL seconds of data [default: as many as possible]\n"
+            "\t-Z, --seconds-buffer=N    Preload N seconds into memory to improve I/O performance.\n"
            );
 
     printf( "\nOTHER OPTIONS\n\n"
@@ -232,6 +234,7 @@ void make_incoh_beam_parse_cmdline(
     opts->outfile          = NULL; // Base name of the output PSRFITS file
     opts->coarse_chan_str  = NULL; // Absolute or relative coarse channel
     opts->max_sec_per_file = 200;  // Number of seconds per fits files
+    opts->seconds_buffer_size = 0;
 
     if (argc > 1)
     {
@@ -247,18 +250,21 @@ void make_incoh_beam_parse_cmdline(
                 {"outfile",         required_argument, 0, 'o'},
                 {"max_output_t",    required_argument, 0, 'S'},
                 {"nseconds",        required_argument, 0, 'T'},
-                {"version",         no_argument,       0, 'V'}
+                {"version",         no_argument,       0, 'V'},
+                {"seconds-buffer",  required_argument, 0, 'Z'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "b:d:f:hm:o:S:T:V",
+                             "b:d:f:hm:o:S:T:VZ:",
                              long_options, &option_index);
             if (c == -1)
                 break;
 
             switch(c) {
-
+                case 'Z':
+                    opts->seconds_buffer_size = atoi(optarg);
+                    break;
                 case 'b':
                     opts->begin_str = strdup(optarg);
                     break;

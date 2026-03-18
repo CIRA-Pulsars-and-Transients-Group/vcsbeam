@@ -59,6 +59,7 @@ struct make_tied_array_beam_opts {
     bool               smart;            // Use legacy settings for PFB
     int                max_sec_per_file; // Number of seconds per fits files
     int                nchunks;          // Split each second into this many processing chunks
+    int                seconds_buffer_size; // Number of seconds to be pre-loaded and stored into memory, to improve I/O performance.
 };
 
 /***********************
@@ -85,7 +86,7 @@ int main(int argc, char **argv)
 
     // Create an mwalib metafits context and associated metadata
     bool use_mpi = true;
-    vcsbeam_context *vm = vmInit( use_mpi );
+    vcsbeam_context *vm = vmInit( use_mpi, opts.seconds_buffer_size);
 
     vmPrintTitle( vm, "Beamformer" );
 
@@ -456,7 +457,7 @@ void usage()
             "\t                           to convert the antenna numbers listed in the RTS 'flagged_tiles.txt' file into human-\n"
             "\t                           readable tile names.\n"
             "\t-k, --picket-fence         Input data is picket fenced data. Will assume the calibration solution contains the\n"
-            "\t                           same set of channels as the input data."
+            "\t                           same set of channels as the input data.\n"
             "\t-O, --offringa             The calibration solution is in the Offringa format instead of\n"
             "\t                           the default RTS format. In this case, the argument to -C should\n" 
             "\t                           be the full path to the binary solution file.\n"
@@ -469,6 +470,7 @@ void usage()
             "\t                                exp(PH*F + OFFS)\n"
             "\t                           Setting PH = OFFS = 0 is equivalent to not performing any phase correction\n"
             "\t-X, --cross-terms          Retain the PQ and QP terms of the calibration solution [default: off]\n"
+            "\t-Z, --seconds-buffer=N    Preload N seconds into memory to improve I/O performance.\n"
           );
 
     printf( "\nMEMORY OPTIONS\n\n"
@@ -515,6 +517,7 @@ void make_tied_array_beam_parse_cmdline(
     opts->phase_slope          = 0.0;
     opts->custom_pq_correction = false;
     opts->use_bandpass         = false; // use the Bandpass calibration solutions
+    opts->seconds_buffer_size  = 0; // Number of seconds to be preloaded and stored in memory. Default: 0, no buffering.
 
     if (argc > 1) {
 
@@ -547,12 +550,13 @@ void make_tied_array_beam_parse_cmdline(
                 {"nchunks",         required_argument, 0, 'n'},
                 {"smart",           no_argument,       0, 's'},
                 {"help",            required_argument, 0, 'h'},
-                {"version",         required_argument, 0, 'V'}
+                {"version",         required_argument, 0, 'V'},
+                {"seconds-buffer",  required_argument, 0, 'Z'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:D:e:f:F:hkm:n:N:OpP:R:sS:t:T:U:vVX",
+                             "A:b:Bc:C:d:D:e:f:F:hkm:n:N:OpP:R:sS:t:T:U:vVXZ:",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -620,6 +624,9 @@ void make_tied_array_beam_parse_cmdline(
                                 "-%c argument must be either 1 or 4\n", c );
                         exit(EXIT_FAILURE);
                     }
+                    break;
+                case 'Z':
+                    opts->seconds_buffer_size = atoi(optarg);
                     break;
                 case 'O':
                     opts->cal_type = CAL_OFFRINGA;

@@ -8,7 +8,7 @@ source "${BASH_UTILS_DIR}/build_utils.sh"
 
 # Set the program name and versions, used to create the installation paths.
 PROGRAM_NAME=vcsbeam
-PROGRAM_VERSION="atomics"
+PROGRAM_VERSION="buffer"
 # the following function sets up the installation path according to the
 # cluster the script is running on and the first argument given. The argument
 # can be:
@@ -27,15 +27,15 @@ module load cmake/3.30.5
 
 mkdir build
 cd build
-cmake -DUSE_HIP=ON -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+cmake -DUSE_OPENMP=ON -DUSE_HIP=ON -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
     -DCMAKE_CXX_COMPILER=hipcc \
     -DCMAKE_CXX_FLAGS="--offload-arch=gfx90a -O3 -munsafe-fp-atomics" \
     -DHYPERBEAM_HDF5=/scratch/references/mwa/beam-models/mwa_full_embedded_element_pattern.h5 \
     -DCMAKE_C_COMPILER=hipcc \
     -DCMAKE_C_FLAGS="-I${ROCM_PATH}/include" \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=RelWithDebugInfo \
     -DPSRFITS_UTILS_ROOT_DIR=${PAWSEY_PSRFITS_UTILS_HOME} -DPAL_ROOT_DIR=${PAWSEY_PAL_HOME} ..
 
 make VERBOSE=1 -j 12
 make install
-create_modulefile
+# create_modulefile

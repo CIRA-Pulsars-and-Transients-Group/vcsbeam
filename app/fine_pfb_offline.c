@@ -22,6 +22,7 @@ struct fine_pfb_offline_opts {
     char              *coarse_chan_str;  // Absolute or relative coarse channel number
     char              *analysis_filter;  // Which analysis filter to use
     int                nchunks;          // Split each second into this many processing chunks
+    int                seconds_buffer_size; // Number of seconds to preload into memory to increase I/O bandwidth usage.
 };
 
 /***********************
@@ -43,7 +44,7 @@ int main( int argc, char *argv[] )
 
     // Set up the VCS metadata struct
     bool use_mpi = false;
-    vcsbeam_context *vm = vmInit( use_mpi );
+    vcsbeam_context *vm = vmInit( use_mpi, opts.seconds_buffer_size );
 
     vmLoadObsMetafits( vm, opts.metafits );
     vmBindObsData( vm,
@@ -121,6 +122,7 @@ void usage()
             "\t                           File [RUNTIME_DIR]/FILTER.dat must exist [default: FINEPFB]\n"
             "\t-T, --nseconds=VAL         Process VAL seconds of data [default: as many as possible]\n"
             "\t-n, --nchunks=VAL          Split each second's worth of data into VAL processing chunks\n"
+            "\t-Z, --seconds-buffer=N    Preload N seconds into memory to improve I/O performance.\n"
             "\t                           [default: 1]\n"
           );
 
@@ -140,6 +142,7 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
     opts->coarse_chan_str    = NULL;  // Absolute or relative coarse channel
     opts->analysis_filter    = NULL;
     opts->nchunks            = 1;
+    opts->seconds_buffer_size = 0;
 
     if (argc > 1) {
 
@@ -155,18 +158,22 @@ void fine_pfb_offline_parse_cmdline( int argc, char **argv, struct fine_pfb_offl
                 {"metafits",        required_argument, 0, 'm'},
                 {"nchunks",         required_argument, 0, 'n'},
                 {"nseconds",        required_argument, 0, 'T'},
-                {"version",         required_argument, 0, 'V'}
+                {"version",         required_argument, 0, 'V'},
+                {"seconds-buffer",  required_argument, 0, 'Z'}
             };
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:d:f:hm:n:T:V",
+                             "A:b:d:f:hm:n:T:VZ:",
                              long_options, &option_index);
             if (c == -1)
                 break;
 
             switch(c)
             {
+                case 'Z':
+                    opts->seconds_buffer_size = atoi(optarg);
+                    break;
                 case 'A':
                     opts->analysis_filter = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->analysis_filter, optarg );
