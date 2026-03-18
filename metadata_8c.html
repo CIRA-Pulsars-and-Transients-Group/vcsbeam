@@ -95,9 +95,9 @@ Include dependency graph for metadata.c:</div>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a7a572becfecd297d68a8b296b29cd0f8"><td class="memItemLeft" align="right" valign="top">vcsbeam_context *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a7a572becfecd297d68a8b296b29cd0f8">vmInit</a> (bool use_mpi)</td></tr>
-<tr class="memdesc:a7a572becfecd297d68a8b296b29cd0f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a VCSBeam context struct.  <a href="metadata_8c.html#a7a572becfecd297d68a8b296b29cd0f8">More...</a><br /></td></tr>
-<tr class="separator:a7a572becfecd297d68a8b296b29cd0f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af03e0f56486ab777f65a40b45a24703d"><td class="memItemLeft" align="right" valign="top">vcsbeam_context *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#af03e0f56486ab777f65a40b45a24703d">vmInit</a> (bool use_mpi, int seconds_buffer_size)</td></tr>
+<tr class="memdesc:af03e0f56486ab777f65a40b45a24703d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a VCSBeam context struct.  <a href="metadata_8c.html#af03e0f56486ab777f65a40b45a24703d">More...</a><br /></td></tr>
+<tr class="separator:af03e0f56486ab777f65a40b45a24703d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a091372039dcad27a96221fa22cd58d5e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a091372039dcad27a96221fa22cd58d5e">vmBindObsData</a> (vcsbeam_context *vm, char *first_coarse_chan_str, int num_coarse_chans_to_process, int coarse_chan_idx_offset, char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset, char *datadir)</td></tr>
 <tr class="memdesc:a091372039dcad27a96221fa22cd58d5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a set of observation files to the VCSBeam context.  <a href="metadata_8c.html#a091372039dcad27a96221fa22cd58d5e">More...</a><br /></td></tr>
 <tr class="separator:a091372039dcad27a96221fa22cd58d5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -206,6 +206,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a6e140f229ab6d67dd32a403dd6f1521e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a6e140f229ab6d67dd32a403dd6f1521e">vmPushChunk</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:a6e140f229ab6d67dd32a403dd6f1521e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads a "chunk" of input data onto the GPU.  <a href="metadata_8c.html#a6e140f229ab6d67dd32a403dd6f1521e">More...</a><br /></td></tr>
 <tr class="separator:a6e140f229ab6d67dd32a403dd6f1521e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adaca07b2c94c23713c8839264830a611"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#adaca07b2c94c23713c8839264830a611">read_next_second_from_buffer</a> (vcsbeam_context *vm, size_t voltage_coarse_chan_index, signed char *buffer_ptr, size_t buffer_len, const char *error_message, size_t error_message_length)</td></tr>
+<tr class="memdesc:adaca07b2c94c23713c8839264830a611"><td class="mdescLeft">&#160;</td><td class="mdescRight">2025 Uptake Project with Pawsey.  <a href="metadata_8c.html#adaca07b2c94c23713c8839264830a611">More...</a><br /></td></tr>
+<tr class="separator:adaca07b2c94c23713c8839264830a611"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a46564605d923a726165f118fdb5d7998"><td class="memItemLeft" align="right" valign="top">vm_error&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="metadata_8c.html#a46564605d923a726165f118fdb5d7998">vmReadNextSecond</a> (vcsbeam_context *vm)</td></tr>
 <tr class="memdesc:a46564605d923a726165f118fdb5d7998"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads a second's worth of input data from the observation files.  <a href="metadata_8c.html#a46564605d923a726165f118fdb5d7998">More...</a><br /></td></tr>
 <tr class="separator:a46564605d923a726165f118fdb5d7998"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -589,6 +592,64 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
 <dl class="section return"><dt>Returns</dt><dd>An absolute coarse channel index</dd></dl>
 <p>If the first character of <code>begin_coarse_chan_str</code> is '<code>+</code>' or '<code>-</code>', then return the coarse channel index relative to the lowest or highest coarse channel, respectively (with "-1" representing the highest channel, "-2" the second highest, etc.). Otherwise, parse it as a coarse channel index in its own right.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="metadata_8c.html#a34a4bbedbfda062ae4298c23c8969c19" title="Gets the GPS second from a string representation of either a relative or absolute value.">parse_begin_string()</a> </dd></dl>
+
+</div>
+</div>
+<a id="adaca07b2c94c23713c8839264830a611"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adaca07b2c94c23713c8839264830a611">&#9670;&nbsp;</a></span>read_next_second_from_buffer()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void read_next_second_from_buffer </td>
+          <td>(</td>
+          <td class="paramtype">vcsbeam_context *&#160;</td>
+          <td class="paramname"><em>vm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>voltage_coarse_chan_index</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">signed char *&#160;</td>
+          <td class="paramname"><em>buffer_ptr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>buffer_len</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>error_message</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>error_message_length</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>2025 Uptake Project with Pawsey. </p>
+<p>Author: Cristian Di Pietrantonio.</p>
+<p>The <code>read_next_second_from_buffer</code> function implements an alternative to the mwalib's <code>mwalib_voltage_context_read_second</code> function. The difference between the two is that this function, <code>read_next_second_from_buffer</code>, will read entire input voltage files, possibly in parallel, and cache the contents in an in-memory buffer. The function will return the next second of data to be processed, read from said buffer instead of the input file directly. In other words, the function adds a caching mechanism to improve the I/O bandwidth my reading larger chunks of data, in parallel. The <code>seconds_buffer</code> structure is defined in <code>vcsbeam.h.in</code>, lines 660-686.</p>
+<p>The function is called in <code>vmReadNextSecond</code> when the option <code>vm-&gt;use_seconds_buffer</code> is set to true. Otherwise, mwalib is called directly.</p>
+<p>We are making the assumption that seconds are processed contiguously. That is, the sequence of GPS seconds that is passed to vmReadNextSeconds corresponds to the sequence defined by the files referenced in <code>common_timestep_indices</code>. </p>
 
 </div>
 </div>
@@ -1437,8 +1498,8 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
 
 </div>
 </div>
-<a id="a7a572becfecd297d68a8b296b29cd0f8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7a572becfecd297d68a8b296b29cd0f8">&#9670;&nbsp;</a></span>vmInit()</h2>
+<a id="af03e0f56486ab777f65a40b45a24703d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af03e0f56486ab777f65a40b45a24703d">&#9670;&nbsp;</a></span>vmInit()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1447,8 +1508,18 @@ time" (i.e. from the beginning of the observation). If <code>relative_begin</cod
           <td class="memname">vcsbeam_context* vmInit </td>
           <td>(</td>
           <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>use_mpi</em></td><td>)</td>
+          <td class="paramname"><em>use_mpi</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>seconds_buffer_size</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
