@@ -1094,9 +1094,9 @@ vm_error vmReadNextSecond( vcsbeam_context *vm )
                 gps_second,
                 timestep_idx+1,
                 ntimesteps,
-                vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
-                coarse_chan_idx,
-                vm->num_coarse_chans_to_process );
+                vm->obs_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,  // x1.28 to get centre freq. in MHz 
+                vm->coarse_chan_idx + 1,  // 1-based channel index
+                vm->ncoarse_chans );  // total number of coarse channels processing
     logger_timed_message( vm->log, vm->log_message );
 
     logger_start_stopwatch( vm->log, "read", true );
