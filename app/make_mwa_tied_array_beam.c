@@ -470,12 +470,12 @@ void usage()
             "\t                                exp(PH*F + OFFS)\n"
             "\t                           Setting PH = OFFS = 0 is equivalent to not performing any phase correction\n"
             "\t-X, --cross-terms          Retain the PQ and QP terms of the calibration solution [default: off]\n"
-            "\t-Z, --seconds-buffer=N    Preload N seconds into memory to improve I/O performance.\n"
           );
 
     printf( "\nMEMORY OPTIONS\n\n"
             "\t-n, --nchunks=VAL          Split each second's worth of data into VAL processing chunks\n"
             "\t                           [default: 1]\n"
+            "\t-Z, --seconds-buffer=N     Preload N seconds into memory to improve I/O performance.\n"
           );
 
     printf( "\nOTHER OPTIONS\n\n"
