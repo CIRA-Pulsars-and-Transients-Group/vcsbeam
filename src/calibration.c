@@ -88,8 +88,10 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     // making sure it matches the metadata
     if (intervalCount > 1)
     {
-        fprintf( stdout, "Warning: Only the first interval in the calibration " );
-        fprintf( stdout, "solution (%s) will be used\n", vm->cal.caldir );
+        snprintf( vm->log_message, sizeof(vm->log_message),
+                "Warning: Only the first interval in the calibration "
+                "solution (%s) will be used", vm->cal.caldir );
+        logger_timed_message( vm->log, vm->log_message );
     }
     if (antennaCount != nant)
     {
@@ -100,8 +102,10 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     }
 
     // Now set the calibration solution settings correctly
-    fprintf( stdout, "Calibration solution (%s) ", vm->cal.caldir );
-    fprintf( stdout, "has (%u) total channels\n", channelCount );
+    snprintf( vm->log_message, sizeof(vm->log_message),
+            "Calibration solution (%s) has (%u) total channels",
+            vm->cal.caldir, channelCount );
+    logger_timed_message( vm->log, vm->log_message );
     nChan = channelCount;
 
     // Figure out the correct number of fine channels in a coarse channel from 
@@ -110,21 +114,27 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
     {
         // Assuming calibration solution has same number of coarse channels as 
         // the number of MPI processes for picket fenced data
-        fprintf( stdout, "Assuming %u coarse channels in the calibration "
-                "solution for picket fence data\n", vm->mpi_size);
+        snprintf( vm->log_message, sizeof(vm->log_message),
+                "Assuming %u coarse channels in the calibration "
+                "solution for picket fence data", vm->mpi_size );
+        logger_timed_message( vm->log, vm->log_message );
         nchan = nChan / vm->mpi_size; 
     }
     else
     {
         // Assuming 24 coarse channels in calibration solution for contiguous 
         // data
-        fprintf( stdout, "Assuming %d coarse channels in the calibration "
-                "solution for contiguous data\n", 24);
+        snprintf( vm->log_message, sizeof(vm->log_message),
+                "Assuming %d coarse channels in the calibration "
+                "solution for contiguous data", 24 );
+        logger_timed_message( vm->log, vm->log_message );
         nchan = nChan / 24;
     }
     interp_factor = vcs_nchan / nchan;
-    fprintf( stdout, "Assuming calibration channels are "
-            "%d kHz\n", vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
+    snprintf( vm->log_message, sizeof(vm->log_message),
+            "Assuming calibration channels are %d kHz",
+            vm->cal_metadata->coarse_chan_width_hz / nchan / 1000 );
+    logger_timed_message( vm->log, vm->log_message );
 #ifdef DEBUG
     fprintf( stderr, "New nChan = %u\n", nChan );
     fprintf( stderr, "New nchan = %u\n", nchan );
@@ -354,9 +364,11 @@ void vmLoadHyperdriveSolution( vcsbeam_context *vm )
         exit(EXIT_FAILURE);
     }
     uintptr_t interp_factor = vcs_nchan / nchan;
-    fprintf( stdout, "Calibration solution (%s): using %ld channels (%d kHz each) for "
-            "coarse channel %d\n", filename, nchan,
+    snprintf( vm->log_message, sizeof(vm->log_message),
+            "Calibration solution (%s): using %ld channels (%d kHz each) for "
+            "coarse channel %d", filename, nchan,
             (int)(vm->cal_metadata->coarse_chan_width_hz / nchan / 1000), coarse_chan_idx );
+    logger_timed_message( vm->log, vm->log_message );
 
     // --- Solutions image dimensions ---
     fits_movnam_hdu( fptr, IMAGE_HDU, "SOLUTIONS", 0, &status );
@@ -387,8 +399,12 @@ void vmLoadHyperdriveSolution( vcsbeam_context *vm )
         exit(EXIT_FAILURE);
     }
     if (ntimeblocks > 1)
-        fprintf( stdout, "Warning: Only the first timeblock in the calibration "
-                "solution (%s) will be used\n", filename );
+    {
+        snprintf( vm->log_message, sizeof(vm->log_message),
+                "Warning: Only the first timeblock in the calibration "
+                "solution (%s) will be used", filename );
+        logger_timed_message( vm->log, vm->log_message );
+    }
 
     // --- Tiles table: map antenna number -> row in the solutions, and flags ---
     long *tile_row = (long *)malloc( nant * sizeof(long) );
