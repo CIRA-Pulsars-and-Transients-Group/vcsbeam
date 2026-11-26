@@ -11,7 +11,7 @@ usage: `make_mwa_tied_array_beam [OPTIONS]`
 | Short option | Long option | Description |
 | ------------ | ----------- | ----------- |
 | -c | --cal-metafits=FILE |  FILE is the metafits file pertaining to the calibration solution |
-| -C | --cal-location=PATH |  PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution |
+| -C | --cal-location=PATH |  PATH is the calibration solution: the native mwa_hyperdrive FITS file (one per subband; several may be given, e.g. `-C solutions_*.fits`), or, with `-O`, the Offringa binary file |
 | -m | --metafits=FILE     |  FILE is the metafits file for the target observation |
 | -P | --pointings=FILE    |  FILE containing RA and Decs of multiple pointings in the format "HH:MM:SS.S DD:MM:SS.S ..." |
 
@@ -44,9 +44,8 @@ usage: `make_mwa_tied_array_beam [OPTIONS]`
 
 | Short option | Long option | Description | Default value |
 | ------------ | ----------- | ----------- | ------------- |
-| -B | --bandpass           | Use the Bandpass (fine channel) as well as the DIJones (coarse channel) solutions (only relevant for RTS) | [off] |
-| -F | --flagged-tiles=FILE | FILE is a text file including the TileNames of extra tiles to be flagged. By default, tiles flagged in both the calibration and the observation metafits file are flagged in the beamformer. The utility `rts_flag_ant_to_tilenames.py` can be used to convert the antenna numbers listed in the RTS `flagged_tiles.txt` file into human-readable tile names. | [no extra tiles are flagged] |
-| -O | --offringa           | The calibration solution is in the Offringa format instead of the default RTS format. In this case, the argument to `-C` should be the full path to the binary solution file. | [off] |
+| -F | --flagged-tiles=FILE | FILE is a text file including the TileNames of extra tiles to be flagged. By default, tiles flagged in both the calibration and the observation metafits file are flagged in the beamformer. | [no extra tiles are flagged] |
+| -O | --offringa           | The calibration solution is in the Offringa binary format instead of the default native mwa_hyperdrive FITS format. In this case, the argument to `-C` should be the full path to the binary solution file. | [off] |
 | -R | --ref-ant=TILENAME   | Override the reference tile given in `pq_phase_correction.txt` for rotating the phases of the PP and QQ elements of the calibration solution. To turn off phase rotation altogether, set TILENAME=NONE. | [Use the value in `pq_phase_correction.txt`] |
 | -U | --PQ-phase=PH,OFFS   | Override the phase correction given in `pq_phase_correction.txt`. PH is given in rad/Hz and OFFS given in rad, such that, the QQ element of the calibration Jones matrix for frequency F (in Hz) is multiplied by exp(PH\*F + OFFS). Setting PH = OFFS = 0 is equivalent to not performing any phase correction | [Use the value in `pq_phase_correction.txt`] |
 | -X | --cross-terms        | Retain the PQ and QP terms of the calibration solution | [off] |

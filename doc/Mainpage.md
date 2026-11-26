@@ -11,7 +11,7 @@ The source code for this software can be found [here](https://github.com/CIRA-Pu
  - [Installation guide](@ref installationguide)
  - Mathematical description
    + [Definitions](@ref definitions) -- Notation, coordinate systems
-   + [Calibration](@ref calibration) -- RTS, Hyperdrive, Hyperbeam
+   + [Calibration](@ref calibration) -- Hyperdrive, Hyperbeam
    + [Beamforming](@ref beamforming) -- Applying calibration, phasing up the array, summing antennas
  - User's Guide
    + [Overview](@ref usersguideoverview)
@@ -26,4 +26,4 @@ The source code for this software can be found [here](https://github.com/CIRA-Pu
      * [MWA Tied Array Beam PSF](@ref applicationsmwatiedarraybeampsf) -- Generate a plot of the tied array beam point spread function
      * [MWA Track Primary Beam Response](@ref applicationsmwatrackprimarybeamresponse) -- Track the sensitivity of a tied-array beam for a given RA/Dec as it passes through the MWA's primary beam
  - Appendices
-   + [File formats](@ref fileformats) - RTS, Offringa
+   + [File formats](@ref fileformats) - Hyperdrive, Offringa

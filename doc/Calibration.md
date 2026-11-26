@@ -37,40 +37,10 @@ where
 
 ## Obtaining the instrumental gains
 
-### Real Time System (RTS) {#rts}
-
-The RTS is one of the pieces of software that can be used to generate calibration solutions for a VCS observation.
-The solutions are given in two sets of files, called "DI_JonesMatrices_nodeCCC.dat" (hereafter, DIJones) and ``BandpassCalibration_nodeCCC.dat'' (hereafter, Bandpass), where CCC represents a coarse channel index.
-The DIJones files contain both the Jones matrices for each tile for the given coarse channel, \f${\bf J}_d\f$, as well as the beam response matrix that was used by the RTS during calibration, \f${\bf B}_\text{cal}\f$.
-To get the calibration solutions for the fine channels, one must multiply \f${\bf J}_d\f$ on the right by the matrices in the Bandpass files, \f${\bf J}_b\f$.
-
-The bases of these matrices are as follows:
-\f{align*}{
-    {\bf J}_d &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, &
-    {\bf J}_b &= \begin{bmatrix} J_{px} & J_{py} \\ J_{qx} & J_{qy} \end{bmatrix}, &
-    {\bf B}_\text{cal} &= \begin{bmatrix} B_{px} & B_{py} \\ B_{qx} & B_{qy} \end{bmatrix}.
-\f}
-If you want to apply these calibration solutions to the same observation (an in particular, to the same calibrator source), then you can set
-\f[
-    {\bf J} = {\bf J}_d
-\f]
-for coarse channel approximations, or, for the fine channel solutions,
-\f[
-    {\bf J} = {\bf J}_d {\bf J}_b
-\f]
-If the calibration solution is to be applied to a different observation (in a different part of the sky), or even to a separate different direction in the same observation, then the instrumental gains must be reconstructed by factoring out the beam response:
-\f[
-    {\bf D} = {\bf J}{\bf B}_\text{cal}^{-1}.
-\f]
-The resulting instrumental gains matrix is in the basis
-\f[
-    {\bf D} = \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}.
-\f]
-
 ### Hyperdrive {#hyperdrive}
 
-Hyperdrive is the faster, better successor to the RTS.
-Hyperdrive can output the instrumental gains matrices (per tile per fine channel) in the "Offringa" format, described in [Offringa format](#offringa).
+Hyperdrive is used to generate the calibration solutions.
+VCSBeam reads its native FITS solutions directly ([Hyperdrive FITS format](@ref hyperdrivefileformat)), or the "Offringa" format, described in [Offringa format](#offringa), which hyperdrive can also output.
 The matrices are in the basis:
 \f[
     {\bf D} = \begin{bmatrix}

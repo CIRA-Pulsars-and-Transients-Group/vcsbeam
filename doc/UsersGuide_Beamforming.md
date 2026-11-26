@@ -38,23 +38,12 @@ ________________
 
 ## Obtaining a calibration solution
 
-Which calibration software to use (RTS vs Hyperdrive) depends on whether the data is Legacy or MWAX, and whether it is VCS or already-correlated data (e.g. a dedicated calibration observation).
-The following table summarises the possibilities:
+Calibration solutions are produced with [Hyperdrive][Hyperdrive], from a dedicated calibration observation of already-correlated data (Legacy or MWAX).
 
-[RTS]: https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-CalibratingwiththeRealTimeSystem(RTS)
 [Hyperdrive]: https://wiki.mwatelescope.org/pages/viewpage.action?pageId=52068764
 
-|        | VCS                      | Correlated visibilities              |
-| ------ | ------------------------ | ------------------------------------ |
-| Legacy | [RTS][RTS]               | [RTS][RTS], [Hyperdrive][Hyperdrive] |
-| MWAX   | [Hyperdrive][Hyperdrive] | [Hyperdrive][Hyperdrive]             |
+See [the MWA Telescope Wiki][Hyperdrive]. Hyperdrive also has some documentation on [its Github main page](https://github.com/MWATelescope/mwa_hyperdrive), and [its Github Wiki page](https://github.com/MWATelescope/mwa_hyperdrive/wiki).
 
-The links in the table will take you to the corresponding documentation.
-Apart from [the MWA Telescope Wiki][Hyperdrive] (same link as given in the table), Hyperdrive also has some documentation on [its Github main page](https://github.com/MWATelescope/mwa_hyperdrive), and [its Github Wiki page](https://github.com/MWATelescope/mwa_hyperdrive/wiki).
-
-The [RTS][RTS] link describes a workflow for preparing a calibration solution using the RTS.
-The equivalent workflow for Hyperdrive is found at the page [Preparing a calibration solution](@ref usersguidecalibration).
-However, it should be noted that the visualisation tools used for Hyperdrive can also be used for RTS solutions.
 
 ________________
 
@@ -87,7 +76,7 @@ For beamforming purposes, the metafits files can be given any arbitrary names.
 
 #### The calibration path
 
-The path to the calibration solution will be either the calibration file solution itself if it is an [Offringa-style format binary file](@ref offringafileformat), or the directory containing the calibration solution files if it is an [RTS solution](@ref rtsfileformat).
+The path to the calibration solution is the native [Hyperdrive FITS solution file](@ref hyperdrivefileformat). Hyperdrive writes one file per contiguous subband, so several files may be given (e.g. `-C solutions_*.fits`); each MPI task uses the file covering its coarse channel. If the `-O` option is given, the path should instead be an [Offringa-style format binary file](@ref offringafileformat).
 
 #### The pointings file
 
@@ -242,27 +231,15 @@ ________________
 
 ### Calibration options
 
-[make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) will expect an RTS style solution unless the `-O` option is explicitly given (this default behaviour may change in the future as Hyperdrive eventually supercedes the RTS as the primary calibration tool used for VCS data).
+[make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) will expect native Hyperdrive FITS solutions unless the `-O` option is explicitly given, in which case an Offringa-style solution is expected.
 
-The calibration solutions provided by the RTS or Hyperdrive can be further manipulated in several ways before they are applied to the input voltages.
+The calibration solutions provided by Hyperdrive can be further manipulated in several ways before they are applied to the input voltages.
 Many of these manipulates are still experimental, and mostly affect the fidelity of the polarisation response, whose verification is still a work in progress.
 
 #### Flagging extra tiles
 
 Extra tiles can be flagged by passing a text file containing TileNames to be flagged to the `-F` option.
 (To decide *which* tiles need flagging, and how to prepare this file, see [Preparing a calibration solution](@ref usersguidecalibration).)
-
-#### Including the Bandpass solutions
-
-The `-B` option signals that the fine channel calibration solutions should be used.
-This only applies to the RTS solutions, where the solutions are separated out into "coarse channel" (DIJones) and "fine channel" (Bandpass) solutions (see [Calibration](@ref calibration) for more details).
-
-The advantage of using the Bandpass solutions is that the solutions may be more accurate (i.e. more accurately reflect the true instrumental response) for individual fine channels, whereas the DIJones solutions, by themselves, only include a zeroth order (i.e. constant) approximation to the solution for the whole coarse channel.
-If the phases do not not change with respect to frequency too rapidly, then the DIJones solutions are probably a good enough approximation and do not degrade the S/N too much.
-If the phases *do* change rapidly for a given antenna, then that antenna's contribution near the coarse channel edges will be degraded to some extent.
-
-Ironically, the edge channels are usually flagged (by default) when producing the calibration solution in the first place.
-Thus, if the Bandpass solutions are used, the edge channels "remain" flagged during beamforming, so any signal present there will be lost anyway.
 
 #### Keeping the cross terms?
 
@@ -276,7 +253,7 @@ The `-X` option can be used to retain the cross terms.
 
 The calibration solution is a Jones matrix whose absolute phase carries no physical signifance.
 Said another way, calibration solutions are unique only up to a complex unit scalar factor, so that if \f$\{{\bf J}_1, {\bf J}_2, \dots, {\bf J}_{N_a}\}\f$ is a set of calibration solutions for antennas \f$1, 2, \dots, N_a\f$, then \f$\{e^{i\theta}{\bf J}_1, e^{i\theta}{\bf J}_2, \dots, e^{i\theta}{\bf J}_{N_a}\}\f$ is an equivalent set of solutions, for any arbitrary \f$\theta\f$.
-Thus, the solutions produced by the RTS and/or Hyperdrive may "look" worse than they really are because the solutions for different frequency channels may have different arbitrary phases.
+Thus, the solutions produced by Hyperdrive may "look" worse than they really are because the solutions for different frequency channels may have different arbitrary phases.
 Thus, in order to compare the solutions across frequency, it is useful to divide the elements of all Jones matrix by a unit complex number which has the same phase as an arbitrarily chosen reference antenna.
 This will make the reference antenna itself have a calibration solution consisting only of real-valued elements, but the phases of the other antennas can now be more easily evaluated for "goodness".
 
@@ -327,7 +304,6 @@ mpirun -np 24 make_mwa_tied_array_beam \      # Use 24 MPI processes to beamform
     -m 1320499816.fits \                      # The target observation metafits file
     -c 1320412440.fits \                      # The calibration observation metafits file
     -C 1320412440_hyperdrive_solutions.bin \  # The calibration solution
-    -O \                                      # Signal that the above calibration solution is an Offringa-style solution
     -d /astro/mwavcs/asvo/252057 \            # The location of the MWAX voltage (.sub) files
     -P pointings.txt \                        # The pointings file
     -b 1320499824 \                           # Start 8 seconds in

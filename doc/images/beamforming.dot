@@ -11,7 +11,7 @@ digraph overview {
     outputchannelisation [ label="Output\nchannelisation?", shape=diamond, fillcolor=lightgoldenrod1, fixedsize=true, width=2.5, height=1.2 ];
     psrfits [ label="PSRFITS\nFull Stokes", fillcolor=lightskyblue ];
     vdif [ label="VDIF\nVoltages", fillcolor=lightskyblue ];
-    calsol [ label="Calibration solution\n(.bin or RTS)", fillcolor=lightskyblue ];
+    calsol [ label="Calibration solution\n(.fits or .bin)", fillcolor=lightskyblue ];
     recombine [ label="recombine", shape=record, href="https://github.com/ICRAR/mwa-voltage.git", fontcolor=blue ];
     tiedarray [ label="make_mwa_tied_array_beam", shape=record, href="@ref applicationsmakemwatiedarraybeam", fontcolor=blue ];
     targetobs -> date;

@@ -69,18 +69,10 @@ hyperdrive solutions-plot -m /astro/mwavcs/asvo/252007/1320412440.metafits hyper
 \image html example_1320499816_amps.png width=500px
 \image latex example_1320499816_amps.png width=0.7\textwidth
 
-### Convert the solutions
+### Using the solutions
 
-Hyperdrive's default is to output the calibration solutions in a FITS format.
-Currently, VCSBeam only supports RTS and Offringa formats.
-Hyperdrive includes a utility to convert the solutions into different formats.
-However, the RTS format is now officially deprecated, and its use is discouraged and [not officially supported by hyperdrive](https://MWATelescope.github.io/mwa_hyperdrive/defs/cal_sols.html).
-
-The conversion to the Offringa format, however, [is supported](https://mwatelescope.github.io/mwa_hyperdrive/defs/cal_sols_ao.html).
-In this example, this is achieved by
-```
-hyperdrive solutions-convert -m /astro/mwavcs/asvo/252007/1320412440.metafits hyperdrive_solutions.fits hyperdrive_solutions.bin
-```
+VCSBeam reads Hyperdrive's native FITS solutions directly, so no conversion is needed.
+Hyperdrive writes one file per contiguous subband, and these can all be given to `-C` (e.g. `-C hyperdrive_solutions*.fits`).
 
 ## Beamforming
 
@@ -132,7 +124,7 @@ srun -N 1 -n 1 make_mwa_tied_array_beam \
     -F flagged_tilenames.txt \
     -c 1320412440.fits \
     -C hyperdrive_solutions.bin \
-    -v -R NONE -U 0,0 -O -X
+    -v -R NONE -U 0,0 -X
 ```
 
 \image html example_1320499816_presto_24chan.png width=500px
@@ -174,7 +166,7 @@ srun -N 24 -n 24 make_mwa_tied_array_beam \
     -F flagged_tilenames.txt \
     -c 1320412440_metafits_ppds.fits \
     -C /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive/hyperdrive_solutions.bin \
-    -p -R NONE -U 0,0 -O -X
+    -p -R NONE -U 0,0 -X
 ```
 
 ```
@@ -279,120 +271,6 @@ do
 
 done
 ```
-
-### RTS (failed!)
-
-#### Create source list
-
-```
-$ cd /astro/mwavcs/vcs/1320499816/cal/1320499816
-$ module load srclists/v1.0.0
-$ wget -O 1320499816_metafits_ppds.fits http://ws.mwatelescope.org/metadata/fits?obs_id=1320499816&include_ppds=1
-$ srclist_by_beam.py -m 1320499816_metafits_ppds.fits -n 1000 -s ${SRCLISTS_DIR}/srclist_pumav3_EoR0aegean_EoR1pietro+ForA.txt
-```
-
-#### Set up initial RTS job
-
-First, we need a calibration metafits file (mode = 'HW_LFILES'), which for the moment I edited by hand. It doesn't matter whether the file is one with PPDs or without, but apparently some script somewhere is expected the file to be called `obsid_metafits_ppds.fits`. So I manually edited the (MWAX VCS) metafits file and just changed the mode, and then made a symbolic link to is called `/astro/mwavcs/vcs/1320499816/cal/1320499816/rts/1320499816_metafits_ppds.fits`.
-Then I ran the script from VCSTools:
-
-```
-cd /astro/mwavcs/vcs/1320499816/cal/1320499816/rts
-$ calibrate_vcs.py -O 1320499816 -o 1320499816 -m 1320499816_metafits_ppds.fits -s ../srclist_pumav3_EoR0aegean_EoR1pietro+ForA_1320499816_patch1000.txt --offline --nosubmit
-```
-There's no good reason I couldn't have left off the `--nosubmit` option and had it run, but I just wanted to check it worked before trying it.
-
-#### Run the RTS
-
-```
-$ cd /astro/mwavcs/vcs/1320499816/cal/1320499816/rts
-$ sbatch /astro/mwavcs/vcs/1320499816/batch/RTS_1320499816.batch
-```
-
-**RTS_1320499816.batch**:
-```
-#!/bin/bash -l
-
-#SBATCH --export=NONE
-#SBATCH --output=/astro/mwavcs/vcs/1320499816/batch/RTS_1320499816.out
-#SBATCH --account=mwavcs
-#SBATCH --clusters=garrawarla
-#SBATCH --partition=gpuq
-#
-#SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=10240MB
-#SBATCH --nice=0
-#SBATCH --chdir=/astro/mwavcs/vcs/1320499816/cal/1320499816/rts
-#SBATCH --time=0:45:00
-#SBATCH --nodes=13
-#SBATCH --cpus-per-gpu=1
-#SBATCH --gres=gpu:1
-
-ncpus=1
-export OMP_NUM_THREADS=1
-
-
-module use /pawsey/mwa/software/python3/modulefiles/
-module load vcstools/master
-
-module load RTS/master
-
-
-cd /astro/mwavcs/vcs/1320499816/cal/1320499816/rts
-export UCX_MEMTYPE_CACHE=n
-srun --export=all -N 25 -n 25 rts_gpu /astro/mwavcs/vcs/1320499816/cal/1320499816/rts/rts_1320499816.in
-```
-
-**rts_1320499816.in**:
-```
-ReadAllFromSingleFile=
-BaseFilename=/astro/mwavcs/vcs/1318345216/cal/1318345216/vis/*_GPUBOX
-ReadGpuboxDirect=0
-UseCorrelatorInput=1
-
-ReadMetafitsFile=1
-MetafitsFilename=/astro/mwavcs/vcs/1318345216/1318345216
-
-DoCalibration=
-doMWArxCorrections=1
-doRawDataCorrections=1
-doRFIflagging=0
-useFastPrimaryBeamModels=0
-generateDIjones=1
-applyDIcalibration=1
-UsePacketInput=0
-UseThreadedVI=1
-
-MaxFrequency=170.24
-ObservationFrequencyBase=138.895
-ObservationTimeBase=2455846.1252314816
-ObservationPointCentreHA=-0.35952189154909175
-ObservationPointCentreDec=-5.98757073636307
-ChannelBandwidth=0.04
-NumberOfChannels=32
-
-CorrDumpsPerCadence=128
-CorrDumpTime=1.0
-NumberOfIntegrationBins=6
-NumberOfIterations=1
-
-StartProcessingAt=0
-
-ArrayPositionLat=-26.7033194
-ArrayPositionLong=116.6708152
-ArrayNumberOfStations=128
-
-ArrayFile=
-
-SourceCatalogueFile=/astro/mwavcs/vcs/1318345216/cal/1318345216/srclist_pumav3_EoR0aegean_EoR1pietro+ForA_1318345216_patch1000.txt
-NumberOfCalibrators=1
-NumberOfSourcesToPeel=0
-calBaselineMin=20.0
-calShortBaselineTaper=40.0
-FieldOfViewDegrees=1
-```
-
-For an as yet unknown reason, this RTS job timed out, even after allowing 4 hours of wall time.
 
 ### Incoherent Beam
 

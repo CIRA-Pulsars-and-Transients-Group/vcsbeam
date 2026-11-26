@@ -8,7 +8,6 @@ digraph overview {
     legacyvis [ label="(Headerless) correlated\nvisibilities (.fits)", fillcolor=lightskyblue ];
     mwaxvis [ label="Correlated\nvisibilities (.fits)", fillcolor=lightskyblue ];
     calsol [ label="Calibration\nsolution", fillcolor=lightskyblue ];
-    rts [ label="RTS", shape=record, href="https://wiki.mwatelescope.org/display/MP/Documentation#Documentation-CalibratingwiththeRealTimeSystem(RTS)", fontcolor=blue ];
     hyperdrive [ label="Hyperdrive", shape=record, href="https://wiki.mwatelescope.org/pages/viewpage.action?pageId=52068764", fontcolor=blue ];
 
     offlinecorrlegacy [ label="(Legacy) offline_correlator", shape=record, href="@ref applicationsofflinecorrelator", fontcolor=blue ];
@@ -21,9 +20,7 @@ digraph overview {
     offlinecorrlegacy -> legacyvis;
     offlinecorrmwax -> mwaxvis;
     calvcs -> mwaxvis [ label="VIS" ];
-    legacyvis -> rts;
-    mwaxvis -> rts;
+    legacyvis -> hyperdrive;
     mwaxvis -> hyperdrive;
-    rts -> calsol;
     hyperdrive -> calsol;
 }

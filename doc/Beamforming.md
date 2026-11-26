@@ -37,7 +37,7 @@ The Jones matrix consists of a *direction independent* component, \f${\bf D}_a\f
 \f${\bf D}_a\f$, which only depends on the antenna, is the *instrumental calibration solution*.
 It is obtained using separate, dedicated calibration software, and VCSBeam currently supports solutions in two formats:
 
-  1. The [RTS format](@ref rtsfileformat), and
+  1. The native [Hyperdrive FITS format](@ref hyperdrivefileformat), and
   2. The [Offringa file format](@ref offringafileformat).
 
 \f${\bf B}_{a,f}\f$, which formally depends on both antenna *and* frequency, is the *beam model*.
