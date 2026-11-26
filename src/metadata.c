@@ -251,15 +251,32 @@ void vmBindObsData(
 }
 
 /**
+ * Sets the list of calibration files (used for hyperdrive solutions, which come
+ * as one file per contiguous subband).
+ *
+ * @param vm     The VCSBeam context struct
+ * @param nfiles The number of files
+ * @param files  The file names (e.g. the expansion of a shell glob). They are copied.
+ *
+ * If this is not called, `vm->cal.caldir` alone is used.
+ */
+void vmBindCalibrationFiles( vcsbeam_context *vm, int nfiles, char **files )
+{
+    vm->cal.ncal_files = nfiles;
+    vm->cal.cal_files  = (char **)malloc( nfiles * sizeof(char *) );
+    for (int i = 0; i < nfiles; i++)
+        vm->cal.cal_files[i] = strdup( files[i] );
+}
+
+/**
  * Binds a calibration solution to the VCSBeam context.
  *
  * @param vm The VCSBeam context struct
  * @param num_coarse_chans_to_process The number of coarse channels to process
- * @param caldir The directory containing RTS solution files, OR the path of
- *        an Offringa-style calibration solution file
- * @param cal_type Either `CAL_RTS` or `CAL_OFFRINGA`
- * @param use_bandpass Whether to include the Bandpass information (relevant
- *        for RTS solutions only)
+ * @param caldir The path of a hyperdrive FITS solution file (the first, if there
+ *        are several; see vmBindCalibrationFiles()), OR the path of an
+ *        Offringa-style calibration solution file
+ * @param cal_type Either `CAL_HYPERDRIVE` or `CAL_OFFRINGA`
  * @param picket_fence Whether the input data is picket fence data. if so, 
  *        assume the calibration solution has the same set of channels as 
  *        the input data
@@ -270,13 +287,11 @@ void vmBindCalibrationData( vcsbeam_context *vm,
         int     num_coarse_chans_to_process,
         char   *caldir,
         int     cal_type,
-        bool    use_bandpass,  // only relevant for RTS observations
         bool    picket_fence,
         char   *flags_file )
 {
-    // Set the calibration type (either RTS or Offringa)
+    // Set the calibration type (either Hyperdrive or Offringa)
     vm->cal.cal_type     = cal_type;
-    vm->cal.use_bandpass = use_bandpass;
     vm->cal.picket_fence = picket_fence;
 
     vm->cal.caldir       = (char *)malloc( strlen( caldir ) + 1 );
@@ -304,17 +319,22 @@ void vmBindCalibrationData( vcsbeam_context *vm,
  *
  * @param vm The VCSBeam context struct
  *
- * Calls either vmLoadRTSSolution() or vmLoadOffringaSolution() depending
- * on whether `vm&rarr;cal.cal_type` is set to `CAL_RTS` or `CAL_OFFRINGA`.
+ * Calls vmLoadHyperdriveSolution() or vmLoadOffringaSolution() depending on
+ * whether `vm&rarr;cal.cal_type` is set to `CAL_HYPERDRIVE` or `CAL_OFFRINGA`.
  * Afterwards, vmSetCustomTileFlags() is called.
  */
 void vmReadCalibration( vcsbeam_context *vm )
 {
     // Read in the calibration data from file
-    if (vm->cal.cal_type == CAL_RTS)
-        vmLoadRTSSolution( vm );
+    if (vm->cal.cal_type == CAL_HYPERDRIVE)
+        vmLoadHyperdriveSolution( vm );
     else if (vm->cal.cal_type == CAL_OFFRINGA)
         vmLoadOffringaSolution( vm );
+    else
+    {
+        fprintf( stderr, "Error: Unknown calibration solution type (%d)\n", vm->cal.cal_type );
+        exit(EXIT_FAILURE);
+    }
 
     // Flag extra tiles that need flagging
     vmSetCustomTileFlags( vm );

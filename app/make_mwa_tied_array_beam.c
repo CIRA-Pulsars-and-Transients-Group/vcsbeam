@@ -42,14 +42,15 @@ struct make_tied_array_beam_opts {
     // Calibration options
     char              *cal_metafits;     // Filename of the metafits file
     char              *caldir;           // Location of calibration data
-    int                cal_type;         // Either RTS or OFFRINGA
+    int                ncal_files;       // Number of hyperdrive solution files
+    char             **cal_files;        // The hyperdrive solution files (-C file plus any trailing arguments)
+    int                cal_type;         // Either HYPERDRIVE or OFFRINGA
     char              *ref_ant;          // Reference antenna for calibration phases
     double             phase_offset;     // Rotate the phase of Y by m*freq + c, where
     double             phase_slope;      //   m = phase_slope (rad/Hz)
                                          //   c = phase_offset (rad)
     bool               custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
     bool               keep_cross_terms; // Include PQ and QP of calibration Jones matrices
-    bool               use_bandpass;     // Use the Bandpass solutions
     bool               picket_fence;     // Assuming input data is picket fenced. Will process calibration data
                                          // accordingly
 
@@ -237,7 +238,9 @@ int main(int argc, char **argv)
      * GET CALIBRATION SOLUTION *
      ****************************/
 
-    vmBindCalibrationData( vm, 1, opts.caldir, opts.cal_type, opts.use_bandpass, opts.picket_fence, opts.custom_flags );
+    vmBindCalibrationData( vm, 1, opts.caldir, opts.cal_type, opts.picket_fence, opts.custom_flags );
+    if (opts.cal_type == CAL_HYPERDRIVE)
+        vmBindCalibrationFiles( vm, opts.ncal_files, opts.cal_files );
     vmReadCalibration( vm );
 
     // Apply any calibration corrections
@@ -407,7 +410,8 @@ void usage()
 
     printf( "\nREQUIRED OPTIONS\n\n"
             "\t-c, --cal-metafits=FILE    FILE is the metafits file pertaining to the calibration solution\n"
-            "\t-C, --cal-location=PATH    PATH is the directory (RTS) or the file (OFFRINGA) containing the calibration solution\n"
+            "\t-C, --cal-location=PATH    PATH is the hyperdrive FITS file (or the Offringa file, with -O) containing the calibration\n"
+            "\t                           solution. For hyperdrive, several files (one per subband) may be given, e.g. -C solutions_*.fits\n"
             "\t-m, --metafits=FILE        FILE is the metafits file for the target observation\n"
             "\t-P, --pointings=FILE       FILE containing RA and Decs of multiple pointings\n"
             "\t                           in the format hh:mm:ss.s dd:mm:ss.s ...\n"
@@ -449,18 +453,14 @@ void usage()
           );
 
     printf( "\nCALIBRATION OPTIONS\n\n"
-            "\t-B, --bandpass             Use the Bandpass (fine channel) as well as the DIJones (coarse channel) solutions\n"
-            "\t                           (only relevant for RTS) [default: off]\n"
             "\t-F, --flagged-tiles=FILE   FILE is a text file including the TileNames of extra tiles to be flagged.\n"
             "\t                           By default, tiles flagged in both the calibration and the observation metafits file\n"
-            "\t                           are flagged in the beamformer. The utility 'rts_flag_ant_to_tilenames.py' can be used\n"
-            "\t                           to convert the antenna numbers listed in the RTS 'flagged_tiles.txt' file into human-\n"
-            "\t                           readable tile names.\n"
+            "\t                           are flagged in the beamformer.\n"
             "\t-k, --picket-fence         Input data is picket fenced data. Will assume the calibration solution contains the\n"
             "\t                           same set of channels as the input data.\n"
-            "\t-O, --offringa             The calibration solution is in the Offringa format instead of\n"
-            "\t                           the default RTS format. In this case, the argument to -C should\n" 
-            "\t                           be the full path to the binary solution file.\n"
+            "\t-O, --offringa             The calibration solution is in the Offringa binary format instead of\n"
+            "\t                           the default native mwa_hyperdrive FITS format. In this case, the\n"
+            "\t                           argument to -C should be the full path to the binary solution file.\n"
             "\t-R, --ref-ant=TILENAME     Override the reference tile given in pq_phase_correction.txt for rotating the phases\n"
             "\t                           of the PP and QQ elements of the calibration solution. To turn off phase rotation\n"
             "\t                           altogether, set TILENAME=NONE.\n"
@@ -508,15 +508,16 @@ void make_tied_array_beam_parse_cmdline(
     opts->smart                = false;
 
     opts->cal_metafits         = NULL;  // filename of the metafits file for the calibration observation
+    opts->ncal_files           = 0;
+    opts->cal_files            = NULL;
     opts->caldir               = NULL;  // The path to where the calibration solutions live
-    opts->cal_type             = CAL_RTS;
+    opts->cal_type             = CAL_HYPERDRIVE;
     opts->picket_fence         = false;
     opts->ref_ant              = NULL;
     opts->keep_cross_terms     = false;
     opts->phase_offset         = 0.0;
     opts->phase_slope          = 0.0;
     opts->custom_pq_correction = false;
-    opts->use_bandpass         = false; // use the Bandpass calibration solutions
     opts->seconds_buffer_size  = 0; // Number of seconds to be preloaded and stored in memory. Default: 0, no buffering.
 
     if (argc > 1) {
@@ -526,7 +527,6 @@ void make_tied_array_beam_parse_cmdline(
 
             static struct option long_options[] = {
                 {"begin",           required_argument, 0, 'b'},
-                {"bandpass",        no_argument,       0, 'B'},
                 {"out-fine",        no_argument,       0, 'p'},
                 {"out-coarse",      no_argument,       0, 'v'},
                 {"out-nstokes",     no_argument,       0, 'N'},
@@ -556,7 +556,7 @@ void make_tied_array_beam_parse_cmdline(
 
             int option_index = 0;
             c = getopt_long( argc, argv,
-                             "A:b:Bc:C:d:D:e:f:F:hkm:n:N:OpP:R:sS:t:T:U:vVXZ:",
+                             "A:b:c:C:d:D:e:f:F:hkm:n:N:OpP:R:sS:t:T:U:vVXZ:",
                              long_options, &option_index);
             if (c == -1)
                 break;
@@ -570,9 +570,6 @@ void make_tied_array_beam_parse_cmdline(
                 case 'b':
                     opts->begin_str = (char *)malloc( strlen(optarg) + 1 );
                     strcpy( opts->begin_str, optarg );
-                    break;
-                case 'B':
-                    opts->use_bandpass = true;
                     break;
                 case 'c':
                     opts->cal_metafits = (char *)malloc( strlen(optarg) + 1 );
@@ -694,6 +691,17 @@ void make_tied_array_beam_parse_cmdline(
         exit(EXIT_FAILURE);
     }
 
+
+    // For hyperdrive solutions, any remaining arguments are further solution
+    // files (e.g. the expansion of "-C solutions_*.fits")
+    if (opts->cal_type == CAL_HYPERDRIVE && opts->caldir != NULL)
+    {
+        opts->ncal_files = 1 + (argc - optind);
+        opts->cal_files = (char **)malloc( opts->ncal_files * sizeof(char *) );
+        opts->cal_files[0] = opts->caldir;
+        for (int i = optind; i < argc; i++)
+            opts->cal_files[1 + i - optind] = argv[i];
+    }
 
     // Check that all the required options were supplied
     assert( opts->pointings_file  != NULL );

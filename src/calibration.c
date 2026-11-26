@@ -9,405 +9,11 @@
 #include <math.h>
 #include <string.h>
 
+#include <fitsio.h>
 #include <mwalib.h>
 
 #include "vcsbeam.h"
 #include "gpu_macros.h"
-
-/**
- * Loads a Real Time System (RTS) calibration solution.
- *
- * @return An array of Jones matrices (`vm&rarr;D`)
- *
- * Reads in the RTS solution from the DI_Jones and Bandpass files in the
- * `vm&rarr;cal.caldir` directory. It only reads the solution for the coarse
- * channel specified in `vm&rarr;coarse_chan_idxs_to_process[0]`. Flagged
- * channels and flagged antennas are set to zero.
- *
- * The Jones matrices, \f$D\f$, are output in the \f$(Q,P)\f$ basis:
- * \f[\begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}.\f]
- *
- * The RTS bandpass solutions ("Bandpass...") are included if
- * `vm&rarr;cal.use_bandpass` is set, otherwise only the coarse channel
- * solutions ("DI_Jones...") are used.
- *
- * This function assumes that a buffer for `vm&rarr;D` has already been
- * allocated.
- *
- * The RTS matrices are actually given in the \f$(P,Q)\f$, and this
- * function reorders the matrices to be in the \f$(Q,P)\f$ basis, required
- * by VCSBeam:
- * \f[
- * \begin{bmatrix} D_{pp} & D_{pq} \\ D_{qp} & D_{qq} \end{bmatrix}
- *      \rightarrow
- * \begin{bmatrix} D_{qq} & D_{qp} \\ D_{pq} & D_{pp} \end{bmatrix}
- * \f]
- * This reording is a "reversal" of the matrix elements (i.e. if one reads
- * the elements from left to right, top to bottom).
- *
- * \see [RTS](@ref rts)
- * \see [RTS file format](@ref rtsfileformat)
- */
-void vmLoadRTSSolution( vcsbeam_context *vm )
-{
-    // Shorthand variables
-    bool        use_bandpass = vm->cal.use_bandpass;
-    const char *caldir       = vm->cal.caldir;
-
-    // Find the "GPUBox" number for this coarse channel
-    int coarse_chan_idx = vm->coarse_chan_idx;
-    uintptr_t gpubox_number = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].corr_chan_number + 1;
-
-    // With the gpubox number in hand, construct the filenames for the
-    // DI_Jones and Bandpass files
-    char dijones_path[CAL_BUFSIZE];
-    char bandpass_path[CAL_BUFSIZE];
-
-    sprintf( dijones_path,  "%s/DI_JonesMatrices_node%03lu.dat", caldir, gpubox_number );
-    sprintf( bandpass_path, "%s/BandpassCalibration_node%03lu.dat", caldir, gpubox_number );
-
-    // Allocate memory for the Jones arrays
-    uintptr_t nant    = vm->cal_metadata->num_ants;
-    uintptr_t ninputs = vm->cal_metadata->num_rf_inputs;
-    uintptr_t nvispol = vm->cal_metadata->num_visibility_pols; // = 4 (PP, PQ, QP, QQ)
-    uintptr_t nantpol = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
-    uintptr_t nchan   = vm->cal_metadata->num_corr_fine_chans_per_coarse;
-    uintptr_t vcs_nchan = vm->nfine_chan;
-    uintptr_t interp_factor = vcs_nchan / nchan;
-    uintptr_t ant, ch; // For loop variables
-
-    // Write out the channel --> gpubox number mapping
-    if (vm->log)
-    {
-        sprintf( vm->log_message, "Receiver channel #%lu --> GPUBox #%lu",
-                vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].rec_chan_number,
-                gpubox_number );
-        logger_timed_message( vm->log, vm->log_message );
-    }
-
-    // Temporary arrays for DI Jones matrices ('Dd') and Bandpass matrices ('Db')
-    gpuDoubleComplex  **Dd = (gpuDoubleComplex ** )calloc( nant, sizeof(gpuDoubleComplex * ) );
-    gpuDoubleComplex ***Db = (gpuDoubleComplex ***)calloc( nant, sizeof(gpuDoubleComplex **) );
-
-    // The array for the final output product (D = Dd x Db)
-    // Use D_IDX for indexing
-    gpuDoubleComplex A[nvispol];
-
-    for (ant = 0; ant < nant; ant++)
-    {
-        Dd[ant] = (gpuDoubleComplex * )calloc( nvispol, sizeof(gpuDoubleComplex  ) );
-        Db[ant] = (gpuDoubleComplex **)calloc( nchan,   sizeof(gpuDoubleComplex *) );
-
-        for (ch = 0; ch < nchan; ch++)
-            Db[ant][ch] = (gpuDoubleComplex *)calloc( nvispol, sizeof(gpuDoubleComplex) );
-    }
-
-    // Read in the DI Jones file
-    read_dijones_file(Dd, A, NULL, vm->cal_metadata->num_ants, dijones_path);
-
-    // Invert the alignment matrix and multiply it to the gains matrix
-    // Eq. (29) in Ord et al. (2019)
-    gpuDoubleComplex Ainv[nvispol];
-    inv2x2( A, Ainv );
-
-    // Read in the Bandpass file
-    if (use_bandpass)
-        read_bandpass_file( NULL, Db, vm->cal_metadata, bandpass_path );
-
-    // Make the master mpi thread print out the antenna names of both
-    // obs and cal metafits. "Header" printed here, actual numbers
-    // printed inside antenna for loop below
-    if (vm->log)
-    {
-        if (vm->log->world_rank == 0)
-        {
-            logger_message( vm->log, "" );
-            logger_timed_message( vm->log, "Calibration metafits info:" );
-            logger_timed_message( vm->log, "--------------------------" );
-            logger_timed_message( vm->log, "|Input| Ant |Tile ID| TileName |Pol|VCS order|" );
-
-            uintptr_t i;
-            for (i = 0; i < ninputs; i++)
-            {
-                sprintf( vm->log_message, "| %3u | %3u | %5u | %8s | %c |  %3u   |",
-                        vm->cal_metadata->rf_inputs[i].input,
-                        vm->cal_metadata->rf_inputs[i].ant,
-                        vm->cal_metadata->rf_inputs[i].tile_id,
-                        vm->cal_metadata->rf_inputs[i].tile_name,
-                        *(vm->cal_metadata->rf_inputs[i].pol),
-                        vm->cal_metadata->rf_inputs[i].vcs_order
-                       );
-                logger_timed_message( vm->log, vm->log_message );
-            }
-
-            logger_message( vm->log, "" );
-        }
-    }
-
-    // Form the "fine channel" DI gain (the "D" in Eqs. (28-30), Ord et al. (2019))
-    // Do this for each of the _voltage_ observation's fine channels (use
-    // nearest-neighbour interpolation). This is "applying the bandpass" corrections.
-    uintptr_t cal_ch, obs_ant, dd_idx;
-    uintptr_t d_idx;
-    uintptr_t i; // (i)dx into rf_inputs
-    Rfinput *obs_rfinput, *cal_rfinput;
-    for (i = 0; i < ninputs; i++)
-    {
-        // Order the Jones matrices by the TARGET OBSERVATION metadata
-        // (not the calibration metadata)
-        obs_rfinput = &(vm->obs_metadata->rf_inputs[i]);
-
-        // Only have to loop once per tile, so skip the 'Y's
-        if (*(obs_rfinput->pol) == 'Y')
-            continue;
-
-        // Match up antenna indices between the cal and obs metadata
-        cal_rfinput = find_matching_rf_input( vm->cal_metadata, obs_rfinput );
-
-        obs_ant = obs_rfinput->ant;
-        dd_idx  = cal_rfinput->input/2;
-
-        for (ch = 0; ch < vcs_nchan; ch++)
-        {
-            // A pointer to the (first element of) the Jones matrix for this
-            // antenna and channel (d_idx) and the Jones matrix for the first
-            // antenna (our reference antenna)
-            d_idx = D_IDX(obs_ant,ch,0,0,vcs_nchan,nantpol);
-
-            // D = Dd x Db
-            // SM: Daniel Mitchell confirmed in an email dated 23 Mar 2017 that the
-            // Bandpass matrices (Db) should be multiplied on the _right_ of the
-            // DI Jones matrices (Dd).
-            cal_ch = ch / interp_factor;
-            if (use_bandpass)
-                mult2x2d( Dd[dd_idx], Db[dd_idx][cal_ch], &(vm->D[d_idx]) );
-            else
-                cp2x2( Dd[dd_idx], &(vm->D[d_idx]) );
-
-            // Multiply in (the inverse of) the alignment matrix
-            mult2x2d( &(vm->D[d_idx]), Ainv, &(vm->D[d_idx]) );
-
-            // The RTS matrices are apparently in (p,q)<-(p,q) basis. The
-            // following converts to (q,p)<-(q,p)
-            reverse2x2( &(vm->D[d_idx]), &(vm->D[d_idx]) );
-        }
-    }
-
-    // Free memory for temporary arrays
-    for (ant = 0; ant < nant; ant++)
-    {
-        for (ch = 0; ch < nchan; ch++)
-            free( Db[ant][ch] );
-
-        free( Db[ant] );
-        free( Dd[ant] );
-    }
-
-    free( Db );
-    free( Dd );
-}
-
-/**
- * Reads in an RTS DIJones file.
- *
- * @param[out] Dd    The buffer to store the read-in matrices
- * @param[out] A     The buffer to store the alignment matrix
- * @param[out] amp   A (single-element) buffer to store the calibration
- *                   amplitude
- * @param[in]  nant  The number of antennas to read in
- * @param      fname The name of the file to read
- *
- * Read in an RTS file and return the direction independent Jones matrix
- * for each antenna. This implements Eq. (29) in Ord et al. (2019).
- *
- * This function assumes that the RTS "DIJones" files are in a very specific
- * format. However, this code is maintained independently from the RTS,
- * so if the RTS changes, this code may break.
- */
-void read_dijones_file( gpuDoubleComplex **Dd, gpuDoubleComplex *A, double *amp, uintptr_t nant, char *fname )
-{
-    // Open the file for reading
-    FILE *fp = NULL;
-    if ((fp = fopen(fname, "r")) == NULL) {
-        fprintf(stderr, "Error: cannot open gain Jones matrix file: %s\n",
-                fname);
-        exit(EXIT_FAILURE);
-    }
-
-    // Set up some variables for reading in
-    double val;
-    double *Adbl = (double *)A; // The alignment matrix, cast as a double array for easy reading
-    double J[NDBL_PER_JONES]; // "Raw" Jones matrix
-
-    // Read in the amplitude (SM: I have no idea what this value represents)
-    fscanf( fp, "%lf", &val );
-    if (amp != NULL)
-        *amp = val;
-
-    // Read in the alignment ("A")
-    int i;
-    for (i = 0; i < NDBL_PER_JONES; i++)
-        fscanf( fp, "%lf,", &Adbl[i] );
-
-    // Finally, read in the Jones ("J") matrices
-    uintptr_t ant;
-    for (ant = 0; ant < nant; ant++)
-    {
-        for (i = 0; i < NDBL_PER_JONES; i++)
-            fscanf( fp, "%lf,", &J[i] );
-
-        cp2x2( (gpuDoubleComplex *)J, Dd[ant] );
-    }
-
-    fclose(fp);
-}
-
-
-/**
- * Reads an RTS Bandpass file.
- *
- * @param[out] Jm A buffer for the measured matrices, \f${\bf J}_m\f$
- * @param[out] Jf A buffer for the fitted matrices, \f${\bf J}_f\f$
- * @param cal_metadata The metadata struct for the calibration observation
- * @param filename The name of the Bandpass file to be read
- *
- * This function populates the \f${\bf J}_m\f$ and \f${\bf J}_f\f$ arrays with
- * values read in from the given Bandpass file. The Bandpass files contain
- * only values for antennas and fine channels that have not been flagged.
- * Nothing is done for those antennas/channels that have been flagged, so the
- * onus is on the caller to initialise the \f${\bf J}_m\f$ and \f${\bf J}_f\f$
- * arrays to values to their preferred values.
- */
-void read_bandpass_file(
-        gpuDoubleComplex ***Jm, // Output: measured Jones matrices (Jm[ant][ch][pol,pol])
-        gpuDoubleComplex ***Jf, // Output: fitted Jones matrices   (Jf[ant][ch][pol,pol])
-        MetafitsMetadata  *cal_metadata,
-        char *filename         // Input:  name of bandpass file
-        )
-{
-
-    // Some shortcut variables
-    int chan_width = cal_metadata->corr_fine_chan_width_hz;        // TODO: Check whether this should sometimes be volt_fine_chan_width_hz
-    int nchan      = cal_metadata->num_corr_fine_chans_per_coarse; //       and num_volt_fine_chans_per_coarse
-    int nant       = cal_metadata->num_ants;
-
-    // Open the file for reading
-    FILE *f = NULL;
-    if ((f = fopen(filename, "r")) == NULL) {
-        fprintf(stderr, "Error: cannot open Bandpass file: %s\n", filename);
-        exit(EXIT_FAILURE);
-    }
-
-    // Read in top row = frequency offsets within coarse channel
-    // Turn these frequencies into a list of indexes into the channel dimension
-    char freqline[CAL_BUFSIZE];
-    if (fgets( freqline, CAL_BUFSIZE, f ) == NULL) {
-        fprintf(stderr, "Error: could not read first line of %s\n", filename);
-        exit(EXIT_FAILURE);
-    }
-
-    // Parse top row
-    // Find out which channels are actually in the Bandpass file
-    // (i.e. which channels have not been flagged)
-    int chan_idxs[nchan];
-    char *freqline_ptr = freqline;
-    int pos;
-    double chan_MHz;
-    int chan_count = 0;
-    int chan_idx;
-    while (sscanf( freqline_ptr, "%lf,%n", &chan_MHz, &pos ) == 1)
-    {
-        chan_count++;
-
-        // Make sure we haven't exceeded the total
-        if (chan_count > nchan) {
-            fprintf(stderr, "Error: More than nchan = %d columns in Bandpass file %s\n", nchan, filename);
-            exit(EXIT_FAILURE);
-        }
-
-        // Convert the channel frequencies (in MHz) to channel indices
-        chan_idx = (int)roundf( chan_MHz*1e6 / (double)chan_width );
-        chan_idxs[chan_count - 1] = chan_idx;
-
-        freqline_ptr += pos;
-    }
-
-    // Read in all the values
-    int ant, curr_ant;         // The antenna number, read in from the file
-    int ant_row;               // Number between 0 and 7. Each antenna has 8 rows.
-    int ch;                    // A counter for channel numbers
-    int ci;                    // A counter for channel number indices
-    double amp,ph;             // For holding the read-in value pairs (real, imaginary)
-    int pol;                   // Number between 0 and 3. Corresponds to position in Jm/Jf matrices: [0,1]
-                               //                                                                    [2,3]
-    gpuDoubleComplex ***J;      // Either points to Jm or Jf, according to which row we're on
-
-    for (ant = 0; ant < nant; ant++)
-    {
-        // Read in first number = antenna number + 1
-        if (fscanf( f, "%d,", &curr_ant ) == EOF)
-            break;
-
-        // (The antenna numbers in the Bandpass files start at 1, not 0)
-        curr_ant--;
-
-        // If the current row is not for this ant, then skip to the current row
-        if (ant < curr_ant)  ant = curr_ant;
-
-        // Now we've caught up to the next non-absent antenna in the bandpass file, so
-        // go through the next 8 rows, which should all pertain to this antenna
-        for (ant_row = 0; ant_row < BANDPASS_ROWS_PER_ANT; ant_row++)
-        {
-            // If we're on the first of 8 lines, then we've already consumed
-            // the antenna number at the beginning of that row. Otherwise, we
-            // still need to do it. We will re-purpose "curr_ant" for this.
-            if (ant_row > 0)
-            {
-                fscanf( f, "%d,", &curr_ant );
-                curr_ant--;
-
-                // Sanity check: the antenna number hasn't changed within the 8 rows
-                if (ant != curr_ant)
-                {
-                    fprintf( stderr, "error: read_bandpass_file: fewer than eight rows "
-                            "detected for antenna %u (labelled '%u') in %s\n",
-                            ant, ant + 1, filename );
-                    exit(EXIT_FAILURE);
-                }
-            }
-
-            // Decide if the row corresponds to the Jm values (even rows)
-            // or Jf values (odd rows)
-            if (ant_row % 2 == 0)
-                J = Jm;
-            else
-                J = Jf;
-
-            // If the caller doesn't care about this row, skip the rest of
-            // this line (freqline isn't needed any more, so use it as a dummy
-            // buffer) and start afresh on the next line
-            if (J == NULL)
-            {
-                fgets( freqline, CAL_BUFSIZE, f );
-                continue;
-            }
-
-            // Get the polarisation index
-            pol = ant_row/2;
-
-            // Loop over the row and read in values
-            for (ci = 0; ci < chan_count; ci++)
-            {
-                ch = chan_idxs[ci];                 // Get the channel number
-                fscanf( f, "%lf,%lf,", &amp, &ph ); // Read in the re,im pairs in each row
-
-                // Convert to complex number and store in output array
-                J[ant][ch][pol] = make_gpuDoubleComplex( amp*cos(ph), amp*sin(ph) );
-            }
-        } // End for loop over 8 rows (for one antenna)
-    }
-}
-
 
 /**
  * Reads in a calibration solution from an Offringa-style solution file.
@@ -595,6 +201,273 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
 
     // Close the file
     fclose(fp);
+}
+
+/**
+ * Exits with a helpful message if a cfitsio call failed.
+ */
+static void check_fits_status( int status, const char *filename, const char *what )
+{
+    if (status == 0)
+        return;
+    char errtxt[FLEN_ERRMSG];
+    fits_get_errstatus( status, errtxt );
+    fprintf( stderr, "Error: %s in hyperdrive solution (%s): %s\n", what, filename, errtxt );
+    exit(EXIT_FAILURE);
+}
+
+/**
+ * Opens the first hyperdrive solution file in a list that covers the given
+ * coarse channel.
+ *
+ * @param[in]  nfiles    The number of files in the list
+ * @param[in]  files     The hyperdrive solution files
+ * @param[in]  start_hz  Lower edge of the coarse channel (Hz)
+ * @param[in]  end_hz    Upper edge of the coarse channel (Hz)
+ * @param[out] fptr      The opened file (positioned at an arbitrary HDU)
+ * @param[out] filename  The name of the file that was opened (to be freed by the caller)
+ * @param[out] first     The index of the first solution channel within the coarse channel
+ * @param[out] flags     Per-channel flags (nchan entries, to be freed by the caller)
+ * @param[out] nchan     The number of solution channels within the coarse channel
+ *
+ * Each hyperdrive file covers a contiguous subband. The CHANBLOCKS table gives
+ * the centre frequency of each solution channel, so the channels belonging to
+ * the coarse channel are found by frequency. This makes no assumption about
+ * how many coarse channels each file contains or where they start.
+ */
+static void open_hyperdrive_file_for_coarse_chan( int nfiles, char **files,
+        double start_hz, double end_hz,
+        fitsfile **fptr, char **filename, long *first, unsigned char **flags, long *nchan )
+{
+    for (int fi = 0; fi < nfiles; fi++)
+    {
+        char *f = files[fi];
+        int status = 0;
+        fitsfile *fp = NULL;
+        fits_open_file( &fp, f, READONLY, &status );
+        check_fits_status( status, f, "failed to open file" );
+
+        fits_movnam_hdu( fp, BINARY_TBL, "CHANBLOCKS", 0, &status );
+        check_fits_status( status, f, "no CHANBLOCKS HDU" );
+        int col_freq = 0, col_flag = 0;
+        long nrows = 0;
+        fits_get_colnum( fp, CASEINSEN, "Freq", &col_freq, &status );
+        fits_get_colnum( fp, CASEINSEN, "Flag", &col_flag, &status );
+        fits_get_num_rows( fp, &nrows, &status );
+        check_fits_status( status, f, "failed to read CHANBLOCKS table" );
+
+        double *freq = (double *)malloc( nrows * sizeof(double) );
+        unsigned char *flag = (unsigned char *)malloc( nrows );
+        int anynul = 0;
+        fits_read_col( fp, TDOUBLE, col_freq, 1, 1, nrows, NULL, freq, &anynul, &status );
+        fits_read_col( fp, TBYTE,   col_flag, 1, 1, nrows, NULL, flag, &anynul, &status );
+        check_fits_status( status, f, "failed to read CHANBLOCKS table" );
+
+        long i0 = -1, n = 0;
+        for (long i = 0; i < nrows; i++)
+        {
+            if (freq[i] >= start_hz && freq[i] < end_hz)
+            {
+                if (i0 < 0) i0 = i;
+                n++;
+            }
+        }
+        free( freq );
+
+        if (n > 0)
+        {
+            *fptr = fp;
+            *filename = strdup( f );
+            *first = i0;
+            *nchan = n;
+            *flags = (unsigned char *)malloc( n );
+            memcpy( *flags, flag + i0, n );
+            free( flag );
+            return;
+        }
+
+        free( flag );
+        fits_close_file( fp, &status );
+    }
+
+    fprintf( stderr, "Error: None of the %d calibration solution file(s) cover the "
+            "coarse channel %.3f - %.3f MHz\n", nfiles, start_hz/1e6, end_hz/1e6 );
+    exit(EXIT_FAILURE);
+}
+
+/**
+ * Reads in a calibration solution from native mwa_hyperdrive FITS file(s).
+ *
+ * The files are `vm->cal.cal_files` (see vmBindCalibrationFiles()), or just
+ * `vm->cal.caldir` if no list was bound. Each hyperdrive file covers one 
+ * contiguous subband (anything from one to all 24 coarse channels). 
+ * The coarse channel to be processed by this MPI task
+ * (`vm->cal_coarse_chan_idxs_to_process[0]`) is located by frequency, using the
+ * `CHANBLOCKS` table, in the first file that contains it.
+ *
+ * Within a file, the relevant HDUs are:
+ * - `SOLUTIONS`: double-precision image with FITS axes
+ *   8 x nchan x ntiles x ntimeblocks. The 8 values are the real and imaginary
+ *   parts of the Jones matrix elements in the order PP, PQ, QP, QQ.
+ * - `TILES`: binary table with `Antenna` and `Flag` columns.
+ * - `CHANBLOCKS`: binary table with `Freq` (Hz) and `Flag` columns.
+ *
+ * Only the first timeblock is used. NaN solutions, flagged tiles and flagged
+ * channels are set to zero (i.e. flagged), as for vmLoadOffringaSolution().
+ *
+ * This function assumes that memory for the Jones matrices (D) has already
+ * been allocated.
+ */
+void vmLoadHyperdriveSolution( vcsbeam_context *vm )
+{
+    int coarse_chan_idx = vm->cal_coarse_chan_idxs_to_process[0];
+    uint32_t nant   = vm->cal_metadata->num_ants;
+    uint32_t ninput = vm->cal_metadata->num_rf_inputs;
+    uintptr_t nantpol   = vm->cal_metadata->num_ant_pols; // = 2 (P, Q)
+    uintptr_t vcs_nchan = vm->nfine_chan;
+    uintptr_t nvispol   = vm->cal_metadata->num_visibility_pols; // = 4
+
+    if (coarse_chan_idx >= (int)vm->cal_metadata->num_metafits_coarse_chans)
+    {
+        fprintf( stderr, "Error: Requested coarse channel number (%d) is more than "
+                "the number of coarse channels in the calibration observation\n", coarse_chan_idx );
+        exit(EXIT_FAILURE);
+    }
+    double chan_start_hz = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].chan_start_hz;
+    double chan_end_hz   = vm->cal_metadata->metafits_coarse_chans[coarse_chan_idx].chan_end_hz;
+
+    // Find the file (and the range of channels in it) for this coarse channel
+    int status = 0;
+    fitsfile *fptr = NULL;
+    char *filename = NULL;
+    long first_chan, nchan;
+    unsigned char *chan_flag = NULL;
+    int nfiles = (vm->cal.ncal_files > 0) ? vm->cal.ncal_files : 1;
+    char **files = (vm->cal.ncal_files > 0) ? vm->cal.cal_files : &(vm->cal.caldir);
+    open_hyperdrive_file_for_coarse_chan( nfiles, files, chan_start_hz, chan_end_hz,
+            &fptr, &filename, &first_chan, &chan_flag, &nchan );
+
+    if (nchan > (long)vcs_nchan)
+    {
+        fprintf( stderr, "Error: Calibration solution (%s) has more channels per coarse "
+                "channel (%ld) than the voltage data (%lu)\n", filename, nchan, vcs_nchan );
+        exit(EXIT_FAILURE);
+    }
+    uintptr_t interp_factor = vcs_nchan / nchan;
+    fprintf( stdout, "Calibration solution (%s): using %ld channels (%d kHz each) for "
+            "coarse channel %d\n", filename, nchan,
+            (int)(vm->cal_metadata->coarse_chan_width_hz / nchan / 1000), coarse_chan_idx );
+
+    // --- Solutions image dimensions ---
+    fits_movnam_hdu( fptr, IMAGE_HDU, "SOLUTIONS", 0, &status );
+    check_fits_status( status, filename, "no SOLUTIONS HDU" );
+    int naxis = 0;
+    long naxes[4] = {0,0,0,0};
+    fits_get_img_dim( fptr, &naxis, &status );
+    check_fits_status( status, filename, "failed to read SOLUTIONS dimensions" );
+    if (naxis != 4)
+    {
+        fprintf( stderr, "Error: SOLUTIONS HDU in %s has %d axes (expected 4)\n", filename, naxis );
+        exit(EXIT_FAILURE);
+    }
+    fits_get_img_size( fptr, 4, naxes, &status );
+    check_fits_status( status, filename, "failed to read SOLUTIONS dimensions" );
+
+    long nChan = naxes[1], ntiles = naxes[2], ntimeblocks = naxes[3];
+    if (naxes[0] != NDBL_PER_JONES)
+    {
+        fprintf( stderr, "Error: SOLUTIONS HDU in %s has %ld values per Jones matrix "
+                "(expected %d)\n", filename, naxes[0], NDBL_PER_JONES );
+        exit(EXIT_FAILURE);
+    }
+    if (ntiles != (long)nant)
+    {
+        fprintf( stderr, "Error: Calibration solution (%s) contains a different "
+                "number of antennas (%ld) than specified (%u)\n", filename, ntiles, nant );
+        exit(EXIT_FAILURE);
+    }
+    if (ntimeblocks > 1)
+        fprintf( stdout, "Warning: Only the first timeblock in the calibration "
+                "solution (%s) will be used\n", filename );
+
+    // --- Tiles table: map antenna number -> row in the solutions, and flags ---
+    long *tile_row = (long *)malloc( nant * sizeof(long) );
+    for (uint32_t a = 0; a < nant; a++)
+        tile_row[a] = -1;
+    short *tile_flag = (short *)calloc( ntiles, sizeof(short) );
+
+    fits_movnam_hdu( fptr, BINARY_TBL, "TILES", 0, &status );
+    check_fits_status( status, filename, "no TILES HDU" );
+    int col_ant = 0, col_flag = 0;
+    fits_get_colnum( fptr, CASEINSEN, "Antenna", &col_ant, &status );
+    fits_get_colnum( fptr, CASEINSEN, "Flag", &col_flag, &status );
+    check_fits_status( status, filename, "TILES table lacks Antenna/Flag columns" );
+    for (long r = 0; r < ntiles; r++)
+    {
+        int antnum = 0, anynul = 0;
+        fits_read_col( fptr, TINT,   col_ant,  r+1, 1, 1, NULL, &antnum,         &anynul, &status );
+        fits_read_col( fptr, TSHORT, col_flag, r+1, 1, 1, NULL, &(tile_flag[r]), &anynul, &status );
+        check_fits_status( status, filename, "failed to read TILES table" );
+        if (antnum >= 0 && antnum < (int)nant)
+            tile_row[antnum] = r;
+    }
+
+    // --- Read the Jones matrices ---
+    fits_movnam_hdu( fptr, IMAGE_HDU, "SOLUTIONS", 0, &status );
+    check_fits_status( status, filename, "no SOLUTIONS HDU" );
+
+    double *buf = (double *)malloc( nchan * NDBL_PER_JONES * sizeof(double) );
+    gpuDoubleComplex Dread[nvispol];
+    const long timeblock = 0;
+
+    for (uint32_t i = 0; i < ninput; i++)
+    {
+        Rfinput *rfinput = &(vm->cal_metadata->rf_inputs[i]);
+        if (*(rfinput->pol) == 'Y')
+            continue;
+
+        uint32_t ant = rfinput->ant;
+        if (ant >= nant || tile_row[ant] < 0)
+        {
+            fprintf( stderr, "Error: Antenna %u (%s) not found in the TILES table of %s\n",
+                    ant, rfinput->tile_name, filename );
+            exit(EXIT_FAILURE);
+        }
+        long row = tile_row[ant];
+
+        // C-order index [timeblock][tile][chan][8], 1-indexed for cfitsio
+        LONGLONG firstelem = (((LONGLONG)timeblock*ntiles + row)*nChan + first_chan)
+                * NDBL_PER_JONES + 1;
+        int anynul = 0;
+        fits_read_img( fptr, TDOUBLE, firstelem, nchan*NDBL_PER_JONES, NULL, buf, &anynul, &status );
+        check_fits_status( status, filename, "failed to read solutions" );
+
+        for (long ch = 0; ch < nchan; ch++)
+        {
+            double *J = buf + ch*NDBL_PER_JONES;
+            int bad = (tile_flag[row] != 0) || (chan_flag[ch] != 0);
+            for (int k = 0; k < NDBL_PER_JONES; k++)
+                if (isnan(J[k]))
+                    bad = 1;
+
+            for (uintptr_t p = 0; p < nvispol; p++)
+                Dread[p] = bad ? make_gpuDoubleComplex( 0.0, 0.0 )
+                               : make_gpuDoubleComplex( J[2*p], J[2*p+1] );
+
+            for (uintptr_t vch = ch*interp_factor; vch < (uintptr_t)(ch + 1)*interp_factor; vch++)
+            {
+                uintptr_t d_idx = D_IDX(ant,vch,0,0,vcs_nchan,nantpol);
+                cp2x2( Dread, &(vm->D[d_idx]) );
+            }
+        }
+    }
+
+    free( buf );
+    free( tile_row );
+    free( tile_flag );
+    free( chan_flag );
+    free( filename );
+    fits_close_file( fptr, &status );
 }
 
 /**
@@ -1037,6 +910,8 @@ void vmSetCustomTileFlags( vcsbeam_context *vm )
 void init_calibration( calibration *cal )
 {
     cal->caldir            = NULL;
+    cal->ncal_files        = 0;
+    cal->cal_files         = NULL;
     cal->ref_ant           = NULL;
     cal->flags_file        = NULL;
     cal->nflags            = 0;
@@ -1054,6 +929,13 @@ void free_calibration( calibration *cal )
 {
     if (cal->caldir != NULL)
         free( cal->caldir );
+
+    if (cal->cal_files != NULL)
+    {
+        for (int i = 0; i < cal->ncal_files; i++)
+            free( cal->cal_files[i] );
+        free( cal->cal_files );
+    }
 
     if (cal->ref_ant != NULL)
         free( cal->ref_ant );
