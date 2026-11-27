@@ -38,11 +38,14 @@ ________________
 
 ## Obtaining a calibration solution
 
-Calibration solutions are produced with [Hyperdrive][Hyperdrive], from a dedicated calibration observation of already-correlated data (Legacy or MWAX).
+Calibration solutions are produced with [Hyperdrive][Hyperdrive], from a
+dedicated calibration observation of already-correlated data (Legacy or MWAX).
 
 [Hyperdrive]: https://wiki.mwatelescope.org/pages/viewpage.action?pageId=52068764
 
-See [the MWA Telescope Wiki][Hyperdrive]. Hyperdrive also has some documentation on [its Github main page](https://github.com/MWATelescope/mwa_hyperdrive), and [its Github Wiki page](https://github.com/MWATelescope/mwa_hyperdrive/wiki).
+See [the MWA Telescope Wiki][Hyperdrive]. Hyperdrive also has some documentation
+on [its Github main page](https://github.com/MWATelescope/mwa_hyperdrive), and
+[its Github Wiki page](https://github.com/MWATelescope/mwa_hyperdrive/wiki).
 
 
 ________________
@@ -76,7 +79,12 @@ For beamforming purposes, the metafits files can be given any arbitrary names.
 
 #### The calibration path
 
-The path to the calibration solution is the native [Hyperdrive FITS solution file](@ref hyperdrivefileformat). Hyperdrive writes one file per contiguous subband, so several files may be given (e.g. `-C solutions_*.fits`); each MPI task uses the file covering its coarse channel. If the `-O` option is given, the path should instead be an [Offringa-style format binary file](@ref offringafileformat).
+The path to the calibration solution is the native [Hyperdrive FITS solution
+file](@ref hyperdrivefileformat). Hyperdrive writes one file per contiguous
+subband, so several files may be given (e.g. `-C solutions_*.fits`); each MPI
+task uses the file covering its coarse channel. If the `-O` option is given, the
+path should instead be an [Offringa-style format binary
+file](@ref offringafileformat).
 
 #### The pointings file
 
@@ -231,9 +239,12 @@ ________________
 
 ### Calibration options
 
-[make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) will expect native Hyperdrive FITS solutions unless the `-O` option is explicitly given, in which case an Offringa-style solution is expected.
+[make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) will expect
+native Hyperdrive FITS solutions unless the `-O` option is explicitly given, in
+which case an Offringa-style solution is expected.
 
-The calibration solutions provided by Hyperdrive can be further manipulated in several ways before they are applied to the input voltages.
+The calibration solutions provided by Hyperdrive can be further manipulated in
+several ways before they are applied to the input voltages.
 Many of these manipulates are still experimental, and mostly affect the fidelity of the polarisation response, whose verification is still a work in progress.
 
 #### Flagging extra tiles
@@ -253,7 +264,9 @@ The `-X` option can be used to retain the cross terms.
 
 The calibration solution is a Jones matrix whose absolute phase carries no physical signifance.
 Said another way, calibration solutions are unique only up to a complex unit scalar factor, so that if \f$\{{\bf J}_1, {\bf J}_2, \dots, {\bf J}_{N_a}\}\f$ is a set of calibration solutions for antennas \f$1, 2, \dots, N_a\f$, then \f$\{e^{i\theta}{\bf J}_1, e^{i\theta}{\bf J}_2, \dots, e^{i\theta}{\bf J}_{N_a}\}\f$ is an equivalent set of solutions, for any arbitrary \f$\theta\f$.
-Thus, the solutions produced by Hyperdrive may "look" worse than they really are because the solutions for different frequency channels may have different arbitrary phases.
+Thus, the solutions produced by Hyperdrive may "look" worse than they really are
+because the solutions for different frequency channels may have different
+arbitrary phases.
 Thus, in order to compare the solutions across frequency, it is useful to divide the elements of all Jones matrix by a unit complex number which has the same phase as an arbitrarily chosen reference antenna.
 This will make the reference antenna itself have a calibration solution consisting only of real-valued elements, but the phases of the other antennas can now be more easily evaluated for "goodness".
 
@@ -299,12 +312,13 @@ HexE2
 Otherwise, the solutions already looked good enough, so that no further amendments were deemed necessary.
 
  4. After deciding how much of the data to process, and what I wanted for the output format, the final [make_mwa_tied_array_beam](@ref applicationsmakemwatiedarraybeam) command is:
+
 ```
 mpirun -np 24 make_mwa_tied_array_beam \      # Use 24 MPI processes to beamform 24 coarse channels and splice them together in the output PSRFITS
     -m 1320499816.fits \                      # The target observation metafits file
     -c 1320412440.fits \                      # The calibration observation metafits file
     -C 1320412440_hyperdrive_solutions.fits \ # The calibration solution
-    -d /astro/mwavcs/asvo/252057 \            # The location of the MWAX voltage (.sub) files (channel numbers may or may not be zero-padded)
+    -d /astro/mwavcs/asvo/252057 \            # The location of the MWAX voltage (.sub) files
     -P pointings.txt \                        # The pointings file
     -b 1320499824 \                           # Start 8 seconds in
     -T 592 \                                  # Process 592 seconds
@@ -315,3 +329,7 @@ mpirun -np 24 make_mwa_tied_array_beam \      # Use 24 MPI processes to beamform
     -U 0,0 \                                  # Do not apply any extra phase ramp
     -X                                        # Keep the cross terms
 ```
+
+The MWAX voltage (`.sub`) files are found whether or not the channel number in
+their names is zero-padded to three digits, so no soft links are needed for
+coarse channels below 100.

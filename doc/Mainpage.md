@@ -8,22 +8,30 @@ The source code for this software can be found [here](https://github.com/CIRA-Pu
 
 ## Contents
 
- - [Installation guide](@ref installationguide)
- - Mathematical description
-   + [Definitions](@ref definitions) -- Notation, coordinate systems
-   + [Calibration](@ref calibration) -- Hyperdrive, Hyperbeam
-   + [Beamforming](@ref beamforming) -- Applying calibration, phasing up the array, summing antennas
- - User's Guide
-   + [Overview](@ref usersguideoverview)
-   + Workflows
-     * [Beamforming](@ref usersguidebeamforming)
-     * [Preparing a calibration solution](@ref usersguidecalibration)
-     * [Examples](@ref usersguideexamples)
-   + Applications
-     * [Fine PFB Offline](@ref applicationsfinepfboffline) -- Convert coarse channels to fine channels
-     * [Make MWA Incoh Beam](@ref applicationsmakemwaincohbeam) -- Form an incoherent beam
-     * [Make MWA Tied Array Beam](@ref applicationsmakemwatiedarraybeam) -- Form a tied-array beam
-     * [MWA Tied Array Beam PSF](@ref applicationsmwatiedarraybeampsf) -- Generate a plot of the tied array beam point spread function
-     * [MWA Track Primary Beam Response](@ref applicationsmwatrackprimarybeamresponse) -- Track the sensitivity of a tied-array beam for a given RA/Dec as it passes through the MWA's primary beam
- - Appendices
-   + [File formats](@ref fileformats) - Hyperdrive, Offringa
+- [Installation guide](@ref installationguide)
+- Mathematical description
+   - [Definitions](@ref definitions) -- Notation, coordinate systems
+   - [Calibration](@ref calibration) -- Hyperdrive, Hyperbeam
+   - [Beamforming](@ref beamforming) -- Applying calibration, phasing up the
+     array, summing antennas
+- User's Guide
+   - [Overview](@ref usersguideoverview)
+   - Workflows
+      - [Beamforming](@ref usersguidebeamforming)
+      - [Preparing a calibration solution](@ref usersguidecalibration)
+      - [Examples](@ref usersguideexamples)
+   - Applications
+      - [Fine PFB Offline](@ref applicationsfinepfboffline) -- Convert coarse
+        channels to fine channels
+      - [Make MWA Incoh Beam](@ref applicationsmakemwaincohbeam) -- Form an
+        incoherent beam
+      - [Make MWA Tied Array Beam](@ref applicationsmakemwatiedarraybeam) --
+        Form a tied-array beam
+      - [MWA Tied Array Beam PSF](@ref applicationsmwatiedarraybeampsf) --
+        Generate a plot of the tied array beam point spread function
+      - [MWA Track Primary Beam
+        Response](@ref applicationsmwatrackprimarybeamresponse) -- Track the
+        sensitivity of a tied-array beam for a given RA/Dec as it passes through
+        the MWA's primary beam
+- Appendices
+   - [File formats](@ref fileformats) - Hyperdrive, Offringa
