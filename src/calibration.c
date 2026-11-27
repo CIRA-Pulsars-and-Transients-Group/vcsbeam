@@ -103,8 +103,10 @@ void vmLoadOffringaSolution( vcsbeam_context *vm )
 
     // Now set the calibration solution settings correctly
     snprintf( vm->log_message, sizeof(vm->log_message),
-            "Calibration solution (%s) has (%u) total channels",
-            vm->cal.caldir, channelCount );
+            "Calibration solution has (%u) total channels", channelCount );
+    logger_timed_message( vm->log, vm->log_message );
+    snprintf( vm->log_message, sizeof(vm->log_message),
+            "    Calibration solution file: %s", vm->cal.caldir );
     logger_timed_message( vm->log, vm->log_message );
     nChan = channelCount;
 
@@ -365,9 +367,12 @@ void vmLoadHyperdriveSolution( vcsbeam_context *vm )
     }
     uintptr_t interp_factor = vcs_nchan / nchan;
     snprintf( vm->log_message, sizeof(vm->log_message),
-            "Calibration solution (%s): using %ld channels (%d kHz each) for "
-            "coarse channel %d", filename, nchan,
+            "Calibration solution: using %ld channels (%d kHz each) for "
+            "coarse channel %d", nchan,
             (int)(vm->cal_metadata->coarse_chan_width_hz / nchan / 1000), coarse_chan_idx );
+    logger_timed_message( vm->log, vm->log_message );
+    snprintf( vm->log_message, sizeof(vm->log_message),
+            "    Calibration solution file: %s", filename );
     logger_timed_message( vm->log, vm->log_message );
 
     // --- Solutions image dimensions ---
