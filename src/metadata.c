@@ -1350,6 +1350,8 @@ void vmCreateFilenames( vcsbeam_context *vm )
     vm->filenames = (char **)malloc( vm->nfiles * ncoarse_chans * sizeof(char *) ); // The full array of filenames, including the paths
 
     // Allocate memory and write filenames
+    int nunpadded = 0;         // The number of files found only with unpadded channel numbers
+    bool *is_unpadded = (bool *)calloc( vm->nfiles, sizeof(bool) ); // Which files those are
     unsigned int t_idx, f_idx;
     uintptr_t c_idx;
     for (t_idx = 0; t_idx < vm->nfiletimes; t_idx++)
@@ -1381,10 +1383,31 @@ void vmCreateFilenames( vcsbeam_context *vm )
                 int rec_chan = vm->obs_metadata->metafits_coarse_chans[c_idx].rec_chan_number;
                 if (unpadded_chan_filename( vm->filenames[f_idx], rec_chan, alt, sizeof(alt) ) &&
                         access( alt, F_OK ) == 0)
+                {
                     strcpy( vm->filenames[f_idx], alt );
+                    is_unpadded[f_idx] = true;
+                    nunpadded++;
+                }
             }
         }
     }
+
+    if (nunpadded > 0)
+    {
+        snprintf( vm->log_message, sizeof(vm->log_message),
+                "Note: %d of %d input files were found with channel numbers that are not "
+                "zero-padded to three digits:", nunpadded, vm->nfiles );
+        logger_timed_message( vm->log, vm->log_message );
+        for (int i = 0; i < vm->nfiles; i++)
+        {
+            if (is_unpadded[i])
+            {
+                snprintf( vm->log_message, sizeof(vm->log_message), "    %s", vm->filenames[i] );
+                logger_timed_message( vm->log, vm->log_message );
+            }
+        }
+    }
+    free( is_unpadded );
 }
 
 /**
