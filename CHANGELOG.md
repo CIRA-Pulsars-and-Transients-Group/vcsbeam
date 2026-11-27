@@ -144,7 +144,8 @@
 - Frequency table mislabelling in PSRFITS output for picket-fence data
 - The `orig_nbits` PSRFITS header entry was not set, which caused psrfits_utils
   to write all zeroes
-- Start time (including offsets) in the output file headers, for both VDIF and PSRFITS
+- Start time (including offsets) in the output file headers, for both VDIF and
+  PSRFITS
 - Reading of Offringa-style calibration solutions, including the number of
   channels used, and GPU memory address alignment errors
 - VDIF output bugs (including which half of the buffer was filled) and the VDIF
@@ -195,7 +196,8 @@
 
 ### Added
 
-- Usage documentation for several more apps, and PSRFITS output changes in `beam_psrfits.c`
+- Usage documentation for several more apps, and PSRFITS output changes in
+  `beam_psrfits.c`
 
 ### Changed
 
@@ -323,7 +325,8 @@
 
 - `plot_calibration.py` now uses argparse and writes PNG files instead of
   plotting to screen, and the calibration plots are much improved
-- `mwa_plot_calibration` can print user-defined strings (e.g. `nan`) for zero matrices
+- `mwa_plot_calibration` can print user-defined strings (e.g. `nan`) for zero
+  matrices
 
 ### Changed
 
@@ -348,7 +351,8 @@
 - Tile flagging during beamforming, using the flagged-tile information
 - `-B` option to make inclusion of the bandpass solutions optional; the bandpass
   solutions are reinstated in the calibration
-- Reading of Offringa-style calibration solutions, implemented and used in `mwa_plot_calibration`
+- Reading of Offringa-style calibration solutions, implemented and used in
+  `mwa_plot_calibration`
 - A more flexible `mwa_track_primary_beam_response`: output format, optional
   primary beam Jones matrices, customisable start/end times and time stride, and
   an option to turn the parallactic angle correction on or off
@@ -362,7 +366,8 @@
 ### Fixed
 
 - Non-master MPI tasks did not wait for their data to be spliced
-- `mwa_plot_calibration` used the wrong metafits file for the calibration correction
+- `mwa_plot_calibration` used the wrong metafits file for the calibration
+  correction
 - A bandpass channel-counting bug, a single-antenna case in
   `rts_flag_ant_to_tilenames.py`, and hardcoded filenames in `pol_correction.py`
 
@@ -413,7 +418,8 @@
 ### Fixed
 
 - Restored the runtime files that were lost in the move to a library
-- Removed C99 non-compliant code from `offline_correlator` and a redundant `-i` option
+- Removed C99 non-compliant code from `offline_correlator` and a redundant `-i`
+  option
 
 ## v2.15 (2021-09-22)
 
@@ -441,7 +447,8 @@
 
 ### Changed
 
-- `ipfb` is renamed to `pfb`, and filter coefficients are loaded via a new struct
+- `ipfb` is renamed to `pfb`, and filter coefficients are loaded via a new
+  struct
 - Antenna flagging now uses mwalib's built-in list
 - `xy_phase_correction` is renamed `pq_phase_correction`
 - Runtime files install to a different default directory
@@ -476,7 +483,8 @@
   means the actual number of channels
 - Compatible with mwalib v0.10.0, and the CMake output is reordered and builds
   more portably (fewer `strdup` calls)
-- The incoherent sum discretisation was merged into the flattened-bandpass kernel
+- The incoherent sum discretisation was merged into the flattened-bandpass
+  kernel
 
 ### Fixed
 
@@ -488,7 +496,8 @@
 ### Added
 
 - New utility `mwa_track_primary_beam_response`
-- Both beamformers now loop over coarse channels (mwalib limits this to one in practice)
+- Both beamformers now loop over coarse channels (mwalib limits this to one in
+  practice)
 
 ### Changed
 
@@ -506,7 +515,8 @@
 
 - The number of seconds to process replaces the end GPS time on both command
   lines, and the `begin` option now uses a new style
-- The `t` option becomes `T`, and the default data directory is the current directory
+- The `t` option becomes `T`, and the default data directory is the current
+  directory
 - Functions are agnostic to the number of pointings
 
 ### Fixed
@@ -555,7 +565,8 @@
 
 - vcsbeam extracted from the vcstools repository as its own repo, with a README
   and LICENSE. FFTW and the deprecated PFB inversion functions were removed
-- Switched to mwalib for metadata, antenna ordering, delays and amplitudes, and calibration
+- Switched to mwalib for metadata, antenna ordering, delays and amplitudes, and
+  calibration
 - Options in `make_beam` for applying a UV phase correction, and for John's
   method of removing calibration artefacts (default)
 - `sky_model_jones_comparison` and a first draft of `azza_track` tools
@@ -610,12 +621,14 @@
 
 ### Changed
 
-- Added a cleanup and comments for `calcEjones`, the analytic beam model in `get_delays_small.c`
+- Added a cleanup and comments for `calcEjones`, the analytic beam model in
+  `get_delays_small.c`
 - Debug output of tile delays was removed from the `make_beam` output
 
 ### Fixed
 
-- A GPU "illegal memory access" error and a bug that could flag more tiles than necessary
+- A GPU "illegal memory access" error and a bug that could flag more tiles than
+  necessary
 - A type mismatch in the `metainfo` struct in `beam_common.c`
 - FEE beams are now recalculated for each pointing in multipixel mode
 - The X and Y definitions were swapped, which corrected the signs of the
@@ -640,7 +653,8 @@
 
 ### Added
 
-- `-S [synth_filter]` option in `make_beam` to choose the inverse PFB synthesis filter
+- `-S [synth_filter]` option in `make_beam` to choose the inverse PFB synthesis
+  filter
 - Least-squares (12-tap) synthesis filter coefficients in `filter.h`
 - `-A` option, so that a single RF stream can be inverted without beamforming
 
@@ -683,7 +697,8 @@
 - Bandpass flattening now happens once instead of in chunks
 - Removed the unnecessary pointing dimension from the Jones matrix
 - Changed build flags, including dropping `-lineinfo`
-- GPU work was found to be slower inside OpenMP loops, so it was made serial again
+- GPU work was found to be slower inside OpenMP loops, so it was made serial
+  again
 
 ### Fixed
 
@@ -695,7 +710,8 @@
 
 ### Changed
 
-- Updated the CMake files and the beamformer to handle the new version number format
+- Updated the CMake files and the beamformer to handle the new version number
+  format
 
 ## v1.5 (2019-09-27, also tagged v1.5.0)
 
@@ -733,5 +749,6 @@
 ### Fixed
 
 - NaN and zero output on Athena, by initialising GPU arrays to zero
-- A polarisation bug where PSRFITS output reported one polarisation instead of four
+- A polarisation bug where PSRFITS output reported one polarisation instead of
+  four
 - Several VDIF, normalisation, memory and pointer-arithmetic bugs

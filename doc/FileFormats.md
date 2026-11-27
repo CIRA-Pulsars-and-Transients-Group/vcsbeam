@@ -10,7 +10,9 @@
 
 ### MWAX files
 
-A full description of the MWAX hight time resolution format can be found on [this MWA Telescope Wiki page](https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System).
+A full description of the MWAX hight time resolution format can be found on
+[this MWA Telescope Wiki
+page](https://wiki.mwatelescope.org/display/MP/MWA+High+Time+Resolution+Voltage+Capture+System).
 
 ## Calibration solutions
 
@@ -39,8 +41,11 @@ widths (up to one file per coarse channel for picket-fence data) is supported.
 
 This format is used with the `-O` option (hyperdrive can convert its solutions
 to it with `hyperdrive solutions-convert`).
-Offringa's own documentation for the format of these binary files (copied from an email dated 4 May 2016 from `franz.kirsten@curtin.edu.au` to `sammy.mcsweeney@gmail.com)`.
-This is itself copied from Andre Offringa's original C++ code, in his Anoko repository, in `mwa-reduce/solutionfile.h`:
+Offringa's own documentation for the format of these binary files (copied from
+an email dated 4 May 2016 from `franz.kirsten@curtin.edu.au` to
+`sammy.mcsweeney@gmail.com)`.
+This is itself copied from Andre Offringa's original C++ code, in his Anoko
+repository, in `mwa-reduce/solutionfile.h`:
 ```
 The solution file is used for storing calibration Jones matrices.
 The format is as follows:
