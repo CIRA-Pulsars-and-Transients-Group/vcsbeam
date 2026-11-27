@@ -32,7 +32,7 @@ Following [Sokolowski et al., 2017](https://www.cambridge.org/core/journals/publ
 where
  - \f${\bf D}\f$ represents the (direction independent) instrumental gains, and
  - \f${\bf B}\f$ represents the (direction dependent) tile beam response.
-\f${\bf D}\f$ is obtained either from the Real Time System, or Hyperdrive.
+\f${\bf D}\f$ is obtained from Hyperdrive.
 \f${\bf B}\f$ is obtained from Hyperbeam.
 
 ## Obtaining the instrumental gains
@@ -40,7 +40,12 @@ where
 ### Hyperdrive {#hyperdrive}
 
 Hyperdrive is used to generate the calibration solutions.
-VCSBeam reads its native FITS solutions directly ([Hyperdrive FITS format](@ref hyperdrivefileformat)), or the "Offringa" format, described in [Offringa format](#offringa), which hyperdrive can also output.
+VCSBeam reads its native FITS solutions directly ([Hyperdrive FITS format](@ref hyperdrivefileformat)); this is the default.
+The "Offringa" binary format ([Offringa file format](@ref offringafileformat)), which hyperdrive can convert its solutions to, is also supported via the `-O` option.
+Hyperdrive writes one file per contiguous subband.
+Each coarse channel is matched to its solution channels by frequency, so the files may cover anywhere from a single coarse channel up to the full 24.
+Each solution is applied to all of the voltage fine channels that fall within the same solution channel (nearest-neighbour replication).
+Flagged tiles, flagged channels and NaN solutions are zeroed, i.e. flagged in the beamformer.
 The matrices are in the basis:
 \f[
     {\bf D} = \begin{bmatrix}

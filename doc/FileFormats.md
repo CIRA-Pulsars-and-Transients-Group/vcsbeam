@@ -20,14 +20,15 @@ Native `mwa_hyperdrive` solutions (the default) are FITS files read directly by 
 
 | HDU | Contents |
 | --- | --- |
-| `SOLUTIONS` | Double-precision image with FITS axes `8 x nchan x ntiles x ntimeblocks`. The 8 values are the real and imaginary parts of the Jones matrix elements (PP, PQ, QP, QQ). NaN means the solution is unavailable. Only the first timeblock is used. |
+| `SOLUTIONS` | Double-precision image with FITS axes `8 x nchan x ntiles x ntimeblocks`. The 8 values are the real and imaginary parts of the Jones matrix elements (PP, PQ, QP, QQ). NaN means the solution is unavailable. Only the first timeblock is used. Tiles are matched to the metafits by `Antenna` number. |
 | `TILES` | Binary table. The `Antenna` column (metafits antenna number) and `Flag` column (non-zero means flagged) are used. |
 | `CHANBLOCKS` | Binary table. The `Freq` column (channel centre, Hz) is used to find the channels belonging to each coarse channel, and `Flag` marks flagged channels. |
 
 Hyperdrive writes one file per contiguous subband. `-C` can be followed by several files (e.g. a shell glob, `-C solutions_*.fits`); each MPI task uses the first file whose frequencies cover its coarse channel, so any mix of subband widths (up to one file per coarse channel for picket-fence data) is supported.
 
-### Offringa/Hyperdrive calibration file format {#offringafileformat}
+### Offringa calibration file format {#offringafileformat}
 
+This format is used with the `-O` option (hyperdrive can convert its solutions to it with `hyperdrive solutions-convert`).
 Offringa's own documentation for the format of these binary files (copied from an email dated 4 May 2016 from `franz.kirsten@curtin.edu.au` to `sammy.mcsweeney@gmail.com)`.
 This is itself copied from Andre Offringa's original C++ code, in his Anoko repository, in `mwa-reduce/solutionfile.h`:
 ```

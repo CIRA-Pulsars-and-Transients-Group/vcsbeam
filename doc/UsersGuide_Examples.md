@@ -123,7 +123,7 @@ srun -N 1 -n 1 make_mwa_tied_array_beam \
     -P pointings.txt \
     -F flagged_tilenames.txt \
     -c 1320412440.fits \
-    -C hyperdrive_solutions.bin \
+    -C hyperdrive_solutions.fits \
     -v -R NONE -U 0,0 -X
 ```
 
@@ -165,7 +165,7 @@ srun -N 24 -n 24 make_mwa_tied_array_beam \
     -P pointings.txt \
     -F flagged_tilenames.txt \
     -c 1320412440_metafits_ppds.fits \
-    -C /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive/hyperdrive_solutions.bin \
+    -C /astro/mwavcs/vcs/1320499816/cal/1320412440/hyperdrive/hyperdrive_solutions.fits \
     -p -R NONE -U 0,0 -X
 ```
 
