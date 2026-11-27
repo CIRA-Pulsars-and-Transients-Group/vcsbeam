@@ -368,8 +368,9 @@ void vmLoadHyperdriveSolution( vcsbeam_context *vm )
     uintptr_t interp_factor = vcs_nchan / nchan;
     snprintf( vm->log_message, sizeof(vm->log_message),
             "Calibration solution: using %ld channels (%d kHz each) for "
-            "coarse channel %d", nchan,
-            (int)(vm->cal_metadata->coarse_chan_width_hz / nchan / 1000), coarse_chan_idx );
+            "coarse channel %d/%d", nchan,
+            (int)(vm->cal_metadata->coarse_chan_width_hz / nchan / 1000),
+            coarse_chan_idx, vm->ncoarse_chans );
     logger_timed_message( vm->log, vm->log_message );
     snprintf( vm->log_message, sizeof(vm->log_message),
             "    Calibration solution file: %s", filename );
