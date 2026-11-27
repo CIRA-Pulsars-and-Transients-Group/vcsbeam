@@ -1,5 +1,8 @@
 # CHANGELOG
 
+<!-- markdownlint-disable MD024 -->
+<!-- The same headings repeat for each release. -->
+
 ## v5.7
 
 ### Added

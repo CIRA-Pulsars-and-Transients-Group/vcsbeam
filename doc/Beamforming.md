@@ -8,13 +8,15 @@ Beamforming is expressed mathematically by the expression
 \f]
 where
 
- - \f$a\f$ represents tiles (i.e. "antennas")
- - \f$f\f$ represents frequency channels
- - \f$\varphi\f$ is the delay phase,
- - \f${\bf v}\f$ is the Jones vector describing the instrumental voltages
- - \f${\bf J}\f$ is the Jones matrix describing the instrumental response to an incident electric field
- - \f${\bf e}\f$ is the Jones vector describing the (recovered) incident electric field
- - \f$N_a\f$ is the number of antennas
+- \f$a\f$ represents tiles (i.e. "antennas")
+- \f$f\f$ represents frequency channels
+- \f$\varphi\f$ is the delay phase,
+- \f${\bf v}\f$ is the Jones vector describing the instrumental voltages
+- \f${\bf J}\f$ is the Jones matrix describing the instrumental response to an
+  incident electric field
+- \f${\bf e}\f$ is the Jones vector describing the (recovered) incident electric
+  field
+- \f$N_a\f$ is the number of antennas
 
 (The time dependence of these quantities is not shown here.)
 

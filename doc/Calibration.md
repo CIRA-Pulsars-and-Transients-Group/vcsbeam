@@ -30,8 +30,10 @@ Following [Sokolowski et al., 2017](https://www.cambridge.org/core/journals/publ
     {\bf J} = {\bf D}{\bf B},
 \f]
 where
- - \f${\bf D}\f$ represents the (direction independent) instrumental gains, and
- - \f${\bf B}\f$ represents the (direction dependent) tile beam response.
+
+- \f${\bf D}\f$ represents the (direction independent) instrumental gains, and
+- \f${\bf B}\f$ represents the (direction dependent) tile beam response.
+
 \f${\bf D}\f$ is obtained from Hyperdrive.
 \f${\bf B}\f$ is obtained from Hyperbeam.
 
