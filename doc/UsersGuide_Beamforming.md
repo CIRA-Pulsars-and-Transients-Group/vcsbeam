@@ -304,7 +304,7 @@ mpirun -np 24 make_mwa_tied_array_beam \      # Use 24 MPI processes to beamform
     -m 1320499816.fits \                      # The target observation metafits file
     -c 1320412440.fits \                      # The calibration observation metafits file
     -C 1320412440_hyperdrive_solutions.bin \  # The calibration solution
-    -d /astro/mwavcs/asvo/252057 \            # The location of the MWAX voltage (.sub) files
+    -d /astro/mwavcs/asvo/252057 \            # The location of the MWAX voltage (.sub) files (channel numbers may or may not be zero-padded)
     -P pointings.txt \                        # The pointings file
     -b 1320499824 \                           # Start 8 seconds in
     -T 592 \                                  # Process 592 seconds
