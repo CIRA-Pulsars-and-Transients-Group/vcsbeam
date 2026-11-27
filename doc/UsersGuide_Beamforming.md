@@ -303,7 +303,7 @@ Otherwise, the solutions already looked good enough, so that no further amendmen
 mpirun -np 24 make_mwa_tied_array_beam \      # Use 24 MPI processes to beamform 24 coarse channels and splice them together in the output PSRFITS
     -m 1320499816.fits \                      # The target observation metafits file
     -c 1320412440.fits \                      # The calibration observation metafits file
-    -C 1320412440_hyperdrive_solutions.bin \  # The calibration solution
+    -C 1320412440_hyperdrive_solutions.fits \ # The calibration solution
     -d /astro/mwavcs/asvo/252057 \            # The location of the MWAX voltage (.sub) files (channel numbers may or may not be zero-padded)
     -P pointings.txt \                        # The pointings file
     -b 1320499824 \                           # Start 8 seconds in
