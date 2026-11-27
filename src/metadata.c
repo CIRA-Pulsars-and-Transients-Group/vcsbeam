@@ -1398,13 +1398,22 @@ void vmCreateFilenames( vcsbeam_context *vm )
                 "Note: %d of %d input files were found with channel numbers that are not "
                 "zero-padded to three digits:", nunpadded, vm->nfiles );
         logger_timed_message( vm->log, vm->log_message );
-        for (int i = 0; i < vm->nfiles; i++)
+        const int max_listed = 5;
+        int nlisted = 0;
+        for (int i = 0; i < vm->nfiles && nlisted < max_listed; i++)
         {
             if (is_unpadded[i])
             {
                 snprintf( vm->log_message, sizeof(vm->log_message), "    %s", vm->filenames[i] );
                 logger_timed_message( vm->log, vm->log_message );
+                nlisted++;
             }
+        }
+        if (nunpadded > max_listed)
+        {
+            snprintf( vm->log_message, sizeof(vm->log_message),
+                    "    ... and %d more", nunpadded - max_listed );
+            logger_timed_message( vm->log, vm->log_message );
         }
     }
     free( is_unpadded );
