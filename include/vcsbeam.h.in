@@ -167,14 +167,13 @@ void logger_report_all_stats( logger *log );
 
 // Calibration solution types
 #define CAL_NONE      0
-#define CAL_RTS       1
-#define CAL_OFFRINGA  2
+#define CAL_HYPERDRIVE 1
+#define CAL_OFFRINGA   2
 
 #define OFFRINGA_HEADER_SIZE_BYTES 48
 #define JONES_SIZE_BYTES           64  /* (4 elements) * (2 re/im) * (8 bytes per double) */
 
 #define NDBL_PER_JONES  8
-#define BANDPASS_ROWS_PER_ANT  8
 
 #define CAL_BUFSIZE    4096
 
@@ -182,15 +181,16 @@ void logger_report_all_stats( logger *log );
 typedef struct calibration_t
 {
     char  *metafits;           // Filename of the metafits file
-    char  *caldir;             // Location of calibration data
-    int    cal_type;           // Either RTS or OFFRINGA
+    char  *caldir;             // Location of calibration data (for HYPERDRIVE, the first file)
+    int    ncal_files;         // Number of calibration files (HYPERDRIVE only; may be 0)
+    char **cal_files;          // List of calibration files, one per subband (HYPERDRIVE only)
+    int    cal_type;           // Either HYPERDRIVE or OFFRINGA
     char  *ref_ant;            // Reference antenna for calibration phases
     bool   keep_cross_terms;   // Include PQ and QP of calibration Jones matrices
     double phase_offset;       // Rotate the phase of Y by m*freq + c, where
     double phase_slope;        //   m = phase_slope (rad/Hz)
                                //   c = phase_offset (rad)
     bool   picket_fence;       // Whether input data is picket fence data
-    bool   use_bandpass;       // Use the Bandpass solutions
     bool   custom_pq_correction; // Set to true if phase_offset and phase_slope are to be applied
     char  *flags_file;         // Name of file containing custom flagged tiles
     int    nflags;             // The size of flagged_tilenames
@@ -203,9 +203,6 @@ extern "C" {
 #endif
 
 
-void read_dijones_file( gpuDoubleComplex **Dd, gpuDoubleComplex *A, double *amp, uintptr_t nant, char *fname );
-void read_bandpass_file( gpuDoubleComplex ***Jm, gpuDoubleComplex ***Jf,
-        MetafitsMetadata *cal_metadata, char *filename );
 
 void remove_reference_phase( gpuDoubleComplex *J, gpuDoubleComplex *Jref );
 void zero_PQ_and_QP( gpuDoubleComplex *J );
@@ -722,12 +719,13 @@ void vmBindObsData(
         char *first_gps_second_str, int num_gps_seconds_to_process, int gps_second_offset,
         char *datadir );
 
+void vmBindCalibrationFiles( vcsbeam_context *vm, int nfiles, char **files );
+
 void vmBindCalibrationData( vcsbeam_context *vm,
         int     num_coarse_chans_to_process,
         char   *caldir,
         int     cal_type,
         bool    picket_fence,
-        bool    use_bandpass,  // only relevant for RTS observations
         char   *flags_file );
 
 void vmReadCalibration( vcsbeam_context *vm );
@@ -827,8 +825,8 @@ void vmParseFlaggedTilenamesFile( char *filename, calibration *cal ); // (define
 void vmSetCustomTileFlags( vcsbeam_context *vm ); // (defined in calibration.c);
 
 // (defined in calibration.c:)
-void vmLoadRTSSolution( vcsbeam_context *vm );
 void vmLoadOffringaSolution( vcsbeam_context *vm );
+void vmLoadHyperdriveSolution( vcsbeam_context *vm );
 
 void vmCreateFilenames( vcsbeam_context *vm );
 void vmGetVoltFilename( vcsbeam_context *vm, unsigned int coarse_chan_idx, uint64_t gps_second, char *filename );
