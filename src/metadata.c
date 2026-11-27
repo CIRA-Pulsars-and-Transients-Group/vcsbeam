@@ -1283,9 +1283,11 @@ void vmSetNumPointings( vcsbeam_context *vm, unsigned int npointings )
 static bool unpadded_chan_filename( const char *padded, int rec_chan, char *out, size_t outsize )
 {
     char padded_chan[16], plain_chan[16];
-    snprintf( padded_chan, sizeof(padded_chan), "%03d", rec_chan );
-    snprintf( plain_chan,  sizeof(plain_chan),  "%d",   rec_chan );
-    if (strcmp( padded_chan, plain_chan ) == 0)
+    int padded_len = snprintf( padded_chan, sizeof(padded_chan), "%03d", rec_chan );
+    int plain_len  = snprintf( plain_chan,  sizeof(plain_chan),  "%d",   rec_chan );
+    if (padded_len <= 0 || (size_t)padded_len >= sizeof(padded_chan) ||
+        plain_len  <= 0 || (size_t)plain_len  >= sizeof(plain_chan) ||
+        padded_len == plain_len)
         return false;
 
     // Find the last occurrence of the padded channel number
@@ -1296,7 +1298,7 @@ static bool unpadded_chan_filename( const char *padded, int rec_chan, char *out,
         return false;
 
     int n = snprintf( out, outsize, "%.*s%s%s",
-            (int)(found - padded), padded, plain_chan, found + strlen( padded_chan ) );
+            (int)(found - padded), padded, plain_chan, found + padded_len );
     return (n > 0 && (size_t)n < outsize);
 }
 
@@ -1384,7 +1386,7 @@ void vmCreateFilenames( vcsbeam_context *vm )
                 if (unpadded_chan_filename( vm->filenames[f_idx], rec_chan, alt, sizeof(alt) ) &&
                         access( alt, F_OK ) == 0)
                 {
-                    strcpy( vm->filenames[f_idx], alt );
+                    snprintf( vm->filenames[f_idx], MAX_COMMAND_LENGTH, "%s", alt );
                     is_unpadded[f_idx] = true;
                     nunpadded++;
                 }
